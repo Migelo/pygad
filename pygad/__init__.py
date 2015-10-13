@@ -85,11 +85,11 @@ if environment.interactive:
 # this line gets changed by setup.py during installation, and hence is different
 # for the repo and the installed module
 #   - in the git repository:
-#       simply calls 'environment.git_descr( environment.module_dir )'
+#       simply calls `git_descr(module_dir, PEP440=True)`
 #   - in the installed version
 #       a string holding the value of above's function call at the moment of
 #       installation via setup.py
-version = environment.git_descr( environment.module_dir )
+version = environment.git_descr( environment.module_dir, PEP440=True )
 if environment.verbose:
     print 'imported pygad', version
 

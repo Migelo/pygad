@@ -403,6 +403,9 @@ def define(name, u=None, latex=None, allow_redef=True, warn=True):
     if iskeyword(name) or name in math.__dict__:
         raise UnitError('"%s" is a keyword or a function or constant from math!'
                 % name)
+    elif not re.match(r"^[_a-zA-Z][_a-zA-Z0-9]*$", name):
+        raise UnitError('"%s" is not a valid name!' % name)
+
     if u is None:
         u = _UnitClass(0, [])
     elif not isinstance(u, _UnitClass):
@@ -478,6 +481,11 @@ def define_from_cfg(config, allow_redef=False, warn=True, undefine_old=True):
         warn (bool):        Turn off warning, if there was a unit redefined
                             differently.
         undefine_old (bool):Undefine all previously defined units.
+
+    Raises:
+        RuntimeError:       In case not all units are well defined (e.g. ther are
+                            circular definitions) or in case the config does does
+                            not exist.
 
     A sample config file:
     [base]

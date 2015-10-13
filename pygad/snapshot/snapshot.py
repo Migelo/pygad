@@ -1056,7 +1056,7 @@ class _Snap(object):
                      'z2a':physics.z2a}
         for n,obj in [(n,getattr(derived,n)) for n in dir(derived)]:
             if hasattr(obj, '__call__') and n!='ptypes_and_deps' \
-                    and n!='read_cfg':
+                    and n!='read_derived_rules':
                 namespace[n] = obj
         for n,obj in [(n,getattr(physics,n)) for n in dir(physics)]:
             if isinstance(obj, UnitArr):

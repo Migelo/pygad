@@ -3,7 +3,7 @@ A module to prepare derived arrays for the snapshot.
 
 Examples:
     >>> from ..environment import module_dir
-    >>> rules = read_cfg([module_dir+'snapshot/derived.cfg'])
+    >>> rules = read_derived_rules([module_dir+'snapshot/derived.cfg'])
     reading config file "pygad/snapshot/derived.cfg"
     >>> assert rules == _rules
     >>> rules['r'], rules['Z']
@@ -16,7 +16,7 @@ Examples:
     ...                                 # types) and elements (baryons only)
     ([True, False, False, False, True, False], set(['elements', 'metals']))
 '''
-__all__ = ['ptypes_and_deps', 'read_cfg', 'calc_temps']
+__all__ = ['ptypes_and_deps', 'read_derived_rules', 'calc_temps']
 
 from ConfigParser import SafeConfigParser
 from .. import utils
@@ -57,7 +57,7 @@ def ptypes_and_deps(defi, snap):
             ptypes = [(ptypes[i] and (i in fam)) for i in xrange(6)]
     return ptypes, deps
 
-def read_cfg(config, store_as_default=True, delete_old=False):
+def read_derived_rules(config, store_as_default=True, delete_old=False):
     '''
     Read rules for derived blocks from a config file.
 

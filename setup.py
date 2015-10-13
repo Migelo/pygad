@@ -28,7 +28,7 @@ for root, dirs, files in os.walk(setup_dir):
 
 # get version for setup and fix version in module's `pygad.version`
 from pygad.environment import git_descr
-version = git_descr(setup_dir)
+version = git_descr(setup_dir, PEP440=True)
 init_file = setup_dir + '/pygad/__init__.py'
 init_tmp = '__init__.tmp'
 os.rename(init_file, init_tmp)
@@ -41,7 +41,9 @@ try:
     # actually do the setup
     setup(name = 'pygad',
           version = version,
-          description = 'Analysis Module for Gadget',
+          description = 'analysis module for Gadget',
+          long_description = 'A light-weighted analysis module for galaxy ' + \
+                             'simulations performed by the SPH code Gadget.',
           author = 'Bernhard Roettgers',
           author_email = 'broett@mpa-garching.mpg.de',
           url = 'https://bitbucket.org/broett/pygad',

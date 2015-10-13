@@ -22,7 +22,7 @@ from masks import *
 import os
 
 from ..environment import module_dir
-read_cfg(['./derived.cfg',
-          os.getenv("HOME")+'/.config/pygad/derived.cfg',
-          module_dir+'snapshot/derived.cfg'])
+read_derived_rules(['./derived.cfg',
+                   os.getenv("HOME")+'/.config/pygad/derived.cfg',
+                   module_dir+'snapshot/derived.cfg'])
 
