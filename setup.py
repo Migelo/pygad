@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
+try:
+    from setuptools import setup
+except:
+    from distutils.core import setup
 #from Cython.Build import cythonize
 import numpy
 import os
@@ -34,17 +37,20 @@ with open(init_file, 'w') as f:
     subprocess.check_call(['sed', sub, init_tmp], stdout=f)
 
 
-# actually do the setup
-setup(name = 'pygad',
-      version = version,
-      description = 'Analysis Module for Gadget',
-      author = 'Bernhard Roettgers',
-      author_email = 'broett@mpa-garching.mpg.de',
-      url = 'https://bitbucket.org/broett/pygad',
-      packages = map(str,modules),
-      package_data = package_data,
-     )
-
-# restore the dynamic git version of the development's pygad
-os.rename(init_tmp, init_file)
+try:
+    # actually do the setup
+    setup(name = 'pygad',
+          version = version,
+          description = 'Analysis Module for Gadget',
+          author = 'Bernhard Roettgers',
+          author_email = 'broett@mpa-garching.mpg.de',
+          url = 'https://bitbucket.org/broett/pygad',
+          packages = map(str,modules),
+          package_data = package_data,
+         )
+except:
+    raise
+finally:
+    # restore the dynamic git version of the development's pygad
+    os.rename(init_tmp, init_file)
 
