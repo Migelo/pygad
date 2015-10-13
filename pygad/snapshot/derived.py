@@ -16,7 +16,7 @@ Examples:
     ...                                 # types) and elements (baryons only)
     ([True, False, False, False, True, False], set(['elements', 'metals']))
 '''
-__all__ = ['ptypes_and_deps', 'read_cfg']
+__all__ = ['ptypes_and_deps', 'read_cfg', 'calc_temps']
 
 from ConfigParser import SafeConfigParser
 from .. import utils
@@ -106,3 +106,41 @@ def read_cfg(config, store_as_default=True, delete_old=False):
     rules.update( cfg.items('rules') )
 
     return rules
+
+def calc_temps(s, gamma=5./3.):
+    '''
+    Calculate the block of temperatures form internal energy.
+
+    This function calculates the temperatures from the internal energy using the
+    ideal gas law:
+
+        U = f/2 N k_b T
+
+    TODO:
+        What to do about ionisation states? What about the different elements? How
+        do they affect the degrees of freedom f?
+
+    Args:
+        s (Snap):       The snapshot to calculate the temperatures for.
+
+    Returns:
+        T (UnitArr):    The temperatures for the particles of s.
+    '''
+    if s.properties['flg_entropy_instead_u']:
+        raise NotImplementedError('Temperatures cannot be calculated from ' + 
+                                  'entropy, yet. However, '
+                                  'flg_entropy_instead_u is True.')
+
+    from .. import physics
+
+    # roughly the average weight for primordial gas
+    av_particle_weight = (0.76*1. + 0.24*4.) * physics.m_u
+    # roughly the average degrees of freedom for primordial gas (no molecules)
+    f = 3
+
+    # the internal energy in Gadget actually is the specific internal energy
+    # TODO: check!
+    T = s.u * s.mass / (f/2. * (s.mass/av_particle_weight) * physics.kB)
+    T.convert_to('K', subs=s)
+    return T
+

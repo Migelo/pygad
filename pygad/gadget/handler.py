@@ -123,8 +123,14 @@ class FileReader(object):
                     data = np.insert(data,
                                      pos,
                                      np.ones(self._header['N_part'][pt],
-                                             dtype=type_char) * \
+                                             dtype=block.dtype) * \
                                         self._header['mass'][pt])
+                    """
+                    for md, mh in [(data[pos], self._header['mass'][pt]),
+                                   (data[pos+self._header['N_part'][pt]-1],
+                                        self._header['mass'][pt])]:
+                        assert (md-mh)/mh < 1e-6
+                    """
                 pos += self._header['N_part'][pt]
 
         data = data.view(UnitArr)
@@ -308,8 +314,8 @@ def write(snap, filename, blocks=None, gformat=2, endianness='native',
     # blocks are actually present (e.g. it does not contain gas though the root
     # does)
     for name in set(blocks)-set(data.keys()):
-        print >> sys.stderr, 'WARNING: block "%s" is not present for this ' + \
-                             '(sub-)snapshot and, hence, not written!'
+        print >> sys.stderr, 'WARNING: block "%s" is not present for ' % name + \
+                             'this (sub-)snapshot and, hence, not written!'
         blocks.remove(name)
 
     if gformat == 3:

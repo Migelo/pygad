@@ -67,6 +67,41 @@ def cubic_vec(u):
     w[mask] = 5.09295817894 * (1.-u_masked)**3
     return w
 
+def quintic(u):
+    '''
+    The quintic kernel:
+
+         2187  / /    \ 5     / 2    \ 5     / 1    \ 5 \               1
+        ----- | |1 - u | - 6 |  - - u | + 15 | - - u |   |      if  u < -
+        40 pi  \ \    /       \ 3    /       \ 3    /   /               3
+        
+         2187  / /    \ 5     / 2    \ 5 \                          1        2
+        ----- | |1 - u | - 6 |  - - u | + |                     if  - <= u < -
+        40 pi  \ \    /       \ 3    /   /                          3        3
+        
+         2187    /    \ 5
+        -----   |1 - u |                                        otherwise
+        40 pi    \    /
+    
+    where u = r/(2h) <= 1.
+    '''
+    if u < 0.3333333333333333:
+        return 17.403593027098754 * ((1.-u)**5-6.*(0.6666666666666667-u)**5+15.*(0.3333333333333333-u)**5)
+    elif u < 0.6666666666666667:
+        return 17.403593027098754 * ((1.-u)**5-6.*(0.6666666666666667-u)**5)
+    else:
+        return 17.403593027098754 * ((1.-u)**5)
+def quintic_vec(u):
+    '''The vector version of the quintic kernel.'''
+    w = (1.-u)**5
+    mask = u < 0.6666666666666667
+    u_masked = u[mask]
+    w[mask] -= 6.*(0.6666666666666667-u_masked)**5
+    mask = u < 0.3333333333333333
+    u_masked = u[mask]
+    w[mask] += 15.*(0.3333333333333333-u_masked)**5
+    return 17.403593027098754 * w
+
 def Wendland_C4(u):
     '''
     The Wendland C4 kernel:
@@ -81,14 +116,34 @@ def Wendland_C4(u):
     return 4.923856051905513 * (1.-u)**6 * (1. + (6. + 11.6666666667*u)*u)
 def Wendland_C4_vec(u):
     '''The vector version of the Wendland C4 kernel.'''
-    return 4.923856051905513 * (1.-u)**6 * (1. + (6. + 11.6666666667*u)*u)
+    return 4.923856051905513 * ( (1.-u)**6 * (1. + (6. + 11.6666666667*u)*u) )
+
+def Wendland_C6(u):
+    '''
+    The Wendland C6 kernel:
+
+                    8
+        1365 (1 - u)   /    3      2         \ 
+        ------------- | 32 u + 25 u + 8 u + 1 |
+            64 pi      \                     /
+        
+    where u = r/(2h) <= 1.
+    '''
+    return 6.78895304126366 * (1.-u)**8 * (1. + (8. + (25. + 32.*u)*u)*u)
+def Wendland_C6_vec(u):
+    '''The vector version of the Wendland C6 kernel.'''
+    return 6.78895304126366 * ( (1.-u)**8 * (1. + (8. + (25. + 32.*u)*u)*u) )
 
 kernels = {
         'cubic':        cubic,
+        'quintic':      quintic,
         'Wendland C4':  Wendland_C4,
+        'Wendland C6':  Wendland_C6,
         }
 vector_kernels = {
         'cubic':        cubic_vec,
+        'quintic':      quintic_vec,
         'Wendland C4':  Wendland_C4_vec,
+        'Wendland C6':  Wendland_C6_vec,
         }
 

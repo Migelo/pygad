@@ -45,7 +45,7 @@ Example:
             [ 0.        ,  0.41260123,  0.        ],
             [ 0.        ,  0.        ,  1.8855924 ]])
     >>> los_velocity_dispersion(sub)
-    UnitArr(167.34437561, dtype=float32, units="km s**-1")
+    UnitArr(167.344421387, dtype=float32, units="km s**-1")
 '''
 __all__ = ['mass_weighted_mean', 'center_of_mass', 'reduced_inertia_tensor',
            'orientate_at', 'los_velocity_dispersion']

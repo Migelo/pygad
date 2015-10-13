@@ -8,7 +8,7 @@ import subprocess
 
 
 # define all package data
-package_data = {'pygad.units':          ['unit_defs.cfg'],
+package_data = {'pygad.units':          ['units.cfg'],
                 'pygad.gadget':         ['gadget.cfg'],
                 'pygad.snapshot':       ['derived.cfg'],
                 'pygad.luminosities':   ['SSP-model/*']}

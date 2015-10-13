@@ -140,7 +140,8 @@ def read_header(gfile, gformat, endianness):
         header['flg_metals'] = int(hattrs['Flag_Metals'])
         header['flg_entropy_instead_u'] = None #int(hattrs['???'])
         header['flg_doubleprecision'] = int(hattrs['Flag_DoublePrecision'])
-        header['flg_ic_info'] = int(hattrs['Flag_IC_Info'])
+        header['flg_ic_info'] = int(hattrs['Flag_IC_Info']) \
+                if 'Flag_IC_Info' in hattrs else None
         header['lpt_scalingfactor'] = None #float(hattrs['???'])
         header['unused'] = ' '*68  # for consistency
     else:
@@ -201,7 +202,8 @@ def write_header(gfile, header, gformat, endianness):
         hat[u'Flag_Metals'] = header['flg_metals']
         #hat['???'] = header['flg_entropy_instead_u']
         hat[u'Flag_DoublePrecision'] = header['flg_doubleprecision']
-        hat[u'Flag_IC_Info'] = header['flg_ic_info']
+        if header['flg_ic_info'] is not None:
+            hat[u'Flag_IC_Info'] = header['flg_ic_info']
         #hat['???'] = header['lpt_scalingfactor']
         #header['unused']
     else:
@@ -533,13 +535,19 @@ def get_block_info(gfile, gformat, endianness, header):
     if gformat == 3:
         info = {}
         for name, group in gfile.iteritems():
-            if name == 'Header': continue
-            ptype = int(name[-1])   # name is e.g. 'Type0'
+            if not name.startswith('PartType'):
+                continue
+            ptype = int(name[-1])   # name is e.g. 'PartType3'
             # We are accessing the dataset classes, but do not load the actual
             # data! For instance, ds.dtype does not require to load the data (a
             # h5py datastructure is not a np.ndarray!), only actually accessing
             # data within the array (like ds[:] or ds[0]) would load it.
             for ds_name, ds in group.iteritems():
+                # for the EAGLE simulations, it happens that there are
+                # sub-groups (e.g. for the different element abundancies), hence:
+                if not isinstance(ds, h5py.Dataset):
+                    # TODO: read the EAGLE elements!
+                    continue
                 block_name = config.HDF5_to_std_name.get(ds_name, None)
                 if block_name is None:
                     block_name = str(ds_name)

@@ -110,14 +110,14 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         if colors is None and colors_av is None:
             if (len(s)!=0 and len(s.stars)==len(s)) \
                     or (s.descriptor.endswith('stars') and len(s)==0):
-                colors, colors_av = 'age', 'lum_v'
+                colors, colors_av = 'age.in_units_of("Gyr")', 'lum_v'
                 if cmap is None:        cmap = cm_age
                 if clim is None:        clim = [0,13]
                 if cbartitle is None:   cbartitle = '(V-band weighted) age ' + \
                                                     '$[\mathrm{Gyr}]$'
             elif (len(s)!=0 and len(s.gas)==len(s)) \
                     or (s.descriptor.endswith('gas') and len(s)==0):
-                colors, colors_av = 'log10(cste)', 'mass'
+                colors, colors_av = 'log10(temp.in_units_of("K"))', 'mass'
                 if cmap is None:        cmap = 'rainbow'
                 if clim is None:        clim = [3.0,6.0]
                 if cbartitle is None:   cbartitle = r'$\log_{10}(T\,[\mathrm{K}])$'
@@ -144,8 +144,8 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     if len(s) == 0:
         if isinstance(qty,str) and units is None:
             raise RuntimeError('Snapshot is empty and no units for the image are '
-                               'not given -- cannot create an empty map of '
-                               'correct units!')
+                               'given -- cannot create an empty map of correct '
+                               'units!')
         if vlim is None: vlim = [1,2]
         im_bright = UnitArr(vlim[0]*np.zeros(Npx),
                             units if units is not None else
@@ -255,7 +255,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         return fig, ax
 
 def phase_diagram(s, rho_units='Msol/pc**3', T_units='K',
-                  T_threshold='8e4 K', rho_threshold='3 cm**-3',
+                  T_threshold=None, rho_threshold=None,
                   threshold_col='black', **kwargs):
     '''
     Plot a phase diagram with the possiblity to color code it with some other
@@ -279,7 +279,7 @@ def phase_diagram(s, rho_units='Msol/pc**3', T_units='K',
     if 'logscale' not in kwargs:    kwargs['logscale'] = True
     if 'showcbar' not in kwargs:    kwargs['showcbar'] = False
     res = scatter_map(np.log10(s.rho.in_units_of(rho_units)),
-                      np.log10(s.cste.in_units_of(T_units)),
+                      np.log10(s.temp.in_units_of(T_units)),
                       s, **kwargs)
     if kwargs['showcbar']:
         fig, ax, cbar = res

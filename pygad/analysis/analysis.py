@@ -87,7 +87,7 @@ def x_ray_luminosity(snap, lumtable='em.dat', tempbin=None, lx0bin=None,
     norm = UnitArr(1e-14,units='cm**5') * em / \
             (4 * np.pi * (Da*(1+red))**2)
     lx = np.zeros(snap.gas.rho.shape[0])            # array for X-ray luminosity
-    temp = snap.gas.cste*1.3806e-16/1.6022e-9       # gas temperatures in keV    
+    temp = snap.gas.temp*1.3806e-16/1.6022e-9       # gas temperatures in keV
     indices = np.zeros(snap.gas.rho.shape[0])       # array for fitting tempbin
                                                     # indices for gas particles
     dtemp = np.zeros(snap.gas.rho.shape[0])+1e30    # minimal differences of gas

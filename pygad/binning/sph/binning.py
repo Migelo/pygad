@@ -125,11 +125,14 @@ def map_sph_qty(s, extent, qty, Npx, res=None, xaxis=0, yaxis=1,
     if environment.verbose:
         print '  do binning + smoothing for hsml < %d px...' % threshold
     hsml_edges = range(threshold+1) * np.min(res)
+    # enshure same units for smoothing lengthes (hsml_edges, res, and pos are
+    # already consistent):
+    hsml = s.hsml.in_units_of(s.pos.units)
     grid = np.zeros(Npx_w)
     if isinstance(qty, UnitArr):
         grid = UnitArr(grid, getattr(qty,'units',None))
     for i in xrange(len(hsml_edges)-1):
-        mask = (hsml_edges[i]<s.hsml) & (s.hsml<= hsml_edges[i+1])
+        mask = (hsml_edges[i]<hsml) & (hsml<=hsml_edges[i+1])
         sub = s[mask]
         if len(sub) == 0:
             continue
@@ -144,7 +147,7 @@ def map_sph_qty(s, extent, qty, Npx, res=None, xaxis=0, yaxis=1,
     if environment.verbose: print '  done.'
 
     # treat SPH particles with smoothing lengthes larger than hsml_edges[-1]
-    mask = hsml_edges[-1]<s.hsml
+    mask = hsml_edges[-1]<hsml
     sub = s[mask]
     qty = qty[mask]
     if len(sub):
@@ -162,7 +165,7 @@ def map_sph_qty(s, extent, qty, Npx, res=None, xaxis=0, yaxis=1,
         pxcs[:,:,1] = tmp[:,:,1].T
         # make copies for faster access (order of magnitude speed-up)
         pos = sub.pos[:,(xaxis,yaxis)].view(np.ndarray).copy()
-        hsml = sub.hsml.view(np.ndarray).copy()
+        sub_hsml = sub.hsml.in_units_of(s.pos.units).view(np.ndarray).copy()
         qty = qty.view(np.ndarray).copy()
         px_size = float(np.prod(res))
         grid_view = grid.view(np.ndarray)     # faster as well (hopefully)
@@ -170,8 +173,8 @@ def map_sph_qty(s, extent, qty, Npx, res=None, xaxis=0, yaxis=1,
             for iy in xrange(Npx[1]):
                 pxc = pxcs[ix,iy]
                 d = dist(pos, pxc)
-                mask = d < hsml
-                masked_hsml = hsml[mask]
+                mask = d < sub_hsml
+                masked_hsml = sub_hsml[mask]
                 u = d[mask] / masked_hsml
                 w = proj_kernel(u) / masked_hsml**2
                 grid_view[ix,iy] += px_size * np.sum(w * qty[mask])

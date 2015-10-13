@@ -25,7 +25,7 @@ doctests:
     TestResults(failed=0, attempted=3)
     >>> print >> sys.stderr, 'testing module kernels...'
     >>> doctest.testmod(kernels)
-    TestResults(failed=0, attempted=7)
+    TestResults(failed=0, attempted=3)
     >>> print >> sys.stderr, 'testing module gadget...'
     >>> doctest.testmod(gadget)
     TestResults(failed=0, attempted=3)
@@ -90,6 +90,8 @@ if environment.interactive:
 #       a string holding the value of above's function call at the moment of
 #       installation via setup.py
 version = environment.git_descr( environment.module_dir )
+if environment.verbose:
+    print 'imported pygad', version
 
 # make some chosen elements directly visible
 from units import Unit, Units, UnitArr, UnitQty, UnitScalar, dist

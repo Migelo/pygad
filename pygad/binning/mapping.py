@@ -79,8 +79,7 @@ def map_qty(s, extent, qty, av=None, Npx=200, res=None, xaxis=0, yaxis=1, soften
         softening (UnitQty):A list of the softening lengthes of the particle
                             types, that are taken for smoothing the maps of the
                             particles types. It has to have length 6.
-                            Default: UnitArr([0.2, 0.45, 2.52, 20.0, 0.2, 0.2],
-                                             'ckpc / h_0')
+                            Default: None.
         sph (bool):         If set to True, do not use the softening length for
                             smoothing the SPH particles' quantity, but the actual
                             SPH smoothing lengthes, which differ from particle to
@@ -120,9 +119,9 @@ def map_qty(s, extent, qty, av=None, Npx=200, res=None, xaxis=0, yaxis=1, soften
         res = res.in_units_of(s.pos.units, subs=s)
     if xaxis not in range(3) or yaxis not in range(3) or xaxis==yaxis:
         raise ValueError('The x- and y-axis have to be 0, 1, or 2 and different!')
-    if softening is None:
-        softening = UnitArr([0.2, 0.45, 2.52, 20.0, 0.2, 0.2],'ckpc / h_0')
-    softening = UnitQty(softening, s.pos.units, subs=s)
+    if softening is not None:
+        #softening = UnitArr([0.2, 0.45, 2.52, 20.0, 0.2, 0.2],'ckpc / h_0')
+        softening = UnitQty(softening, s.pos.units, subs=s)
 
     if environment.verbose:
         print 'create a %d x %d map (%.4g x %.4g %s)...' % (tuple(Npx) + \
@@ -158,17 +157,24 @@ def map_qty(s, extent, qty, av=None, Npx=200, res=None, xaxis=0, yaxis=1, soften
         if len(sub) == 0:
             continue
 
-        border = int( min(max(1, np.ceil(softening[pt] / res.min())),
-                          0.3 * Npx.max()) )
-        Npx_w = Npx + [2*border]*2
-        extent_w = UnitArr( [extent[:,0] - border*res,
-                             extent[:,1] + border*res],
-                           extent.units).T
+        if softening is not None:
+            border = int( min(max(1, np.ceil(softening[pt] / res.min())),
+                              0.3 * Npx.max()) )
+            Npx_w = Npx + [2*border]*2
+            extent_w = UnitArr( [extent[:,0] - border*res,
+                                 extent[:,1] + border*res],
+                               extent.units).T
 
-        tmp = gridbin(sub.pos[:,(xaxis,yaxis)], qty[sub._mask], extent=extent_w,
-                      bins=Npx_w, nanval=0.0)
-        tmp = smooth(tmp, softening[pt] / res.min(), kernel=proj_kernel)
-        tmp = tmp[border:-border,border:-border]
+            tmp = gridbin(sub.pos[:,(xaxis,yaxis)], qty[sub._mask], extent=extent_w,
+                          bins=Npx_w, nanval=0.0)
+            tmp = smooth(tmp, softening[pt] / res.min(), kernel=proj_kernel)
+            tmp = tmp[border:-border,border:-border]
+        else:
+            Npx_w = Npx
+            extent_w = UnitArr( [extent[:,0], extent[:,1]],
+                               extent.units).T
+            tmp = gridbin(sub.pos[:,(xaxis,yaxis)], qty[sub._mask], extent=extent_w,
+                          bins=Npx_w, nanval=0.0)
         grid += tmp
 
     return grid, np.prod(res)

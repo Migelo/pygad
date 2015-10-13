@@ -339,13 +339,14 @@ class DiscMask(SnapMask):
 
 class IDMask(SnapMask):
     '''
-    Get a index array from IDs
+    Mask a snapshot to a list of given IDs.
+
+    The given IDs do not all have to be present in the snapshot to be masked; the
+    masked one, though does contain all those and only those partilces which IDs
+    are given and present.
     
     Args:
-        IDs from previous snapshot to mask the current one.
-        
-    Returns:
-        Mask for the snapshot s.
+        IDs (array-like):   IDs from previous snapshot to mask the current one.
     '''
     
     def __init__(self, IDs):

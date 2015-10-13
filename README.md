@@ -4,7 +4,7 @@ pygad aims to be a light-weight Python module for analysis of Gadget snapshots.
 It supports all Gadget formats (1, 2, and 3, i.e. HDF5 – with and without info blocks).
 
 Written entirely in Python 2.7, it only requires a running Python environment and the following additional modules:  
-`numpy`, `scipy`, `matplotlib`.
+`numpy`, `scipy`, `matplotlib`, `hdf5`.
 
 ---
 

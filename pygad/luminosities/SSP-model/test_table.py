@@ -13,16 +13,16 @@ def read_table(filename):
     table = np.loadtxt(filename)
     return head, names, table
 
-directory = './'
+directory = '/Users/bernhard/Downloads/SSP_L/'
 
 if __name__ == '__main__':
-    ref = read_table(directory + '/Z_0_0001.dat')
+    ref = read_table(directory + 'Z_0_0001.dat')
     all_fine = True
     for f in os.listdir(directory):
         if not f.startswith('Z_'):
             continue
         Z = float( f[2:8].replace('_','.') )
-        h, n, t = read_table(directory + '/' + f)
+        h, n, t = read_table(directory + f)
         if h != ref[0]:
             print 'wrong header in:', f
             all_fine = False

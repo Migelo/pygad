@@ -4,7 +4,8 @@ A collection of some general (low-level) functions.
 Doctests are in the functions themselves.
 '''
 __all__ = ['static_vars', 'nice_big_num_str', 'float_to_nice_latex', 'perm_inv',
-           'periodic_distance_to', 'positive_simple_slice', 'is_consecutive']
+           'periodic_distance_to', 'positive_simple_slice', 'is_consecutive',
+           'rand_dir']
 
 import numpy as np
 import re
@@ -294,4 +295,33 @@ def is_consecutive(l):
     if isinstance(l, dict):
         raise TypeError('Cannot check whether a dict has consecutive values!')
     return np.all( np.arange(len(l)) + l[0] == list(l) )
+
+def rand_dir(dim=3):
+    '''
+    Create a vectors with uniform spherical distribution.
+
+    Args:
+        dim (int):      The number of dimensions the vector shall have.
+
+    Returns:
+        r (np.ndarray): A vector of shape (dim,) with length of one pointing into
+                        a random direction.
+
+    Examples:
+        >>> N = 1000
+        >>> for dim in [2,3,4]:
+        ...     for n in xrange(10):
+        ...         assert abs( np.linalg.norm(rand_dir(dim=dim)) - 1 ) < 1e-4
+        ...     v = np.empty([N,dim])
+        ...     for n in xrange(N):
+        ...         v[n] = rand_dir(dim=dim)
+        ...     assert np.linalg.norm(v.sum(axis=0))/N < 2.0/np.sqrt(N)
+    '''
+    if dim < 1:
+        raise ValueError('Can only create vectors with at least one dimension!')
+    length = 2.
+    while length > 1.0 or length < 1e-4:
+        r = np.random.uniform(-1.,1., size=dim)
+        length = np.linalg.norm(r)
+    return r / length
 

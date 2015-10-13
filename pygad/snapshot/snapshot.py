@@ -27,14 +27,14 @@ Example:
     >>> s.loadable_blocks()
     ['vel', 'mass', 'ID', 'pos']
     >>> for d in s.deriveable_blocks(): print d,
-    lum_j lum_k lum_h lum_i Epot lum_b Ne metals jzjc RemainingElements lum_r rcyl lum_v lum_u mag_j alpha_el r Fe mag_v lum momentum He Mg E mag_b H mag_i mag_h O N mag_u S angmom mag_k mag mag_r Z Ekin C Ca vcirc Si vrad jcirc
+    lum_j lum_k lum_h lum_i Epot lum_b Ne metals jzjc RemainingElements lum_r rcyl lum_v lum_u mag_j alpha_el r Fe mag_v lum momentum He Mg E mag_b H mag_i mag_h O N mag_u S angmom mag_k mag mag_r Z Ekin temp C Ca vcirc Si vrad jcirc
     >>> assert set(s.all_blocks()) == set(s.loadable_blocks() + s.deriveable_blocks())
     >>> mwgt_pos = np.tensordot(s.mass, s.pos, axes=1).view(UnitArr)
     load block mass... done.
     >>> mwgt_pos.units = s.mass.units * s.pos.units
     >>> com = mwgt_pos / s.mass.sum()
     >>> com
-    UnitArr([ 50.24965286,  50.23574448,  50.130867  ],
+    UnitArr([ 50.25789261,  50.2459259 ,  50.14157867],
             dtype=float32, units="cMpc h_0**-1")
 
     And the physical distance between the center of mass and the unweighted mean
@@ -42,7 +42,7 @@ Example:
     (Conversion from 'ckpc/h_0' to 'kpc' is done automatically: the values for 'a'
     and 'h_0' are taken from the associated snapshot and substitued.)
     >>> np.sqrt(np.sum( (com - s.pos.mean(axis=0))**2 )).in_units_of('Mpc', subs=s)
-    UnitArr(0.0118607562035, dtype=float32, units="Mpc")
+    UnitArr(0.00863040331751, dtype=float32, units="Mpc")
 
     Whereas the physical dimensions of the simulation's box are:
     >>> s.boxsize
@@ -234,11 +234,11 @@ Example:
     ...     b  = getattr(s.get_host_subsnap(name), name)
     ...     b2 = getattr(s2.get_host_subsnap(name), name)
     ...     assert np.all( b == b2 )
-    load block pos... done.
     load block nh... done.
     load block elements... done.
     load block hsml... done.
     load block pot... done.
+    load block inim... done.
     ...
     >>> assert s.redshift == s2.redshift
     >>> for name, prop in s.properties.iteritems():
@@ -353,29 +353,24 @@ def Snap(filename, physical=False, cosmological=None, gad_units=None):
 
     if greader.header['N_files'] > 1:
         s._descriptor += '.0-'+str(greader.header['N_files'])
-        if greader.format == 3:
-            # TODO
-            raise NotImplementedError('Reading HDF5 snapshots spread over ' +
-                                      'multiple files is not yet supported.')
-        else:
+        # enshure Python int's to avoid overflows
+        N_part = list( greader.header['N_part'] )
+        for n in xrange(1, greader.header['N_files']): # first already done
+            filename = base + '.' + str(n) + suffix
+            greader = gadget.FileReader(filename)
+            s._file_handlers.append( greader )
             # enshure Python int's to avoid overflows
-            N_part = list( greader.header['N_part'] )
-            for n in xrange(1, greader.header['N_files']): # first already done
-                filename = base + '.' + str(n) + suffix
-                greader = gadget.FileReader(filename)
-                s._file_handlers.append( greader )
-                # enshure Python int's to avoid overflows
-                for i in xrange(6): N_part[i] += greader.header['N_part'][i]
-                # update loadable blocks:
-                for block in greader.infos():
-                    if block.name in s._block_avail:
-                        s._block_avail[block.name] = [ (o or n) for o,n \
-                                in zip(s._block_avail[block.name], block.ptypes)]
-                    else:
-                        s._block_avail[block.name] = block.ptypes
-            if N_part != s._N_part:
-                # more particles than fit into a native int
-                s._N_part = N_part
+            for i in xrange(6): N_part[i] += greader.header['N_part'][i]
+            # update loadable blocks:
+            for block in greader.infos():
+                if block.name in s._block_avail:
+                    s._block_avail[block.name] = [ (o or n) for o,n \
+                            in zip(s._block_avail[block.name], block.ptypes)]
+                else:
+                    s._block_avail[block.name] = block.ptypes
+        if N_part != s._N_part:
+            # more particles than fit into a native int
+            s._N_part = N_part
 
     # Process block names: make standard names lower case (except ID) and replace
     # spaces with underscores for HDF5 names. Also strip names
@@ -392,6 +387,8 @@ def Snap(filename, physical=False, cosmological=None, gad_units=None):
             new_name = new_name.upper()
         elif new_name == 'z':
             new_name = 'elements'
+        elif new_name == 'cste':
+            new_name = 'temp'
         s._load_name[new_name] = name
         s._block_avail[new_name] = s._block_avail[name]
         del s._block_avail[name]    # blocks should not appear twice, could
@@ -670,6 +667,8 @@ class _Snap(object):
             if block_name in done:
                 continue
             host = self.get_host_subsnap(block_name)
+            if host is None:
+                continue
             if not present or block_name in host.__dict__:
                 if block and name:
                     yield getattr(host, block_name), block_name
@@ -747,16 +746,29 @@ class _Snap(object):
         else:
             first = True
             for reader in root._file_handlers:
+                # getting masses should always return something - even if there is
+                # no such block, but the masses are given in the header only
                 if not reader.has_block(block_name) and block_name!='mass':
                     continue
                 read = reader.read_block(block_name, gad_units=root._gad_units)
+                units = read.units
                 if first:
-                    block = read
+                    blocks = [read[np.sum(reader.header['N_part'][:pt])
+                                    :np.sum(reader.header['N_part'][:pt+1])] \
+                                for pt in xrange(6)]
                     first = False
                 else:
-                    block = np.concatenate((block, read), axis=0).view(UnitArr)
-                    block.units = read.units
+                    for pt in xrange(6):
+                        if not reader.header['N_part'][pt]:
+                            continue
+                        read_pt = read[np.sum(reader.header['N_part'][:pt])
+                                       :np.sum(reader.header['N_part'][:pt+1])]
+                        blocks[pt] = np.concatenate((blocks[pt], read_pt),
+                                                    axis=0).view(UnitArr)
+                        blocks[pt].units = units
             assert not first
+            block = np.concatenate(blocks, axis=0).view(UnitArr)
+            block.units = units
         block = block.view(SimArr)
         block._snap = self
         if environment.verbose: print 'done.'
@@ -1034,14 +1046,24 @@ class _Snap(object):
 
         # prepare evaluator
         from numpy.core.umath_tests import inner1d
+        import derived
         namespace = {'dist':dist, 'Unit':Unit, 'Units':Units, 'UnitArr':UnitArr,
                      'UnitQty':UnitQty, 'UnitScalar':UnitScalar,
                      'inner1d':inner1d, 'calc_mags':calc_mags,
                      'perm_inv':utils.perm_inv, 'solar':physics.solar,
-                     'G':physics.G, 'm_p':physics.m_p}
+                     'WMAP7':physics.WMAP7, 'Planck2013':physics.Planck2013,
+                     'FLRWCosmo':physics.FLRWCosmo, 'a2z':physics.a2z,
+                     'z2a':physics.z2a}
+        for n,obj in [(n,getattr(derived,n)) for n in dir(derived)]:
+            if hasattr(obj, '__call__') and n!='ptypes_and_deps' \
+                    and n!='read_cfg':
+                namespace[n] = obj
+        for n,obj in [(n,getattr(physics,n)) for n in dir(physics)]:
+            if isinstance(obj, UnitArr):
+                namespace[n] = obj
         e = utils.Evaluator(namespace, my_math=np)
         # load properties etc. from this snapshot only if needed in the expression
-        namespace = {}
+        namespace = {'self':self}
         for name, el in utils.iter_idents_in_expr(expr, True):
             if name not in e.namespace and name not in namespace:
                 try:

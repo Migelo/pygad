@@ -13,9 +13,9 @@ Example:
     >>> sum(solar.Z_massfrac)
     0.99971229335
 '''
-__all__ = ['alpha_elements', 'G', 'c', 'm_p', 'm_n', 'm_u', 'm_e', 'solar',
-           'SMH_Moster_2013', 'SMH_Behroozi_2013', 'SMH_Kravtsov_2014',
-           'Reff_van_der_Wel_2014', 'SFR_Elbaz_2007']
+__all__ = ['alpha_elements', 'G', 'c', 'kB', 'N_A', 'R', 'm_p', 'm_n', 'm_u',
+           'm_e', 'solar', 'SMH_Moster_2013', 'SMH_Behroozi_2013',
+           'SMH_Kravtsov_2014', 'Reff_van_der_Wel_2014', 'SFR_Elbaz_2007']
 
 import numpy as np
 import sys
@@ -34,6 +34,11 @@ G = UnitArr(scipy.constants.value('Newtonian constant of gravitation'),
                                 .replace('^','**'))
 c = UnitArr(scipy.constants.value('speed of light in vacuum'),
             scipy.constants.unit('speed of light in vacuum').replace('^','**'))
+kB = UnitArr(scipy.constants.value('Boltzmann constant'),
+             scipy.constants.unit('Boltzmann constant').replace('^','**'))
+N_A = UnitArr(scipy.constants.value('Avogadro constant'),
+              scipy.constants.unit('Avogadro constant').replace('^','**'))
+R = N_A * kB    # ideal gas constant
 m_p = UnitArr(scipy.constants.value('proton mass'),
               scipy.constants.unit('proton mass').replace('^','**'))
 m_n = UnitArr(scipy.constants.value('neutron mass'),
@@ -139,11 +144,9 @@ def SMH_Moster_2013(M_halo, z=0.0, return_scatter=False):
     '''
     Calculate the stellar mass to halo mass ratio as in Moster et al. (2013).
 
-    The scatter of this relation seems to be 0.15 dex:
-    "Therefore we assume an intrinsic scatter around this average relation when
-    assigning the stellar mass to an individual galaxy: we draw a stellar mass m
-    from a lognormal distribution with a mean value given by equation (2) and
-    with a scatter of sigma_m(log m) = 0.15."
+    The formula was given by Benjamin Moster in a private communication. It simply
+    comes from a simple propagation of uncertainties of the formula of the mean,
+    plus a constant 0.15 dex for a "physical scatter" (as explained in the paper).
 
     Args:
         M_halo (UnitScalar):    The halo mass (in solar masses, if as float).
@@ -151,32 +154,32 @@ def SMH_Moster_2013(M_halo, z=0.0, return_scatter=False):
         return_scatter (bool):  Whether to also return the scatter.
 
     Returns:
-        SMH (float):            The stellar mass to halo mass ratio.
+        SMH (float):                The stellar mass to halo mass ratio.
        [scatter ([float, float]):   The scatter.]
 
     Example:
         >>> for M in [1e11, 1e12, 1e13]:
         ...     print SMH_Moster_2013(M)
-        0.0101419301066
-        0.0342751518561
-        0.00973565742726
+        0.010129827533
+        0.0342965939809
+        0.00974028215475
         >>> for z in [0.5, 1.0, 2.0, 4.0]:
-        ...     print SMH_Moster_2013(1e11,z)
-        ...     print SMH_Moster_2013(1e13,z)
-        0.00432059949352
-        0.00995326012693
-        0.00324108591865
-        0.0103224556003
-        0.0026585530816
-        0.0105613347592
-        0.00239677365737
-        0.0103662206344
+        ...     print SMH_Moster_2013(1e11,z,return_scatter=True)
+        ...     print SMH_Moster_2013(1e13,z,return_scatter=True)
+        (0.004314181996911216, [0.0013140763985384505, 0.014163686619114201])
+        (0.009955587054568093, [0.0040431561246770777, 0.024513946665613771])
+        (0.003235536108623059, [0.00087465807272739534, 0.011968898746409244])
+        (0.010323427157890868, [0.0039215586877591139, 0.027176221693924904])
+        (0.0026531006668289547, [0.00060215465142679015, 0.011689593581399173])
+        (0.010560160483693697, [0.0037325186267171905, 0.02987714211072727])
+        (0.002390900353994381, [0.00044896686807466534, 0.012732352672802963])
+        (0.0103622356309934, [0.0034261919431899795, 0.03133972907900081])
     '''
     param = {
-            'M1':    [11.590 , 1.195 ],
-            'N':     [ 0.0351,-0.0247],
-            'beta':  [ 1.376 ,-0.826 ],
-            'gamma': [ 0.608 , 0.329 ],
+            'M1':    [11.590470, 1.194913],
+            'N':     [ 0.035113,-0.024729],
+            'beta':  [ 1.376177,-0.825820],
+            'gamma': [ 0.608170, 0.329275],
             }
     one_minus_a = float(z / (z + 1.0))
 
@@ -190,11 +193,42 @@ def SMH_Moster_2013(M_halo, z=0.0, return_scatter=False):
     SHM = 2.0 * inter['N'] / ( (M_halo/inter['M1'])**-inter['beta'] +
                                (M_halo/inter['M1'])**inter['gamma'] )
     if return_scatter:
-        warnings.warn('Scatter of 0.15 dex in Moster et al. (2013) not shure!')
-        #print >> sys.stderr, 'WARNING: scatter of 0.15 dex in Moster et al. (2013) not shure!'
+        param.update( {
+                'M1e':    [ 0.236067  , 0.353477  ],
+                'Ne':     [ 0.00577173, 0.00693815],
+                'betae':  [ 0.19344   , 0.285018  ],
+                'gammae': [ 0.0993274 , 0.212919  ],
+                } )
+
+        eta = M_halo / inter['M1']
+        alpha = eta**-inter['beta'] + eta**inter['gamma']
+        dmd = {}
+        dmd['M1'] = [ (inter['gamma']*eta**inter['gamma'] \
+                        - inter['beta']*eta**(-inter['beta'])) / alpha,
+                      (inter['gamma']*eta**inter['gamma'] \
+                        - inter['beta']*eta**(-inter['beta'])) / alpha \
+                        * one_minus_a ]
+        dmd['N'] = [ np.log10(np.e) / inter['N'],
+                     np.log10(np.e) / inter['N'] * one_minus_a ]
+        dmd['beta'] = [ np.log10(np.e) / alpha * np.log(eta) \
+                            * eta**(-inter['beta']),
+                        np.log10(np.e) / alpha * np.log(eta) \
+                            * eta**(-inter['beta']) * one_minus_a ]
+        dmd['gamma'] = [ -np.log10(np.e) / alpha * np.log(eta) \
+                            * eta**inter['gamma'],
+                         -np.log10(np.e) / alpha * np.log(eta) \
+                            * eta**inter['gamma'] * one_minus_a ]
+        sigma = 0.0
+        for key in dmd.iterkeys():
+            sigma += ( dmd[key][0] * param[key+'e'][0] )**2 \
+                    + ( dmd[key][1] * param[key+'e'][1] )**2
+        sigma = np.sqrt( sigma ) + 0.15
+
         log10_SM = np.log10(SHM*M_halo)
-        xi = 0.15
-        return SHM, [10**(log10_SM-xi)/M_halo, 10**(log10_SM+xi)/M_halo]
+        lower, upper = 10**(log10_SM-sigma)/M_halo, 10**(log10_SM+sigma)/M_halo
+
+    if return_scatter:
+        return SHM, [lower, upper]
     else:
         return SHM
 
@@ -220,7 +254,7 @@ def SMH_Behroozi_2013(M_halo, z=0.0, return_scatter=False):
         return_scatter (bool):  Whether to also return the scatter.
 
     Returns:
-        SMH (float):            The stellar mass to halo mass ratio.
+        SMH (float):                The stellar mass to halo mass ratio.
        [scatter ([float, float]):   The scatter.]
 
     Example:
@@ -279,7 +313,7 @@ def SMH_Kravtsov_2014(M_halo, type='200c', return_scatter=False):
         return_scatter (bool):  Whether to also return the scatter.
 
     Returns:
-        SMH (float):            The stellar mass to halo mass ratio.
+        SMH (float):                The stellar mass to halo mass ratio.
        [scatter ([float, float]):   The scatter.]
 
     Example:
