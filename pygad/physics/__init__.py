@@ -6,7 +6,7 @@ Also doctest other parts of this sub-module:
     >>> doctest.testmod(quantities)
     TestResults(failed=0, attempted=17)
     >>> doctest.testmod(cosmology)
-    TestResults(failed=0, attempted=32)
+    TestResults(failed=0, attempted=41)
 '''
 
 from quantities import *

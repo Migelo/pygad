@@ -151,6 +151,23 @@ class FLRWCosmo(object):
         UnitArr(70.0, units="km s**-1 Mpc**-1")
         >>> cosmo.H(z=1.0)
         UnitArr(123.247718032, units="km s**-1 Mpc**-1")
+        >>> z = 1.234
+        >>> cosmo.comoving_distance(z)
+        UnitArr(3.83915090517, units="Gpc")
+        >>> cosmo.trans_comoving_distance(z)
+        UnitArr(3.83915090517, units="Gpc")
+        >>> cosmo.angular_diameter_distance(z)
+        UnitArr(1.71850980536, units="Gpc")
+        >>> cosmo.luminosity_distance(z)
+        UnitArr(8.57666312215, units="Gpc")
+        >>> cosmo.apparent_angle('1 kpc', z)
+        UnitArr(0.120025388045, units="arcsec")
+        >>> cosmo.angle_to_length('1 arcsec', z)
+        UnitArr(8.33157064758, units="kpc")
+        >>> cosmo.angle_to_length(1e-6, z)
+        UnitArr(1.71850980536, units="kpc")
+        >>> cosmo.angle_to_length(cosmo.apparent_angle('1 kpc',z), z)
+        UnitArr(1.0, units="kpc")
     '''
 
     def __init__(self, h_0, Omega_Lambda, Omega_m, Omega_b=None, sigma_8=None,
@@ -320,7 +337,7 @@ class FLRWCosmo(object):
         # this import is suspended until here, because it takes some time
         from scipy.integrate import quad
 
-        if z < -1:
+        if z <= -1:
             raise ValueError('Redshift cannot be smaller -1.')
         t, err = quad(lambda zz: 1.0/((1.0+zz)*self._E(zz)), 0.0, z)
         # divide by H to get t in units of 1/(km s**-1 Mpc**-1)
@@ -359,7 +376,7 @@ class FLRWCosmo(object):
         Args:
             z (float):  The redshift to calculate the cosmic time for. 
         '''
-        return self.universe_age() - self.lookback_time(z=z)
+        return self.lookback_time(z=np.inf) - self.lookback_time(z=z)
 
     def lookback_time_2z(self, t):
         '''
@@ -388,4 +405,99 @@ class FLRWCosmo(object):
         t = float(t.in_units_of('Gyr'))
         return brentq(lambda z: self.lookback_time_in_Gyr(z) - t, -1e-10, 1e5,
                       maxiter=1000, disp=True)
+
+    def comoving_distance(self, z, units='Gpc'):
+        '''
+        Comoving distance for an object with redshift z.
+
+        Args:
+            z (float):          The redshift to calculate the distance for.
+            units (str, Unit):  The units to return the distance in.
+        
+        Returns:
+            comoving_distance (UnitArr):    Comoving distance.
+        '''
+        from scipy.integrate import quad
+
+        if z <= -1:
+            raise ValueError('Redshift cannot be smaller -1.')
+        d_c, err = quad(lambda zz: 1.0/self._E(zz), 0.0, z)
+        # divide by H to get d_c (com. dist. over speed of light) in units of
+        # 1/(km s**-1 Mpc**-1)
+        d_c /= 100.0 * self._h_0
+        # 978.461942380137 Gyr = 1 / (km*s**-1 * Mpc**-1)
+        d_c *= 978.461942380137
+        return (c * UnitArr(d_c,'Gyr')).in_units_of(units, subs={'a':1.0})
+
+    def trans_comoving_distance(self, z, units='Gpc'):
+        '''
+        The transverse comoving distance for an object with redshift z.
+
+        Args and Returns as in comoving_distance.
+        '''
+        dc = self.comoving_distance(z=z, units=units)
+        if self.Omega_k == 0.0:
+            return dc
+
+        dh = (c / self.H()).in_units_of(units)
+        if self.Omega_k > 0.0:
+            sqrt_Ok = np.sqrt(self.Omega_k)
+            return dh / sqrt_Ok * np.sinh(sqrt_Ok * dc / dh)
+        else:   # self.Omega_k < 0.0
+            sqrt_Ok = np.sqrt(-self.Omega_k)
+            return dh / sqrt_Ok * np.sin(sqrt_Ok * dc / dh)
+
+    def angular_diameter_distance(self, z, units='Gpc'):
+        '''
+        The angular diameter distance for an object with redshift z.
+
+        Args and Returns as in comoving_distance.
+        '''
+        return self.trans_comoving_distance(z, units=units) / (1.0+z)
+
+    def luminosity_distance(self, z, units='Gpc'):
+        '''
+        The luminosity distance for an object with redshift z.
+
+        Args and Returns as in comoving_distance.
+        '''
+        return (1.0+z) * self.trans_comoving_distance(z, units=units)
+
+    def apparent_angle(self, l, z, units='arcsec'):
+        '''
+        Convert a physical extent of some object at redshift z to its apparent
+        angle.
+
+        Args:
+            l (UnitScalar):     The physical length of the object.
+            z (float):          The redshift of the object.
+            units (str, Unit):  The units to return the angle in (has to be an
+                                angular unit, cannot be unitless!).
+
+        Returns:
+            theta (UnitArr):    The object's apparent angle.
+        '''
+        l = UnitScalar(l)
+        dA = self.angular_diameter_distance(z, units=l.units)
+        theta = UnitArr((l/dA).in_units_of(1), 'rad')
+        return theta.in_units_of(units)
+
+    def angle_to_length(self, theta, z, units='kpc'):
+        '''
+        Convert an apparent angle of some object at redshift z into its physical
+        extent.
+
+        Args:
+            theta (UnitScalar, float):
+                                The apparent angle of the object. If a float is
+                                passed, it is interpreted as radiants.
+            z (float):          The redshift of the object.
+            units (str, Unit):  The units to return the extent in.
+
+        Returns:
+            ext (UnitArr):      The object's physical extent.
+        '''
+        theta = UnitScalar(theta, 'rad')
+        dA = self.angular_diameter_distance(z, units=units)
+        return float(theta) * dA
 
