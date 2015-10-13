@@ -510,8 +510,12 @@ class UnitArr(np.ndarray):
             self.units = units
         else:
             # not a_form of z_form
+            fac = self._units.in_units_of(units, subs=subs)
             view = self.view(np.ndarray)
-            view *= self._units.in_units_of(units, subs=subs)
+            try:
+                view *= fac
+            except:
+                view *= np.array(fac, dtype=view.dtype)
             self.units = units
 
     def __getitem__(self, i):
