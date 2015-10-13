@@ -1,0 +1,94 @@
+'''
+Definitions of the kernels.
+
+Note:
+    Outside the kernels' support, the function return undefined values! If
+    arbitrary values of radius are use, it has to be taken care of those outside
+    the support manually.
+                                                                              r
+    Furthermore the arguments are always normed by the smoothing length: u = --- .
+                                                                             2 h
+
+Examples and doctests:
+    >>> cubic(0.0)
+    2.5464790894703255
+    >>> cubic(0.5)
+    0.6366197723675
+    >>> cubic(1.0)
+    0.0
+    >>> Wendland_C4_vec(np.linspace(0,1,12))
+    array([  4.92385605e+00,   4.56340351e+00,   3.65811505e+00,
+             2.55311070e+00,   1.54488080e+00,   7.95912455e-01,
+             3.36297380e-01,   1.08637670e-01,   2.33707743e-02,
+             2.44034893e-03,   4.47381991e-05,   0.00000000e+00])
+
+    Test for the equality of all the vector versions and for normation:
+    >>> for name, kernel in kernels.iteritems():
+    ...     kernel_vec = vector_kernels[name]
+    ...     u = np.linspace(0,1,100)
+    ...     w = kernel_vec(u)
+    ...     for uu,ww in zip(u,w):
+    ...         if not np.all(np.abs(ww - kernel(uu)) < 1e-6):
+    ...             print name, 'has issues with its vector version'
+    ...             break
+    ...     I = np.sum(4*np.pi*u**2 * w) / (len(w)-1)
+    ...     if not abs(I-1.0) < 1e-6:
+    ...         print name, 'is not normed to 1, but to', I
+'''
+
+import numpy as np
+
+def cubic(u):
+    '''
+    The cubic kernel:
+
+        8   /   2           \               1
+        -- | 6 u (u - 1) + 1 |      if  u < -
+        pi  \               /               2
+        
+          16  /     \ 3
+        - -- | 1 - u |              otherwise
+          pi  \     /
+
+    where u = r/(2h) <= 1.
+    '''
+    if u < 0.5:
+        return 2.5464790894703255 * (1.+6.*(u-1.)*u**2)
+    else:
+        return 5.09295817894 * (1.-u)**3
+def cubic_vec(u):
+    '''The vector version of the cubic kernel.'''
+    w = np.empty(len(u))
+    mask = u < 0.5
+    u_masked = u[mask]
+    w[mask] = 2.5464790894703255 * (1.+6.*(u_masked-1.)*u_masked**2)
+    mask = ~mask
+    u_masked = u[mask]
+    w[mask] = 5.09295817894 * (1.-u_masked)**3
+    return w
+
+def Wendland_C4(u):
+    '''
+    The Wendland C4 kernel:
+
+                   6  /    2          \ 
+        495 (1 - u)  | 35 u            |
+        ------------ | ----- + 6 u + 1 |
+           32 pi      \  3            /
+
+    where u = r/(2h) <= 1.
+    '''
+    return 4.923856051905513 * (1.-u)**6 * (1. + (6. + 11.6666666667*u)*u)
+def Wendland_C4_vec(u):
+    '''The vector version of the Wendland C4 kernel.'''
+    return 4.923856051905513 * (1.-u)**6 * (1. + (6. + 11.6666666667*u)*u)
+
+kernels = {
+        'cubic':        cubic,
+        'Wendland C4':  Wendland_C4,
+        }
+vector_kernels = {
+        'cubic':        cubic_vec,
+        'Wendland C4':  Wendland_C4_vec,
+        }
+

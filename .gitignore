@@ -1,0 +1,12 @@
+# compiled python files
+*.pyc
+
+# iPython Notebook checkpoints
+.ipynb_checkpoints
+
+# weird MacOS files
+.DS_store
+
+# directory with sample snapshots
+snaps
+

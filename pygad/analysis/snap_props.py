@@ -1,0 +1,191 @@
+'''
+A collection of (sub-)snapshot wide analysis functions.
+
+Example:
+    >>> from ..environment import module_dir
+    >>> from ..snapshot import Snap
+    >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=False)
+    >>> mass_weighted_mean(s, 'pos')
+    load block pos... done.
+    load block mass... done.
+    UnitArr([ 34799.42578125,  33686.4765625 ,  32010.89453125],
+            dtype=float32, units="ckpc h_0**-1")
+    >>> center_of_mass(s)
+    UnitArr([ 34799.42578125,  33686.4765625 ,  32010.89453125],
+            dtype=float32, units="ckpc h_0**-1")
+    >>> Translation([-34792.2, -35584.8, -33617.9]).apply(s)
+    apply Translation to "pos" of "snap_M1196_4x_320"... done.
+    >>> sub = s[s.r < '20 kpc']
+    derive block r... done.
+    >>> orientate_at(sub, 'L', total=True)
+    load block vel... done.
+    derive block momentum... done.
+    derive block angmom... done.
+    apply Rotation to "vel" of "snap_M1196_4x_320"... done.
+    apply Rotation to "pos" of "snap_M1196_4x_320"... done.
+    >>> sub.angmom.sum(axis=0)
+    derive block momentum... done.
+    derive block angmom... done.
+    UnitArr([  3.35956104e-02,  -1.74680334e-02,   1.10114893e+04],
+            dtype=float32, units="1e+10 ckpc h_0**-1 Msol h_0**-1 km s**-1")
+    >>> redI = reduced_inertia_tensor(sub.baryons)
+    derive block r... done.
+    >>> redI
+    matrix([[ 1.82747424, -0.23583228,  0.19712902],
+            [-0.23583228,  0.19789133,  0.0371508 ],
+            [ 0.19712902,  0.0371508 ,  0.42077191]])
+    >>> orientate_at(s, 'red I', redI)
+    apply Rotation to "vel" of "snap_M1196_4x_320"... done.
+    apply Rotation to "pos" of "snap_M1196_4x_320"... done.
+    >>> redI = reduced_inertia_tensor(sub.baryons)
+    derive block r... done.
+    >>> redI[np.abs(redI)<1e-9] = 0.0
+    >>> redI
+    matrix([[ 0.14794385,  0.        ,  0.        ],
+            [ 0.        ,  0.41260123,  0.        ],
+            [ 0.        ,  0.        ,  1.8855924 ]])
+    >>> los_velocity_dispersion(sub)
+    UnitArr(167.34437561, dtype=float32, units="km s**-1")
+'''
+__all__ = ['mass_weighted_mean', 'center_of_mass', 'reduced_inertia_tensor',
+           'orientate_at', 'los_velocity_dispersion']
+
+import numpy as np
+from ..units import *
+from ..transformation import *
+
+def mass_weighted_mean(s, qty):
+    '''
+    Calculate the mass weighted mean of some quantity, i.e.
+    sum(mass[i]*qty[i])/sum(mass).
+    
+    Args:
+        s (Snap):           The (sub-)snapshot the quantity belongs to (the masses
+                            are taken from it, too).
+        qty (str, UnitArr): The quantity to average. It can either be the block
+                            itself (make shure it already has the appropiate
+                            shape), or a expression that can be passed to Snap.get
+                            (e.g. simply a name of a block).
+
+    Returns:
+        mean (UnitArr):     The mass weighted mean.
+    '''
+    if isinstance(qty, str):
+        if hasattr(s,qty):
+            qty = getattr(s, qty)
+        else:
+            qty = s.get(qty)
+    else:
+        qty = UnitArr(qty)
+    if len(s) == 0:
+        return UnitArr([0]*qty.shape[-1], units=qty.units, dtype=qty.dtype)
+    # only using the np.ndarray views does not speed up
+    mwgt = np.tensordot(s.mass, qty, axes=1).view(UnitArr)
+    mwgt.units = s.mass.units * qty.units
+    normalized_mwgt = mwgt / s.mass.sum()
+    return normalized_mwgt
+
+def center_of_mass(snap):
+    '''Calculate and return the center of mass of this snapshot.'''
+    return mass_weighted_mean(snap, 'pos')
+
+def reduced_inertia_tensor(s):
+    '''
+    Calculate the 'reduced' inertia tensor by Raini and Steinmetz (2005) of this
+    ensemble.
+
+    $I_ij = \\sum_k m_k \\frac{r_{k,i} r_{k,j}}{r_k^2}$
+    I_ij = sum_k m_k (r_ki r_kj) / r_k^2
+
+    Args:
+        s (Snap):   The (sub-)snapshot to calculate the reduced inertia tensor of.
+
+    Returns:
+        I (np.matrix):  The reduced inertia tensor. (Without units, but they would
+                        be s.mass.units/s.pos.units.)
+    '''
+    # a bit faster with the np.ndarray views
+    r2 = (s.r**2).view(np.ndarray)
+    m = s.mass.view(np.ndarray)
+    pos = s.pos.view(np.ndarray)
+    I_xx = np.sum(m * pos[:,0]**2 / r2)
+    I_yy = np.sum(m * pos[:,1]**2 / r2)
+    I_zz = np.sum(m * pos[:,2]**2 / r2)
+    I_xy = np.sum(m * pos[:,0]*pos[:,1] / r2)
+    I_xz = np.sum(m * pos[:,0]*pos[:,2] / r2)
+    I_yz = np.sum(m * pos[:,1]*pos[:,2] / r2)
+    I = np.matrix([[I_xx, I_xy, I_xz], \
+                   [I_xy, I_yy, I_yz], \
+                   [I_xz, I_yz, I_zz]], dtype=np.float64)
+    return I
+
+def orientate_at(s, mode, qty=None, total=False, remember=True):
+    '''
+    Orientate the (sub-)snapshot at a given quantity.
+
+    Possible modes:
+        'vec'/'L':          Orientate such that the given vector alignes with the
+                            z-axis. If no vector is given and the mode is 'L', the
+                            angular momentum is used.
+        'tensor'/'red I':   Orientate at the eigenvectors of a tensor. The
+                            eigenvector with the smallest eigenvalue is
+                            orientated along the z-axis and the one with the
+                            largest eigenvalue along the x-axis. If no tensor is
+                            given and the mode is 'red I', the reduced inertia
+                            tensor is used.
+
+    Args:
+        s (Snap):       The snapshot to orientate
+        mode (str):     The mode of orientation. See above.
+        qty (...):      The quantity to use for orientation. If it is None, it is
+                        calculated on the fly (for the passed (sub-)snapshot).
+        total (bool):   Whether to apply the transformation to the entire snapshot
+                        or just the passed sub-snapshot. (Cf. Transformation.apply
+                        for more information!)
+        remember (bool):
+                        Remember the transformation for blocks loaded later. (Cf.
+                        Transformation.apply for more information!)
+    '''
+    if qty is None:
+        if mode == 'L':
+            qty = s.angmom.sum(axis=0)
+        elif mode == 'red I':
+            qty = reduced_inertia_tensor(s)
+        else:
+            raise ValueError('No quantity passed to orientate at!')
+
+    if mode in ['vec', 'L']:
+        T = transformation.rot_to_z(qty)
+    elif mode in ['tensor', 'red I']:
+        if np.max(np.abs(qty.H-qty)) > 1e-6:
+            raise ValueError('The matrix passed as qty has to be Hermitian!')
+        vals, vecs = np.linalg.eigh(qty)
+        i = np.argsort(vals)
+        try:
+            T = transformation.Rotation(vecs[:,i].T)
+        except ValueError:
+            # probably not a proper rotation... (not right-handed)
+            vecs[:,i[1]] *= -1
+            T = transformation.Rotation(vecs[:,i].T)
+        except:
+            raise
+    else:
+        raise ValueError('unknown orientation mode \'%s\'' % what)
+
+    T.apply(s, total=total, remember=remember)
+
+def los_velocity_dispersion(s, proj=2):
+    '''
+    Calculate (mass-weighted) line-of-sight velocity dispersion.
+
+    Args:
+        s (Snap):       The (sub-)snapshot to use.
+        proj (int):     The line of sight is along this axis (0=x, 1=y, 2=z).
+    '''
+    # array of los velocities
+    v = s.vel[:,proj].ravel()
+    av_v = mass_weighted_mean(s, v)
+    sigma_v = np.sqrt( mass_weighted_mean(s, (v-av_v)**2) )
+    
+    return sigma_v
+
