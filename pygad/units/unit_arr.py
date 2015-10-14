@@ -130,7 +130,7 @@ def UnitQty(obj, units=None, subs=None, dtype=None):
 
     if units is not None:
         if obj.units is not None:
-            obj.convert_to(units, subs=subs)
+            obj = obj.in_units_of(units, subs=subs)
         else:
             obj.units = units
 
