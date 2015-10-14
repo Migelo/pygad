@@ -1,5 +1,7 @@
 # compiled python files
 *.pyc
+# egg info folder created by `python setup.py develop`
+pygad.egg-info
 
 # iPython Notebook checkpoints
 .ipynb_checkpoints
@@ -7,8 +9,8 @@
 # weird MacOS files
 .DS_store
 
-# directory with sample snapshots
+# some directories and downloads you might have from the bitbucket side
 snaps
-# directory of wiki
 wiki
+QuickStart.ipynb
 

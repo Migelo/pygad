@@ -2,7 +2,7 @@
 
 This module is a light-weight Python module for analysis of Gadget snapshots.
 It supports all Gadget formats (in our experience better than [pynbody]).
-pygad is inspired and influenced by [pynbody].
+[pygad][] is inspired and influenced by [pynbody].
 
 ---
 
@@ -31,7 +31,7 @@ If you have problems or want a more detailed explanation, see the [wiki][WikiIns
 
 ### Configure
 
-You probably need to customise pygad's config files for your specific type of snapshots (even HDF5 block names can differ).
+You probably need to customise [pyga][]d's config files for your specific type of snapshots (even HDF5 block names can differ).
 This goes a little beyond the scope of a README.
 Be referred to the [wiki][WikiConfig].
 
@@ -39,7 +39,8 @@ Be referred to the [wiki][WikiConfig].
 
 For a starter you could try something like the following in iPython:
 
-```python
+```
+#!python
 import pygad
 import matplotlib.pyplot as plt
 s = pygad.Snap('path/to/snap')
@@ -50,7 +51,7 @@ ax.add_artist(plot.Circle([0,0], R200, facecolor='none', edgecolor='w'))
 plt.draw()
 ```
 
-There is a iPython Notebook called `QuickStart.ipnb` in the [bitbucket downloads][Downloads] that shows some more of the features.
+There is a iPython Notebook called `QuickStart.ipynb` in the [bitbucket downloads][Downloads] that shows some more of the features.
 Please, also read the [wiki][WikiHome].
 
 ---
@@ -61,6 +62,7 @@ If you have any problems, ideas, found bugs, or want to contribute in some way, 
 contact me:  
 [broett@mpa-garching.mpg.de](mailto:broett@mpa-garching.mpg.de)
 
+[pygad]: https://bitbucket.org/broett/pygad
 [pynbody]: https://pynbody.github.io
 [Downloads]: https://bitbucket.org/broett/pygad/downloads
 [WikiHome]: https://bitbucket.org/broett/pygad/wiki/Home
