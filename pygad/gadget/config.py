@@ -12,6 +12,8 @@ Example:
     ['gands', 'dm', 'gas', 'lowres', 'bh', 'sandbh', 'stars', 'highres', 'baryons']
     >>> families['dm']
     [1, 2, 3]
+    >>> general
+    {'kernel': 'Wendland C4', 'IMF': 'Kroupa'}
     >>> get_block_units('RHO ')
     Unit("1e+10 Msol ckpc**-3 h_0**2")
     >>> HDF5_to_std_name['Coordinates'], HDF5_to_std_name['ParticleIDs']
@@ -23,17 +25,22 @@ Example:
 '''
 __all__ = ['families', 'elements', 'default_gadget_units', 'block_units',
            'std_name_to_HDF5', 'HDF5_to_std_name', 'read_config',
-           'get_block_units']
+           'get_block_units', 'general']
 
 from ConfigParser import SafeConfigParser
 from ..units import *
 from os.path import exists
 from .. import environment
+from .. import kernels
 
 # already with some basic default values
 families = {'gas':[0], 'stars':[4], 'dm':[1,2,3], 'bh':[5], 'baryons':[0,4,5]}
 block_order = []
 elements = []
+general = {
+    'kernel': '<undefined>',
+    'IMF': '<undefined>',
+    }
 # def. units have to be strings - they are used as replacements
 default_gadget_units = {
     'LENGTH':   'ckpc/h_0',
@@ -65,7 +72,7 @@ def read_config(config):
         config (list):  list of possible filenames for the config file.
     '''
     global families, block_order, elements, default_gadget_units, block_units, \
-           std_nameto_HDF5, HDF5_to_std_name
+           std_nameto_HDF5, HDF5_to_std_name, general
 
     def test_section(cfg, section, entries):
         if not cfg.has_section(section):
@@ -88,6 +95,7 @@ def read_config(config):
     cfg.optionxform = str
     cfg.read(filename)
 
+    test_section(cfg, 'general', ['kernel', 'IMF'])
     test_section(cfg, 'families', ['gas', 'stars', 'dm', 'bh', 'baryons'])
     test_section(cfg, 'base units', ['LENGTH', 'VELOCITY', 'MASS'])
 
@@ -103,6 +111,14 @@ def read_config(config):
     while elements: elements.pop()
     if cfg.has_option('general', 'elements'):
         elements += map(str.strip, cfg.get('general', 'elements').split(','))
+    kernel = cfg.get('general', 'kernel')
+    if kernel not in kernels.kernels:
+        raise ValueError('Kernel "%s" is unknown!' % kernel)
+    general['kernel'] = kernel
+    IMF = cfg.get('general', 'IMF')
+    if IMF not in ['Kroupa', 'Salpeter', 'Chabrier']:
+        raise ValueError('IMF "%s" is unknown!' % IMF)
+    general['IMF'] = IMF
 
     default_gadget_units.clear()
     default_gadget_units.update( cfg.items('base units') )

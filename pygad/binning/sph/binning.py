@@ -54,9 +54,10 @@ from ...units import *
 from ..core import *
 from ...utils import *
 from ... import environment
+from ... import gadget
 
 def map_sph_qty(s, extent, qty, Npx, res=None, xaxis=0, yaxis=1,
-                kernel='Wendland C4', threshold=20):
+                kernel=None, threshold=20):
     '''
     A fast pure-Python routine for binning SPH quantities onto a map.
 
@@ -77,7 +78,8 @@ def map_sph_qty(s, extent, qty, Npx, res=None, xaxis=0, yaxis=1,
                             both, x and y, or seperate values for them.
         xaxis (int):        The coordinate for the x-axis. (0:'x', 1:'y', 2:'z')
         yaxis (int):        The coordinate for the y-axis. (0:'x', 1:'y', 2:'z')
-        kernel (str):       The kernel to use for smoothing.
+        kernel (str):       The kernel to use for smoothing. (By default use the
+                            kernel defined in 'gadget.cfg'.)
         threshold (int):    Up to this smoothing length over pixel size (hsml/px),
                             the particles are first binned by hsml/px. For each
                             bin the quantity is simply binned onto the grid by the
@@ -101,6 +103,8 @@ def map_sph_qty(s, extent, qty, Npx, res=None, xaxis=0, yaxis=1,
         res = res.in_units_of(s.pos.units, subs=s)
     if xaxis not in range(3) or yaxis not in range(3) or xaxis==yaxis:
         raise ValueError('The x- and y-axis has to be 0, 1, or 2 and different!')
+    if kernel is None:
+        kernel = gadget.general['kernel']
     proj_kernel = project_kernel(kernel)
     if threshold <= 0:
         raise ValueError('The smoothing threshold has to be a postive number of '

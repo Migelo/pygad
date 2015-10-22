@@ -128,7 +128,7 @@ def integrate_kernel(kernel, N=100, inter_kind='quadratic'):
 
 #old version: needs to use 'intergrate_kernel' now (cache it?!)...
 @static_vars( integs={} )
-def rand_kernel_r(kernel='Wendland C4'):
+def rand_kernel_r(kernel=None):
     '''
     Get a random radius, with a PDF (propability density function) of the
     specified 3D kernel.
@@ -138,12 +138,17 @@ def rand_kernel_r(kernel='Wendland C4'):
     points in 3D space would have the PDF of the (3D-)kernel.
 
     Args:
-        kernel (str):   The name of the kernel to use.
+        kernel (str):   The name of the kernel to use. (By default use the kernel
+                        defined in 'gadget.cfg'.)
 
     Returns:
         r (float):      A random radius.
     '''
     from scipy.optimize import brentq
+
+    if kernel is None:
+        from ..gadget import general
+        kernel = general['kernel']
 
     # this caching gives a speed-up of a factor of an order of magnitude!
     if kernel not in rand_kernel_r.integs:
