@@ -13,7 +13,7 @@ Example:
     >>> families['dm']
     [1, 2, 3]
     >>> general
-    {'kernel': 'Wendland C4', 'IMF': 'Kroupa'}
+    {'kernel': 'Wendland C4', 'SSP_dir': './bc03', 'IMF': 'Kroupa'}
     >>> get_block_units('RHO ')
     Unit("1e+10 Msol ckpc**-3 h_0**2")
     >>> HDF5_to_std_name['Coordinates'], HDF5_to_std_name['ParticleIDs']
@@ -40,6 +40,7 @@ elements = []
 general = {
     'kernel': '<undefined>',
     'IMF': '<undefined>',
+    'SSP_dir': '<undefined>',
     }
 # def. units have to be strings - they are used as replacements
 default_gadget_units = {
@@ -119,6 +120,8 @@ def read_config(config):
     if IMF not in ['Kroupa', 'Salpeter', 'Chabrier']:
         raise ValueError('IMF "%s" is unknown!' % IMF)
     general['IMF'] = IMF
+    if cfg.has_option('general', 'SSP_dir'):
+        general['SSP_dir'] = cfg.get('general', 'SSP_dir')
 
     default_gadget_units.clear()
     default_gadget_units.update( cfg.items('base units') )

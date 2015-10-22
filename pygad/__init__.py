@@ -40,7 +40,7 @@ doctests:
     TestResults(failed=0, attempted=2)
     >>> print >> sys.stderr, 'testing module luminosities...'
     >>> doctest.testmod(luminosities)
-    TestResults(failed=0, attempted=12)
+    TestResults(failed=0, attempted=3)
     >>> print >> sys.stderr, 'testing module binning...'
     >>> doctest.testmod(binning)
     TestResults(failed=0, attempted=4)

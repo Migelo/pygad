@@ -79,7 +79,7 @@ def map_sph_qty(s, extent, qty, Npx, res=None, xaxis=0, yaxis=1,
         xaxis (int):        The coordinate for the x-axis. (0:'x', 1:'y', 2:'z')
         yaxis (int):        The coordinate for the y-axis. (0:'x', 1:'y', 2:'z')
         kernel (str):       The kernel to use for smoothing. (By default use the
-                            kernel defined in 'gadget.cfg'.)
+                            kernel defined in `gadget.cfg`.)
         threshold (int):    Up to this smoothing length over pixel size (hsml/px),
                             the particles are first binned by hsml/px. For each
                             bin the quantity is simply binned onto the grid by the
