@@ -54,7 +54,7 @@ from ..kernels import *
 from .. import environment
 
 def map_qty(s, extent, qty, av=None, Npx=200, res=None, xaxis=0, yaxis=1, softening=None,
-            sph=True, sph_threshold=20, kernel='Wendland C4'):
+            sph=True, sph_threshold=20, kernel=None):
     '''
     A fast pure-Python routine for binning SPH quantities onto a map.
 
@@ -88,13 +88,17 @@ def map_qty(s, extent, qty, av=None, Npx=200, res=None, xaxis=0, yaxis=1, soften
         sph_threshold (int):The threshold between image smoothing and kernel use
                             in the sub-routine 'sph.map_sph_qty'. See its
                             documentation for more details.
-        kernel (str):       The kernel to use for smoothing.
+        kernel (str):       The kernel to use for smoothing. (Default: 'kernel'
+                            from config file 'gadget.cfg')
 
     Returns:
         grid (UnitArr):     The quantity summed along the third axis over the area
                             of a pixel (column -- *not* column density).
         px_area (UnitArr):  The area of a pixel.
     '''
+    if kernel is None:
+        kernel = general['kernel']
+
     if isinstance(qty, str):
         qty = s.get(qty)
 

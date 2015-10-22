@@ -4,7 +4,7 @@ Module for handling Gadget files.
 Also doctest other parts of this sub-module:
     >>> import doctest
     >>> doctest.testmod(config)
-    TestResults(failed=0, attempted=9)
+    TestResults(failed=0, attempted=10)
     >>> doctest.testmod(lowlevel_file)
     TestResults(failed=0, attempted=12)
 
