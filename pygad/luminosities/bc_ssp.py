@@ -10,19 +10,19 @@ Examples:
             0.1679,  0.227 ,  0.2277,  0.2713,  0.2879,  0.2926,  0.2845,
             0.275 ])
     >>> for Z in [0.001, 0.01, 0.03]:
-    ...     print calc_bc_qty('1.23 Myr', Z, 'Mbol'),
-    ...     print calc_bc_qty('15.2 Myr', Z, 'Mbol'),
-    ...     print calc_bc_qty('0.8 Gyr', Z, 'Mbol'),
-    ...     print calc_bc_qty('2.5 Gyr', Z, 'Mbol')
-    -2.63760769231 -2.63760769231 -2.63760769231 -2.63760769231
-    -2.73153108405 -2.81110600157 -2.93654167692 -2.97260382741
-    -3.09563469756 -3.44045934015 -3.98401393332 -4.14028325209
+    ...     print inter_bc_qty('1.23 Myr', Z, qty='Mbol', verbose=False),
+    ...     print inter_bc_qty('15.2 Myr', Z, qty='Mbol', verbose=False),
+    ...     print inter_bc_qty('0.8 Gyr', Z, qty='Mbol', verbose=False),
+    ...     print inter_bc_qty('2.5 Gyr', Z, qty='Mbol', verbose=False)
+    -2.620117e+00 -5.622717e-01 3.82323198781 4.69156838617
+    -2.669872e+00 -4.638262e-01 3.93319109813 4.86059389313
+    -2.725156e+00 -3.544422e-01 4.05536788737 5.04840001196
 '''
-__all__ = ['load_table', 'calc_bc_qty']
+__all__ = ['load_table', 'inter_bc_qty']
 
 import numpy as np
 from .. import gadget
-from ..units import UnitScalar
+from ..units import UnitQty, UnitScalar
 
 metallicity_name = {
         1e-4: 'm22',
@@ -105,7 +105,7 @@ table_base_name = {
         'Salpeter': 'bc2003_hr_stelib_%s_salp_ssp',
         }
 
-def load_table(qty, metal_code, folder=None, base=None, ending=None):
+def load_table(qty, metal_code, folder=None, base=None, ending=None, IMF=None):
     '''
     Read the column of a quantity from the SSP tables.
 
@@ -126,16 +126,26 @@ def load_table(qty, metal_code, folder=None, base=None, ending=None):
         ending (str):       The file name ending. If None, it iterates over the
                             keys in `table_names` until the quantity `qty` is
                             found in the table.
+        IMF (str):          The name of the IMF to use, if folder and base is not
+                            given (undefined behaviour otherwise). By default the
+                            one given in `gadget.cfg` is used. Values that are not
+                            in `table_base_name.keys()` are invalid.
 
     Returns:
-        ages (np.ndarray):  The first column, which are the ages for the different
-                            bins.
-        qty (nnp.ndarray):  The column of the quantity asked for.
+        age_bins (np.ndarray):  The first column, which are the age bins for the
+                                different bins.
+        qty (np.ndarray):       The column of the quantity asked for.
+
+    Raises:
+        IOError:            If any of the tables does not exist.
+        RuntimeError:       If the quantity does not exists in one of the tables.
     '''
+    if IMF is None:
+        IMF=gadget.general['IMF']
     if folder is None:
-        folder = gadget.general['SSP_dir'] + '/' + gadget.general['IMF'].lower()
+        folder = gadget.general['SSP_dir'] + '/' + IMF.lower()
     if base is None:
-        base = table_base_name[gadget.general['IMF']]
+        base = table_base_name[IMF]
 
     found = False
     if ending is None:
@@ -156,57 +166,116 @@ def load_table(qty, metal_code, folder=None, base=None, ending=None):
 
     return tbl[:,0], tbl[:,columns.index(qty)]
 
-def calc_bc_qty(age, Z, qty):
+def inter_bc_qty(age, Z, qty, units=None, IMF=None, verbose=None):
     '''
     Interpolate a quantity for given age and metallicity from the SSP model
     tables.
 
     Args:
-        age (...):
-        Z (...):
+        age (UnitQty):  The ages. If no units are given, they are assumed to be in
+                        years.
+        Z (UnitQty):    The metallicities (in absolute units, not solar units).
         qty (str):      The quantity to interpolate (as in the tables).
+        IMF (str):      The name of the IMF to use, if folder and base is not
+                        given (undefined behaviour otherwise). By default the one
+                        given in `gadget.cfg` is used. Values that are not in
+                        `table_base_name.keys()` are invalid.
+        verbose (bool): Whether to run in verbose mode. By default use the value
+                        of `environment.verbose`.
 
     Returns:
-        Q (...):
+        Q (UnitArr):    The interpolated quantity.
+
+    Raises:
+        IOError:            If any of the tables does not exist.
+        RuntimeError:       If the quantity does not exists in one of the tables.
+        ValueError:         If the length of the ages and the metallicity Z do not
+                            fit eachother.
     '''
-    age = float( np.log10(UnitScalar(age, 'yr')) )
+    if verbose is None:
+        from .. import environment
+        verbose = environment.verbose
+        print 'interpolate SSP tables for qty "%s"...' % qty
 
-    z = [None] * 2
-    for mtl, mtl_code in metallicity_name.iteritems():
-        if mtl < Z:
-            z[0] = mtl
-        if mtl > Z:
-            z[1] = mtl
-            break
-    if z[0] is None: z[0] = min(metallicity_name.keys())
-    if z[1] is None: z[1] = max(metallicity_name.keys())
+    age = np.log10(UnitQty(age, 'yr')).view(np.ndarray)
+    Z = UnitQty(Z).view(np.ndarray)
 
-    tbl = {}
-    for mtl in z:
-        ages, tbl[mtl] = load_table(qty, metallicity_name[mtl])
+    # allow for single values
+    single_value = False
+    if not age.shape or not Z.shape:
+        single_value = True
+        if not age.shape:
+            age = np.array([float(age)])
+        if not Z.shape:
+            Z = np.array([float(Z)])
+    if not len(age)==len(Z):
+        raise ValueError('The array of ages and metallicities need to have ' + \
+                         'the length!')
 
-    i = np.argmin(ages - age)
-    if ages[i] > age:
-        i = [i-1, i]
-    else:
-        i = [i, i+1]
-    if i[0] < 0:
-        for mtl, table in tbl.iteritems():
-            Q[mtl] = table[0]
-    elif i[1] >= len(tbl):
-        for mtl, table in tbl.iteritems():
-            Q[mtl] = table[-1]
-    else:
-        a = (age - ages[i[0]]) / (ages[i[1]] - ages[i[0]])
-        Q = {}
-        for mtl, table in tbl.iteritems():
-            Q[mtl] = a*table[i[1]] + (1.0-a)*table[i[0]]
+    if verbose:
+        import sys
+        print 'read tables...'
+        sys.stdout.flush()
+    # load all tables (just a few MB)
+    tbls = {}
+    for mtl in metallicity_name.keys():
+        age_bins, tbls[mtl] = load_table(qty, metallicity_name[mtl], IMF=IMF)
 
-    if z[0] == z[1]:
-        Q = Q[z[0]]
-    else:
-        a = (Z - z[0]) / (z[1] - z[0])
-        Q = a*Q[z[1]] + (1.0-a)*Q[z[0]]
+    if verbose:
+        print 'table limits:'
+        print '  age [yr]:    %.2e - %.2e' % (10**age_bins.min(),
+                                              10**age_bins.max())
+        print '  metallicity: %.2e - %.2e' % (min(metallicity_name.keys()),
+                                              max(metallicity_name.keys()))
 
-    return Q
+    if verbose:
+        print 'interpolate in age...'
+        sys.stdout.flush()
+    # interpolate in age in all metallicities simultaneously (creating blocks for
+    # each tabled metallicity for each particle, i.e. len(metallicity_name) entire
+    # blocks -- there are much less metallcity bins than age bins!):
+    Q_mtl = {mtl:np.empty(len(age)) for mtl in metallicity_name.iterkeys()}
+    for k in xrange(len(age_bins)+1):
+        if k == 0:
+            age_mask = age<age_bins[0]
+            n = [0, 0]
+            a_age = np.zeros(np.sum(age_mask))
+        elif k == len(age_bins):
+            age_mask = age_bins[-1]<=age
+            n = [-1, -1]
+            a_age = np.zeros(np.sum(age_mask))
+        else:
+            age_mask = (age_bins[k-1]<=age) & (age<age_bins[k])
+            n = [k-1, k]
+            a_age = (age[age_mask] - age_bins[n[0]]) / (age_bins[n[1]] - age_bins[n[0]])
+
+        for mtl in metallicity_name.iterkeys():
+            tbl = tbls[mtl]
+            Q_mtl[mtl][age_mask] = a_age*tbl[n[1]] + (1.0-a_age)*tbl[n[0]]
+
+    if verbose:
+        import sys
+        print 'interpolate in metallicity...'
+        sys.stdout.flush()
+    # now interpolate in metallicity:
+    Q = np.empty(len(age))
+    for i in xrange(len(metallicity_name)+1):
+        if i == 0:
+            z = metallicity_name.keys()[0]
+            Z_mask = Z<z
+            Q[Z_mask] = Q_mtl[z][Z_mask]
+        elif i == len(metallicity_name):
+            z = metallicity_name.keys()[-1]
+            Z_mask = z<=Z
+            Q[Z_mask] = Q_mtl[z][Z_mask]
+        else:
+            z = [metallicity_name.keys()[i-1], metallicity_name.keys()[i]]
+            Z_mask = (z[0]<=Z) & (Z<z[1])
+            a_Z = (Z[Z_mask] - z[0]) / (z[1] - z[0])
+            Q[Z_mask] = a_Z * Q_mtl[z[1]][Z_mask] + \
+                    (1.0-a_Z) * Q_mtl[z[0]][Z_mask]
+
+    if single_value:
+        return UnitScalar(float(Q), units)
+    return UnitQty(Q, units)
 
