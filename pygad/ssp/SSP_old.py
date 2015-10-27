@@ -135,7 +135,7 @@ def combine_tables(band, required_shape=(353,11)):
         tab (np.ndarray):   The table of magnitudes.
     '''
     from ..environment import module_dir
-    directory = module_dir+'luminosities/SSP-model/'
+    directory = module_dir+'ssp/SSP-model/'
     band = band.upper()
     if band == 'MBOL':
         band = 'mbol'

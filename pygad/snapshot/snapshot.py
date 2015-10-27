@@ -1042,7 +1042,7 @@ class _Snap(object):
             res (SimArr):       The result.
         '''
         from sim_arr import SimArr
-        from ..luminosities import calc_mags, inter_bc_qty
+        from ..ssp import calc_mags, inter_bc_qty
 
         # prepare evaluator
         from numpy.core.umath_tests import inner1d

@@ -17,6 +17,36 @@ Examples:
     -2.620117e+00 -5.622717e-01 3.82323198781 4.69156838617
     -2.669872e+00 -4.638262e-01 3.93319109813 4.86059389313
     -2.725156e+00 -3.544422e-01 4.05536788737 5.04840001196
+
+    >>> from ..environment import module_dir
+    >>> from ..snapshot import Snap
+    >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=True)
+    >>> inter_bc_qty(s.stars.age, s.stars.Z, qty='log Nly')
+    load block age... done.
+    convert block age to physical units... done.
+    load block elements... done.
+    convert block elements to physical units... done.
+    derive block H... done.
+    derive block He... done.
+    derive block metals... done.
+    derive block Z... done.
+    interpolate SSP tables for qty "log Nly"...
+    read tables...
+    table limits:
+      age [yr]:    1.00e+05 - 2.00e+10
+      metallicity: 1.00e-04 - 5.00e-02
+    interpolate in age...
+    interpolate in metallicity...
+    UnitArr([ 40.88760733,  40.87670045,  41.10933622, ...,  41.1284523 ,
+              41.21504043,  41.10660553])
+    >>> inter_bc_qty(s.stars.age, s.stars.Z, qty='Vmag', IMF='Chabrier',
+    ...              verbose=False)
+    UnitArr([ 5.38572149,  5.38222705,  5.95851407, ...,  6.24853992,
+              5.89012057,  6.2964592 ])
+    >>> inter_bc_qty(s.stars.age, s.stars.Z, qty='Vmag', IMF='Salpeter',
+    ...              verbose=False)
+    UnitArr([ 5.73452262,  5.72079989,  6.27333274, ...,  6.56081867,
+              6.19076843,  6.60469198])
 '''
 __all__ = ['load_table', 'inter_bc_qty']
 

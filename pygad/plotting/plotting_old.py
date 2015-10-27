@@ -15,7 +15,7 @@ from matplotlib.cm import get_cmap
 from units import Unit, _UnitClass, UnitArr
 import analysis
 import collections
-import luminosities
+import ssp
 import environment
 import sys
 
@@ -760,13 +760,13 @@ def plot_stellar_light(snap, width, bands=None, weights=None, dynamic_range=3.,
         bands = ['r', 'v', 'b']
     bands = map(str.lower, bands)
     if weights is None:
-        weights = [luminosities._band_weights[b] for b in bands]
+        weights = [ssp._band_weights[b] for b in bands]
     print 'bands:', bands
     print 'band weights:', weights
 
     ms = []
     for w, band in zip(weights, bands):
-        M = luminosities.calc_mags(snap, band)
+        M = ssp.calc_mags(snap, band)
         # sum up luminosities (!)
         lum_map = analysis.density_map(
                         snap.stars, lims, lims,
