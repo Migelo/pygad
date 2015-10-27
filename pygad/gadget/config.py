@@ -13,7 +13,7 @@ Example:
     >>> families['dm']
     [1, 2, 3]
     >>> general
-    {'kernel': 'Wendland C4', 'SSP_dir': './bc03', 'IMF': 'Kroupa'}
+    {'kernel': 'Wendland C4', 'SSP_dir': 'pygad//../bc03', 'IMF': 'Kroupa'}
     >>> get_block_units('RHO ')
     Unit("1e+10 Msol ckpc**-3 h_0**2")
     >>> HDF5_to_std_name['Coordinates'], HDF5_to_std_name['ParticleIDs']
@@ -102,6 +102,8 @@ def read_config(config):
 
     families.clear()
     for family in cfg.options('families'):
+        if family in cfg.defaults():
+            continue
         families[family] = sorted([int(t) for t
                 in cfg.get('families',family).split(',')])
 
@@ -121,7 +123,8 @@ def read_config(config):
         raise ValueError('IMF "%s" is unknown!' % IMF)
     general['IMF'] = IMF
     if cfg.has_option('general', 'SSP_dir'):
-        general['SSP_dir'] = cfg.get('general', 'SSP_dir')
+        general['SSP_dir'] = cfg.get('general', 'SSP_dir',
+                                     vars={'PYGAD_DIR':environment.module_dir})
 
     default_gadget_units.clear()
     default_gadget_units.update( cfg.items('base units') )
