@@ -22,6 +22,7 @@ from ConfigParser import SafeConfigParser
 from .. import utils
 from .. import gadget
 from .. import environment
+import re
 
 _rules = {}
 
@@ -99,11 +100,16 @@ def read_derived_rules(config, store_as_default=True, delete_old=False):
 
     for i,el in enumerate(gadget.elements):
         rules[el] = 'elements[:,%d]' % i
-    for band in ['u','b','v','r','i','j','h','k']:
-        rules['mag_'+band] = "calc_mags(stars,'%s')" % band
-        rules['lum_'+band] = "UnitQty(10**(-0.4*(mag_%s-solar.abs_mag)),'Lsol')" % band
-
     rules.update( cfg.items('rules') )
+
+    for derived_name in rules.keys():
+        if derived_name=='mag':
+            mag, lum = 'mag', 'lum'
+        elif re.match('mag_[a-zA-Z]', derived_name):
+            mag, lum = derived_name, 'lum_'+derived_name[-1]
+        else:
+            continue
+        rules[lum] = "UnitQty(10**(-0.4*(%s-solar.abs_mag)),'Lsol')" % mag
 
     return rules
 

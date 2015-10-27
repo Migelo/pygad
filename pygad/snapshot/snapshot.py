@@ -27,7 +27,7 @@ Example:
     >>> s.loadable_blocks()
     ['vel', 'mass', 'ID', 'pos']
     >>> for d in s.deriveable_blocks(): print d,
-    lum_j lum_k lum_h lum_i Epot lum_b Ne metals jzjc RemainingElements lum_r rcyl lum_v lum_u mag_j alpha_el r Fe mag_v lum momentum He Mg E mag_b H mag_i mag_h O N mag_u S angmom mag_k mag mag_r Z Ekin temp C Ca vcirc Si vrad jcirc
+    lum_k Epot lum_b C metals jzjc RemainingElements lum_r rcyl lum_v lum_u Z vrad alpha_el r Fe lum jcirc He Mg E mag_b H O Ne mag_u S angmom mag_k mag mag_r N Ekin temp Ca vcirc Si mag_v momentum
     >>> assert set(s.all_blocks()) == set(s.loadable_blocks() + s.deriveable_blocks())
     >>> mwgt_pos = np.tensordot(s.mass, s.pos, axes=1).view(UnitArr)
     load block mass... done.
@@ -126,7 +126,7 @@ Example:
     >>> 'r' in s
     True
     >>> for a in s.available_blocks(): print a,
-    Epot pot pos jzjc rcyl r mass vel momentum E vrad ID Ekin vcirc angmom jcirc
+    Epot pot pos jzjc rcyl vrad r mass vel jcirc E ID Ekin vcirc angmom momentum
     >>> s.delete_blocks(derived=True)
     >>> 'r' in s
     True
@@ -1042,7 +1042,7 @@ class _Snap(object):
             res (SimArr):       The result.
         '''
         from sim_arr import SimArr
-        from ..luminosities import calc_mags
+        from ..luminosities import calc_mags, inter_bc_qty
 
         # prepare evaluator
         from numpy.core.umath_tests import inner1d
@@ -1050,6 +1050,7 @@ class _Snap(object):
         namespace = {'dist':dist, 'Unit':Unit, 'Units':Units, 'UnitArr':UnitArr,
                      'UnitQty':UnitQty, 'UnitScalar':UnitScalar,
                      'inner1d':inner1d, 'calc_mags':calc_mags,
+                     'inter_bc_qty':inter_bc_qty,
                      'perm_inv':utils.perm_inv, 'solar':physics.solar,
                      'WMAP7':physics.WMAP7, 'Planck2013':physics.Planck2013,
                      'FLRWCosmo':physics.FLRWCosmo, 'a2z':physics.a2z,
