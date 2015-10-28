@@ -1177,7 +1177,7 @@ class _SubSnap(_Snap):
     '''
     def _calc_N_part_from_slice(self, N_part_base, _slice):
         # work with positive stepping (and without None's):
-        _slice = utils.positive_simple_slice(_slice, sum(N_part_base))
+        _slice = utils.positive_simple_slice(_slice, int(sum(N_part_base)))
         start, stop, step = _slice.start, _slice.stop, _slice.step
 
         N_part = [0]*6
@@ -1189,7 +1189,7 @@ class _SubSnap(_Snap):
             pt += 1
         # count particles of the different types
         while pt < 6 and cur_pos < stop:
-            remain = min(stop, N_cum_base[pt]) - cur_pos
+            remain = int( min(stop, N_cum_base[pt]) - cur_pos )
             N_part[pt] = remain / step
             if remain % step:
                 N_part[pt] += 1
