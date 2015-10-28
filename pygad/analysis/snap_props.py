@@ -46,9 +46,26 @@ Example:
             [ 0.        ,  0.        ,  1.8855924 ]])
     >>> los_velocity_dispersion(sub)
     UnitArr(167.344421387, dtype=float32, units="km s**-1")
+
+    >>> scatter_gas_to_stars(s, 'Z', '0.2 kpc', name='gas_Z')
+    load block elements... done.
+    derive block H... done.
+    derive block He... done.
+    derive block metals... done.
+    derive block Z... done.
+    load block hsml... done.
+    build tree...
+    done.
+    scatter property of 64,158 star particles...
+    done.
+    didn't found neighbours 30440 times
+    UnitArr([  6.62012251e-09,   2.28143236e-09,   1.77712193e-14, ...,
+               0.00000000e+00,   0.00000000e+00,   0.00000000e+00])
 '''
 __all__ = ['mass_weighted_mean', 'center_of_mass', 'reduced_inertia_tensor',
-           'orientate_at', 'los_velocity_dispersion']
+           'orientate_at', 'los_velocity_dispersion',
+           'scatter_gas_to_stars',
+          ]
 
 import numpy as np
 from ..units import *
@@ -188,4 +205,78 @@ def los_velocity_dispersion(s, proj=2):
     sigma_v = np.sqrt( mass_weighted_mean(s, (v-av_v)**2) )
     
     return sigma_v
+
+def scatter_gas_to_stars(s, qty, name=None, units=None, kernel=None):
+    '''
+    Spread a stellar quantity to the gas particles, kernel weighted.
+
+    Args:
+        s (Snap):               The snapshot to spread the properties of.
+        qty (array-like, str):  The name of the block or the block itself to
+                                spread onto the neighbouring SPH (i.e. gas)
+                                particles.
+        spread (UnitScalar):    The "smoothing length" of the kernel to use for
+                                distribution. I.e. the quantity is spread over a
+                                region with radius 2*spread.
+        name (str):             The name of the new SPH block. If it is None and
+                                `qty` is a string, is taken as the name.
+        kernel (str):           The kernel to use. The default is to take the
+                                kernel given in the `gadget.cfg`.
+
+    Returns:
+        Q (UnitArr):            The new SPH block.
+
+    Raises:
+        RuntimeError:       From this function directly:
+                                If no name was given, though the qty is not a
+                                string; or if the length of `qty` does not match
+                                the number of stars in `s`.
+                            From setting the new block:
+                                If the length of the data does not fit the length
+                                of the (sub-)snapshot; or if the latter is not the
+                                correct "host" of the new block.
+        KeyError:           If there already exists a block of that name.
+    '''
+    if name is None:
+        if isinstance(qty, str):
+            name = qty
+        else:
+            raise RuntimeError('No name for the quantity is given!')
+
+    if isinstance(qty, str):
+        qty = s.gas.get(qty)
+    else:
+        if len(qty) != len(s.gas):
+            from ..utils import nice_big_num_str
+            raise RuntimeError('The length of the quantity ' + \
+                               '(%s) does not ' % nice_big_num_str(len(qty)) + \
+                               'match the number of gas ' + \
+                               '(%s)!' % nice_big_num_str(len(s.gas)))
+    if units is None:
+        units = getattr(qty, 'units', None)
+    else:
+        units = Unit(units)
+    qty = np.asarray(qty)
+
+    hsml = s.gas.hsml.in_units_of(s.pos.units).view(np.ndarray)
+    gas_pos = s.gas.pos.view(np.ndarray)
+    star_pos = s.stars.pos.view(np.ndarray)
+    if len(qty.shape) > 1:
+        Q = np.zeros((len(s.stars), qty.shape[1]))
+    else:
+        Q = np.zeros(len(s.stars))
+
+    if kernel is None:
+        from ..gadget import config
+        kernel = config.general['kernel']
+    from ..kernels import vector_kernels
+    kernel = vector_kernels[kernel]
+
+    for i in xrange(len(s.stars)):
+        d = dist(gas_pos, star_pos[i]) / hsml
+        mask = d < 1.0
+        Q[i] = np.sum((qty[mask].T * kernel(d[mask])).T, axis=0)
+
+    Q = UnitArr(Q, units)
+    return s.stars.add_custom_block(Q, name)
 

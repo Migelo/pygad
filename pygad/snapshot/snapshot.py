@@ -143,6 +143,7 @@ Example:
     derive block Z... done.
     >>> new = np.ones(len(s.stars))
     >>> s.stars.add_custom_block(new, 'new')
+    SimArr([ 1.,  1.,  1., ...,  1.,  1.,  1.], snap="snap_M1196_4x_470":stars)
     >>> sub.new
     SimArr([ 1.,  1.,  1., ...,  1.,  1.,  1.], snap="snap_M1196_4x_470":stars)
 
@@ -855,6 +856,15 @@ class _Snap(object):
             data (array-like):  The new block (of appropiate size, i.e. length of
                                 this (sub-)snapshot).
             name (str):         The name of the new block.
+
+        Returns:
+            block (SimArr):     The reference to the new block.
+
+        Raises:
+            RuntimeError:       If the length of the data does not fit the length
+                                of the (sub-)snapshot; or if the latter is not the
+                                correct "host" of the new block.
+            KeyError:           If there already exists a block of that name.
         '''
         if len(data) == len(self):
             ptypes = [bool(N) for N in self.parts]
@@ -874,6 +884,8 @@ class _Snap(object):
 
         from sim_arr import SimArr
         setattr( host, name, SimArr(data,snap=host) )
+
+        return getattr(host, name)
 
     def refresh(self):
         '''Update sliced/masked blocks of this snapshot.'''
