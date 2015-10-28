@@ -208,18 +208,24 @@ def los_velocity_dispersion(s, proj=2):
 
 def scatter_gas_to_stars(s, qty, name=None, units=None, kernel=None):
     '''
-    Spread a stellar quantity to the gas particles, kernel weighted.
+    Calculate a gas property at the positions of the stars and store it as a
+    stellar property.
+
+    This function calculates the gas property at the positions of the star
+    particles by a so-called scatter approach, i.e. by evaluating the gas property
+    of every gas particle at the stellar positions, kernel-weighted by the kernel
+    of the gas particled the property comes from.
+    Finally these quantities are stored as a new block for the stars of the
+    snapshot. (Make shure there is no such block yet.)
 
     Args:
         s (Snap):               The snapshot to spread the properties of.
         qty (array-like, str):  The name of the block or the block itself to
                                 spread onto the neighbouring SPH (i.e. gas)
                                 particles.
-        spread (UnitScalar):    The "smoothing length" of the kernel to use for
-                                distribution. I.e. the quantity is spread over a
-                                region with radius 2*spread.
         name (str):             The name of the new SPH block. If it is None and
                                 `qty` is a string, is taken as the name.
+        units (str, Unit):      The units to store the property in.
         kernel (str):           The kernel to use. The default is to take the
                                 kernel given in the `gadget.cfg`.
 
