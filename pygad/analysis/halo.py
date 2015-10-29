@@ -45,8 +45,8 @@ Examples:
     derive block He... done.
     derive block metals... done.
     derive block Z... done.
-    load block age... done.
-    convert block age to physical units... done.
+    load block form_time... done.
+    derive block age... done.
     load block inim... done.
     convert block inim to physical units... done.
     done.

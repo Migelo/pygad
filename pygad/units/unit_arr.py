@@ -94,19 +94,10 @@ import units
 from units import *
 from units import _UnitClass
 from fractions import Fraction
-from multiprocessing import Pool, cpu_count
 import warnings
 import functools
 import numbers
 from .. import environment
-
-def _Gyr2z_vec(arr, cosmo):
-    '''Needed to pickle cosmo.lookback_time_2z for Pool().apply_async.'''
-    return np.vectorize(lambda t: cosmo.lookback_time_2z(t))(arr)
-
-def _z2Gyr_vec(arr, cosmo):
-    '''Needed to pickle cosmo.lookback_time_in_Gyr for Pool().apply_async.'''
-    return np.vectorize(cosmo.lookback_time_in_Gyr)(arr)
 
 def UnitQty(obj, units=None, subs=None, dtype=None):
     '''
@@ -356,7 +347,7 @@ class UnitArr(np.ndarray):
         new._units = self._units
         return new
 
-    def in_units_of(self, units, subs=None, cosmo=None, parallel=None, copy=False):
+    def in_units_of(self, units, subs=None, cosmo=None, copy=False):
         '''
         Return the array in other units.
 
@@ -364,7 +355,6 @@ class UnitArr(np.ndarray):
             units (Unit, str):  The target units.
             subs (Snap, dict):  See 'convert_to'.
             cosmo (FLRWCosmo):  See 'convert_to'.
-            parallel (bool):    See 'convert_to'.
             copy (bool):        If set to false, return the array itself, if the
                                 target units are the same as the current ones.
 
@@ -383,10 +373,10 @@ class UnitArr(np.ndarray):
         if not copy and self.units == units:
             return self
         c = self.copy()
-        c.convert_to(units=units, subs=subs, cosmo=cosmo, parallel=parallel)
+        c.convert_to(units=units, subs=subs, cosmo=cosmo)
         return c
 
-    def convert_to(self, units, subs=None, cosmo=None, parallel=None):
+    def convert_to(self, units, subs=None, cosmo=None):
         '''
         Convert the array into other units in place.
 
@@ -401,11 +391,6 @@ class UnitArr(np.ndarray):
             cosmo (FLRWCosmo):  A FLRW cosmology to use, when it is needed to
                                 convert lookbacktime to z_form (or a_form) or
                                 vice versa.
-            parallel (bool):    If units are converted from Gyr (or some other
-                                time unit) to z_form / a_form, one can choose to
-                                use multiple threads. By default, the function
-                                chooses automatically whether to perform in
-                                parallel or not.
 
         Raises:
             UnitError:          In case the current units and the target units are
@@ -421,7 +406,7 @@ class UnitArr(np.ndarray):
 
         # if this is not the entire array, pass down to base
         if isinstance(self.base, UnitArr):
-            self.base.convert_to(units, subs=subs, cosmo=cosmo, parallel=parallel)
+            self.base.convert_to(units, subs=subs, cosmo=cosmo)
             self._units = units
             return
 
@@ -436,87 +421,13 @@ class UnitArr(np.ndarray):
             if cosmo is None:
                 cosmo = snap.cosmology
 
-        # for these kind of conversion ignore subs(titutions)
-        if self._units in ['a_form', 'z_form'] or units in ['a_form', 'z_form']:
-            from ..physics import a2z, z2a
-            # We have functions to convert: a <-> z <-> Gyr or other time units
-            # first bring own units to z_form
-            if self._units == 'a_form':
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    self.setfield(np.vectorize(a2z)(self), dtype=self.dtype)
-            elif self._units != 'z_form':
-                # then the unit is (or should be) some time unit
-                # to present day (z=0) ages
-                self += cosmo.lookback_time(subs['z'])
-                # from present day lookback times (ages) to z
-                if environment.allow_parallel_conversion and (
-                        parallel or (parallel is None and len(self) > 10)):
-                    N_threads = cpu_count()
-                    chunk = [[i*len(self)/N_threads, (i+1)*len(self)/N_threads] 
-                                for i in xrange(N_threads)]
-                    p = Pool(N_threads)
-                    res = [None] * N_threads
-                    for i in xrange(N_threads):
-                        with warnings.catch_warnings():
-                            warnings.simplefilter("ignore")
-                            res[i] = p.apply_async(_Gyr2z_vec,
-                                                   (self[chunk[i][0]:chunk[i][1]],
-                                                       cosmo))
-                    for i in xrange(N_threads):
-                        self[chunk[i][0]:chunk[i][1]] = res[i].get()
-                else:
-                    with warnings.catch_warnings():
-                        warnings.simplefilter("ignore")
-                        self.setfield(np.vectorize(lambda t:
-                                        cosmo.lookback_time_2z(t))(self),
-                                      dtype=self.dtype)
-            self.units = 'z_form'
-            # if target unit is z_form, we are done
-            if units == 'z_form':
-                return
-            # convert own units (now in z_form) to target unit
-            if units == 'a_form':
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    self.setfield(np.vectorize(z2a)(self), dtype=self.dtype)
-            else:   # target unit is (or should be) some time unit
-                if environment.allow_parallel_conversion and (
-                        parallel or (parallel is None and len(self) > 1000)):
-                    N_threads = cpu_count()
-                    chunk = [[i*len(self)/N_threads, (i+1)*len(self)/N_threads]
-                                for i in xrange(N_threads)]
-                    p = Pool(N_threads)
-                    res = [None] * N_threads
-                    with warnings.catch_warnings():
-                        # warnings.catch_warnings doesn't work in parallel
-                        # environment...
-                        warnings.simplefilter("ignore") # for _z2Gyr_vec
-                        for i in xrange(N_threads):
-                            res[i] = p.apply_async(_z2Gyr_vec,
-                                        (self[chunk[i][0]:chunk[i][1]], cosmo))
-                    for i in xrange(N_threads):
-                        self[chunk[i][0]:chunk[i][1]] = res[i].get()
-                else:
-                    with warnings.catch_warnings():
-                        warnings.simplefilter("ignore") # for _z2Gyr_vec
-                        self.setfield(_z2Gyr_vec(self,cosmo), dtype=self.dtype)
-                self.units = 'Gyr'
-                if units != 'Gyr':
-                    view = self.view(np.ndarray)
-                    view *= self._units.in_units_of(units, subs=subs)
-                # from present day ages (lookback time) to actual current ages
-                self -= cosmo.lookback_time(subs['z'])
-            self.units = units
-        else:
-            # not a_form of z_form
-            fac = self._units.in_units_of(units, subs=subs)
-            view = self.view(np.ndarray)
-            try:
-                view *= fac
-            except:
-                view *= np.array(fac, dtype=view.dtype)
-            self.units = units
+        fac = self._units.in_units_of(units, subs=subs)
+        view = self.view(np.ndarray)
+        try:
+            view *= fac
+        except:
+            view *= np.array(fac, dtype=view.dtype)
+        self.units = units
 
     def __getitem__(self, i):
         item = np.ndarray.__getitem__(self, i)

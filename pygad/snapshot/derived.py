@@ -19,9 +19,14 @@ Examples:
 __all__ = ['ptypes_and_deps', 'read_derived_rules', 'calc_temps']
 
 from ConfigParser import SafeConfigParser
+import warnings
+import numpy as np
 from .. import utils
 from .. import gadget
 from .. import environment
+from .. import physics
+from ..units import UnitArr
+from multiprocessing import Pool, cpu_count
 
 _rules = {}
 
@@ -143,4 +148,80 @@ def calc_temps(s, gamma=5./3.):
     T = s.u * s.mass / (f/2. * (s.mass/av_particle_weight) * physics.kB)
     T.convert_to('K', subs=s)
     return T
+
+"""
+def _Gyr2z_vec(arr, cosmo):
+    '''Needed to pickle cosmo.lookback_time_2z for Pool().apply_async.'''
+    return np.vectorize(lambda t: cosmo.lookback_time_2z(t))(arr)
+"""
+
+def _z2Gyr_vec(arr, cosmo):
+    '''Needed to pickle cosmo.lookback_time_in_Gyr for Pool().apply_async.'''
+    return np.vectorize(cosmo.lookback_time_in_Gyr)(arr)
+
+
+def age_from_form(form, subs, cosmo=None, units='Gyr', parallel=None):
+    '''
+    Calculate ages from formation time.
+
+    TODO
+            parallel (bool):    If units are converted from Gyr (or some other
+                                time unit) to z_form / a_form, one can choose to
+                                use multiple threads. By default, the function
+                                chooses automatically whether to perform in
+                                parallel or not.
+    '''
+    from ..snapshot.snapshot import _Snap
+    if subs is None:
+        subs = {}
+    elif isinstance(subs, _Snap):
+        snap, subs = subs, {}
+        subs['a'] = snap.scale_factor
+        subs['z'] = snap.redshift
+        subs['h_0'] = snap.cosmology.h_0
+        if cosmo is None:
+            cosmo = snap.cosmology
+
+    form = form.copy().view(UnitArr)
+
+    if str(form.units).endswith('_form]'):
+        # (a ->) z -> Gyr (-> time_units)
+        if form._units == 'a_form':
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                form.setfield(np.vectorize(physics.a2z)(form), dtype=form.dtype)
+        form.units = 'z_form'
+
+        if environment.allow_parallel_conversion and (
+                parallel or (parallel is None and len(form) > 1000)):
+            N_threads = cpu_count()
+            chunk = [[i*len(form)/N_threads, (i+1)*len(form)/N_threads]
+                        for i in xrange(N_threads)]
+            p = Pool(N_threads)
+            res = [None] * N_threads
+            with warnings.catch_warnings():
+                # warnings.catch_warnings doesn't work in parallel
+                # environment...
+                warnings.simplefilter("ignore") # for _z2Gyr_vec
+                for i in xrange(N_threads):
+                    res[i] = p.apply_async(_z2Gyr_vec,
+                                (form[chunk[i][0]:chunk[i][1]], cosmo))
+            for i in xrange(N_threads):
+                form[chunk[i][0]:chunk[i][1]] = res[i].get()
+        else:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore") # for _z2Gyr_vec
+                form.setfield(_z2Gyr_vec(form,cosmo), dtype=form.dtype)
+        form.units = 'Gyr'
+        # from present day ages (lookback time) to actual current ages
+        form -= cosmo.lookback_time(subs['z'])
+
+    else:
+        # 't_form' -> actual age
+        form = snap.time - form
+
+    if units is not None:
+        form.convert_to(units)
+
+    return form
 

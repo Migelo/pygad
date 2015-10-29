@@ -154,6 +154,8 @@ def get_block_units(block, gad_units=None):
         raise KeyError('Units of block "%s" are not known' % block)
     if gad_units is None:
         gad_units = default_gadget_units
+    gad_units = gad_units.copy()
+    gad_units['TIME'] = gad_units['LENGTH'] + ' / (' + gad_units['VELOCITY'] + ')'
 
     u = block_units[block]
     for dimension, unit in gad_units.iteritems():
