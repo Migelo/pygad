@@ -14,7 +14,7 @@ import subprocess
 package_data = {'pygad.units':          ['units.cfg'],
                 'pygad.gadget':         ['gadget.cfg'],
                 'pygad.snapshot':       ['derived.cfg'],
-                'pygad.luminosities':   ['SSP-model/*']}
+                'pygad.ssp':            ['SSP-model/*']}
 
 # find all sub-packages
 modules = []
