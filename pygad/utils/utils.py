@@ -232,6 +232,7 @@ def positive_simple_slice(s, N):
     step = s.step if s.step is not None else 1
     if step == 0:
         ValueError('Slice step cannot be 0!')
+    N = int(N)
 
     # get first index
     first = s.start

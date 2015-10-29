@@ -27,7 +27,7 @@ Example:
     >>> s.loadable_blocks()
     ['vel', 'mass', 'ID', 'pos']
     >>> for d in s.deriveable_blocks(): print d,
-    lum_k Epot lum_b C metals jzjc RemainingElements lum_r rcyl lum_v lum_u Z vrad alpha_el r Fe lum jcirc He Mg E mag_b H O Ne mag_u S angmom mag_k mag mag_r N Ekin temp Ca vcirc Si mag_v momentum
+    lum_k Epot lum_b C metals jzjc RemainingElements lum_r rcyl lum_v lum_u Z vrad alpha_el r Fe lum momentum He Mg E mag_b H O Ne mag_u S angmom mag_k mag mag_r N Ekin temp Ca vcirc Si mag_v jcirc age
     >>> assert set(s.all_blocks()) == set(s.loadable_blocks() + s.deriveable_blocks())
     >>> mwgt_pos = np.tensordot(s.mass, s.pos, axes=1).view(UnitArr)
     load block mass... done.
@@ -126,7 +126,7 @@ Example:
     >>> 'r' in s
     True
     >>> for a in s.available_blocks(): print a,
-    Epot pot pos jzjc rcyl vrad r mass vel jcirc E ID Ekin vcirc angmom momentum
+    Epot pot pos jzjc rcyl vrad r mass vel momentum E ID Ekin vcirc angmom jcirc
     >>> s.delete_blocks(derived=True)
     >>> 'r' in s
     True
@@ -191,9 +191,9 @@ Example:
     >>> s2.load_all_blocks()    # doctest:+ELLIPSIS
     load block nh... done.
     load block elements... done.
-    load block hsml... done.
-    load block age... done.
-    load block inim... done.
+    load block temp... done.
+    load block sfr... done.
+    load block pot... done.
     ...
     >>> for name in s.loadable_blocks():
     ...     b  = getattr(s.get_host_subsnap(name), name)
@@ -389,6 +389,8 @@ def Snap(filename, physical=False, cosmological=None, gad_units=None):
             new_name = 'elements'
         elif new_name == 'cste':
             new_name = 'temp'
+        elif new_name == 'age':
+            new_name = 'form_time'
         s._load_name[new_name] = name
         s._block_avail[new_name] = s._block_avail[name]
         del s._block_avail[name]    # blocks should not appear twice, could
@@ -943,10 +945,7 @@ class _Snap(object):
             return
         """
 
-        if block.units in ['a_form', 'z_form']:
-            phys_units = 'Gyr'
-        else:
-            phys_units = block.units.free_of_factors(['a','h_0'])
+        phys_units = block.units.free_of_factors(['a','h_0'])
 
         if phys_units != block.units:
             if environment.verbose:
@@ -1156,14 +1155,14 @@ class _SubSnap(_Snap):
         UnitArr(True, dtype=bool)
         >>> len(slim[slim_mask].elements)
         10015
-        >>> assert s[2:-123:10].stars.age.shape[0] == len(s[2:-123:10].stars)
-        load block age... done.
-        >>> s[2:-123:10].stars.age
+        >>> assert s[2:-123:10].stars.form_time.shape[0] == len(s[2:-123:10].stars)
+        load block form_time... done.
+        >>> s[2:-123:10].stars.form_time
         SimArr([ 0.77399528,  0.950091  ,  0.81303227, ...,  0.2623567 ,
                  0.40703428,  0.28800005],
                dtype=float32, units="a_form", snap="snap_M1196_4x_470":stars)
-        >>> assert slim[slim_mask].stars.age.shape[0] == len(slim[slim_mask].stars)
-        >>> slim[slim_mask].stars.age[::100]
+        >>> assert slim[slim_mask].stars.form_time.shape[0] == len(slim[slim_mask].stars)
+        >>> slim[slim_mask].stars.form_time[::100]
         SimArr([ 0.9974333 ,  0.30829304,  0.64798123,  0.60468233,  0.18474203,
                  0.53754038,  0.18224117,  0.26500258],
                dtype=float32, units="a_form", snap="snap_M1196_4x_470":stars)
@@ -1178,7 +1177,7 @@ class _SubSnap(_Snap):
     '''
     def _calc_N_part_from_slice(self, N_part_base, _slice):
         # work with positive stepping (and without None's):
-        _slice = utils.positive_simple_slice(_slice, sum(N_part_base))
+        _slice = utils.positive_simple_slice(_slice, int(sum(N_part_base)))
         start, stop, step = _slice.start, _slice.stop, _slice.step
 
         N_part = [0]*6
@@ -1190,7 +1189,7 @@ class _SubSnap(_Snap):
             pt += 1
         # count particles of the different types
         while pt < 6 and cur_pos < stop:
-            remain = min(stop, N_cum_base[pt]) - cur_pos
+            remain = int( min(stop, N_cum_base[pt]) - cur_pos )
             N_part[pt] = remain / step
             if remain % step:
                 N_part[pt] += 1

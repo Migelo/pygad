@@ -115,24 +115,23 @@ class SimArr(UnitArr):
         duplicate._dependencies = self.dependencies.copy()
         return duplicate
 
-    def in_units_of(self, units, subs=None, cosmo=None, parallel=None, copy=False):
+    def in_units_of(self, units, subs=None, cosmo=None, copy=False):
         '''See UnitArr for documentation. This, however, returns a UnitArr view.'''
         if not copy and self.units == units:
             return self
         if subs is None:
             subs = self.snap
         return super(SimArr, self).in_units_of(units, subs=subs, cosmo=cosmo,
-                                               parallel=parallel, copy=copy)
+                                               copy=copy)
 
-    def convert_to(self, units, subs=None, cosmo=None, parallel=None):
+    def convert_to(self, units, subs=None, cosmo=None):
         '''See UnitArr for documentation.'''
         if subs is None:
             subs = self.snap
         if cosmo is None and isinstance(subs, _Snap):
             cosmo = self.snap.cosmology
 
-        super(SimArr, self).convert_to(units, subs=subs, cosmo=cosmo,
-                                       parallel=parallel)
+        super(SimArr, self).convert_to(units, subs=subs, cosmo=cosmo)
 
     def invalidate_dependencies(self):
         '''

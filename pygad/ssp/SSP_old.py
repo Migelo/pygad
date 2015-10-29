@@ -30,9 +30,9 @@ Examples:
     derive block He... done.
     derive block metals... done.
     derive block Z... done.
-    load block age... done.
+    load block form_time... done.
     convert to double precision... done.
-    convert block age to physical units... done.
+    derive block age... done.
     load block inim... done.
     convert to double precision... done.
     convert block inim to physical units... done.

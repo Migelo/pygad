@@ -22,8 +22,8 @@ Examples:
     >>> from ..snapshot import Snap
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=True)
     >>> inter_bc_qty(s.stars.age, s.stars.Z, qty='log Nly')
-    load block age... done.
-    convert block age to physical units... done.
+    load block form_time... done.
+    derive block age... done.
     load block elements... done.
     convert block elements to physical units... done.
     derive block H... done.

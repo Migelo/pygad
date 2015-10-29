@@ -33,8 +33,8 @@ Examples:
     UnitArr(12.1113256052, units="kpc")
     >>> eff_radius(sub)
     derive block rcyl... done.
-    load block age... done.
-    convert block age to physical units... done.
+    load block form_time... done.
+    derive block age... done.
     load block elements... done.
     convert block elements to physical units... done.
     derive block H... done.
