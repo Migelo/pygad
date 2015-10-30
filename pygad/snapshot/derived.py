@@ -15,8 +15,24 @@ Examples:
     >>> ptypes_and_deps(rules['Z'], s)  # derived from mass (for all particles
     ...                                 # types) and elements (baryons only)
     ([True, False, False, False, True, False], set(['elements', 'metals']))
+
+    >>> cosmo = physics.Planck2013()
+    >>> age_from_form(UnitArr([0.001, 0.1, 0.5, 0.9], 'a_form'),
+    ...               subs={'a':0.9, 'z':physics.a2z(0.9)},
+    ...               cosmo=cosmo)
+    UnitArr([ 12.33841509,  11.79365731,   6.48467893,   0.        ], units="Gyr")
+    >>> age_from_form(UnitArr([10.0, 1.0, 0.5, 0.1], 'z_form'),
+    ...               subs={'a':0.9, 'z':physics.a2z(0.9)},
+    ...               cosmo=cosmo)
+    UnitArr([ 11.86625829,   6.48467893,   3.73639146,  -0.13898853], units="Gyr")
+    >>> age_from_form(UnitArr([-2.0, 0.0, 1.0], '(ckpc h_0**-1) / (km/s)'),
+    ...               time='2.1 Gyr',
+    ...               subs={'a':0.9, 'z':physics.a2z(0.9), 'h_0':cosmo.h_0},
+    ...               cosmo=cosmo,
+    ...               units='Myr')
+    UnitArr([ 4722.59871705,  2100.        ,   788.70064148], units="Myr")
 '''
-__all__ = ['ptypes_and_deps', 'read_derived_rules', 'calc_temps']
+__all__ = ['ptypes_and_deps', 'read_derived_rules', 'calc_temps', 'age_from_form']
 
 from ConfigParser import SafeConfigParser
 import warnings
@@ -25,7 +41,7 @@ from .. import utils
 from .. import gadget
 from .. import environment
 from .. import physics
-from ..units import UnitArr
+from ..units import UnitArr, UnitScalar
 from multiprocessing import Pool, cpu_count
 
 _rules = {}
@@ -136,8 +152,6 @@ def calc_temps(s, gamma=5./3.):
                                   'entropy, yet. However, '
                                   'flg_entropy_instead_u is True.')
 
-    from .. import physics
-
     # roughly the average weight for primordial gas
     av_particle_weight = (0.76*1. + 0.24*4.) * physics.m_u
     # roughly the average degrees of freedom for primordial gas (no molecules)
@@ -160,16 +174,28 @@ def _z2Gyr_vec(arr, cosmo):
     return np.vectorize(cosmo.lookback_time_in_Gyr)(arr)
 
 
-def age_from_form(form, subs, cosmo=None, units='Gyr', parallel=None):
+def age_from_form(form, subs, time=None, cosmo=None, units='Gyr', parallel=None):
     '''
     Calculate ages from formation time.
 
-    TODO
-            parallel (bool):    If units are converted from Gyr (or some other
-                                time unit) to z_form / a_form, one can choose to
-                                use multiple threads. By default, the function
-                                chooses automatically whether to perform in
-                                parallel or not.
+    Args:
+        form (UnitArr):     The formation times to convert. Has to be UnitArr with
+                            appropiate units, i.e. '*_form' or a time unit.
+        subs (dict, Snap):  Subsitution for unit convertions. See e.g.
+                            `UnitArr.convert_to` for more information.
+        time (UnitScalar):  TODO
+        cosmo (FLRWCosmo):  A cosmology to use for conversions. If None and subs
+                            is a snapshot, the cosmology of that snapshot is used.
+        units (str, Unit):  The units to return the ages in. If None, the return
+                            value still has correct units, you just do not have
+                            control over them.
+        parallel (bool):    If units are converted from Gyr (or some other time
+                            unit) to z_form / a_form, one can choose to use
+                            multiple threads. By default, the function chooses
+                            automatically whether to perform in parallel or not.
+
+    Returns:
+        ages (UnitArr):     The ages.
     '''
     from ..snapshot.snapshot import _Snap
     if subs is None:
@@ -181,6 +207,8 @@ def age_from_form(form, subs, cosmo=None, units='Gyr', parallel=None):
         subs['h_0'] = snap.cosmology.h_0
         if cosmo is None:
             cosmo = snap.cosmology
+        if time is None:
+            time = snap.time
 
     form = form.copy().view(UnitArr)
 
@@ -218,10 +246,11 @@ def age_from_form(form, subs, cosmo=None, units='Gyr', parallel=None):
 
     else:
         # 't_form' -> actual age
-        form = UnitArr(snap.time, form.units) - form
+        time = UnitScalar(time, form.units, subs=subs)
+        form = time - form
 
     if units is not None:
-        form.convert_to(units, subs=snap)
+        form.convert_to(units, subs=subs)
 
     return form
 
