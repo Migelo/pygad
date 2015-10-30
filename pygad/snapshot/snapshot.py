@@ -1029,7 +1029,7 @@ class _Snap(object):
 
         The evaluation is done with a utils.Evaluator with numpy for math and the
         snapshot's blocks as well as some chosen objects (e.g. 'dist', 'Unit',
-        'UnitArr', 'UnitQty', 'calc_mags', 'solar', 'G') as namespace.
+        'UnitArr', 'UnitQty', 'inter_bc_qty', 'solar', 'G') as namespace.
 
         Args:
             expr (str):         An python expression that knows about the blocks
@@ -1041,15 +1041,14 @@ class _Snap(object):
             res (SimArr):       The result.
         '''
         from sim_arr import SimArr
-        from ..ssp import calc_mags, inter_bc_qty
+        from ..ssp import inter_bc_qty
 
         # prepare evaluator
         from numpy.core.umath_tests import inner1d
         import derived
         namespace = {'dist':dist, 'Unit':Unit, 'Units':Units, 'UnitArr':UnitArr,
                      'UnitQty':UnitQty, 'UnitScalar':UnitScalar,
-                     'inner1d':inner1d, 'calc_mags':calc_mags,
-                     'inter_bc_qty':inter_bc_qty,
+                     'inner1d':inner1d, 'inter_bc_qty':inter_bc_qty,
                      'perm_inv':utils.perm_inv, 'solar':physics.solar,
                      'WMAP7':physics.WMAP7, 'Planck2013':physics.Planck2013,
                      'FLRWCosmo':physics.FLRWCosmo, 'a2z':physics.a2z,

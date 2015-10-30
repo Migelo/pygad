@@ -40,7 +40,7 @@ doctests:
     TestResults(failed=0, attempted=2)
     >>> print >> sys.stderr, 'testing module ssp...'
     >>> doctest.testmod(ssp)
-    TestResults(failed=0, attempted=3)
+    TestResults(failed=0, attempted=2)
     >>> print >> sys.stderr, 'testing module binning...'
     >>> doctest.testmod(binning)
     TestResults(failed=0, attempted=4)
