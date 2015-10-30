@@ -347,14 +347,13 @@ class UnitArr(np.ndarray):
         new._units = self._units
         return new
 
-    def in_units_of(self, units, subs=None, cosmo=None, copy=False):
+    def in_units_of(self, units, subs=None, copy=False):
         '''
         Return the array in other units.
 
         Args:
             units (Unit, str):  The target units.
             subs (Snap, dict):  See 'convert_to'.
-            cosmo (FLRWCosmo):  See 'convert_to'.
             copy (bool):        If set to false, return the array itself, if the
                                 target units are the same as the current ones.
 
@@ -373,10 +372,10 @@ class UnitArr(np.ndarray):
         if not copy and self.units == units:
             return self
         c = self.copy()
-        c.convert_to(units=units, subs=subs, cosmo=cosmo)
+        c.convert_to(units=units, subs=subs)
         return c
 
-    def convert_to(self, units, subs=None, cosmo=None):
+    def convert_to(self, units, subs=None):
         '''
         Convert the array into other units in place.
 
@@ -388,9 +387,6 @@ class UnitArr(np.ndarray):
                                 the scale factor 'a', and the Hubble parameter
                                 'h_0' from it are used as well as the cosmology,
                                 if not set explicitly by the other argument.
-            cosmo (FLRWCosmo):  A FLRW cosmology to use, when it is needed to
-                                convert lookbacktime to z_form (or a_form) or
-                                vice versa.
 
         Raises:
             UnitError:          In case the current units and the target units are
@@ -406,7 +402,7 @@ class UnitArr(np.ndarray):
 
         # if this is not the entire array, pass down to base
         if isinstance(self.base, UnitArr):
-            self.base.convert_to(units, subs=subs, cosmo=cosmo)
+            self.base.convert_to(units, subs=subs)
             self._units = units
             return
 
@@ -418,8 +414,6 @@ class UnitArr(np.ndarray):
             subs['a'] = snap.scale_factor
             subs['z'] = snap.redshift
             subs['h_0'] = snap.cosmology.h_0
-            if cosmo is None:
-                cosmo = snap.cosmology
 
         fac = self._units.in_units_of(units, subs=subs)
         view = self.view(np.ndarray)
