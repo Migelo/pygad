@@ -218,10 +218,10 @@ def age_from_form(form, subs, cosmo=None, units='Gyr', parallel=None):
 
     else:
         # 't_form' -> actual age
-        form = snap.time - form
+        form = UnitArr(snap.time, form.units) - form
 
     if units is not None:
-        form.convert_to(units)
+        form.convert_to(units, subs=snap)
 
     return form
 
