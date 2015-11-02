@@ -13,7 +13,7 @@ Example:
     >>> families['dm']
     [1, 2, 3]
     >>> general
-    {'kernel': 'Wendland C4', 'IMF': 'Kroupa'}
+    {'kernel': 'Wendland C4', 'SSP_dir': 'pygad//../bc03', 'IMF': 'Kroupa'}
     >>> get_block_units('RHO ')
     Unit("1e+10 Msol ckpc**-3 h_0**2")
     >>> HDF5_to_std_name['Coordinates'], HDF5_to_std_name['ParticleIDs']
@@ -40,6 +40,7 @@ elements = []
 general = {
     'kernel': '<undefined>',
     'IMF': '<undefined>',
+    'SSP_dir': '<undefined>',
     }
 # def. units have to be strings - they are used as replacements
 default_gadget_units = {
@@ -101,6 +102,8 @@ def read_config(config):
 
     families.clear()
     for family in cfg.options('families'):
+        if family in cfg.defaults():
+            continue
         families[family] = sorted([int(t) for t
                 in cfg.get('families',family).split(',')])
 
@@ -119,6 +122,9 @@ def read_config(config):
     if IMF not in ['Kroupa', 'Salpeter', 'Chabrier']:
         raise ValueError('IMF "%s" is unknown!' % IMF)
     general['IMF'] = IMF
+    if cfg.has_option('general', 'SSP_dir'):
+        general['SSP_dir'] = cfg.get('general', 'SSP_dir',
+                                     vars={'PYGAD_DIR':environment.module_dir})
 
     default_gadget_units.clear()
     default_gadget_units.update( cfg.items('base units') )
@@ -154,6 +160,8 @@ def get_block_units(block, gad_units=None):
         raise KeyError('Units of block "%s" are not known' % block)
     if gad_units is None:
         gad_units = default_gadget_units
+    gad_units = gad_units.copy()
+    gad_units['TIME'] = gad_units['LENGTH'] + ' / (' + gad_units['VELOCITY'] + ')'
 
     u = block_units[block]
     for dimension, unit in gad_units.iteritems():

@@ -15,13 +15,35 @@ Examples:
     >>> ptypes_and_deps(rules['Z'], s)  # derived from mass (for all particles
     ...                                 # types) and elements (baryons only)
     ([True, False, False, False, True, False], set(['elements', 'metals']))
+
+    >>> cosmo = physics.Planck2013()
+    >>> age_from_form(UnitArr([0.001, 0.1, 0.5, 0.9], 'a_form'),
+    ...               subs={'a':0.9, 'z':physics.a2z(0.9)},
+    ...               cosmo=cosmo)
+    UnitArr([ 12.33841509,  11.79365731,   6.48467893,   0.        ], units="Gyr")
+    >>> age_from_form(UnitArr([10.0, 1.0, 0.5, 0.1], 'z_form'),
+    ...               subs={'a':0.9, 'z':physics.a2z(0.9)},
+    ...               cosmo=cosmo)
+    UnitArr([ 11.86625829,   6.48467893,   3.73639146,  -0.13898853], units="Gyr")
+    >>> age_from_form(UnitArr([-2.0, 0.0, 1.0], '(ckpc h_0**-1) / (km/s)'),
+    ...               time='2.1 Gyr',
+    ...               subs={'a':0.9, 'z':physics.a2z(0.9), 'h_0':cosmo.h_0},
+    ...               cosmo=cosmo,
+    ...               units='Myr')
+    UnitArr([ 4722.59871705,  2100.        ,   788.70064148], units="Myr")
 '''
-__all__ = ['ptypes_and_deps', 'read_derived_rules', 'calc_temps']
+__all__ = ['ptypes_and_deps', 'read_derived_rules', 'calc_temps', 'age_from_form']
 
 from ConfigParser import SafeConfigParser
+import warnings
+import numpy as np
 from .. import utils
 from .. import gadget
 from .. import environment
+import re
+from .. import physics
+from ..units import UnitArr, UnitScalar
+from multiprocessing import Pool, cpu_count
 
 _rules = {}
 
@@ -99,11 +121,16 @@ def read_derived_rules(config, store_as_default=True, delete_old=False):
 
     for i,el in enumerate(gadget.elements):
         rules[el] = 'elements[:,%d]' % i
-    for band in ['u','b','v','r','i','j','h','k']:
-        rules['mag_'+band] = "calc_mags(stars,'%s')" % band
-        rules['lum_'+band] = "UnitQty(10**(-0.4*(mag_%s-solar.abs_mag)),'Lsol')" % band
-
     rules.update( cfg.items('rules') )
+
+    for derived_name in rules.keys():
+        if derived_name=='mag':
+            mag, lum = 'mag', 'lum'
+        elif re.match('mag_[a-zA-Z]', derived_name):
+            mag, lum = derived_name, 'lum_'+derived_name[-1]
+        else:
+            continue
+        rules[lum] = "UnitQty(10**(-0.4*(%s-solar.abs_mag)),'Lsol')" % mag
 
     return rules
 
@@ -131,8 +158,6 @@ def calc_temps(s, gamma=5./3.):
                                   'entropy, yet. However, '
                                   'flg_entropy_instead_u is True.')
 
-    from .. import physics
-
     # roughly the average weight for primordial gas
     av_particle_weight = (0.76*1. + 0.24*4.) * physics.m_u
     # roughly the average degrees of freedom for primordial gas (no molecules)
@@ -143,4 +168,95 @@ def calc_temps(s, gamma=5./3.):
     T = s.u * s.mass / (f/2. * (s.mass/av_particle_weight) * physics.kB)
     T.convert_to('K', subs=s)
     return T
+
+"""
+def _Gyr2z_vec(arr, cosmo):
+    '''Needed to pickle cosmo.lookback_time_2z for Pool().apply_async.'''
+    return np.vectorize(lambda t: cosmo.lookback_time_2z(t))(arr)
+"""
+
+def _z2Gyr_vec(arr, cosmo):
+    '''Needed to pickle cosmo.lookback_time_in_Gyr for Pool().apply_async.'''
+    return np.vectorize(cosmo.lookback_time_in_Gyr)(arr)
+
+
+def age_from_form(form, subs, time=None, cosmo=None, units='Gyr', parallel=None):
+    '''
+    Calculate ages from formation time.
+
+    Args:
+        form (UnitArr):     The formation times to convert. Has to be UnitArr with
+                            appropiate units, i.e. '*_form' or a time unit.
+        subs (dict, Snap):  Subsitution for unit convertions. See e.g.
+                            `UnitArr.convert_to` for more information.
+        time (UnitScalar):  TODO
+        cosmo (FLRWCosmo):  A cosmology to use for conversions. If None and subs
+                            is a snapshot, the cosmology of that snapshot is used.
+        units (str, Unit):  The units to return the ages in. If None, the return
+                            value still has correct units, you just do not have
+                            control over them.
+        parallel (bool):    If units are converted from Gyr (or some other time
+                            unit) to z_form / a_form, one can choose to use
+                            multiple threads. By default, the function chooses
+                            automatically whether to perform in parallel or not.
+
+    Returns:
+        ages (UnitArr):     The ages.
+    '''
+    from ..snapshot.snapshot import _Snap
+    if subs is None:
+        subs = {}
+    elif isinstance(subs, _Snap):
+        snap, subs = subs, {}
+        subs['a'] = snap.scale_factor
+        subs['z'] = snap.redshift
+        subs['h_0'] = snap.cosmology.h_0
+        if cosmo is None:
+            cosmo = snap.cosmology
+        if time is None:
+            time = snap.time
+
+    form = form.copy().view(UnitArr)
+
+    if str(form.units).endswith('_form]'):
+        # (a ->) z -> Gyr (-> time_units)
+        if form._units == 'a_form':
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                form.setfield(np.vectorize(physics.a2z)(form), dtype=form.dtype)
+        form.units = 'z_form'
+
+        if environment.allow_parallel_conversion and (
+                parallel or (parallel is None and len(form) > 1000)):
+            N_threads = cpu_count()
+            chunk = [[i*len(form)/N_threads, (i+1)*len(form)/N_threads]
+                        for i in xrange(N_threads)]
+            p = Pool(N_threads)
+            res = [None] * N_threads
+            with warnings.catch_warnings():
+                # warnings.catch_warnings doesn't work in parallel
+                # environment...
+                warnings.simplefilter("ignore") # for _z2Gyr_vec
+                for i in xrange(N_threads):
+                    res[i] = p.apply_async(_z2Gyr_vec,
+                                (form[chunk[i][0]:chunk[i][1]], cosmo))
+            for i in xrange(N_threads):
+                form[chunk[i][0]:chunk[i][1]] = res[i].get()
+        else:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore") # for _z2Gyr_vec
+                form.setfield(_z2Gyr_vec(form,cosmo), dtype=form.dtype)
+        form.units = 'Gyr'
+        # from present day ages (lookback time) to actual current ages
+        form -= cosmo.lookback_time(subs['z'])
+
+    else:
+        # 't_form' -> actual age
+        time = UnitScalar(time, form.units, subs=subs)
+        form = time - form
+
+    if units is not None:
+        form.convert_to(units, subs=subs)
+
+    return form
 

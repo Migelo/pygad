@@ -33,25 +33,24 @@ Examples:
     UnitArr(12.1113256052, units="kpc")
     >>> eff_radius(sub)
     derive block rcyl... done.
-    derive block mag... skipping Z_0_0150.dat
-    skipping Z_0_0160.dat
-    skipping Z_0_0170.dat
-    skipping Z_0_0190.dat
-    skipping Z_0_0200.dat
-    skipping Z_0_0210.dat
+    load block form_time... done.
+    derive block age... done.
     load block elements... done.
     convert block elements to physical units... done.
     derive block H... done.
     derive block He... done.
     derive block metals... done.
     derive block Z... done.
-    load block age... done.
-    convert block age to physical units... done.
-    load block inim... done.
-    convert block inim to physical units... done.
+    derive block mag... interpolate SSP tables for qty "Mbol"...
+    read tables...
+    table limits:
+      age [yr]:    1.00e+05 - 2.00e+10
+      metallicity: 1.00e-04 - 5.00e-02
+    interpolate in age...
+    interpolate in metallicity...
     done.
     derive block lum... done.
-    UnitArr(2.99944045889, units="kpc")
+    UnitArr(2.92262951906, units="kpc")
     >>> half_qty_radius(sub, qty='mass', proj=2)
     UnitArr(9.17572055243, units="kpc")
     >>> print map(str,flow_rates(s, '50 kpc'))

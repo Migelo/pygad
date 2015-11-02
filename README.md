@@ -24,14 +24,20 @@ Simply clone and install the git repository:
 ```
 $ git clone https://bitbucket.org/broett/pygad
 $ cd pygad
+$ wget https://bitbucket.org/broett/pygad/downloads/bc03.tar.gz
+$ tar -xzf bc03.tar.gz
 $ sudo python setup.py install
 ```
+
+The third step of downloading the [Bruzual & Charlot (2003) SSP models][BC03] is optional but recommended (since required for standard star plotting routines).
 
 If you have problems or want a more detailed explanation, see the [wiki][WikiInstallation].
 
 ### Configure
 
-You probably need to customise [pyga][]d's config files for your specific type of snapshots (even HDF5 block names can differ).
+In order to use the single stellar population models
+
+You probably need to customise [pygad]'s config files for your specific type of snapshots (even HDF5 block names can differ).
 This goes a little beyond the scope of a README.
 Be referred to the [wiki][WikiConfig].
 
@@ -64,6 +70,7 @@ contact me:
 
 [pygad]: https://bitbucket.org/broett/pygad
 [pynbody]: https://pynbody.github.io
+[BC03]: http://www.bruzual.org
 [Downloads]: https://bitbucket.org/broett/pygad/downloads
 [WikiHome]: https://bitbucket.org/broett/pygad/wiki/Home
 [WikiInstallation]: https://bitbucket.org/broett/pygad/wiki/Installation

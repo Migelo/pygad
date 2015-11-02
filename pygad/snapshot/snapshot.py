@@ -27,7 +27,7 @@ Example:
     >>> s.loadable_blocks()
     ['vel', 'mass', 'ID', 'pos']
     >>> for d in s.deriveable_blocks(): print d,
-    lum_j lum_k lum_h lum_i Epot lum_b Ne metals jzjc RemainingElements lum_r rcyl lum_v lum_u mag_j alpha_el r Fe mag_v lum momentum He Mg E mag_b H mag_i mag_h O N mag_u S angmom mag_k mag mag_r Z Ekin temp C Ca vcirc Si vrad jcirc
+    lum_k Epot lum_b C metals jzjc RemainingElements lum_r rcyl lum_v lum_u Z vrad alpha_el r Fe lum momentum He Mg E mag_b H O Ne mag_u S angmom mag_k mag mag_r N Ekin temp Ca vcirc Si mag_v jcirc age
     >>> assert set(s.all_blocks()) == set(s.loadable_blocks() + s.deriveable_blocks())
     >>> mwgt_pos = np.tensordot(s.mass, s.pos, axes=1).view(UnitArr)
     load block mass... done.
@@ -126,7 +126,7 @@ Example:
     >>> 'r' in s
     True
     >>> for a in s.available_blocks(): print a,
-    Epot pot pos jzjc rcyl r mass vel momentum E vrad ID Ekin vcirc angmom jcirc
+    Epot pot pos jzjc rcyl vrad r mass vel momentum E ID Ekin vcirc angmom jcirc
     >>> s.delete_blocks(derived=True)
     >>> 'r' in s
     True
@@ -191,9 +191,9 @@ Example:
     >>> s2.load_all_blocks()    # doctest:+ELLIPSIS
     load block nh... done.
     load block elements... done.
-    load block hsml... done.
-    load block age... done.
-    load block inim... done.
+    load block temp... done.
+    load block sfr... done.
+    load block pot... done.
     ...
     >>> for name in s.loadable_blocks():
     ...     b  = getattr(s.get_host_subsnap(name), name)
@@ -389,6 +389,8 @@ def Snap(filename, physical=False, cosmological=None, gad_units=None):
             new_name = 'elements'
         elif new_name == 'cste':
             new_name = 'temp'
+        elif new_name == 'age':
+            new_name = 'form_time'
         s._load_name[new_name] = name
         s._block_avail[new_name] = s._block_avail[name]
         del s._block_avail[name]    # blocks should not appear twice, could
@@ -943,10 +945,7 @@ class _Snap(object):
             return
         """
 
-        if block.units in ['a_form', 'z_form']:
-            phys_units = 'Gyr'
-        else:
-            phys_units = block.units.free_of_factors(['a','h_0'])
+        phys_units = block.units.free_of_factors(['a','h_0'])
 
         if phys_units != block.units:
             if environment.verbose:
@@ -1030,7 +1029,7 @@ class _Snap(object):
 
         The evaluation is done with a utils.Evaluator with numpy for math and the
         snapshot's blocks as well as some chosen objects (e.g. 'dist', 'Unit',
-        'UnitArr', 'UnitQty', 'calc_mags', 'solar', 'G') as namespace.
+        'UnitArr', 'UnitQty', 'inter_bc_qty', 'solar', 'G') as namespace.
 
         Args:
             expr (str):         An python expression that knows about the blocks
@@ -1042,14 +1041,14 @@ class _Snap(object):
             res (SimArr):       The result.
         '''
         from sim_arr import SimArr
-        from ..luminosities import calc_mags
+        from ..ssp import inter_bc_qty
 
         # prepare evaluator
         from numpy.core.umath_tests import inner1d
         import derived
         namespace = {'dist':dist, 'Unit':Unit, 'Units':Units, 'UnitArr':UnitArr,
                      'UnitQty':UnitQty, 'UnitScalar':UnitScalar,
-                     'inner1d':inner1d, 'calc_mags':calc_mags,
+                     'inner1d':inner1d, 'inter_bc_qty':inter_bc_qty,
                      'perm_inv':utils.perm_inv, 'solar':physics.solar,
                      'WMAP7':physics.WMAP7, 'Planck2013':physics.Planck2013,
                      'FLRWCosmo':physics.FLRWCosmo, 'a2z':physics.a2z,
@@ -1155,14 +1154,14 @@ class _SubSnap(_Snap):
         UnitArr(True, dtype=bool)
         >>> len(slim[slim_mask].elements)
         10015
-        >>> assert s[2:-123:10].stars.age.shape[0] == len(s[2:-123:10].stars)
-        load block age... done.
-        >>> s[2:-123:10].stars.age
+        >>> assert s[2:-123:10].stars.form_time.shape[0] == len(s[2:-123:10].stars)
+        load block form_time... done.
+        >>> s[2:-123:10].stars.form_time
         SimArr([ 0.77399528,  0.950091  ,  0.81303227, ...,  0.2623567 ,
                  0.40703428,  0.28800005],
                dtype=float32, units="a_form", snap="snap_M1196_4x_470":stars)
-        >>> assert slim[slim_mask].stars.age.shape[0] == len(slim[slim_mask].stars)
-        >>> slim[slim_mask].stars.age[::100]
+        >>> assert slim[slim_mask].stars.form_time.shape[0] == len(slim[slim_mask].stars)
+        >>> slim[slim_mask].stars.form_time[::100]
         SimArr([ 0.9974333 ,  0.30829304,  0.64798123,  0.60468233,  0.18474203,
                  0.53754038,  0.18224117,  0.26500258],
                dtype=float32, units="a_form", snap="snap_M1196_4x_470":stars)

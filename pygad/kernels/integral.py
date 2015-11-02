@@ -139,7 +139,7 @@ def rand_kernel_r(kernel=None):
 
     Args:
         kernel (str):   The name of the kernel to use. (By default use the kernel
-                        defined in 'gadget.cfg'.)
+                        defined in `gadget.cfg`.)
 
     Returns:
         r (float):      A random radius.

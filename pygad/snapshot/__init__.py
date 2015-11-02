@@ -9,7 +9,7 @@ Also doctest other parts of this sub-module:
     >>> doctest.testmod(snapshot)
     TestResults(failed=0, attempted=114)
     >>> doctest.testmod(derived)
-    TestResults(failed=0, attempted=8)
+    TestResults(failed=0, attempted=12)
     >>> doctest.testmod(sim_arr)
     TestResults(failed=0, attempted=10)
     >>> doctest.testmod(masks)

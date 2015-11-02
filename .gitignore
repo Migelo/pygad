@@ -10,6 +10,7 @@ pygad.egg-info
 .DS_store
 
 # some directories and downloads you might have from the bitbucket side
+bc03
 snaps
 wiki
 QuickStart.ipynb

@@ -89,7 +89,7 @@ def map_qty(s, extent, qty, av=None, Npx=200, res=None, xaxis=0, yaxis=1, soften
                             in the sub-routine 'sph.map_sph_qty'. See its
                             documentation for more details.
         kernel (str):       The kernel to use for smoothing. (Default: 'kernel'
-                            from config file 'gadget.cfg')
+                            from config file `gadget.cfg`)
 
     Returns:
         grid (UnitArr):     The quantity summed along the third axis over the area

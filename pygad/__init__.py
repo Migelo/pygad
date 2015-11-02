@@ -38,9 +38,9 @@ doctests:
     >>> print >> sys.stderr, 'testing module octree...'
     >>> doctest.testmod(octree)
     TestResults(failed=0, attempted=2)
-    >>> print >> sys.stderr, 'testing module luminosities...'
-    >>> doctest.testmod(luminosities)
-    TestResults(failed=0, attempted=12)
+    >>> print >> sys.stderr, 'testing module ssp...'
+    >>> doctest.testmod(ssp)
+    TestResults(failed=0, attempted=2)
     >>> print >> sys.stderr, 'testing module binning...'
     >>> doctest.testmod(binning)
     TestResults(failed=0, attempted=4)
@@ -74,7 +74,7 @@ import gadget
 import transformation
 import snapshot
 import octree
-import luminosities
+import ssp
 import binning
 import analysis
 import tools
