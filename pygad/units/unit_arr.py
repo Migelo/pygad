@@ -201,6 +201,20 @@ class UnitArr(np.ndarray):
 
         return new
 
+    def __float__(self):
+        try:
+            a = self.astype(float).in_units_of(1)
+        except:
+            a = self
+        return float(a.view(np.ndarray))
+
+    def __int__(self):
+        try:
+            a = self.astype(float).in_units_of(1)
+        except:
+            a = self
+        return int(a.view(np.ndarray))
+
     def __array_finalize__(self, obj):
         if obj is None:
             return
@@ -380,8 +394,6 @@ class UnitArr(np.ndarray):
         if not isinstance(units, (_UnitClass,str,numbers.Number)):
             raise TypeError('Cannot convert type %s to units!' % \
                             type(units).__name__)
-        if not copy and self.units == units:
-            return self
         c = self.copy()
         c.convert_to(units=units, subs=subs, cosmo=cosmo, parallel=parallel)
         return c
@@ -414,6 +426,8 @@ class UnitArr(np.ndarray):
         if not isinstance(units, _UnitClass):
             units = Unit(units)
         if self._units == units:
+            if str(self._units) != str(units):
+                self.units = units
             return
         elif self._units is None:
             self.units = units
@@ -669,10 +683,11 @@ class UnitArr(np.ndarray):
 
     def prod(self, axis=None, dtype=None, out=None):
         x = np.ndarray.prod(self, axis, dtype, out)
-        if axis is None:
-            x.units = self._units ** np.prod(self.shape)
-        else:
-            x.units = self._units ** self.shape[axis]
+        if self._units is not None:
+            if axis is None:
+                x.units = self._units ** np.prod(self.shape)
+            else:
+                x.units = self._units ** self.shape[axis]
         return x
 
     def sum(self, *args, **kwargs):
@@ -707,7 +722,8 @@ class UnitArr(np.ndarray):
 
     def var(self, *args, **kwargs):
         x = np.ndarray.var(self, *args, **kwargs)
-        x.units = self._units**2
+        if self._units is not None:
+            x.units = self._units**2
         return x
 
 def dist(arr, pos=None, metric='euclidean', p=2, V=None, VI=None, w=None):
