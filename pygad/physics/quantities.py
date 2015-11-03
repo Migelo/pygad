@@ -12,10 +12,18 @@ Example:
     TODO: Why is this actually not closer to one?!
     >>> sum(solar.Z_massfrac)
     0.99971229335
+
+    >>> Jeans_mass('10 K', '1e6 u/cm**3')
+    UnitArr(0.370466528012, units="Msol")
+    >>> Jeans_length('10 K', '1e6 u/cm**3', units='pc')
+    UnitArr(0.0306686617722, units="pc")
+    >>> Jeans_mass('1e4 K', '1.0 u/cm**3')
+    UnitArr(1.171518e+07, units="Msol")
 '''
 __all__ = ['alpha_elements', 'G', 'c', 'kB', 'N_A', 'R', 'm_p', 'm_n', 'm_u',
            'm_e', 'solar', 'SMH_Moster_2013', 'SMH_Behroozi_2013',
-           'SMH_Kravtsov_2014', 'Reff_van_der_Wel_2014', 'SFR_Elbaz_2007']
+           'SMH_Kravtsov_2014', 'Reff_van_der_Wel_2014', 'SFR_Elbaz_2007',
+           'Jeans_length', 'Jeans_mass']
 
 import numpy as np
 import sys
@@ -432,4 +440,56 @@ def SFR_Elbaz_2007(M_star, z=0.0, return_scatter=False):
         return SFR, sigma
     else:
         return SFR
+
+def Jeans_length(T, rho, mu=m_u, units='kpc'):
+    '''
+    The Jeans length.
+
+    ... as in:
+
+           15 kB T
+       ---------------
+        4 pi G mu rho
+
+    Args:
+        T (UnitScalar):     The temperature of the gas (floats are interpreted in
+                            units of Kelvin).
+        rho (UnitScalar):   The gas density (floats -> g/cm**3).
+        mu (UnitScalar):    The (effective) particle mass (floats -> g).
+        units (str, Unit):  The units to return the Jeans length in.
+
+    Return:
+        L (UnitScalar):     The Jeans length.
+    '''
+    T = UnitScalar(T, 'K')
+    rho = UnitScalar(rho, 'g/cm**3')
+    mu = UnitScalar(mu, 'g')
+
+    L2 = 15.*kB*T/(4.*np.pi*G*mu*rho)
+    L2.convert_to(Unit(units)**2)
+    return np.sqrt(L2)
+    
+def Jeans_mass(T, rho, mu=m_u, units='Msol'):
+    '''
+    The Jeans mass.
+
+    ... as in:
+
+          1125        /  kB T  \ 3       2
+       ---------  x  |  ------  |  x  rho
+        16 pi^2       \  G mu  /
+
+    Args:
+        T (UnitScalar):     The temperature of the gas (floats are interpreted in
+                            units of Kelvin).
+        rho (UnitScalar):   The gas density (floats -> g/cm**3).
+        mu (UnitScalar):    The (effective) particle mass (floats -> g).
+        units (str, Unit):  The units to return the Jeans mass in.
+
+    Return:
+        M (UnitScalar):     The Jeans mass.
+    '''
+    M = 4.*np.pi/3. * (Jeans_length(T,rho,mu)/2.)**3 * rho
+    M.convert_to(units)
+    return M
 
