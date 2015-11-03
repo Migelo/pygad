@@ -17,8 +17,11 @@ Example:
     UnitArr(0.370466528012, units="Msol")
     >>> Jeans_length('10 K', '1e6 u/cm**3', units='pc')
     UnitArr(0.0306686617722, units="pc")
-    >>> Jeans_mass('1e4 K', '1.0 u/cm**3')
-    UnitArr(1.171518e+07, units="Msol")
+    >>> Jeans_mass(UnitArr([1e2,1e3,1e4,1e5],'K'), '1.0 u/cm**3')
+    UnitArr([  1.17151803e+04,   3.70466528e+05,   1.17151803e+07,
+               3.70466528e+08], units="Msol")
+    >>> Jeans_mass('1e4 K', UnitArr([1e-2,1e0,1e2],'u/cm**3'))
+    UnitArr([  1.17151803e+08,   1.17151803e+07,   1.17151803e+06], units="Msol")
 '''
 __all__ = ['alpha_elements', 'G', 'c', 'kB', 'N_A', 'R', 'm_p', 'm_n', 'm_u',
            'm_e', 'solar', 'SMH_Moster_2013', 'SMH_Behroozi_2013',
@@ -447,23 +450,34 @@ def Jeans_length(T, rho, mu=m_u, units='kpc'):
 
     ... as in:
 
-           15 kB T
-       ---------------
-        4 pi G mu rho
+        /    15 kB T    \ 1/2
+       | --------------- |
+        \ 4 pi G mu rho /
+
+    Note:
+        You can also calculate Jeans lengthes for arrays of parameters as long as
+        all other parameters are still scalars.
 
     Args:
-        T (UnitScalar):     The temperature of the gas (floats are interpreted in
+        T (UnitQty):        The temperature of the gas (floats are interpreted in
                             units of Kelvin).
-        rho (UnitScalar):   The gas density (floats -> g/cm**3).
-        mu (UnitScalar):    The (effective) particle mass (floats -> g).
+        rho (UnitQty):      The gas density (floats -> g/cm**3).
+        mu (UnitQty):       The (effective) particle mass (floats -> g).
         units (str, Unit):  The units to return the Jeans length in.
 
     Return:
-        L (UnitScalar):     The Jeans length.
+        L (UnitQty):        The Jeans length.
+
+    Raises:
+        ValueError:         If more than one of the parameters has shape.
     '''
-    T = UnitScalar(T, 'K')
-    rho = UnitScalar(rho, 'g/cm**3')
-    mu = UnitScalar(mu, 'g')
+    T = UnitQty(T, 'K')
+    rho = UnitQty(rho, 'g/cm**3')
+    mu = UnitQty(mu, 'g')
+
+    if np.sum(map(bool, (T.shape, rho.shape, mu.shape))) > 1:
+        raise ValueError('Passing more than one parameter as an array is ' + \
+                         'ambiguous!')
 
     L2 = 15.*kB*T/(4.*np.pi*G*mu*rho)
     L2.convert_to(Unit(units)**2)
@@ -475,20 +489,29 @@ def Jeans_mass(T, rho, mu=m_u, units='Msol'):
 
     ... as in:
 
-          1125        /  kB T  \ 3       2
-       ---------  x  |  ------  |  x  rho
-        16 pi^2       \  G mu  /
+        4      3          /     3    \ 1/2  / 5 kB T \ 3/2
+       --- pi L  rho  =  | ---------- |    | -------- |
+        3                 \ 4 pi rho /      \  G mu  /
+
+    Note:
+        You can also calculate Jeans lengthes for arrays of parameters as long as
+        all other parameters are still scalars.
 
     Args:
-        T (UnitScalar):     The temperature of the gas (floats are interpreted in
+        T (UnitQty):        The temperature of the gas (floats are interpreted in
                             units of Kelvin).
-        rho (UnitScalar):   The gas density (floats -> g/cm**3).
-        mu (UnitScalar):    The (effective) particle mass (floats -> g).
+        rho (UnitQty):      The gas density (floats -> g/cm**3).
+        mu (UnitQty):       The (effective) particle mass (floats -> g).
         units (str, Unit):  The units to return the Jeans mass in.
 
     Return:
-        M (UnitScalar):     The Jeans mass.
+        M (UnitQty):        The Jeans mass.
+
+    Raises:
+        ValueError:         If more than one of the parameters has shape.
     '''
+    rho = UnitQty(rho, 'g/cm**3')
+
     M = 4.*np.pi/3. * (Jeans_length(T,rho,mu)/2.)**3 * rho
     M.convert_to(units)
     return M
