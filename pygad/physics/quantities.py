@@ -474,28 +474,16 @@ def Jeans_length(T, rho, mu=m_u, units='kpc'):
         ValueError:         If multiple parameters have nonidentical shapes.
     '''
     k = [] # array for lengths of given arrays
-    if not isinstance(T, UnitArr):
-        T = UnitArr(T)
-    if T._units is None:
-        T._units = Unit('K')
+    T = UnitQty(T, units='K', dtype=np.float64)
     if sum(T.shape) > 0:
-        T = np.float64(T)
         k.append(sum(T.shape))
 
-    if not isinstance(rho, UnitArr):
-        rho = UnitArr(rho)
-    if rho._units is None:
-        rho._units = Unit('g/cm**3')
+    rho = UnitQty(rho, units='g/cm**3', dtype=np.float64)
     if sum(rho.shape) > 0:
-        rho = np.float64(rho)
         k.append(sum(rho.shape))
 
-    if not isinstance(mu, UnitArr):
-        mu = UnitArr(mu)
-    if mu._units is None:
-        mu._units = Unit('g')
+    mu = UnitQty(mu, units='g', dtype=np.float64)
     if sum(mu.shape) > 0:
-        mu = np.float64(mu)
         k.append(sum(mu.shape))
 
     # check if all given arrays are of the same shape, if there are more than one
@@ -536,13 +524,8 @@ def Jeans_mass(T, rho, mu=m_u, units='Msol'):
 
     Raises:
         ValueError:         If multiple parameters have nonidentical shapes.
-    '''
-    if not isinstance(rho, UnitArr):
-        rho = UnitArr(rho)
-    if rho._units is None:
-        rho._units = Unit('g/cm**3')
-    if sum(rho.shape) > 0:
-        rho = np.float64(rho)
+    ''' 
+    rho = UnitQty(rho, units='g/cm**3', dtype=np.float64)
 
     M = 4.*np.pi/3. * (Jeans_length(T,rho,mu)/2.)**3 * rho
     M.convert_to(units)
