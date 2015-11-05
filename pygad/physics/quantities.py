@@ -456,28 +456,53 @@ def Jeans_length(T, rho, mu=m_u, units='kpc'):
 
     Note:
         You can also calculate Jeans lengthes for arrays of parameters as long as
-        all other parameters are still scalars.
+        they have all the same length (the Jeans length is then calculated 
+        elementwise for all entries in the array) or only on parameter is given
+        as an array while all others are still scalars.
 
     Args:
-        T (UnitQty):        The temperature of the gas (floats are interpreted in
+        T (UnitArr):        The temperature of the gas (floats are interpreted in
                             units of Kelvin).
-        rho (UnitQty):      The gas density (floats -> g/cm**3).
-        mu (UnitQty):       The (effective) particle mass (floats -> g).
+        rho (UnitArr):      The gas density (floats -> g/cm**3).
+        mu (UnitArr):       The (effective) particle mass (floats -> g).
         units (str, Unit):  The units to return the Jeans length in.
 
     Return:
         L (UnitQty):        The Jeans length.
 
     Raises:
-        ValueError:         If more than one of the parameters has shape.
+        ValueError:         If multiple parameters have nonidentical shapes.
     '''
-    T = UnitQty(T, 'K')
-    rho = UnitQty(rho, 'g/cm**3')
-    mu = UnitQty(mu, 'g')
+    k = [] # array for lengths of given arrays
+    if not isinstance(T, UnitArr):
+        T = UnitArr(T)
+    if T._units is None:
+        T._units = Unit('K')
+    if sum(T.shape) > 0:
+        T = np.float64(T)
+        k.append(sum(T.shape))
 
-    if np.sum(map(bool, (T.shape, rho.shape, mu.shape))) > 1:
-        raise ValueError('Passing more than one parameter as an array is ' + \
-                         'ambiguous!')
+    if not isinstance(rho, UnitArr):
+        rho = UnitArr(rho)
+    if rho._units is None:
+        rho._units = Unit('g/cm**3')
+    if sum(rho.shape) > 0:
+        rho = np.float64(rho)
+        k.append(sum(rho.shape))
+
+    if not isinstance(mu, UnitArr):
+        mu = UnitArr(mu)
+    if mu._units is None:
+        mu._units = Unit('g')
+    if sum(mu.shape) > 0:
+        mu = np.float64(mu)
+        k.append(sum(mu.shape))
+
+    # check if all given arrays are of the same shape, if there are more than one
+    if len(k) > 1:
+        if k.count(k[0]) != len(k):
+            raise ValueError('If more than one parameter is passed as an ' + \
+                             'array, they need to have the same shape!')
 
     L2 = 15.*kB*T/(4.*np.pi*G*mu*rho)
     L2.convert_to(Unit(units)**2)
@@ -489,28 +514,35 @@ def Jeans_mass(T, rho, mu=m_u, units='Msol'):
 
     ... as in:
 
-        4      3          /     3    \ 1/2  / 5 kB T \ 3/2
-       --- pi L  rho  =  | ---------- |    | -------- |
-        3                 \ 4 pi rho /      \  G mu  /
+        4      / L \ 3          /      3     \ 1/2  / 5 kB T \ 3/2
+       --- pi | --- |  rho  =  | ------------ |    | -------- |
+        3      \ 2 /            \ 256 pi rho /      \  G mu  /
 
     Note:
         You can also calculate Jeans lengthes for arrays of parameters as long as
-        all other parameters are still scalars.
+        they have all the same length (the Jeans length is then calculated 
+        elementwise for all entries in the array) or only on parameter is given
+        as an array while all others are still scalars.
 
     Args:
-        T (UnitQty):        The temperature of the gas (floats are interpreted in
+        T (UnitArr):        The temperature of the gas (floats are interpreted in
                             units of Kelvin).
-        rho (UnitQty):      The gas density (floats -> g/cm**3).
-        mu (UnitQty):       The (effective) particle mass (floats -> g).
+        rho (UnitArr):      The gas density (floats -> g/cm**3).
+        mu (UnitArr):       The (effective) particle mass (floats -> g).
         units (str, Unit):  The units to return the Jeans mass in.
 
     Return:
         M (UnitQty):        The Jeans mass.
 
     Raises:
-        ValueError:         If more than one of the parameters has shape.
+        ValueError:         If multiple parameters have nonidentical shapes.
     '''
-    rho = UnitQty(rho, 'g/cm**3')
+    if not isinstance(rho, UnitArr):
+        rho = UnitArr(rho)
+    if rho._units is None:
+        rho._units = Unit('g/cm**3')
+    if sum(rho.shape) > 0:
+        rho = np.float64(rho)
 
     M = 4.*np.pi/3. * (Jeans_length(T,rho,mu)/2.)**3 * rho
     M.convert_to(units)
