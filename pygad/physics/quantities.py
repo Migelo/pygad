@@ -14,14 +14,14 @@ Example:
     0.99971229335
 
     >>> Jeans_mass('10 K', '1e6 u/cm**3')
-    UnitArr(0.370466528012, units="Msol")
+    UnitArr(2.9637322241, units="Msol")
     >>> Jeans_length('10 K', '1e6 u/cm**3', units='pc')
     UnitArr(0.0306686617722, units="pc")
     >>> Jeans_mass(UnitArr([1e2,1e3,1e4,1e5],'K'), '1.0 u/cm**3')
-    UnitArr([  1.17151803e+04,   3.70466528e+05,   1.17151803e+07,
-               3.70466528e+08], units="Msol")
+    UnitArr([  9.37214420e+04,   2.96373222e+06,   9.37214420e+07,
+               2.96373222e+09], units="Msol")
     >>> Jeans_mass('1e4 K', UnitArr([1e-2,1e0,1e2],'u/cm**3'))
-    UnitArr([  1.17151803e+08,   1.17151803e+07,   1.17151803e+06], units="Msol")
+    UnitArr([  9.37214420e+08,   9.37214420e+07,   9.37214420e+06], units="Msol")
 '''
 __all__ = ['alpha_elements', 'G', 'c', 'kB', 'N_A', 'R', 'm_p', 'm_n', 'm_u',
            'm_e', 'solar', 'SMH_Moster_2013', 'SMH_Behroozi_2013',
@@ -502,9 +502,9 @@ def Jeans_mass(T, rho, mu=m_u, units='Msol'):
 
     ... as in:
 
-        4      / L \ 3          /      3     \ 1/2  / 5 kB T \ 3/2
-       --- pi | --- |  rho  =  | ------------ |    | -------- |
-        3      \ 2 /            \ 256 pi rho /      \  G mu  /
+        4      3          /     3    \ 1/2  / 5 kB T \ 3/2
+       --- pi L  rho  =  | ---------- |    | -------- |
+        3                 \ 4 pi rho /      \  G mu  /
 
     Note:
         You can also calculate Jeans lengthes for arrays of parameters as long as
@@ -527,7 +527,7 @@ def Jeans_mass(T, rho, mu=m_u, units='Msol'):
     ''' 
     rho = UnitQty(rho, units='g/cm**3', dtype=np.float64)
 
-    M = 4.*np.pi/3. * (Jeans_length(T,rho,mu)/2.)**3 * rho
+    M = 4.*np.pi/3. * Jeans_length(T,rho,mu)**3 * rho
     M.convert_to(units)
     return M
 
