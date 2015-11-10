@@ -20,8 +20,8 @@ Example:
     >>> Jeans_mass(UnitArr([1e2,1e3,1e4,1e5],'K'), '1.0 u/cm**3')
     UnitArr([  9.37214420e+04,   2.96373222e+06,   9.37214420e+07,
                2.96373222e+09], units="Msol")
-    >>> Jeans_mass('1e4 K', UnitArr([1e-2,1e0,1e2],'u/cm**3'))
-    UnitArr([  9.37214420e+08,   9.37214420e+07,   9.37214420e+06], units="Msol")
+    >>> Jeans_mass(UnitArr([1e4,1e4,1e2],'K'), UnitArr([1e-2,1e0,1e2],'u/cm**3'))
+    UnitArr([  9.37214420e+08,   9.37214420e+07,   9.37214420e+03], units="Msol")
 '''
 __all__ = ['alpha_elements', 'G', 'c', 'kB', 'N_A', 'R', 'm_p', 'm_n', 'm_u',
            'm_e', 'solar', 'SMH_Moster_2013', 'SMH_Behroozi_2013',
