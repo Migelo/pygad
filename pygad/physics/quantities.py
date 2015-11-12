@@ -160,31 +160,34 @@ def SMH_Moster_2013(M_halo, z=0.0, return_scatter=False):
     plus a constant 0.15 dex for a "physical scatter" (as explained in the paper).
 
     Args:
-        M_halo (UnitScalar):    The halo mass (in solar masses, if as float).
+        M_halo (UnitQty):       The halo mass (in solar masses, if as float).
         z (float):              The redshift to calculate for.
         return_scatter (bool):  Whether to also return the scatter.
 
     Returns:
-        SMH (float):                The stellar mass to halo mass ratio.
-       [scatter ([float, float]):   The scatter.]
+        SMH (float, np.dnarray):    The stellar mass to halo mass ratio.
+       [lower (float, np.dnarray):  The lower bound of the 1-sigma scatter.]
+       [upper (float, np.dnarray):  The upper bound of the 1-sigma scatter.]
 
     Example:
-        >>> for M in [1e11, 1e12, 1e13]:
-        ...     print SMH_Moster_2013(M)
-        0.010129827533
-        0.0342965939809
-        0.00974028215475
+        >>> SMH_Moster_2013([1e11, 1e12, 1e13])
+        array([ 0.01012983,  0.03429659,  0.00974028])
+        >>> for a in SMH_Moster_2013([1e11, 1e12, 1e13], return_scatter=True):
+        ...     print a
+        [ 0.01012983  0.03429659  0.00974028]
+        [ 0.00341559  0.0186693   0.00423019]
+        [ 0.03004267  0.06300485  0.0224276 ]
         >>> for z in [0.5, 1.0, 2.0, 4.0]:
-        ...     print SMH_Moster_2013(1e11,z,return_scatter=True)
-        ...     print SMH_Moster_2013(1e13,z,return_scatter=True)
-        (0.004314181996911216, [0.0013140763985384505, 0.014163686619114201])
-        (0.009955587054568093, [0.0040431561246770777, 0.024513946665613771])
-        (0.003235536108623059, [0.00087465807272739534, 0.011968898746409244])
-        (0.010323427157890868, [0.0039215586877591139, 0.027176221693924904])
-        (0.0026531006668289547, [0.00060215465142679015, 0.011689593581399173])
-        (0.010560160483693697, [0.0037325186267171905, 0.02987714211072727])
-        (0.002390900353994381, [0.00044896686807466534, 0.012732352672802963])
-        (0.0103622356309934, [0.0034261919431899795, 0.03133972907900081])
+        ...     print SMH_Moster_2013('1e11 Msol',z,return_scatter=True)
+        ...     print SMH_Moster_2013('1e13 Msol',z,return_scatter=True)
+        (0.004314181996911216, 0.0013140763985384505, 0.014163686619114201)
+        (0.009955587054568093, 0.0040431561246770777, 0.024513946665613771)
+        (0.003235536108623059, 0.00087465807272739534, 0.011968898746409244)
+        (0.010323427157890868, 0.0039215586877591139, 0.027176221693924904)
+        (0.0026531006668289547, 0.00060215465142679015, 0.011689593581399173)
+        (0.010560160483693697, 0.0037325186267171905, 0.02987714211072727)
+        (0.002390900353994381, 0.00044896686807466534, 0.012732352672802963)
+        (0.0103622356309934, 0.0034261919431899795, 0.03133972907900081)
     '''
     param = {
             'M1':    [11.590470, 1.194913],
@@ -194,14 +197,25 @@ def SMH_Moster_2013(M_halo, z=0.0, return_scatter=False):
             }
     one_minus_a = float(z / (z + 1.0))
 
-    M_halo = float( UnitScalar(M_halo, 'Msol', dtype=float) )
+    M_halo = UnitQty(M_halo, 'Msol', dtype=float)
+    from collections import Iterable
+    if getattr(M_halo, 'shape', None) and M_halo.shape[0] > 1:
+        ret = []
+        for Mh in M_halo:
+            ret.append( SMH_Moster_2013(Mh, z=z, return_scatter=return_scatter) )
+        ret = np.array(ret)
+        if return_scatter:
+            return ret[:,0], ret[:,1], ret[:,2]
+        else:
+            return ret
+    M_halo = float(M_halo)
 
     inter = {}
     for key, vals in param.iteritems():
         inter[key] = vals[0] + vals[1] * one_minus_a
     inter['M1'] = 10**inter['M1']
 
-    SHM = 2.0 * inter['N'] / ( (M_halo/inter['M1'])**-inter['beta'] +
+    SMH = 2.0 * inter['N'] / ( (M_halo/inter['M1'])**-inter['beta'] +
                                (M_halo/inter['M1'])**inter['gamma'] )
     if return_scatter:
         param.update( {
@@ -235,13 +249,13 @@ def SMH_Moster_2013(M_halo, z=0.0, return_scatter=False):
                     + ( dmd[key][1] * param[key+'e'][1] )**2
         sigma = np.sqrt( sigma ) + 0.15
 
-        log10_SM = np.log10(SHM*M_halo)
+        log10_SM = np.log10(SMH*M_halo)
         lower, upper = 10**(log10_SM-sigma)/M_halo, 10**(log10_SM+sigma)/M_halo
 
     if return_scatter:
-        return SHM, [lower, upper]
+        return SMH, lower, upper
     else:
-        return SHM
+        return SMH
 
 def _Behroozi_function(log10_M, log10_M1, log10_eps, alpha, delta, gamma):
     '''
@@ -260,20 +274,23 @@ def SMH_Behroozi_2013(M_halo, z=0.0, return_scatter=False):
     Calculate the stellar mass to halo mass ratio as in Behroozi et al. (2013).
 
     Args:
-        M_halo (UnitScalar):    The halo mass (in solar masses, if as float).
+        M_halo (UnitQty):       The halo mass (in solar masses, if as float).
         z (float):              The redshift to calculate for.
         return_scatter (bool):  Whether to also return the scatter.
 
     Returns:
-        SMH (float):                The stellar mass to halo mass ratio.
-       [scatter ([float, float]):   The scatter.]
+        SMH (float, np.dnarray):    The stellar mass to halo mass ratio.
+       [lower (float, np.dnarray):  The lower bound of the 1-sigma scatter.]
+       [upper (float, np.dnarray):  The upper bound of the 1-sigma scatter.]
 
     Example:
-        >>> for M in [1e11, 1e12, 1e13]:
-        ...     print SMH_Behroozi_2013(M)
-        0.00467550099072
-        0.0267982464569
-        0.00898847634918
+        >>> SMH_Behroozi_2013([1e11, 1e12, 1e13])
+        array([ 0.0046755 ,  0.02679825,  0.00898848])
+        >>> for e in SMH_Behroozi_2013([1e11, 1e12, 1e13], return_scatter=True):
+        ...     print e
+        [ 0.0046755   0.02679825  0.00898848]
+        [ 0.00283027  0.01622207  0.00544109]
+        [ 0.00772375  0.04426968  0.01484862]
         >>> for z in [0.5, 1.0, 2.0, 4.0]:
         ...     print SMH_Behroozi_2013(1e11,z)
         ...     print SMH_Behroozi_2013(1e13,z)
@@ -285,10 +302,8 @@ def SMH_Behroozi_2013(M_halo, z=0.0, return_scatter=False):
         0.0114371024135
         0.00346060663521
         0.00727267777033
-        >>> SMH_Behroozi_2013(1e11, z=0.1, return_scatter=True)
-        (0.0047309550870295175, [0.0028500856797309547, 0.0078530748021593891])
     '''
-    M_halo = float( UnitScalar(M_halo, 'Msol', dtype=float) )
+    M_halo = UnitQty(M_halo, 'Msol', dtype=float).view(np.ndarray)
 
     z = float(z)
     a           = 1 / (1.+z)
@@ -308,7 +323,8 @@ def SMH_Behroozi_2013(M_halo, z=0.0, return_scatter=False):
     #TODO: do properly
     #log10_SM = log10_SM - mu
     if return_scatter:
-        return 10**log10_SM/M_halo, [10**(log10_SM-xi)/M_halo, 10**(log10_SM+xi)/M_halo]
+        return 10**log10_SM/M_halo, \
+               10**(log10_SM-xi)/M_halo, 10**(log10_SM+xi)/M_halo
     else:
         return 10**log10_SM/M_halo
 
@@ -328,15 +344,22 @@ def SMH_Kravtsov_2014(M_halo, type='200c', return_scatter=False):
        [scatter ([float, float]):   The scatter.]
 
     Example:
+        >>> SMH_Kravtsov_2014([1e11, 1e12, 1e13])
+        array([ 0.00807214,  0.04218667,  0.0205807 ])
+        >>> for a in SMH_Kravtsov_2014([1e11, 1e12, 1e13], return_scatter=True):
+        ...     print a
+        [ 0.00807214  0.04218667  0.0205807 ]
+        [ 0.00509317  0.02661799  0.01298554]
+        [ 0.01279348  0.06686137  0.03261821]
         >>> for M in [1e11, 1e12, 1e13, 1e14, 1e15]:
         ...     print SMH_Kravtsov_2014(M, return_scatter=True)
-        (0.0080721380725860981, [0.0050931748025563987, 0.01279347667984786])
-        (0.042186669544032114, [0.026617988987965989, 0.066861365372942974])
-        (0.020580699826573009, [0.012985543710118501, 0.032618211051221133])
-        (0.0072125753788777162, [0.0045508274079199152, 0.01143116161809591])
-        (0.0022639956645691835, [0.0014284846924312448, 0.0035881913165371681])
+        (0.0080721380725860981, 0.0050931748025563987, 0.01279347667984786)
+        (0.042186669544032114, 0.026617988987965989, 0.066861365372942974)
+        (0.020580699826573009, 0.012985543710118501, 0.032618211051221133)
+        (0.0072125753788777162, 0.0045508274079199152, 0.01143116161809591)
+        (0.0022639956645691835, 0.0014284846924312448, 0.0035881913165371681)
     '''
-    M_halo = float( UnitScalar(M_halo, 'Msol', dtype=float) )
+    M_halo = UnitQty(M_halo, 'Msol', dtype=float).view(np.ndarray)
 
     log10_M1 =  {'200c': 11.35, '200m': 11.41, 'vir': 11.39}[type]
     log10_eps = {'200c':-1.642, '200m':-1.720, 'vir':-1.685}[type]
@@ -348,7 +371,8 @@ def SMH_Kravtsov_2014(M_halo, type='200c', return_scatter=False):
     if return_scatter:
         warnings.warn('Scatter of 0.2 dex in Kravtsov et al. (2014) not shure!')
         #print >> sys.stderr, 'WARNING: scatter of 0.2 dex in Kravtsov et al. (2014) not shure!'
-        return 10**log10_SM/M_halo, [10**(log10_SM-0.2)/M_halo, 10**(log10_SM+0.2)/M_halo]
+        return 10**log10_SM/M_halo, \
+               10**(log10_SM-0.2)/M_halo, 10**(log10_SM+0.2)/M_halo
     else:
         return 10**log10_SM/M_halo
 
