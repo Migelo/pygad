@@ -12,16 +12,6 @@ Example:
     TODO: Why is this actually not closer to one?!
     >>> sum(solar.Z_massfrac)
     0.99971229335
-
-    >>> Jeans_mass('10 K', '1e6 u/cm**3')
-    UnitArr(2.9637322241, units="Msol")
-    >>> Jeans_length('10 K', '1e6 u/cm**3', units='pc')
-    UnitArr(0.0306686617722, units="pc")
-    >>> Jeans_mass(UnitArr([1e2,1e3,1e4,1e5],'K'), '1.0 u/cm**3')
-    UnitArr([  9.37214420e+04,   2.96373222e+06,   9.37214420e+07,
-               2.96373222e+09], units="Msol")
-    >>> Jeans_mass(UnitArr([1e4,1e4,1e2],'K'), UnitArr([1e-2,1e0,1e2],'u/cm**3'))
-    UnitArr([  9.37214420e+08,   9.37214420e+07,   9.37214420e+03], units="Msol")
 '''
 __all__ = ['alpha_elements', 'G', 'c', 'kB', 'N_A', 'R', 'm_p', 'm_n', 'm_u',
            'm_e', 'solar', 'SMH_Moster_2013', 'SMH_Behroozi_2013',
@@ -381,15 +371,25 @@ def Reff_van_der_Wel_2014(M_stars, z, type, return_scatter=False):
     A fit to the measure effective radii from van der Wel et al. (2014).
 
     Args:
-        M_stars (UnitScalar):   The stellar mass (in solar masses if float).
+        M_stars (UnitQty):      The stellar mass (in solar masses if float).
         z (float):              The redshift. Has to be less than 3.
         type ('ETG', 'LTG'):    The type of the galaxy.
         return_scatter (bool):  Whether to also return the scatter.
 
     Returns:
-        Reff (float):    The half mass radius in kpc.
-        or
-        sigma (float):  The logarithmic scatter in Reff: sigma(log10(Reff)).
+        Reff (UnitQty):     The half mass radius in kpc.
+       [sigma (float):      The logarithmic scatter in Reff:
+                            sigma(log10(Reff/kpc)). It is also for arrays of Reff
+                            just a scalar!]
+
+    Examples:
+        >>> Reff_van_der_Wel_2014(1e10, z=1.2, type='LTG')
+        UnitArr(3.58283327536, units="kpc")
+        >>> Reff_van_der_Wel_2014([1e9,1e10,1e11], z=0.5, type='LTG')
+        UnitArr([ 2.63476599,  4.52628659,  7.7757457 ], units="kpc")
+        >>> Reff_van_der_Wel_2014([1e10,1e11,1e12], z=0.5, type='ETG',
+        ...                       return_scatter=True)
+        (UnitArr([  0.99942888,   5.36725089,  28.82384388], units="kpc"), 0.10500000000000001)
     '''
     z_edges = np.array([0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0])
     z = float(z)
@@ -412,8 +412,9 @@ def Reff_van_der_Wel_2014(M_stars, z, type, return_scatter=False):
             sigma = sigma_bins[type][i-1] * xi_z + sigma_bins[type][i] * (1.-xi_z)
             break
 
-    M_stars = float( UnitScalar(M_stars, 'Msol', dtype=float) )
-    Reff = 10**A * (M_stars/5e10)**alpha
+    M_stars = UnitQty(M_stars, 'Msol', dtype=float) / UnitArr(5e10, 'Msol')
+    M_stars = M_stars.view(np.ndarray)  # needed for broken power of alpha
+    Reff = UnitArr(10**A * M_stars**alpha, 'kpc')
     if return_scatter:
         return Reff, sigma
     else:
@@ -428,30 +429,35 @@ def SFR_Elbaz_2007(M_star, z=0.0, return_scatter=False):
     inbetween or >1.
 
     Args:
-        M_star (UnitScalar):    The stellar mass of the galaxy.
+        M_star (UnitQty):       The stellar mass of the galaxy.
         z (float):              The redshift. Has to be less than 1.5.
         return_scatter (bool):  Whether to also return the scatter.
 
     Returns:
-        SFR (float):    The star-formation rate in solar masses per year.
+        SFR (UnitQty):          The star-formation rate.
+       [lower (UnitQty):        The lower bound of the 1-sigma scatter.]
+       [upper (UnitQty):        The upper bound of the 1-sigma scatter.]
 
     Examples:
-        >>> SFR_Elbaz_2007(1e9)
-        0.2509107407720147
-        >>> SFR_Elbaz_2007(1e10)
-        1.4774719776417176
-        >>> SFR_Elbaz_2007(1e11)
-        8.7
-        >>> SFR_Elbaz_2007(2e10, z=1)
-        13.435675078130027
-        >>> SFR_Elbaz_2007(2e10, z=0)
-        2.5194883194934694
-        >>> SFR_Elbaz_2007(2e10, z=0.5)
-        7.977581698811748
-        >>> SFR_Elbaz_2007(2e10, z=0.1, return_scatter=True)
-        (3.611106995357125, [1.974967367437606, 6.883386251196164])
+        >>> SFR_Elbaz_2007('1e9 Msol')
+        UnitArr(0.250910740772, units="Msol yr**-1")
+        >>> SFR_Elbaz_2007([1e10, 1e11])
+        UnitArr([ 1.47747198,  8.7       ], units="Msol yr**-1")
+        >>> SFR_Elbaz_2007([1,2e10,5e11], z=1)
+        UnitArr([  7.20000000e-09,   1.34356751e+01,   2.43447602e+02],
+                units="Msol yr**-1")
+        >>> for e in SFR_Elbaz_2007(2e10, z=0.1, return_scatter=True):
+        ...     print e
+        3.61110699536 [Msol yr**-1]
+        1.97496736744 [Msol yr**-1]
+        6.8833862512 [Msol yr**-1]
+        >>> for e in SFR_Elbaz_2007([1,2e10,5e11], z=0.7, return_scatter=True):
+        ...     print e
+        [  1.38838325e-08   1.01608191e+01   1.79425865e+02] [Msol yr**-1]
+        [  7.60266234e-09   5.13688082e+00   9.03862837e+01] [Msol yr**-1]
+        [  2.64461727e-08   2.02086955e+01   3.57505029e+02] [Msol yr**-1]
     '''
-    M_star = float( UnitScalar(M_star, 'Msol', dtype=float) )
+    M_star = UnitQty(M_star, 'Msol', dtype=float).view(np.ndarray)
 
     SFR_0 = 8.7*(M_star/1e11)**0.77
     SFR_1 = 7.2*(M_star/1e10)**0.9
@@ -463,8 +469,11 @@ def SFR_Elbaz_2007(M_star, z=0.0, return_scatter=False):
     SFR = xi_z*SFR_0 + (1.-xi_z)*SFR_1
     sigma = [xi_z*s[0] + (1.-xi_z)*s[1] for s in zip(sigma_0, sigma_1)]
 
+    SFR = UnitArr(SFR, 'Msol/yr')
+    sigma = [UnitArr(s, 'Msol/yr') for s in sigma]
+
     if return_scatter:
-        return SFR, sigma
+        return SFR, sigma[0], sigma[1]
     else:
         return SFR
 
@@ -496,6 +505,12 @@ def Jeans_length(T, rho, mu=m_u, units='kpc'):
 
     Raises:
         ValueError:         If multiple parameters have nonidentical shapes.
+
+    Examples:
+        >>> Jeans_length('10 K', '1e6 u/cm**3', units='pc')
+        UnitArr(0.0306686617722, units="pc")
+        >>> Jeans_length(1e4, '1 u/cm**3', units='pc')
+        UnitArr(969.828239894, units="pc")
     '''
     k = [] # array for lengths of given arrays
     T = UnitQty(T, units='K', dtype=np.float64)
@@ -548,6 +563,15 @@ def Jeans_mass(T, rho, mu=m_u, units='Msol'):
 
     Raises:
         ValueError:         If multiple parameters have nonidentical shapes.
+
+    Examples:
+        >>> Jeans_mass('10 K', '1e6 u/cm**3')
+        UnitArr(2.9637322241, units="Msol")
+        >>> Jeans_mass(UnitArr([1e2,1e3,1e4,1e5],'K'), '1.0 u/cm**3')
+        UnitArr([  9.37214420e+04,   2.96373222e+06,   9.37214420e+07,
+                   2.96373222e+09], units="Msol")
+        >>> Jeans_mass(UnitArr([1e4,1e4,1e2],'K'), UnitArr([1e-2,1e0,1e2],'u/cm**3'))
+        UnitArr([  9.37214420e+08,   9.37214420e+07,   9.37214420e+03], units="Msol")
     ''' 
     rho = UnitQty(rho, units='g/cm**3', dtype=np.float64)
 
