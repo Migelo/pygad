@@ -1188,7 +1188,7 @@ class _SubSnap(_Snap):
     '''
     def _calc_N_part_from_slice(self, N_part_base, _slice):
         # work with positive stepping (and without None's):
-        _slice = utils.positive_simple_slice(_slice, int(sum(N_part_base)))
+        _slice = utils.sane_slice(_slice, int(sum(N_part_base)))
         start, stop, step = _slice.start, _slice.stop, _slice.step
 
         N_part = [0]*6
@@ -1265,7 +1265,7 @@ class _SubSnap(_Snap):
 
         if isinstance(self._mask, slice):
             # work with positive stepping (and without None's):
-            _slice = utils.positive_simple_slice(self._mask, len(base))
+            _slice = utils.sane_slice(self._mask, len(base))
             start, stop, step = _slice.start, _slice.stop, _slice.step
             offset = sum( base._N_part[:ptypes[0]] )
             if utils.is_consecutive(ptypes):

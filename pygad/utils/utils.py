@@ -4,8 +4,7 @@ A collection of some general (low-level) functions.
 Doctests are in the functions themselves.
 '''
 __all__ = ['static_vars', 'nice_big_num_str', 'float_to_nice_latex', 'perm_inv',
-           'periodic_distance_to', 'positive_simple_slice', 'is_consecutive',
-           'rand_dir']
+           'periodic_distance_to', 'sane_slice', 'is_consecutive', 'rand_dir']
 
 import numpy as np
 import re
@@ -187,19 +186,22 @@ def periodic_distance_to(pos, center, boxsize):
     r.units = unit
     return r
 
-def positive_simple_slice(s, N):
+def sane_slice(s, N, forward=True):
     '''
-    Convert a slice into an equivalent one with step>0 and 0<=start<=stop<=N and
-    start, stop, and step are all not None.
-
+    Convert a slice into an equivalent "sane" one.
+    
     The new slice is equivalent in the sense, that it yields the same values when
     applied. These are, however, reverted with respect to the original slice, if
-    it had a negative step, of course.
+    it had a negative step and `forward` is True.
+    "Sane" slice means: none of the attributes of the slice is None (except for a
+    backwards slice that contains the first element), 0 <= start <= stop <= N, and
+    if the slice is empty the result is always slice(0,0,1).
 
     Args:
-        s (slice):  The slice to make sane.
-        N (int):    The length of the sequence to apply the slice to. (Needed for
-                    negative indices and None's in the slice).
+        s (slice):      The slice to make sane.
+        N (int):        The length of the sequence to apply the slice to. (Needed
+                        for negative indices and None's in the slice).
+        forward (bool): Convert to forward slice.
 
     Returns:
         simple (slice): The sane start and stop position and the (positive) step.
@@ -208,9 +210,9 @@ def positive_simple_slice(s, N):
         ValueError:     If a slice with step==0 was passed.
 
     Examples:
-        >>> positive_simple_slice(slice(None,2,-3), 10)
+        >>> sane_slice(slice(None,2,-3), 10)
         slice(3, 10, 3)
-        >>> positive_simple_slice(slice(-3,None,None), 10)
+        >>> sane_slice(slice(-3,None,None), 10)
         slice(7, 10, 1)
 
         Test some random parameters for the requirements:
@@ -222,56 +224,48 @@ def positive_simple_slice(s, N):
         ...     if step==0: step = None     # would raise exception
         ...     a = range(N)
         ...     s = slice(start,stop,step)
-        ...     ss = positive_simple_slice(s,N)
-        ...     if not ( sorted(a[s]) == a[ss] and 0 <= ss.start <= ss.stop <= N
-        ...                 and ss.step > 0 ):
-        ...         print 'ERROR:'
+        ...     ss = sane_slice(s, N)
+        ...     if not ( sorted(a[s])==a[ss] and 0<=ss.start<=ss.stop<= N
+        ...                 and ss.step>0 ):
+        ...         print 'ERROR (forward=True):'
         ...         print N, s, ss
         ...         print a[s], a[ss]
+        ...     if len(a[s])==0 and not (ss.start==ss.stop==0 and ss.step==1):
+        ...         print 'ERROR:'
+        ...         print 'empty slice:', ss
+        ...     ss = sane_slice(s, N, forward=False)
+        ...     if not ( a[s]==a[ss] and 0<=ss.start<=N and (
+        ...                 (ss.stop is None and ss.step<0) or 0<=ss.stop<=N)):
+        ...         print 'ERROR (forward=False):'
+        ...         print N, s, ss
+        ...         print a[s], a[ss]
+        ...     if len(a[s])==0 and not (ss.start==ss.stop==0 and ss.step==1):
+        ...         print 'ERROR:'
+        ...         print 'empty slice:', ss
     '''
-    step = s.step if s.step is not None else 1
-    if step == 0:
-        ValueError('Slice step cannot be 0!')
-    N = int(N)
+    # get rid of None's, overly large indices, and negative indices (except -1 for
+    # backward slices that go down to first element)
+    start, stop, step = s.indices(N)
 
-    # get first index
-    first = s.start
-    if first is None:
-        first = 0 if step > 0 else N-1
-    elif first < 0:
-        first = N+first
-        if first < 0:
-            if step < 0:
-                return slice(0,0,1)
-            first = 0
-    elif first >= N:
-        if step > 0:
-            return slice(0,0,1)
-        first = N-1
-    # get stop index
-    stop = s.stop
-    if stop is None:
-        stop = N if step > 0 else -1
-    elif stop < 0:
-        stop = max(-1, N+stop)
-
-    # check for etmpy slices
-    if (stop-first)*step <= 0:
+    # get number of steps & remaining
+    n, r = divmod(stop - start, step)
+    if n < 0 or (n==0 and r==0):
         return slice(0,0,1)
+    if r != 0:  # it's a "stop index", not the last index
+        n += 1
 
-    if step > 0:
-        return slice(first, min(stop,N), step)
-    elif step == -1:
-        return slice(stop+1, first+1, -step)
-    else:
-        # calculate the new start -- does not have to be next to old stop, since
-        # the stepping might lead elsewhere
-        step = -step
-        dist = first - max(stop,-1)
-        last = first - dist / step * step
-        if dist % step == 0:
-            last += step
-        return slice(last, first+1, step)
+    if step < 0:
+        if forward:
+            start, stop, step = start+(n-1)*step, start-step, -step
+            stop = min(stop, N)
+        else:
+            stop = start+n*step
+            if stop < 0:
+                stop = None
+    else: # step > 0, step == 0 is not allowed
+        stop = min(start+n*step, N)
+
+    return slice(start, stop, step)
 
 def is_consecutive(l):
     '''
