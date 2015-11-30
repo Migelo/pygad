@@ -366,20 +366,24 @@ def rot_from_axis_angle(u, angle):
     Create a Rotation of an angle around a axis.
 
     Args:
-        u (array-like): The axis to rotate around (does not have to be
-                        normalized).
-        angle (float):  The angle in radians around the axis u (right-hand
-                        rotation).
+        u (array-like):         The axis to rotate around (does not have to be
+                                normalized).
+        angle (UnitScalar):     The angle in radians around the axis u (right-hand
+                                rotation). (Default units: rad)
 
     Example:
         >>> print rot_from_axis_angle([1,0,0], np.pi/2.0)
         Rotation([[ 1.000, 0.000, 0.000],[ 0.000, 0.000,-1.000],[ 0.000, 1.000, 0.000]])
         >>> print rot_from_axis_angle([0,0,1], np.pi/4.0)
         Rotation([[ 0.707,-0.707, 0.000],[ 0.707, 0.707, 0.000],[ 0.000, 0.000, 1.000]])
+        >>> print rot_from_axis_angle([0,0,1], '12 degree')
+        Rotation([[ 0.978,-0.208, 0.000],[ 0.208, 0.978, 0.000],[ 0.000, 0.000, 1.000]])
         >>> R = rot_from_axis_angle([1,2,3], 1.234)
         >>> np.sqrt(1**2+2**2+3**2)*R.axis(), R.angle()
         (array([ 1.,  2.,  3.]), 1.234)
     '''
+    if isinstance(angle, (str,UnitArr)):
+        angle = UnitScalar(angle, 'rad')
     angle = float(angle)
     u = np.array(u, dtype=float)
     if u.shape != (3,):

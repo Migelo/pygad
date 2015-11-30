@@ -86,6 +86,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     Returns:
         fig (Figure):       The figure of the axis plotted on.
         ax (AxesSubplot):   The axis plotted on.
+        im (AxesImage):     The image instance created.
        [cbar (Colobar):     The colorbar, if showcbar is True.]
     '''
     # setting default values for arguments
@@ -190,8 +191,8 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
 
     if scaleunits is not None:
         extent.convert_to(scaleunits, subs=s)
-    fig, ax = show_image(im, extent=extent, ax=ax, cmap=cmap, vlim=vlim,
-                         interpolation=interpolation)
+    fig, ax, im = show_image(im, extent=extent, ax=ax, cmap=cmap, vlim=vlim,
+                             interpolation=interpolation)
 
     if showcbar:
         from mpl_toolkits.axes_grid1.inset_locator import inset_axes
@@ -250,9 +251,9 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         warnings.warn('Unknown scaling indicator scaleind="%s"!' % scaleind)
 
     if showcbar:
-        return fig, ax, cbar
+        return fig, ax, im, cbar
     else:
-        return fig, ax
+        return fig, ax, im
 
 def phase_diagram(s, rho_units='Msol/pc**3', T_units='K',
                   T_threshold=None, rho_threshold=None,
@@ -274,6 +275,7 @@ def phase_diagram(s, rho_units='Msol/pc**3', T_units='K',
     Returns:
         fig (Figure):       The figure of the axis plotted on.
         ax (AxesSubplot):   The axis plotted on.
+        im (AxesImage):     The image instance created.
        [cbar (Colobar):     The colorbar, if showcbar is True.]
     '''
     if 'logscale' not in kwargs:    kwargs['logscale'] = True
@@ -282,9 +284,9 @@ def phase_diagram(s, rho_units='Msol/pc**3', T_units='K',
                       np.log10(s.temp.in_units_of(T_units)),
                       s, **kwargs)
     if kwargs['showcbar']:
-        fig, ax, cbar = res
+        fig, ax, im, cbar = res
     else:
-        fig, ax = res
+        fig, ax, im = res
 
     if rho_threshold:
         th = UnitScalar(rho_threshold)
@@ -309,7 +311,7 @@ def phase_diagram(s, rho_units='Msol/pc**3', T_units='K',
                    fontsize=16 )
 
     if kwargs['showcbar']:
-        return fig, ax, cbar
+        return fig, ax, im, cbar
     else:
-        return fig, ax
+        return fig, ax, im
 
