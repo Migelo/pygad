@@ -715,6 +715,7 @@ def _same_units_binary(a, b):
 @UnitArr.ufunc_rule(np.abs)
 @UnitArr.ufunc_rule(np.floor)
 @UnitArr.ufunc_rule(np.ceil)
+@UnitArr.ufunc_rule(np.transpose)
 #@UnitArr.ufunc_rule(np.minimum)    not unary
 #@UnitArr.ufunc_rule(np.maximum)    not unary
 def _same_units_unary(a):
