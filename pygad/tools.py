@@ -3,7 +3,7 @@ Some general high-level functions.
 
 Example:
 '''
-__all__ = ['prepare_zoom', 'read_info_file', 'fill_star_from_info',
+__all__ = ['read_info_file', 'prepare_zoom', 'fill_star_from_info',
            'read_traced_gas']
 
 from snapshot import *
@@ -13,41 +13,7 @@ from transformation import *
 import environment
 import re
 import sys
-
-def prepare_zoom(s, fullsph=False):
-    '''
-    A convenience function to load a snapshot from a zoomed-in simulation that is
-    not jet centered or orienated.
-    '''
-    if isinstance(s,str):
-        s = Snap(s)
-    print 'prepare zoomed-in', s
-
-    s.to_physical_units()
-
-    # center in space
-    center = shrinking_sphere(s.stars,
-                              [float(s.boxsize)/2.]*3,
-                              np.sqrt(3)*s.boxsize)
-    print 'center at:', center
-    Translation(-center).apply(s)
-    # center the velocities
-    s.vel -= mass_weighted_mean(s[s.r<'1 kpc'], 'vel')
-    # orientate at the angular momentum of the baryons wihtin 10 kpc
-    orientate_at(s[s.r < '10 kpc'].baryons, 'L', total=True)
-
-    # cut the halo (<R200)
-    R200, M200 = virial_info(s)
-    print 'R200:', R200
-    print 'M200:', M200
-    halo = s[BallMask(R200, fullsph=fullsph)]
-
-    # cut the inner part (< 15% R200)
-    gal = s[BallMask(0.15*R200, fullsph=fullsph)]
-    Ms = gal.stars.mass.sum()
-    print 'M*:  ', Ms
-
-    return s, halo
+import os
 
 def read_info_file(filename):
     '''
@@ -91,6 +57,88 @@ def read_info_file(filename):
                 if e.message[-6:] != 'unpack':
                     raise
     return info
+
+def prepare_zoom(s, info='deduce', fullsph=False):
+    '''
+    A convenience function to load a snapshot from a zoomed-in simulation that is
+    not yet centered or orienated.
+
+    Args:
+        s (str, Snap):      The snapshot of a zoomed-in simulation to prepare.
+                            Either as an already loaded snapshot or a path to the
+                            snapshot.
+        info (str, dict):   Path to info file or the dictionary as returned from
+                            `read_info_file`.
+                            However, if set to 'deduce', it is tried to deduce the
+                            path to the info file from the snapshot filename: it
+                            is assumed to be in a subfolder 'trace' that is in the
+                            same directory as the snapshot and named
+                            `info_%03d.txt`, where the `%03d` is filled with the
+                            snapshot number. The latter is taken as the last three
+                            characters of the first dot / the end of the filename.
+        fullsph (bool):     Whether to mask all particles that overlap into the
+                            halo region (that is also include SPH particles that
+                            are outside the virial radius, but their smoothing
+                            length reaches into it).
+
+    Returns:
+        s (Snap):           The prepared snapshot.
+        halo (SubSnap):     The cut halo of the found structure.
+    '''
+    if isinstance(s,str):
+        s = Snap(s)
+    print 'prepare zoomed-in', s
+
+    if info is 'deduce':
+        try:
+            snap = int(os.path.basename(s.filename).split('.')[0][-3:])
+            info = os.path.dirname(s.filename) + '/trace/info_%03d.txt' % snap
+        except:
+            info = None
+    if isinstance(info, str):
+        if not os.path.exists(info):
+            print >> sys.stderr, 'WARNING: There is not info file named ' + \
+                                 '"%s"' % info
+            info = None
+        else:
+            info = read_info_file(info)
+
+    s.to_physical_units()
+
+    # center in space
+    if info:
+        center = info['center']
+    else:
+        center = shrinking_sphere(s.stars,
+                                  [float(s.boxsize)/2.]*3,
+                                  np.sqrt(3)*s.boxsize)
+    print 'center at:', center
+    Translation(-center).apply(s)
+    # center the velocities
+    s.vel -= mass_weighted_mean(s[s.r<'1 kpc'], 'vel')
+    # orientate at the angular momentum of the baryons wihtin 10 kpc
+    if info:
+        L = info['L_baryons']
+        orientate_at(s, 'vec', L, total=True)
+    else:
+        orientate_at(s[s.r < '10 kpc'].baryons, 'L', total=True)
+
+    # cut the halo (<R200)
+    if info:
+        R200 = info['R200']
+        M200 = info['M200']
+    else:
+        R200, M200 = virial_info(s)
+    print 'R200:', R200
+    print 'M200:', M200
+    halo = s[BallMask(R200, fullsph=fullsph)]
+
+    # cut the inner part (< 15% R200)
+    gal = s[BallMask(0.15*R200, fullsph=fullsph)]
+    Ms = gal.stars.mass.sum()
+    print 'M*:  ', Ms
+
+    return s, halo
 
 def fill_star_from_info(snap, SFI):
     '''

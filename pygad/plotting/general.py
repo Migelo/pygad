@@ -148,6 +148,7 @@ def show_image(im, extent=None, cmap='jet', vlim=None, aspect=None,
     Returns:
         fig (Figure):       The figure of the axis plotted on.
         ax (AxesSubplot):   The axis plotted on.
+        im (AxesImage):     The image instance created.
     '''
     if len(im.shape)!=2 and not (len(im.shape)==3 and im.shape[-1] in [3,4]):
         raise ValueError('Image has to have shape (w,h), (w,h,3) or (w,h,4)!')
@@ -165,10 +166,11 @@ def show_image(im, extent=None, cmap='jet', vlim=None, aspect=None,
     else:
         im = np.dstack( [im[:,:,i].T for i in range(im.shape[-1])] )
 
-    ax.imshow(im, origin='lower', extent=extent, cmap=cmap, vmin=vmin, vmax=vmax,
-              aspect=aspect, interpolation=interpolation, **kwargs)
+    im = ax.imshow(im, origin='lower', extent=extent,
+                   cmap=cmap, vmin=vmin, vmax=vmax,
+                   aspect=aspect, interpolation=interpolation, **kwargs)
 
-    return fig, ax
+    return fig, ax, im
 
 def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
                 vlim=None, cmap=None, colors=None, colors_av=None, clim=None,
@@ -216,6 +218,7 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
     Returns:
         fig (Figure):       The figure of the axis plotted on.
         ax (AxesSubplot):   The axis plotted on.
+        im (AxesImage):     The image instance created.
        [cbar (Colobar):     The colorbar, if showcbar is True.]
     '''
     xname = ''
@@ -295,8 +298,8 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
             del finitegrid
         grid = color_code(grid, col, cmap=cmap, vlim=vlim, clim=clim)
 
-    fig, ax = show_image(grid, extent=extent, cmap=cmap, aspect=aspect, ax=ax,
-                         **kwargs)
+    fig, ax, im = show_image(grid, extent=extent, cmap=cmap, aspect=aspect, ax=ax,
+                             **kwargs)
 
     if showcbar:
         from mpl_toolkits.axes_grid1.inset_locator import inset_axes
@@ -332,7 +335,7 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
     ax.set_ylabel( '%s%s' % (yname, yunits), fontsize=16 )
 
     if showcbar:
-        return fig, ax, cbar
+        return fig, ax, im, cbar
     else:
-        return fig, ax
+        return fig, ax, im
 
