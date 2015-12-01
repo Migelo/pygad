@@ -281,7 +281,8 @@ def scatter_gas_to_stars(s, qty, name=None, units=None, kernel=None):
     for i in xrange(len(s.stars)):
         d = dist(gas_pos, star_pos[i]) / hsml
         mask = d < 1.0
-        Q[i] = np.sum((qty[mask].T * kernel(d[mask])).T, axis=0)
+        Q[i] = np.sum((qty[mask].T
+                    * (kernel(d[mask]) / hsml[mask]**3)).T, axis=0)
 
     Q = UnitArr(Q, units)
     return s.stars.add_custom_block(Q, name)
