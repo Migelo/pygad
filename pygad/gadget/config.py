@@ -13,7 +13,7 @@ Example:
     >>> families['dm']
     [1, 2, 3]
     >>> general
-    {'kernel': 'Wendland C4', 'SSP_dir': 'pygad//../bc03', 'IMF': 'Kroupa'}
+    {'kernel': 'cubic', 'SSP_dir': 'pygad//../bc03', 'IMF': 'Kroupa'}
     >>> get_block_units('RHO ')
     Unit("1e+10 Msol ckpc**-3 h_0**2")
     >>> HDF5_to_std_name['Coordinates'], HDF5_to_std_name['ParticleIDs']

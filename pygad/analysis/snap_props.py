@@ -47,7 +47,8 @@ Example:
     >>> los_velocity_dispersion(sub)
     UnitArr(167.344421387, dtype=float32, units="km s**-1")
 
-    >>> scatter_gas_to_stars(s, 'Z', name='gas_Z')
+    #to slow...!
+    #>>> scatter_gas_to_stars(s, 'Z', name='gas_Z')
     load block elements... done.
     derive block H... done.
     derive block He... done.
