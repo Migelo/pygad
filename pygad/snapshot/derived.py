@@ -20,17 +20,17 @@ Examples:
     >>> age_from_form(UnitArr([0.001, 0.1, 0.5, 0.9], 'a_form'),
     ...               subs={'a':0.9, 'z':physics.a2z(0.9)},
     ...               cosmo=cosmo)
-    UnitArr([ 12.33841509,  11.79365731,   6.48467893,   0.        ], units="Gyr")
+    UnitArr([ 12.30493079,  11.75687265,   6.44278561,   0.        ], units="Gyr")
     >>> age_from_form(UnitArr([10.0, 1.0, 0.5, 0.1], 'z_form'),
     ...               subs={'a':0.9, 'z':physics.a2z(0.9)},
     ...               cosmo=cosmo)
-    UnitArr([ 11.86625829,   6.48467893,   3.73639146,  -0.13898853], units="Gyr")
+    UnitArr([ 11.82987008,   6.44278561,   3.70734788,  -0.13772577], units="Gyr")
     >>> age_from_form(UnitArr([-2.0, 0.0, 1.0], '(ckpc h_0**-1) / (km/s)'),
     ...               time='2.1 Gyr',
     ...               subs={'a':0.9, 'z':physics.a2z(0.9), 'h_0':cosmo.h_0},
     ...               cosmo=cosmo,
     ...               units='Myr')
-    UnitArr([ 4722.59871705,  2100.        ,   788.70064148], units="Myr")
+    UnitArr([ 4697.05769369,  2100.        ,   801.47115316], units="Myr")
 '''
 __all__ = ['ptypes_and_deps', 'read_derived_rules', 'calc_temps', 'age_from_form']
 

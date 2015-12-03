@@ -73,19 +73,21 @@ def Planck2013():
     '''
     Create a FLRW cosmology with the Planck 2013 results.
 
+    Parameters are taken from Table 9 of the Planck Collaboration results of 2013.
+
     Returns:
-        FLRWCosmo(h_0=0.6711, Omega_Lambda=0.6825, Omega_m=0.3175,
-                  Omega_b=0.0491, sigma_8=0.8344, n_s=0.9624)
+        FLRWCosmo(h_0=0.6777, Omega_Lambda=0.683, Omega_m=0.307,
+                  Omega_b=0.04825, sigma_8=0.8288, n_s=0.9611)
 
     Example:
         >>> planck = Planck2013()
         >>> planck.universe_age()
-        UnitArr(13.8344731089, units="Gyr")
+        UnitArr(13.7869170878, units="Gyr")
         >>> planck.f_c
-        0.15464566929133858
+        0.15716612377850164
     '''
-    return FLRWCosmo(h_0=0.6711, Omega_Lambda=0.6825, Omega_m=0.3175,
-                     Omega_b=0.0491, sigma_8=0.8344, n_s=0.9624)
+    return FLRWCosmo(h_0=0.6777, Omega_Lambda=0.683, Omega_m=0.307,
+                     Omega_b=0.04825, sigma_8=0.8288, n_s=0.9611)
 
 def WMAP7():
     '''

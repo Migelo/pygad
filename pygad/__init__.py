@@ -95,6 +95,7 @@ if environment.verbose:
 
 # make some chosen elements directly visible
 from units import Unit, Units, UnitArr, UnitQty, UnitScalar, dist
+from physics import cosmology
 from physics import G, m_p, solar
 from transformation import Translation, Rotation
 from snapshot import Snap, BallMask, BoxMask, DiscMask, IDMask
