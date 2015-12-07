@@ -310,7 +310,7 @@ def rand_dir(dim=3):
         ...     v = np.empty([N,dim])
         ...     for n in xrange(N):
         ...         v[n] = rand_dir(dim=dim)
-        ...     assert np.linalg.norm(v.sum(axis=0))/N < 2.0/np.sqrt(N)
+        ...     assert np.linalg.norm(v.sum(axis=0))/N < 3.0/np.sqrt(N)
     '''
     if dim < 1:
         raise ValueError('Can only create vectors with at least one dimension!')

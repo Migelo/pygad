@@ -58,7 +58,7 @@ def read_info_file(filename):
                     raise
     return info
 
-def prepare_zoom(s, info='deduce', fullsph=False):
+def prepare_zoom(s, info='deduce', fullsph=False, gal_R200=0.10):
     '''
     A convenience function to load a snapshot from a zoomed-in simulation that is
     not yet centered or orienated.
@@ -80,6 +80,8 @@ def prepare_zoom(s, info='deduce', fullsph=False):
                             halo region (that is also include SPH particles that
                             are outside the virial radius, but their smoothing
                             length reaches into it).
+        gal_R200 (float):   The radius to define the galaxy. Everything within
+                            <gal_R200>*R200 will be defined as the galaxy.
 
     Returns:
         s (Snap):           The prepared snapshot.
@@ -87,6 +89,7 @@ def prepare_zoom(s, info='deduce', fullsph=False):
     '''
     if isinstance(s,str):
         s = Snap(s)
+    gal_R200 = float(gal_R200)
     print 'prepare zoomed-in', s
 
     if info is 'deduce':
@@ -134,11 +137,11 @@ def prepare_zoom(s, info='deduce', fullsph=False):
     halo = s[BallMask(R200, fullsph=fullsph)]
 
     # cut the inner part (< 15% R200)
-    gal = s[BallMask(0.15*R200, fullsph=fullsph)]
+    gal = s[BallMask(gal_R200*R200, fullsph=fullsph)]
     Ms = gal.stars.mass.sum()
     print 'M*:  ', Ms
 
-    return s, halo
+    return s, halo, gal
 
 def fill_star_from_info(snap, SFI):
     '''

@@ -27,12 +27,11 @@ Examples:
     177.000391642 [kpc] 1.001030e+12 [Msol]
     >>> Translation(-center).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_320"... done.
-    >>> sub = s[s.r < 0.15*R200]
+    >>> sub = s[s.r < 0.10*R200]
     derive block r... done.
-    >>> half_mass_radius(sub)
-    UnitArr(12.1113256052, units="kpc")
-    >>> eff_radius(sub)
-    derive block rcyl... done.
+    >>> half_mass_radius(sub.stars)
+    UnitArr(4.31187898891, units="kpc")
+    >>> eff_radius(sub, 'V', proj=None)
     load block form_time... done.
     derive block age... done.
     load block elements... done.
@@ -41,7 +40,7 @@ Examples:
     derive block He... done.
     derive block metals... done.
     derive block Z... done.
-    derive block mag... interpolate SSP tables for qty "Mbol"...
+    derive block mag_v... interpolate SSP tables for qty "Vmag"...
     read tables...
     table limits:
       age [yr]:    1.00e+05 - 2.00e+10
@@ -49,14 +48,23 @@ Examples:
     interpolate in age...
     interpolate in metallicity...
     done.
-    derive block lum... done.
+    derive block lum_v... done.
+    UnitArr(3.27137010062, units="kpc")
+    >>> eff_radius(sub, 'V', proj=2)
+    derive block rcyl... done.
     UnitArr(2.92262951906, units="kpc")
-    >>> half_qty_radius(sub, qty='mass', proj=2)
-    UnitArr(9.17572055243, units="kpc")
+    >>> half_qty_radius(sub.stars, qty='mass', proj=2)
+    UnitArr(3.76825188782, units="kpc")
     >>> print map(str,flow_rates(s, '50 kpc'))
     load block vel... done.
     derive block vrad... done.
     ['420.879786667 [Msol yr**-1]', '370.061994667 [Msol yr**-1]']
+    >>> shell_flow_rates(s.gas, UnitArr([48,52],'kpc'))
+    UnitArr(-7.098015e+00, units="Msol yr**-1")
+    >>> shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'in')
+    UnitArr(-1.463577e+01, units="Msol yr**-1")
+    >>> shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'out')
+    UnitArr(7.53775332834, units="Msol yr**-1")
     >>> ifr, ofr = flow_rates(s.gas, '50 kpc')
     >>> print ifr
     11.5465066667 [Msol yr**-1]
@@ -346,7 +354,7 @@ def eff_radius(s, band=None, L=None, center=None, proj=2):
         qty += '_' + band.lower()
     return half_qty_radius(s.stars, qty=qty, Qtot=L, center=center, proj=proj)
 
-def shell_flow_rates(s, Rlim, direction='both'):
+def shell_flow_rates(s, Rlim, direction='both', units='Msol/yr'):
     '''
     Estimate flow rate in spherical shell.
     
@@ -361,6 +369,7 @@ def shell_flow_rates(s, Rlim, direction='both'):
                                 take onflowing gas particles into the calculation;
                                 analog for 'out'; and do not restrict to particles
                                 with 'both'.
+        units (Unit, str):      The units in which to return the flow rate.
 
     Returns:
         flow (UnitArr):         The estimated flow rate.
@@ -373,13 +382,15 @@ def shell_flow_rates(s, Rlim, direction='both'):
     if direction=='both':
         pass
     elif direction=='in':
-        inshell = shell[shell.vrad < 0]
+        shell = shell[shell.vrad < 0]
     elif direction=='out':
-        inshell = shell[shell.vrad > 0]
+        shell = shell[shell.vrad > 0]
     else:
         raise RuntimeError('unknown direction %s!' % direction)
 
-    return shell.mass * shell.vrad / (Rlim[1]-Rlim[0])
+    flow = np.sum(shell.mass * shell.vrad / UnitArr(Rlim[1]-Rlim[0], Rlim.units))
+    flow.convert_to(units)
+    return flow
 
 def flow_rates(s, R, dt='3 Myr'):
     #TODO: extend to discs!
