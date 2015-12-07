@@ -13,6 +13,8 @@ Example:
     >>> center_of_mass(s)
     UnitArr([ 34799.42578125,  33686.4765625 ,  32010.89453125],
             dtype=float32, units="ckpc h_0**-1")
+
+    Center of mass is *not* center of galaxy / halo!
     >>> Translation([-34792.2, -35584.8, -33617.9]).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_320"... done.
     >>> sub = s[s.r < '20 kpc']
@@ -47,8 +49,24 @@ Example:
     >>> los_velocity_dispersion(sub)
     UnitArr(167.344421387, dtype=float32, units="km s**-1")
 
+    >>> s.to_physical_units()
+    convert block pos to physical units... done.
+    convert block r to physical units... done.
+    convert block mass to physical units... done.
+    convert boxsize to physical units... done.
+    >>> SPH_qty_at(s, 'rho', [0,0,0])
+    load block rho... done.
+    convert block rho to physical units... done.
+    load block hsml... done.
+    convert block hsml to physical units... done.
+    UnitArr(1.740805e+05, units="Msol kpc**-3")
+    >>> SPH_qty_at(s, 'rho', s.gas.pos[331798])
+    UnitArr(5.330261e+04, units="Msol kpc**-3")
+    >>> s.gas.rho[331798]
+    56831.004
+
     #to slow...!
-    #>>> scatter_gas_to_stars(s, 'Z', name='gas_Z')
+    #>>> scatter_gas_qty_to_stars(s, 'Z', name='gas_Z')
     load block elements... done.
     derive block H... done.
     derive block He... done.
@@ -65,7 +83,7 @@ Example:
 '''
 __all__ = ['mass_weighted_mean', 'center_of_mass', 'reduced_inertia_tensor',
            'orientate_at', 'los_velocity_dispersion',
-           'scatter_gas_to_stars',
+           'SPH_qty_at', 'scatter_gas_qty_to_stars',
           ]
 
 import numpy as np
@@ -207,17 +225,66 @@ def los_velocity_dispersion(s, proj=2):
     
     return sigma_v
 
-def scatter_gas_to_stars(s, qty, name=None, units=None, kernel=None):
+def SPH_qty_at(s, qty, r, units=None, kernel=None, mode='correct'):
+    '''
+    Calculate a SPH quantity with the scatter approach at a given position.
+
+    Args:
+        s (Snap):               The (sub-)snapshot to take the gas (quantity)
+                                from.
+        qty (str, array-like):  The name of the gas quantity or a array-like
+                                object with length of the gas.
+        r (UnitQty):            The position to evaluate the SPH quantity at.
+
+    Returns:
+        Q (UnitArr):            The SPH property at the given position.
+    '''
+    r = UnitQty(r, s.pos.units, subs=s)
+    if r.shape != (3,):
+        raise ValueError('Position `r` needs to have shape (3,)!')
+    if isinstance(qty, str):
+        qty = s.gas.get(qty)
+    else:
+        if len(qty) != len(s.gas):
+            from ..utils import nice_big_num_str
+            raise RuntimeError('The length of the quantity ' + \
+                               '(%s) does not ' % nice_big_num_str(len(qty)) + \
+                               'match the number of gas ' + \
+                               '(%s)!' % nice_big_num_str(len(s.gas)))
+    if units is None:
+        units = getattr(qty, 'units', None)
+    else:
+        units = Unit(units)
+    qty = np.asarray(qty)
+
+    if kernel is None:
+        from ..gadget import config
+        kernel = config.general['kernel']
+    from ..kernels import vector_kernels
+    kernel = vector_kernels[kernel]
+
+    d = (dist(s.gas.pos, r) / s.gas.hsml).in_units_of(1,subs=s).view(np.ndarray)
+    mask = d < 1.0
+    Q = np.sum((qty[mask].T
+                * (kernel(d[mask]) / s.gas.hsml[mask]**3 \
+                        * s.gas.mass[mask] / s.gas.rho[mask])).T,
+                axis=0)
+
+    return UnitArr(Q, units)
+
+def scatter_gas_qty_to_stars(s, qty, name=None, units=None, kernel=None):
+    # TODO: find ways to speed it up!
+    # TODO: parallelize
     '''
     Calculate a gas property at the positions of the stars and store it as a
     stellar property.
 
     This function calculates the gas property at the positions of the star
-    particles by a so-called scatter approach, i.e. by evaluating the gas property
-    of every gas particle at the stellar positions, kernel-weighted by the kernel
-    of the gas particled the property comes from.
-    Finally these quantities are stored as a new block for the stars of the
-    snapshot. (Make shure there is no such block yet.)
+    particles by the so-called scatter approach, i.e. by evaluating the gas
+    property of every gas particle at the stellar positions, kernel-weighted by
+    the kernel of the gas particled the property comes from. Finally these
+    quantities are stored as a new block for the stars of the snapshot. (Make
+    shure there is no such block yet.)
 
     Args:
         s (Snap):               The snapshot to spread the properties of.
@@ -265,7 +332,9 @@ def scatter_gas_to_stars(s, qty, name=None, units=None, kernel=None):
         units = Unit(units)
     qty = np.asarray(qty)
 
-    hsml = s.gas.hsml.in_units_of(s.pos.units).view(np.ndarray)
+    hsml = s.gas.hsml.in_units_of(s.pos.units,subs=s).view(np.ndarray)
+    m_rho_hsml3 = (s.gas.mass / s.gas.rho / s.hsml**3) \
+                .in_units_of(1,subs=s).view(np.ndarray)
     gas_pos = s.gas.pos.view(np.ndarray)
     star_pos = s.stars.pos.view(np.ndarray)
     if len(qty.shape) > 1:
@@ -282,8 +351,8 @@ def scatter_gas_to_stars(s, qty, name=None, units=None, kernel=None):
     for i in xrange(len(s.stars)):
         d = dist(gas_pos, star_pos[i]) / hsml
         mask = d < 1.0
-        Q[i] = np.sum((qty[mask].T
-                    * (kernel(d[mask]) / hsml[mask]**3)).T, axis=0)
+        Q[i] = np.sum((qty[mask].T * (kernel(d[mask]) * m_rho_hsml3[mask])).T,
+                      axis=0)
 
     Q = UnitArr(Q, units)
     return s.stars.add_custom_block(Q, name)
