@@ -347,27 +347,27 @@ def eff_radius(s, band=None, L=None, center=None, proj=2):
     return half_qty_radius(s.stars, qty=qty, Qtot=L, center=center, proj=proj)
 
 def shell_flow_rates(s, Rlim, direction='both'):
-    #TODO: extend to discs!
     '''
-    Estimate in- and outflow rates through a spherical shell.
+    Estimate flow rate in spherical shell.
     
-    The estimation is done by propagating the positions with constant current
-    velocities, i.e. pos_new = pos_old + vel*dt. Then counting the mass that
-    passed the shell of radius R.
+    The estimation is done by caluculating m*v/d on a particle base, where d is
+    the thickness of the shell.
 
     Args:
         s (Snap):               The (sub-)snapshot to use.
-        R (UnitScalar):         The radius of the shell through which the flow is
-                                estimated.
-        dt (UnitScalar):        The time used for the linear extrapolation of the
-                                current positions (if it is a plain number without
-                                units, they are assumed to be 'Myr').
+        Rlim (UnitQty):         The inner and outer radius of the shell.
+        direction ('in', 'out', 'both'):
+                                The direction to take into account. If 'in', only
+                                take onflowing gas particles into the calculation;
+                                analog for 'out'; and do not restrict to particles
+                                with 'both'.
 
     Returns:
-        ifr (UnitArr):          The estimated inflow rate.
-        ofr (UnitArr):          The estimated outflow rate.
+        flow (UnitArr):         The estimated flow rate.
     '''
     Rlim = UnitQty(Rlim, s.r.units)
+    if not Rlim.shape == (2,):
+        raise ValueError('Rlim must have shape (2,)!')
     shell = s[(Rlim[0]<s.r) & (s.r<Rlim[1])]
 
     if direction=='both':
@@ -384,7 +384,7 @@ def shell_flow_rates(s, Rlim, direction='both'):
 def flow_rates(s, R, dt='3 Myr'):
     #TODO: extend to discs!
     '''
-    Estimate in- and outflow rates through a spherical shell.
+    Estimate in- and outflow rates through a given radius.
     
     The estimation is done by propagating the positions with constant current
     velocities, i.e. pos_new = pos_old + vel*dt. Then counting the mass that

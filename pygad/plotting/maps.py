@@ -20,12 +20,29 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     '''
     Show an image of the snapshot.
 
-    By default the mass is plotted with the colormap 'gray'. For stars only,
+    By default the mass is plotted with the colormap 'jet'. For stars only,
     however, the (V-band weighted) stellar ages are plotted with the colormap
     general.cm_age and image brightness is the visual stellar luminosity (V-band);
     for gas only the mass-weighted log10(temperature) is colorcoded with 'rainbow'
     and the image brightness is the surface density; and for dark matter only the
     colormap general.cm_k_g is used.
+
+    The defaults -- if `qty` and `av` are None -- are:
+        for stars only:
+            qty='lum_v', av=None, logscale=True, surface_dens=True
+        otherwise:
+            qty='mass', av=None, logscale=True, surface_dens=True
+    if additionally `colors` and `colors_av` are None as well, the following
+    defautls apply:
+        for stars only:
+            colors='age.in_units_of("Gyr")', colors_av='lum_v', cmap=cm_age,
+            clim=[0,13], cbartitle = '(V-band weighted) age $[\mathrm{Gyr}]$'
+        for gas only:
+            colors='log10(temp.in_units_of("K"))', colors_av='mass', cmap=rainbow,
+            clim=[3.0,6.0], cbartitle=r'$\log_{10}(T\,[\mathrm{K}])$'
+        for otherwise:
+            cmap=(cm_k_g if len(s.baryons)==0 else cm_k_p),
+            cbartitle=(r'$\log_{10}(\Sigma\,[%s])$' % units.latex())
 
     Args:
         s (Snap):           The (sub-)snapshot to use.
@@ -52,7 +69,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         yaxis (int):        The coordinate for the y-axis. (0:'x', 1:'y', 2:'z')
         vlim (sequence):    The limits of the quantity for the plot.
         cmap (str,Colormap):The colormap to use. If colors==None it is applied to
-                            qty, otherwise to colors.
+                            qty, otherwise to colors. Default: 'jet'.
         colors (UnitQty, str):
                             The array for color coding (qty is just brightness
                             unless this is None). Otherwise same as qty.
@@ -93,18 +110,21 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     if units is not None:
         units = Unit(units)
     if qty is None and av is None:
-        if (len(s)!=0 and len(s.stars)==len(s)) \
-                or (s.descriptor.endswith('stars') and len(s)==0):
-            qty, av = 'lum_v', None
-            if logscale is None:        logscale = True
-            if surface_dens is None:    surface_dens = True
+        """
         elif (len(s)!=0 and len(s.gas)==len(s)) \
                 or (s.descriptor.endswith('gas') and len(s)==0):
             qty, av = 'mass', None
             if logscale is None:        logscale = True
             if surface_dens is None:    surface_dens = True
+        """
+        if (len(s)!=0 and len(s.stars)==len(s)) \
+                or (s.descriptor.endswith('stars') and len(s)==0):
+            qty, av = 'lum_v', None
+            if logscale is None:        logscale = True
+            if surface_dens is None:    surface_dens = True
         else:
             qty, av = 'mass', None
+            # needed for cbartitle:
             if units is None:           units = s.mass.units / s.pos.units**2
             if logscale is None:        logscale = True
             if surface_dens is None:    surface_dens = True
