@@ -277,7 +277,7 @@ def write(snap, filename, blocks=None, gformat=2, endianness='native',
                     # only update, if we have the bigger block
                     if sum(ptypes) <= sum(info[name].ptypes):
                         continue
-                block = getattr(sub,name)
+                block = sub[name]
                 size = block.dtype.itemsize*np.prod(block.shape)
                 dtype = block.dtype.base
                 if dtype.kind == 'f':
@@ -294,7 +294,7 @@ def write(snap, filename, blocks=None, gformat=2, endianness='native',
                 if block_name in config.block_units:
                     units = config.get_block_units(block_name, gad_units)
                 else:
-                    units = getattr(sub,name).units
+                    units = sub[name].units
                     warnings.warn('Blocks that do not have default units, are '
                                   'stored in their current units -- other blocks '
                                   'are converted!')
@@ -302,11 +302,11 @@ def write(snap, filename, blocks=None, gformat=2, endianness='native',
                     data[name] = [None] * 6
                     for pt in xrange(6):
                         if sub._N_part[pt]:
-                            data[name][pt] = getattr(sub[[pt]],name) \
+                            data[name][pt] = sub[[pt]][name] \
                                                 .astype(info[name].dtype) \
                                                 .in_units_of(units, subs=snap)
                 else:
-                    data[name] = getattr(sub,name) \
+                    data[name] = sub[name] \
                                     .astype(info[name].dtype) \
                                     .in_units_of(units, subs=snap)
 

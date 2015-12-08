@@ -7,9 +7,9 @@ Example:
     >>> from ...transformation import *
     >>> s = Snap('snaps/snap_M1196_4x_470', physical=True)
     >>> Translation(UnitArr([-48087.1,-49337.1,-46084.3],'kpc')).apply(s)    
-    >>> s.vel -= UnitArr([-42.75,-15.60,-112.20],'km s**-1')
+    >>> s['vel'] -= UnitArr([-42.75,-15.60,-112.20],'km s**-1')
     load block vel... done.
-    >>> orientate_at(s[s.r < '10 kpc'].baryons, 'L', total=True)
+    >>> orientate_at(s[s['r'] < '10 kpc'].baryons, 'L', total=True)
     load block pos... done.
     convert block pos to physical units... done.
     apply stored Translation to block pos... done.
@@ -31,8 +31,8 @@ Example:
       calculate pixel center kernel-weighted quantity for
         925 particles with hsml > 16.0 [kpc] (px = 0.8 [kpc])...
       done.
-    >>> m_min = s.gas[BallMask('60 kpc',fullsph=False)].mass.sum()
-    >>> m_max = sub.gas.mass.sum()
+    >>> m_min = s.gas[BallMask('60 kpc',fullsph=False)]['mass'].sum()
+    >>> m_max = sub.gas['mass'].sum()
     >>> if not (1-1e-3)*m_min <= m.sum() <= (1+1e-3)*m_max:
     ...     print m_min, m.sum(), m_max
 
@@ -98,9 +98,9 @@ def map_sph_qty(s, extent, qty, Npx, res=None, xaxis=0, yaxis=1,
     # prepare arguments
     extent, Npx, res = grid_props(extent=extent, Npx=Npx, res=res)
     if isinstance(extent, UnitArr):
-        extent = extent.in_units_of(s.pos.units, subs=s)
+        extent = extent.in_units_of(s['pos'].units, subs=s)
     if isinstance(res, UnitArr):
-        res = res.in_units_of(s.pos.units, subs=s)
+        res = res.in_units_of(s['pos'].units, subs=s)
     if xaxis not in range(3) or yaxis not in range(3) or xaxis==yaxis:
         raise ValueError('The x- and y-axis has to be 0, 1, or 2 and different!')
     if kernel is None:
@@ -124,14 +124,14 @@ def map_sph_qty(s, extent, qty, Npx, res=None, xaxis=0, yaxis=1,
     if isinstance(qty, str):
         qty = s.get(qty)
     if len(s) == 0:
-        return UnitArr(np.zeros(Npx), getattr(qty,'units',None)/s.pos.units**2)
+        return UnitArr(np.zeros(Npx), getattr(qty,'units',None)/s['pos'].units**2)
 
     if environment.verbose:
         print '  do binning + smoothing for hsml < %d px...' % threshold
     hsml_edges = range(threshold+1) * np.min(res)
     # enshure same units for smoothing lengthes (hsml_edges, res, and pos are
     # already consistent):
-    hsml = s.hsml.in_units_of(s.pos.units)
+    hsml = s['hsml'].in_units_of(s['pos'].units)
     grid = np.zeros(Npx_w)
     if isinstance(qty, UnitArr):
         grid = UnitArr(grid, getattr(qty,'units',None))
@@ -140,7 +140,7 @@ def map_sph_qty(s, extent, qty, Npx, res=None, xaxis=0, yaxis=1,
         sub = s[mask]
         if len(sub) == 0:
             continue
-        tmp = gridbin(sub.pos[:,(xaxis,yaxis)], qty[mask], extent=extent_w,
+        tmp = gridbin(sub['pos'][:,(xaxis,yaxis)], qty[mask], extent=extent_w,
                       bins=Npx_w, nanval=0.0)
         # smooth with roughly sqrt(1/2) times the pixel size more than the maxium
         # smoothing length, since the particles could be in the corners as well
@@ -159,7 +159,7 @@ def map_sph_qty(s, extent, qty, Npx, res=None, xaxis=0, yaxis=1,
             import sys
             print '  calculate pixel center kernel-weighted quantity for'
             print '    %d particles with hsml > %s (px = %s)...' % (len(sub),
-                    UnitQty(hsml_edges[-1],s.pos.units), res.min())
+                    UnitQty(hsml_edges[-1],s['pos'].units), res.min())
             sys.stdout.flush()
         x = np.linspace(extent[0,0]+res[0]/2., extent[0,1]-res[0]/2., Npx[0])
         y = np.linspace(extent[1,0]+res[1]/2., extent[1,1]-res[1]/2., Npx[1])
@@ -168,8 +168,8 @@ def map_sph_qty(s, extent, qty, Npx, res=None, xaxis=0, yaxis=1,
         pxcs[:,:,0] = tmp[:,:,0].T
         pxcs[:,:,1] = tmp[:,:,1].T
         # make copies for faster access (order of magnitude speed-up)
-        pos = sub.pos[:,(xaxis,yaxis)].view(np.ndarray).copy()
-        sub_hsml = sub.hsml.in_units_of(s.pos.units).view(np.ndarray).copy()
+        pos = sub['pos'][:,(xaxis,yaxis)].view(np.ndarray).copy()
+        sub_hsml = sub['hsml'].in_units_of(s['pos'].units).view(np.ndarray).copy()
         qty = qty.view(np.ndarray).copy()
         px_size = float(np.prod(res))
         grid_view = grid.view(np.ndarray)     # faster as well (hopefully)

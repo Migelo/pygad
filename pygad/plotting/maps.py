@@ -112,23 +112,23 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         units = Unit(units)
 
     if extent is None:
-        extent = UnitArr([np.percentile(s.pos[:,xaxis], [1,99]),
-                          np.percentile(s.pos[:,yaxis], [1,99])],
-                         s.pos.units)
+        extent = UnitArr([np.percentile(s['pos'][:,xaxis], [1,99]),
+                          np.percentile(s['pos'][:,yaxis], [1,99])],
+                         s['pos'].units)
     extent, Npx, res = grid_props(extent=extent, Npx=Npx, res=res)
     if isinstance(extent, UnitArr):
-        extent = extent.in_units_of(s.pos.units, subs=s)
+        extent = extent.in_units_of(s['pos'].units, subs=s)
     if isinstance(res, UnitArr):
-        res = res.in_units_of(s.pos.units, subs=s)
+        res = res.in_units_of(s['pos'].units, subs=s)
 
     # mask snapshot for faster plotting
     mask = np.ones(len(s), bool)
     for n, axis in enumerate([xaxis, yaxis]):
-        mask &= (extent[n,0]<=s.pos[:,axis]) & (s.pos[:,axis]<=extent[n,1])
+        mask &= (extent[n,0]<=s['pos'][:,axis]) & (s['pos'][:,axis]<=extent[n,1])
         for pt in config.families['gas']:
             gas = s[ [pt,] ]
-            mask[gas._mask] &= (extent[n,0]<=gas.pos[:,axis]+gas.hsml) \
-                    & (gas.pos[:,axis]-gas.hsml<=extent[n,1])
+            mask[gas._mask] &= (extent[n,0]<=gas['pos'][:,axis]+gas['hsml']) \
+                    & (gas['pos'][:,axis]-gas['hsml']<=extent[n,1])
     s = s[mask]
     if isinstance(qty, (list,tuple)):   # enable masking for non-standard
         qty = np.ndarray(qty)           # containers
@@ -151,7 +151,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         else:
             qty, av = 'mass', None
             # needed for cbartitle:
-            if units is None:           units = s.mass.units / s.pos.units**2
+            if units is None:           units = s['mass'].units / s['pos'].units**2
             if logscale is None:        logscale = True
             if surface_dens is None:    surface_dens = True
         if colors is None and colors_av is None:
@@ -248,7 +248,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                 cunits = units if units is not None else getattr(cqty,'units',None)
             if surface_dens and colors is None:
                 if units is None and cunits is not None:
-                    cunits = cunits/s.pos.units**2
+                    cunits = cunits/s['pos'].units**2
                 cname = 'surface-density of ' + cname
             if cunits is None or cunits == 1:
                 cunits = ''
@@ -263,9 +263,9 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     if scaleind is None:
         pass
     if scaleind == 'labels':
-        x_label = r'$%s$ [$%s$]' % ({0:'x',1:'y',2:'z'}[xaxis], s.pos.units.latex())
+        x_label = r'$%s$ [$%s$]' % ({0:'x',1:'y',2:'z'}[xaxis], s['pos'].units.latex())
         ax.set_xlabel(x_label)
-        y_label = r'$%s$ [$%s$]' % ({0:'x',1:'y',2:'z'}[yaxis], s.pos.units.latex())
+        y_label = r'$%s$ [$%s$]' % ({0:'x',1:'y',2:'z'}[yaxis], s['pos'].units.latex())
         ax.set_ylabel(y_label)
     if scaleind == 'line':
         width = extent[:,1] - extent[:,0]
@@ -315,8 +315,8 @@ def phase_diagram(s, rho_units='Msol/pc**3', T_units='K',
     '''
     if 'logscale' not in kwargs:    kwargs['logscale'] = True
     if 'showcbar' not in kwargs:    kwargs['showcbar'] = False
-    res = scatter_map(np.log10(s.rho.in_units_of(rho_units)),
-                      np.log10(s.temp.in_units_of(T_units)),
+    res = scatter_map(np.log10(s['rho'].in_units_of(rho_units)),
+                      np.log10(s['temp'].in_units_of(T_units)),
                       s, **kwargs)
     if kwargs['showcbar']:
         fig, ax, im, cbar = res

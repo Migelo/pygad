@@ -26,7 +26,7 @@ Examples:
     ...               cosmo=cosmo)
     UnitArr([ 11.82987008,   6.44278561,   3.70734788,  -0.13772577], units="Gyr")
     >>> age_from_form(UnitArr([-2.0, 0.0, 1.0], '(ckpc h_0**-1) / (km/s)'),
-    ...               time='2.1 Gyr',
+    ...               cosmic_time='2.1 Gyr',
     ...               subs={'a':0.9, 'z':physics.a2z(0.9), 'h_0':cosmo.h_0},
     ...               cosmo=cosmo,
     ...               units='Myr')
@@ -180,7 +180,7 @@ def _z2Gyr_vec(arr, cosmo):
     return np.vectorize(cosmo.lookback_time_in_Gyr)(arr)
 
 
-def age_from_form(form, subs, time=None, cosmo=None, units='Gyr', parallel=None):
+def age_from_form(form, subs, cosmic_time=None, cosmo=None, units='Gyr', parallel=None):
     '''
     Calculate ages from formation time.
 
@@ -189,7 +189,9 @@ def age_from_form(form, subs, time=None, cosmo=None, units='Gyr', parallel=None)
                             appropiate units, i.e. '*_form' or a time unit.
         subs (dict, Snap):  Subsitution for unit convertions. See e.g.
                             `UnitArr.convert_to` for more information.
-        time (UnitScalar):  TODO
+        cosmic_time (UnitScalar):
+                            The current cosmic time. If None and subs is a
+                            snapshot, it defaults to subs.time.
         cosmo (FLRWCosmo):  A cosmology to use for conversions. If None and subs
                             is a snapshot, the cosmology of that snapshot is used.
         units (str, Unit):  The units to return the ages in. If None, the return
@@ -213,8 +215,8 @@ def age_from_form(form, subs, time=None, cosmo=None, units='Gyr', parallel=None)
         subs['h_0'] = snap.cosmology.h_0
         if cosmo is None:
             cosmo = snap.cosmology
-        if time is None:
-            time = snap.time
+        if cosmic_time is None:
+            cosmic_time = snap.time
 
     form = form.copy().view(UnitArr)
 
@@ -252,8 +254,8 @@ def age_from_form(form, subs, time=None, cosmo=None, units='Gyr', parallel=None)
 
     else:
         # 't_form' -> actual age
-        time = UnitScalar(time, form.units, subs=subs)
-        form = time - form
+        cosmic_time = UnitScalar(cosmic_time, form.units, subs=subs)
+        form = cosmic_time - form
 
     if units is not None:
         form.convert_to(units, subs=subs)

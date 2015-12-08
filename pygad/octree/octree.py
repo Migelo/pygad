@@ -58,7 +58,7 @@ Example:
     >>> sub = snap[all_indices(tree)]
     >>> sub.parts
     [8573, 9334, 0, 0, 736, 0]
-    >>> apply_on(tree, populate_center_of_mass(snap.pos, snap.mass))
+    >>> apply_on(tree, populate_center_of_mass(snap['pos'], snap['mass']))
     load block mass... done.
     (array([ 34497.34417332,  35431.56577665,  33097.62803619]), 2.9262269136343093)
     >>> from .. import analysis
@@ -227,8 +227,8 @@ def Octree(pos_data, idx=None, center=None, world_size=None):
     from ..snapshot.snapshot import _Snap
     if isinstance(pos_data, _Snap):
         s = pos_data
-        bz = float( s.boxsize.in_units_of(s.pos.units, copy=False) )
-        return Octree(s.pos, center=[bz/2.]*3, world_size=bz)
+        bz = float( s.boxsize.in_units_of(s['pos'].units, copy=False) )
+        return Octree(s['pos'], center=[bz/2.]*3, world_size=bz)
 
     if center is None:
         upper = np.max(pos_data, axis=0)

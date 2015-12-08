@@ -6,9 +6,9 @@ Example:
     >>> from ..transformation import *
     >>> s = Snap('snaps/snap_M1196_4x_470', physical=True)
     >>> Translation(UnitArr([-48087.1,-49337.1,-46084.3],'kpc')).apply(s)    
-    >>> s.vel -= UnitArr([-42.75,-15.60,-112.20],'km s**-1')
+    >>> s['vel'] -= UnitArr([-42.75,-15.60,-112.20],'km s**-1')
     load block vel... done.
-    >>> orientate_at(s[s.r < '10 kpc'].baryons, 'L', total=True)
+    >>> orientate_at(s[s['r'] < '10 kpc'].baryons, 'L', total=True)
     load block pos... done.
     convert block pos to physical units... done.
     apply stored Translation to block pos... done.
@@ -118,14 +118,14 @@ def map_qty(s, extent, qty, av=None, Npx=200, res=None, xaxis=0, yaxis=1, soften
     # prepare arguments
     extent, Npx, res = grid_props(extent=extent, Npx=Npx, res=res)
     if isinstance(extent, UnitArr):
-        extent = extent.in_units_of(s.pos.units, subs=s)
+        extent = extent.in_units_of(s['pos'].units, subs=s)
     if isinstance(res, UnitArr):
-        res = res.in_units_of(s.pos.units, subs=s)
+        res = res.in_units_of(s['pos'].units, subs=s)
     if xaxis not in range(3) or yaxis not in range(3) or xaxis==yaxis:
         raise ValueError('The x- and y-axis have to be 0, 1, or 2 and different!')
     if softening is not None:
         #softening = UnitArr([0.2, 0.45, 2.52, 20.0, 0.2, 0.2],'ckpc / h_0')
-        softening = UnitQty(softening, s.pos.units, subs=s)
+        softening = UnitQty(softening, s['pos'].units, subs=s)
 
     if environment.verbose:
         print 'create a %d x %d map (%.4g x %.4g %s)...' % (tuple(Npx) + \
@@ -169,7 +169,7 @@ def map_qty(s, extent, qty, av=None, Npx=200, res=None, xaxis=0, yaxis=1, soften
                                  extent[:,1] + border*res],
                                extent.units).T
 
-            tmp = gridbin(sub.pos[:,(xaxis,yaxis)], qty[sub._mask], extent=extent_w,
+            tmp = gridbin(sub['pos'][:,(xaxis,yaxis)], qty[sub._mask], extent=extent_w,
                           bins=Npx_w, nanval=0.0)
             tmp = smooth(tmp, softening[pt] / res.min(), kernel=proj_kernel)
             tmp = tmp[border:-border,border:-border]
@@ -177,7 +177,7 @@ def map_qty(s, extent, qty, av=None, Npx=200, res=None, xaxis=0, yaxis=1, soften
             Npx_w = Npx
             extent_w = UnitArr( [extent[:,0], extent[:,1]],
                                extent.units).T
-            tmp = gridbin(sub.pos[:,(xaxis,yaxis)], qty[sub._mask], extent=extent_w,
+            tmp = gridbin(sub['pos'][:,(xaxis,yaxis)], qty[sub._mask], extent=extent_w,
                           bins=Npx_w, nanval=0.0)
         grid += tmp
 
