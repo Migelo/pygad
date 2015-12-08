@@ -225,7 +225,7 @@ def los_velocity_dispersion(s, proj=2):
     
     return sigma_v
 
-def SPH_qty_at(s, qty, r, units=None, kernel=None, mode='correct'):
+def SPH_qty_at(s, qty, r, units=None, kernel=None):
     '''
     Calculate a SPH quantity with the scatter approach at a given position.
 
@@ -234,14 +234,16 @@ def SPH_qty_at(s, qty, r, units=None, kernel=None, mode='correct'):
                                 from.
         qty (str, array-like):  The name of the gas quantity or a array-like
                                 object with length of the gas.
-        r (UnitQty):            The position to evaluate the SPH quantity at.
+        r (UnitQty):            The position(s) to evaluate the SPH quantity at.
 
     Returns:
         Q (UnitArr):            The SPH property at the given position.
     '''
+    # TODO: find ways to speed it up!
+    # TODO: parallelize
     r = UnitQty(r, s.pos.units, subs=s)
-    if r.shape != (3,):
-        raise ValueError('Position `r` needs to have shape (3,)!')
+    if not (r.shape==(3,) or (r.shape[1:]==(3,) and len(r.shape)==2)):
+        raise ValueError('Position `r` needs to have shape (3,) or (N,3)!')
     if isinstance(qty, str):
         qty = s.gas.get(qty)
     else:
@@ -257,24 +259,34 @@ def SPH_qty_at(s, qty, r, units=None, kernel=None, mode='correct'):
         units = Unit(units)
     qty = np.asarray(qty)
 
+    m_rho_hsml3 = (s.gas.mass / s.gas.rho / s.gas.hsml**3) \
+                .in_units_of(1,subs=s).view(np.ndarray)
+    r = r.view(np.ndarray)
+    gas_pos = s.gas.pos.view(np.ndarray)
+    hsml = s.gas.hsml.in_units_of(s.pos.units,subs=s).view(np.ndarray)
+
     if kernel is None:
         from ..gadget import config
         kernel = config.general['kernel']
     from ..kernels import vector_kernels
     kernel = vector_kernels[kernel]
 
-    d = (dist(s.gas.pos, r) / s.gas.hsml).in_units_of(1,subs=s).view(np.ndarray)
-    mask = d < 1.0
-    Q = np.sum((qty[mask].T
-                * (kernel(d[mask]) / s.gas.hsml[mask]**3 \
-                        * s.gas.mass[mask] / s.gas.rho[mask])).T,
-                axis=0)
+    if r.shape == (3,):
+        d = dist(gas_pos, r) / hsml
+        mask = d < 1.0
+        Q = np.sum((qty[mask].T * (kernel(d[mask]) * m_rho_hsml3[mask])).T,
+                   axis=0)
+    else:
+        Q = np.empty( (len(r),)+qty.shape[1:] )
+        for i,x in enumerate(r):
+            d = dist(gas_pos, x) / hsml
+            mask = d < 1.0
+            Q[i] = np.sum((qty[mask].T * (kernel(d[mask]) * m_rho_hsml3[mask])).T,
+                          axis=0)
 
     return UnitArr(Q, units)
 
 def scatter_gas_qty_to_stars(s, qty, name=None, units=None, kernel=None):
-    # TODO: find ways to speed it up!
-    # TODO: parallelize
     '''
     Calculate a gas property at the positions of the stars and store it as a
     stellar property.
@@ -317,43 +329,7 @@ def scatter_gas_qty_to_stars(s, qty, name=None, units=None, kernel=None):
         else:
             raise RuntimeError('No name for the quantity is given!')
 
-    if isinstance(qty, str):
-        qty = s.gas.get(qty)
-    else:
-        if len(qty) != len(s.gas):
-            from ..utils import nice_big_num_str
-            raise RuntimeError('The length of the quantity ' + \
-                               '(%s) does not ' % nice_big_num_str(len(qty)) + \
-                               'match the number of gas ' + \
-                               '(%s)!' % nice_big_num_str(len(s.gas)))
-    if units is None:
-        units = getattr(qty, 'units', None)
-    else:
-        units = Unit(units)
-    qty = np.asarray(qty)
+    Q = SPH_qty_at(s, qty=qty, r=s.stars.pos, units=units, kernel=kernel)
 
-    hsml = s.gas.hsml.in_units_of(s.pos.units,subs=s).view(np.ndarray)
-    m_rho_hsml3 = (s.gas.mass / s.gas.rho / s.hsml**3) \
-                .in_units_of(1,subs=s).view(np.ndarray)
-    gas_pos = s.gas.pos.view(np.ndarray)
-    star_pos = s.stars.pos.view(np.ndarray)
-    if len(qty.shape) > 1:
-        Q = np.zeros((len(s.stars), qty.shape[1]))
-    else:
-        Q = np.zeros(len(s.stars))
-
-    if kernel is None:
-        from ..gadget import config
-        kernel = config.general['kernel']
-    from ..kernels import vector_kernels
-    kernel = vector_kernels[kernel]
-
-    for i in xrange(len(s.stars)):
-        d = dist(gas_pos, star_pos[i]) / hsml
-        mask = d < 1.0
-        Q[i] = np.sum((qty[mask].T * (kernel(d[mask]) * m_rho_hsml3[mask])).T,
-                      axis=0)
-
-    Q = UnitArr(Q, units)
     return s.stars.add_custom_block(Q, name)
 
