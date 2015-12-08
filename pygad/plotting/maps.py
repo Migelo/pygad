@@ -130,6 +130,10 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
             mask[gas._mask] &= (extent[n,0]<=gas.pos[:,axis]+gas.hsml) \
                     & (gas.pos[:,axis]-gas.hsml<=extent[n,1])
     s = s[mask]
+    if isinstance(qty, (list,tuple)):   # enable masking for non-standard
+        qty = np.ndarray(qty)           # containers
+    if isinstance(qty, np.ndarray):     # includes the derived UnitArr and SimArr
+        qty = qty[mask]
 
     if qty is None and av is None:
         """
