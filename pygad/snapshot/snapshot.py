@@ -26,8 +26,8 @@ Example:
     current age of the universe: 12.8697344013 [Myr]
     >>> s.loadable_blocks()
     ['vel', 'mass', 'ID', 'pos']
-    >>> for d in s.deriveable_blocks(): print d,
-    lum_k Epot lum_b C metals jzjc RemainingElements lum_r rcyl lum_v lum_u Z vrad alpha_el r Fe lum momentum He Mg E mag_b H O Ne mag_u S angmom mag_k mag mag_r N Ekin temp Ca vcirc Si mag_v jcirc age
+    >>> ' '.join(s.deriveable_blocks())
+    'Epot jzjc rcyl vrad r momentum E angmom Ekin vcirc jcirc'
     >>> assert set(s.all_blocks()) == set(s.loadable_blocks() + s.deriveable_blocks())
     >>> mwgt_pos = np.tensordot(s.mass, s.pos, axes=1).view(UnitArr)
     load block mass... done.
@@ -399,13 +399,14 @@ def Snap(filename, physical=False, cosmological=None, gad_units=None):
     # now the mass block is named 'mass' for all cases (HDF5 or other)
     s._block_avail['mass'] = [n>0 for n in s._N_part]
 
+    # calculate the dependencies and particle types of the derived blocks
     import derived
     changed = True
     while changed:
         changed = False
         for name, rule in derived._rules.iteritems():
             if name in s._load_name:
-                continue
+                continue    # this derived block can actually be loaded
             ptypes, deps = derived.ptypes_and_deps(rule, s)
             if name in s._block_avail:
                 if ptypes!=s._block_avail[name] \
@@ -415,6 +416,17 @@ def Snap(filename, physical=False, cosmological=None, gad_units=None):
                changed = True
             s._block_avail[name] = ptypes
             s._derive_rule_deps[name] = (rule, deps)
+    # now remove those derived blocks, that depend on non-existent blocks
+    not_available = set()
+    removed = -1
+    while removed != len(not_available):
+        removed = len(not_available)
+        for name, rd in s._derive_rule_deps.iteritems():
+            if not (any(s._block_avail[name]) and (rd[1]-not_available)):
+                not_available.add(name)
+        for name in not_available:
+            s._block_avail.pop(name,None)
+            s._derive_rule_deps.pop(name,None)
 
     s._descriptor = '"' + s._descriptor + '"'
 
