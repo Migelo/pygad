@@ -393,8 +393,9 @@ def Snap(filename, physical=False, cosmological=None, gad_units=None):
             new_name = 'form_time'
         s._load_name[new_name] = name
         s._block_avail[new_name] = s._block_avail[name]
-        del s._block_avail[name]    # blocks should not appear twice, could
-                                    # confuse in __dict__ (tab completion etc.)
+        if name != new_name:
+            del s._block_avail[name]    # blocks should not appear twice, could
+                                        # confuse in __dict__ (tab completion etc.)
     # now the mass block is named 'mass' for all cases (HDF5 or other)
     s._block_avail['mass'] = [n>0 for n in s._N_part]
 
