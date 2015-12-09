@@ -375,13 +375,13 @@ def Snap(filename, physical=False, cosmological=None, gad_units=None):
     # spaces with underscores for HDF5 names. Also strip names
     s._load_name = {}
     for name, block in s._block_avail.items():
-        if s._file_handlers[0]._format == 3:
-            if '%-4s'%name in gadget.std_name_to_HDF5:
-                new_name = name.strip().lower()
-            else:
-                new_name = name.strip().replace(' ','_')
+        if s._file_handlers[0]._format == 3 \
+                and '%-4s'%name not in gadget.std_name_to_HDF5:
+            new_name = name.strip()
         else:
             new_name = name.strip().lower()
+
+        # some renaming
         if new_name in ['id']:
             new_name = new_name.upper()
         elif new_name == 'z':
@@ -390,6 +390,7 @@ def Snap(filename, physical=False, cosmological=None, gad_units=None):
             new_name = 'temp'
         elif new_name == 'age':
             new_name = 'form_time'
+
         s._load_name[new_name] = name
         s._block_avail[new_name] = s._block_avail[name]
         if name != new_name:
