@@ -17,10 +17,10 @@ Examples:
     load block mass... done.
     done.
     apply Translation to "pos" of "snap_M1196_4x_470"... done.
-    >>> s.vel -= mass_weighted_mean(s[s.r<'1 kpc'], 'vel')
+    >>> s['vel'] -= mass_weighted_mean(s[s['r']<'1 kpc'], 'vel')
     load block vel... done.
     derive block r... done.
-    >>> orientate_at(s[s.r < '10 kpc'].baryons, 'L', total=True)
+    >>> orientate_at(s[s['r'] < '10 kpc'].baryons, 'L', total=True)
     derive block momentum... done.
     derive block angmom... done.
     apply Rotation to "vel" of "snap_M1196_4x_470"... done.
@@ -30,9 +30,9 @@ Examples:
     load block hsml... done.
     >>> sub
     <Snap "snap_M1196_4x_470":ball(r=60.0 [kpc]); N=198,248; z=0.000>
-    >>> sub.r.max().in_units_of('kpc',subs=s)
+    >>> sub['r'].max().in_units_of('kpc',subs=s)
     UnitArr(9.905400e+03, units="kpc")
-    >>> SubSnap(sub,list(set(range(6))-set(gadget.families['gas']))).r.max().in_units_of('kpc',subs=s)
+    >>> SubSnap(sub,list(set(range(6))-set(gadget.families['gas'])))['r'].max().in_units_of('kpc',subs=s)
     UnitArr(59.9990167027, units="kpc")
     >>> s.to_physical_units()
     convert block hsml to physical units... done.
@@ -43,7 +43,7 @@ Examples:
     >>> sub = s[BoxMask('60 kpc',fullsph=False)]
     >>> sub
     <Snap "snap_M1196_4x_470":box(width/2=60.0 [kpc],strict); N=218,984; z=0.000>
-    >>> np.abs(sub.pos).max(axis=0)
+    >>> np.abs(sub['pos']).max(axis=0)
     UnitArr([ 59.99853516,  59.9999733 ,  59.99820328], dtype=float32, units="kpc")
 
     >>> discmask = DiscMask(0.85,rmax='60.0 kpc')
@@ -56,7 +56,7 @@ Examples:
     derive block rcyl... done.
     >>> disc
     <Snap "snap_M1196_4x_470":disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc]); N=36,419; z=0.000>
-    >>> gal = s[s.r<'60 kpc']
+    >>> gal = s[s['r']<'60 kpc']
     >>> np.array(disc.parts,float) / np.array(gal.parts)
     array([ 0.78445298,  0.02730335,         nan,         nan,  0.26439983,
                    nan])
@@ -66,15 +66,15 @@ Examples:
     >>> float(len(disc)) / len(bulge)
     0.22773973673514053
 
-    >>> IDs = bulge.ID[:1000:3]
+    >>> IDs = bulge['ID'][:1000:3]
     load block ID... done.
     >>> sub = gal[IDMask(IDs)]
     >>> sub
     <Snap "snap_M1196_4x_470":masked:IDMask; N=334; z=0.000>
-    >>> assert np.all( sub.ID == IDs )
-    >>> assert np.all( bulge[:1000:3].pos == sub.pos )
+    >>> assert np.all( sub['ID'] == IDs )
+    >>> assert np.all( bulge[:1000:3]['pos'] == sub['pos'] )
     >>> antisub = gal[~IDMask(IDs)]
-    >>> assert not bool( set(antisub.ID).intersection(sub.ID) )
+    >>> assert not bool( set(antisub['ID']).intersection(sub['ID']) )
     >>> assert len(antisub) + len(sub) == len(gal)
 '''
 __all__ = ['SnapMask', 'BallMask', 'BoxMask', 'DiscMask', 'IDMask']
@@ -173,18 +173,19 @@ class BallMask(SnapMask):
         return s + ')'
 
     def _get_mask_for(self, s):
-        R = self._R.in_units_of(s.r.units,subs=s)
-        center = self._center.in_units_of(s.r.units,subs=s)
+        R = self._R.in_units_of(s['r'].units,subs=s)
+        center = self._center.in_units_of(s['r'].units,subs=s)
 
-        r = dist(s.pos,center) if not np.all(center==0) else s.r
+        r = dist(s['pos'],center) if not np.all(center==0) else s['r']
         mask = r < R
 
         if self.fullsph and 'gas' in s:
             for pt in gadget.families['gas']:
                 subgas = SubSnap(s, [pt])
-                r = dist(subgas.pos,center) if not np.all(center==0) else subgas.r
+                r = dist(subgas['pos'],center) if not np.all(center==0) \
+                        else subgas['r']
                 mask[sum(s.parts[:pt]):sum(s.parts[:pt+1])] |= \
-                        r-subgas.hsml < R
+                        r-subgas['hsml'] < R
 
         return mask.view(np.ndarray)
 
@@ -248,18 +249,19 @@ class BoxMask(SnapMask):
         return s + ')'
 
     def _get_mask_for(self, s):
-        d = self._halfwidth.in_units_of(s.pos.units,subs=s)
-        center = self._center.in_units_of(s.pos.units,subs=s)
+        d = self._halfwidth.in_units_of(s['pos'].units,subs=s)
+        center = self._center.in_units_of(s['pos'].units,subs=s)
 
-        pos = s.pos-center if not np.all(center==0) else s.pos
+        pos = s['pos']-center if not np.all(center==0) else s['pos']
         mask = np.abs(pos).max(axis=1) < d
 
         if self.fullsph and 'gas' in s:
             for pt in gadget.families['gas']:
                 subgas = SubSnap(s, [pt])
-                pos = subgas.pos-center if not np.all(center==0) else subgas.pos
+                pos = subgas['pos']-center if not np.all(center==0) \
+                        else subgas['pos']
                 mask[sum(s.parts[:pt]):sum(s.parts[:pt+1])] |= \
-                        np.abs(pos).max(axis=1)-subgas.hsml < d
+                        np.abs(pos).max(axis=1)-subgas['hsml'] < d
 
         return mask.view(np.ndarray)
 
@@ -327,13 +329,13 @@ class DiscMask(SnapMask):
         return s + ')'
 
     def _get_mask_for(self, s):
-        mask = s.jzjc > self.jzjc_min
+        mask = s['jzjc'] > self.jzjc_min
         if self._rmax is not None:
-            rmax = self._rmax.in_units_of(s.rcyl.units,subs=s)
-            mask &= s.rcyl < rmax
+            rmax = self._rmax.in_units_of(s['rcyl'].units,subs=s)
+            mask &= s['rcyl'] < rmax
         if self._zmax is not None:
-            zmax = self._zmax.in_units_of(s.pos.units,subs=s)
-            mask &= np.abs(s.pos[:,2]) < zmax
+            zmax = self._zmax.in_units_of(s['pos'].units,subs=s)
+            mask &= np.abs(s['pos'][:,2]) < zmax
         return mask
 
 
@@ -369,5 +371,5 @@ class IDMask(SnapMask):
         
     def _get_mask_for(self, s):
         IDs = self._IDs
-        return np.in1d(s.ID, IDs)
+        return np.in1d(s['ID'], IDs)
 

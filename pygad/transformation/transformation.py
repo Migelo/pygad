@@ -10,7 +10,7 @@ Examples:
     ValueError: Rotation matrix needs to fullfil det(R) == +1 (proper Rotation)!
     >>> rot = Rotation([[0,1,0],[0,0,1],[1,0,0]])
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470', physical=False)
-    >>> s.pos[:3]
+    >>> s['pos'][:3]
     load block pos... done.
     SimArr([[ 34613.515625  ,  35521.81640625,  33178.60546875],
             [ 34613.296875  ,  35521.765625  ,  33178.31640625],
@@ -18,12 +18,12 @@ Examples:
            dtype=float32, units="ckpc h_0**-1", snap="snap_M1196_4x_470")
     >>> rot.apply(s)
     apply Rotation to "pos" of "snap_M1196_4x_470"... done.
-    >>> s.pos[:3]
+    >>> s['pos'][:3]
     SimArr([[ 35521.81640625,  33178.60546875,  34613.515625  ],
             [ 35521.765625  ,  33178.31640625,  34613.296875  ],
             [ 35521.8828125 ,  33178.48046875,  34613.26171875]],
            dtype=float32, units="ckpc h_0**-1", snap="snap_M1196_4x_470")
-    >>> s.vel[:3]
+    >>> s['vel'][:3]
     load block vel... done.
     apply stored Rotation to block vel... done.
     SimArr([[-119.9617691 , -215.21350098, -218.84106445],
@@ -32,16 +32,39 @@ Examples:
            dtype=float32, units="s**-1 km", snap="snap_M1196_4x_470")
     >>> Translation(UnitArr([10,-20,30],'Mpc')).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_470"... done.
-    >>> s.pos[:3]
+    >>> s['pos'][:3]
     SimArr([[ 42721.81640625,  18778.60546875,  56213.515625  ],
             [ 42721.765625  ,  18778.31640625,  56213.296875  ],
             [ 42721.8828125 ,  18778.48046875,  56213.26171875]],
            dtype=float32, units="ckpc h_0**-1", snap="snap_M1196_4x_470")
     >>> Translation(UnitArr([100,200,300])).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_470"... done.
+    >>> s['angmom']
+    load block mass... done.
+    derive block momentum... done.
+    derive block angmom... done.
+    SimArr([[ 453.28463745,  146.67962646, -392.72454834],
+            [ 627.07080078,  316.37619019, -581.39532471],
+            [ 483.9508667 ,  198.68783569, -433.42886353],
+            ..., 
+            [  59.79833984, -180.23754883,   15.16521835],
+            [ 147.31933594,  -25.50907898, -103.11534119],
+            [  60.9321785 ,  114.03372955,  -84.46931458]],
+           dtype=float32, units="1e+10 ckpc h_0**-1 Msol h_0**-1 km s**-1", snap="snap_M1196_4x_470")
     >>> rot.apply(s)
     apply Rotation to "vel" of "snap_M1196_4x_470"... done.
     apply Rotation to "pos" of "snap_M1196_4x_470"... done.
+    >>> s['angmom']
+    derive block momentum... done.
+    derive block angmom... done.
+    SimArr([[ 146.67962646, -392.72454834,  453.28463745],
+            [ 316.37619019, -581.39532471,  627.07080078],
+            [ 198.68783569, -433.42886353,  483.9508667 ],
+            ..., 
+            [-180.23754883,   15.16521835,   59.79833984],
+            [ -25.50907898, -103.11534119,  147.31933594],
+            [ 114.03372955,  -84.46931458,   60.9321785 ]],
+           dtype=float32, units="1e+10 ckpc h_0**-1 Msol h_0**-1 km s**-1", snap="snap_M1196_4x_470")
     >>> ca, sa = np.cos(12), np.sin(12)
     >>> Rotation([[ca,sa,0],[-sa,ca,0],[0,0,1]]).apply(s)
     apply Rotation to "vel" of "snap_M1196_4x_470"... done.
@@ -51,33 +74,33 @@ Examples:
     Rotation([[ 0.000, 1.000, 0.000],[ 0.000, 0.000, 1.000],[ 1.000, 0.000, 0.000]])
     Translation([10.14,-19.72,30.42] [Mpc])
     Rotation([[ 0.000, 0.844,-0.537],[ 0.000, 0.537, 0.844],[ 1.000, 0.000, 0.000]])
-    >>> old = s.pos[:3]
-    >>> del s.pos
-    >>> assert np.max(np.abs((s.pos[:3] - old) / old)) < 1e-6
+    >>> old = s['pos'][:3]
+    >>> del s['pos']
+    >>> assert np.max(np.abs((s['pos'][:3] - old) / old)) < 1e-6
     load block pos... done.
     apply stored Rotation to block pos... done.
     apply stored Translation to block pos... done.
     apply stored Rotation to block pos... done.
     >>> del s; s = Snap(module_dir+'../snaps/snap_M1196_4x_470', physical=False)
-    >>> print s.pos[0]; print s.pos[-1]
+    >>> print s['pos'][0]; print s['pos'][-1]
     load block pos... done.
     [ 34613.515625    35521.81640625  33178.60546875] [ckpc h_0**-1]
     [ 34607.65234375  35537.62109375  33167.83203125] [ckpc h_0**-1]
     >>> rot.apply(s.gas,remember=False)
     apply Rotation to "pos" of "snap_M1196_4x_470":gas... done.
-    >>> print s.pos[0]; print s.pos[-1]
+    >>> print s['pos'][0]; print s['pos'][-1]
     [ 35521.81640625  33178.60546875  34613.515625  ] [ckpc h_0**-1]
     [ 34607.65234375  35537.62109375  33167.83203125] [ckpc h_0**-1]
-    >>> del s.pos
+    >>> del s['pos']
 
-    >>> np.linalg.norm(s.pos[0])
+    >>> np.linalg.norm(s['pos'][0])
     load block pos... done.
     59671.727
     >>> rot_to_z([1,0,0]).apply(s.gas, total=True)
     apply Rotation to "pos" of "snap_M1196_4x_470"... done.
-    >>> np.linalg.norm(s.pos[0])
+    >>> np.linalg.norm(s['pos'][0])
     59671.727
-    >>> s.vel[-3:]
+    >>> s['vel'][-3:]
     load block vel... done.
     apply stored Rotation to block vel... done.
     SimArr([[  14.27710342,  -56.8183403 ,   54.35939789],
@@ -179,9 +202,9 @@ class Transformation(object):
             if name not in snap.available_blocks() or name in exclude:
                 continue
             # ... and do not load blocks here
-            if name not in snap.__dict__:
+            if name not in snap._blocks:
                 # might not yet be sliced, but loaded into its host
-                if name not in snap.get_host_subsnap(name).__dict__:
+                if name not in snap.get_host_subsnap(name)._blocks:
                     continue
             if environment.verbose:
                 print 'apply %s to "%s" of %s...' % (self.__class__.__name__,
@@ -260,7 +283,7 @@ class Translation(Transformation):
 
     def _apply_to_block(self, block, snap=None):
         if snap is not None:
-            block = getattr(snap,block)
+            block = snap[block]
         if not len(block.shape)==2 and block.shape[1]==self._trans.shape[0]:
             raise ValueError('The block has to have shape (?,%d)!' %
                     self._trans.shape[0])
@@ -346,7 +369,7 @@ class Rotation(Transformation):
 
     def _apply_to_block(self, block, snap=None):
         if snap is not None:
-            name, block = block, getattr(snap,block)
+            name, block = block, snap[block]
         if not len(block.shape)==2 and block.shape[1]==self._R.shape[0]:
             raise ValueError('The block has to have shape (?,%d)!' %
                     self._R.shape[0])

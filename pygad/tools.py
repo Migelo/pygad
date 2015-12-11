@@ -118,13 +118,13 @@ def prepare_zoom(s, info='deduce', fullsph=False, gal_R200=0.10):
     print 'center at:', center
     Translation(-center).apply(s)
     # center the velocities
-    s.vel -= mass_weighted_mean(s[s.r<'1 kpc'], 'vel')
+    s['vel'] -= mass_weighted_mean(s[s['r']<'1 kpc'], 'vel')
     # orientate at the angular momentum of the baryons wihtin 10 kpc
     if info:
         L = info['L_baryons']
         orientate_at(s, 'vec', L, total=True)
     else:
-        orientate_at(s[s.r < '10 kpc'].baryons, 'L', total=True)
+        orientate_at(s[s['r'] < '10 kpc'].baryons, 'L', total=True)
 
     # cut the halo (<R200)
     if info:
@@ -138,7 +138,7 @@ def prepare_zoom(s, info='deduce', fullsph=False, gal_R200=0.10):
 
     # cut the inner part (< 15% R200)
     gal = s[BallMask(gal_R200*R200, fullsph=fullsph)]
-    Ms = gal.stars.mass.sum()
+    Ms = gal.stars['mass'].sum()
     print 'M*:  ', Ms
 
     return s, halo, gal
@@ -160,7 +160,7 @@ def fill_star_from_info(snap, SFI):
                            '"%s"!' % SFI)
 
     sfiididx = np.argsort( SFI[:,0] )
-    sididx = np.argsort( stars.ID )
+    sididx = np.argsort( stars['ID'] )
 
     stars.add_custom_block(UnitArr(np.empty(len(stars),dtype=float),units='kpc'),
                            'rform')

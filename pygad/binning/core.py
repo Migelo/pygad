@@ -8,23 +8,24 @@ Examples:
     >>> from ..transformation import *
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470')
     >>> Translation(UnitArr([-48087.1,-49337.1,-46084.3],'kpc')).apply(s)
-    >>> s.vel -= mass_weighted_mean(s[s.r<'1 kpc'], 'vel')
+    >>> s['vel'] -= mass_weighted_mean(s[s['r']<'1 kpc'], 'vel')
     load block vel... done.
     load block pos... done.
     apply stored Translation to block pos... done.
     derive block r... done.
     load block mass... done.
-    >>> orientate_at(s[s.r < '10 kpc'].baryons, 'L', total=True)
+    >>> orientate_at(s[s['r'] < '10 kpc'].baryons, 'L', total=True)
     derive block momentum... done.
     derive block angmom... done.
     apply Rotation to "vel" of "snap_M1196_4x_470"... done.
     apply Rotation to "pos" of "snap_M1196_4x_470"... done.
     >>> sub = s[BoxMask('50 kpc',fullsph=False)]
-    >>> assert np.all(gridbin2d(sub.pos[:,0], sub.pos[:,1])==gridbin(sub.pos[:,(0,1)]))
-    >>> m1 = gridbin2d(sub.pos[:,0], sub.pos[:,1], sub.mass, bins=100)
-    >>> m2 = gridbin(sub.pos[:,(0,1)], sub.mass, bins=100)
+    >>> assert np.all(gridbin2d(sub['pos'][:,0],sub['pos'][:,1])
+    ...             ==gridbin(sub['pos'][:,(0,1)]))
+    >>> m1 = gridbin2d(sub['pos'][:,0], sub['pos'][:,1], sub['mass'], bins=100)
+    >>> m2 = gridbin(sub['pos'][:,(0,1)], sub['mass'], bins=100)
     >>> assert np.all(m1==m2)
-    >>> mcube = gridbin(sub.pos, sub.mass, bins=100)
+    >>> mcube = gridbin(sub['pos'], sub['mass'], bins=100)
     >>> assert np.all(m2 == mcube.sum(axis=2))
     >>> m1 = scale01(m1, np.percentile(m1, [5,95]))
     >>> assert m1.min() >= 0 and m1.max() <= 1
