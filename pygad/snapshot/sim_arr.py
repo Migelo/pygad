@@ -139,8 +139,8 @@ class SimArr(UnitArr):
         '''
         for dep in self.dependencies:
             host = self.snap.get_host_subsnap(dep)
-            if dep in host.__dict__:
-                delattr(host,dep)
+            if dep in host._blocks:
+                del host[dep]
 
 
 # arithmetic functions that yield new arrays shall return UnitArr's

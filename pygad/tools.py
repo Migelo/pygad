@@ -58,7 +58,7 @@ def read_info_file(filename):
                     raise
     return info
 
-def prepare_zoom(s, info='deduce', fullsph=False):
+def prepare_zoom(s, info='deduce', fullsph=False, gal_R200=0.10):
     '''
     A convenience function to load a snapshot from a zoomed-in simulation that is
     not yet centered or orienated.
@@ -80,6 +80,8 @@ def prepare_zoom(s, info='deduce', fullsph=False):
                             halo region (that is also include SPH particles that
                             are outside the virial radius, but their smoothing
                             length reaches into it).
+        gal_R200 (float):   The radius to define the galaxy. Everything within
+                            <gal_R200>*R200 will be defined as the galaxy.
 
     Returns:
         s (Snap):           The prepared snapshot.
@@ -87,6 +89,7 @@ def prepare_zoom(s, info='deduce', fullsph=False):
     '''
     if isinstance(s,str):
         s = Snap(s)
+    gal_R200 = float(gal_R200)
     print 'prepare zoomed-in', s
 
     if info is 'deduce':
@@ -115,13 +118,13 @@ def prepare_zoom(s, info='deduce', fullsph=False):
     print 'center at:', center
     Translation(-center).apply(s)
     # center the velocities
-    s.vel -= mass_weighted_mean(s[s.r<'1 kpc'], 'vel')
+    s['vel'] -= mass_weighted_mean(s[s['r']<'1 kpc'], 'vel')
     # orientate at the angular momentum of the baryons wihtin 10 kpc
     if info:
         L = info['L_baryons']
         orientate_at(s, 'vec', L, total=True)
     else:
-        orientate_at(s[s.r < '10 kpc'].baryons, 'L', total=True)
+        orientate_at(s[s['r'] < '10 kpc'].baryons, 'L', total=True)
 
     # cut the halo (<R200)
     if info:
@@ -134,11 +137,11 @@ def prepare_zoom(s, info='deduce', fullsph=False):
     halo = s[BallMask(R200, fullsph=fullsph)]
 
     # cut the inner part (< 15% R200)
-    gal = s[BallMask(0.15*R200, fullsph=fullsph)]
-    Ms = gal.stars.mass.sum()
+    gal = s[BallMask(gal_R200*R200, fullsph=fullsph)]
+    Ms = gal.stars['mass'].sum()
     print 'M*:  ', Ms
 
-    return s, halo
+    return s, halo, gal
 
 def fill_star_from_info(snap, SFI):
     '''
@@ -157,7 +160,7 @@ def fill_star_from_info(snap, SFI):
                            '"%s"!' % SFI)
 
     sfiididx = np.argsort( SFI[:,0] )
-    sididx = np.argsort( stars.ID )
+    sididx = np.argsort( stars['ID'] )
 
     stars.add_custom_block(UnitArr(np.empty(len(stars),dtype=float),units='kpc'),
                            'rform')

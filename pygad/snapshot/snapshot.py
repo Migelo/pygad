@@ -17,7 +17,7 @@ Example:
     ...          gad_units={'LENGTH':'cMpc/h_0'})
     >>> s
     <Snap "AqA_ICs_C02_200_nm.gdt.0-8"; N=2,951,686; z=127.000>
-    >>> s.pos.units
+    >>> s['pos'].units
     load block pos... done.
     Unit("cMpc h_0**-1")
     >>> s.gadget_units
@@ -26,13 +26,13 @@ Example:
     current age of the universe: 12.8697344013 [Myr]
     >>> s.loadable_blocks()
     ['vel', 'mass', 'ID', 'pos']
-    >>> for d in s.deriveable_blocks(): print d,
-    lum_k Epot lum_b C metals jzjc RemainingElements lum_r rcyl lum_v lum_u Z vrad alpha_el r Fe lum momentum He Mg E mag_b H O Ne mag_u S angmom mag_k mag mag_r N Ekin temp Ca vcirc Si mag_v jcirc age
+    >>> ' '.join(s.deriveable_blocks())
+    'Epot jzjc rcyl vrad r momentum E angmom Ekin vcirc jcirc'
     >>> assert set(s.all_blocks()) == set(s.loadable_blocks() + s.deriveable_blocks())
-    >>> mwgt_pos = np.tensordot(s.mass, s.pos, axes=1).view(UnitArr)
+    >>> mwgt_pos = np.tensordot(s['mass'], s['pos'], axes=1).view(UnitArr)
     load block mass... done.
-    >>> mwgt_pos.units = s.mass.units * s.pos.units
-    >>> com = mwgt_pos / s.mass.sum()
+    >>> mwgt_pos.units = s['mass'].units * s['pos'].units
+    >>> com = mwgt_pos / s['mass'].sum()
     >>> com
     UnitArr([ 50.25789261,  50.2459259 ,  50.14157867],
             dtype=float32, units="cMpc h_0**-1")
@@ -41,13 +41,13 @@ Example:
     of the positions is:
     (Conversion from 'ckpc/h_0' to 'kpc' is done automatically: the values for 'a'
     and 'h_0' are taken from the associated snapshot and substitued.)
-    >>> np.sqrt(np.sum( (com - s.pos.mean(axis=0))**2 )).in_units_of('Mpc', subs=s)
+    >>> np.sqrt(np.sum( (com - s['pos'].mean(axis=0))**2 )).in_units_of('Mpc', subs=s)
     UnitArr(0.00863040331751, dtype=float32, units="Mpc")
 
     Whereas the physical dimensions of the simulation's box are:
     >>> s.boxsize
     SimArr(100.0, units="cMpc h_0**-1", snap="AqA_ICs_C02_200_nm.gdt.0-8")
-    >>> s.pos.max(axis=0) - s.pos.min(axis=0)
+    >>> s['pos'].max(axis=0) - s['pos'].min(axis=0)
     UnitArr([ 97.78572083,  97.81533051,  97.83026123],
             dtype=float32, units="cMpc h_0**-1")
 
@@ -61,7 +61,7 @@ Example:
     In fact, in order to access blocks that are only for certains families, one has
     to restrict the snapshot to appropiately.
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470', physical=False)
-    >>> s.gas.rho
+    >>> s.gas['rho']
     load block rho... done.
     SimArr([  2.13930360e-03,   8.17492546e-04,   9.48364788e-04, ...,
               4.68019188e-08,   3.91658048e-08,   3.44690605e-08],
@@ -69,16 +69,16 @@ Example:
 
     The derived block R (radius) is updated automatically, if the block pos it
     depends on changes:
-    >>> s.r
+    >>> s['r']
     load block pos... done.
     derive block r... done.
     SimArr([ 59671.72500919,  59671.40716648,  59671.54775578, ...,
              59672.52310468,  59671.98484173,  59671.74536916],
            units="ckpc h_0**-1", snap="snap_M1196_4x_470")
-    >>> np.all( s.r == dist(s.pos) ).value
+    >>> np.all( s['r'] == dist(s['pos']) ).value
     True
-    >>> s.pos -= UnitArr([34622.7,35522.7,33180.5], 'ckpc/h_0')
-    >>> s.r
+    >>> s['pos'] -= UnitArr([34622.7,35522.7,33180.5], 'ckpc/h_0')
+    >>> s['r']
     derive block r... done.
     SimArr([  9.41927424,   9.69844804,   9.6864571 , ...,  25.08852488,
              23.95322772,  24.6890346 ],
@@ -89,7 +89,7 @@ Example:
     convert block r to physical units... done.
     convert block rho to physical units... done.
     convert boxsize to physical units... done.
-    >>> sub = s[s.r < UnitScalar('30 kpc')]
+    >>> sub = s[s['r'] < UnitScalar('30 kpc')]
     >>> sub
     <Snap "snap_M1196_4x_470":masked; N=121,013; z=0.000>
     >>> sub.gas
@@ -100,12 +100,12 @@ Example:
     SimArr([  1.54323637e-05,   4.28144806e-05,   3.68149753e-05, ...,
               2.25019852e+04,   2.70823020e+04,   3.08840657e+04],
            units="Msol**-1 kpc**5", snap="snap_M1196_4x_470":gas)
-    >>> assert np.max(np.abs( (s.get('dist(pos)') - s.r) / s.r )) < 1e-6
-    >>> del s.pos
-    >>> s.r
+    >>> assert np.max(np.abs( (s.get('dist(pos)') - s['r']) / s['r'] )) < 1e-6
+    >>> del s['pos']
+    >>> s['r']
     SimArr([ 13.08232533,  13.47006673,  13.45341264, ...,  34.84517345,
              33.26837183,  34.29032583], units="kpc", snap="snap_M1196_4x_470")
-    >>> s.pos
+    >>> s['pos']
     load block pos... done.
     convert block pos to physical units... done.
     SimArr([[ 48074.32421875,  49335.85546875,  46081.39453125],
@@ -116,7 +116,7 @@ Example:
             [ 48067.49609375,  49357.2578125 ,  46066.24609375],
             [ 48066.18359375,  49357.8046875 ,  46066.4296875 ]],
            dtype=float32, units="kpc", snap="snap_M1196_4x_470")
-    >>> s.r
+    >>> s['r']
     derive block r... done.
     SimArr([ 82877.39261021,  82876.95257089,  82877.14659861, ...,
              82878.50049942,  82877.75400349,  82877.42052568],
@@ -133,18 +133,16 @@ Example:
     >>> 'stars' in s
     True
 
-    New custom blocks can be set via add_custom_block:
-    >>> sub = s.baryons[s.baryons.Z>1e-3].stars
+    New custom blocks can be set easily (though have to fit the (sub-)snapshot):
+    >>> sub = s.baryons[s.baryons['Z']>1e-3].stars
     load block elements... done.
     convert block elements to physical units... done.
     derive block H... done.
     derive block He... done.
     derive block metals... done.
     derive block Z... done.
-    >>> new = np.ones(len(s.stars))
-    >>> s.stars.add_custom_block(new, 'new')
-    SimArr([ 1.,  1.,  1., ...,  1.,  1.,  1.], snap="snap_M1196_4x_470":stars)
-    >>> sub.new
+    >>> s.stars['new'] = np.ones(len(s.stars))
+    >>> sub['new']
     SimArr([ 1.,  1.,  1., ...,  1.,  1.,  1.], snap="snap_M1196_4x_470":stars)
 
     >>> dest_file = module_dir+'test.gad'
@@ -161,15 +159,15 @@ Example:
     writing block MASS (dtype=float32, units=[1e+10 Msol h_0**-1])... done.
     writing block R    (dtype=float32, units=[kpc])... done.
     >>> sub_copy = Snap(dest_file, physical=True)
-    >>> sub_copy.r.units = 'kpc'    # notice: block r gets *loaded*!
+    >>> sub_copy['r'].units = 'kpc' # notice: block r gets *loaded*!
     ...                             # the units are those from before!
     ...                             # and are not in the config!
     load block r... done.
     >>> assert sub.parts == sub_copy.parts
-    >>> assert np.max(np.abs((sub.pos - sub_copy.pos) / sub.pos)) < 1e-6
+    >>> assert np.max(np.abs((sub['pos'] - sub_copy['pos']) / sub['pos'])) < 1e-6
     load block pos... done.
     convert block pos to physical units... done.
-    >>> assert np.max(np.abs((sub.r - sub_copy.r) / sub.r)) < 1e-6
+    >>> assert np.max(np.abs((sub['r'] - sub_copy['r']) / sub['r'])) < 1e-6
     >>> assert np.abs((sub.boxsize - sub_copy.boxsize) / sub.boxsize) < 1e-6
     >>> import os
     >>> os.remove(dest_file)
@@ -197,8 +195,8 @@ Example:
     load block pot... done.
     ...
     >>> for name in s.loadable_blocks():
-    ...     b  = getattr(s.get_host_subsnap(name), name)
-    ...     b2 = getattr(s2.get_host_subsnap(name), name)
+    ...     b  = s.get_host_subsnap(name)[name]
+    ...     b2 = s2.get_host_subsnap(name)[name]
     ...     err = np.max( np.abs((b - b2) / b) )
     ...     if err[np.isfinite(err)] > 1e-6:
     ...         print name, b, b2
@@ -232,8 +230,8 @@ Example:
     >>> os.remove(dest_file_hdf5)
     >>> s2 = Snap(dest_file, physical=False)
     >>> for name in s.loadable_blocks():    # doctest:+ELLIPSIS
-    ...     b  = getattr(s.get_host_subsnap(name), name)
-    ...     b2 = getattr(s2.get_host_subsnap(name), name)
+    ...     b  = s.get_host_subsnap(name)[name]
+    ...     b2 = s2.get_host_subsnap(name)[name]
     ...     assert np.all( b == b2 )
     load block nh... done.
     load block elements... done.
@@ -254,7 +252,7 @@ Example:
     <Snap "snap_M1196_4x_conv_470.hdf5"; N=2,079,055; z=0.000>
     >>> s.cosmology
     FLRWCosmo(h_0=0.72, O_Lambda=0.74, O_m=0.26, O_b=0.0416, sigma_8=None, n_s=None)
-    >>> s.pos
+    >>> s['pos']
     load block pos... done.
     SimArr([[ 34613.515625  ,  35521.81640625,  33178.60546875],
             [ 34613.296875  ,  35521.765625  ,  33178.31640625],
@@ -264,7 +262,7 @@ Example:
             [ 34608.59765625,  35537.2265625 ,  33167.69921875],
             [ 34607.65234375,  35537.62109375,  33167.83203125]],
            dtype=float32, units="ckpc h_0**-1", snap="snap_M1196_4x_conv_470.hdf5")
-    >>> s.r
+    >>> s['r']
     derive block r... done.
     SimArr([ 59671.72500919,  59671.40716648,  59671.54775578, ...,
              59672.52310468,  59671.98484173,  59671.74536916],
@@ -279,7 +277,7 @@ Example:
     >>> SubSnap(s, [0,2,4]).parts
     [921708, 0, 56796, 0, 79764, 0]
 '''
-__all__ = ['Snap', 'SubSnap', 'write']
+__all__ = ['Snap', 'SubSnap', 'FamilySubSnap', 'write']
 
 import sys
 import os.path
@@ -377,13 +375,13 @@ def Snap(filename, physical=False, cosmological=None, gad_units=None):
     # spaces with underscores for HDF5 names. Also strip names
     s._load_name = {}
     for name, block in s._block_avail.items():
-        if s._file_handlers[0]._format == 3:
-            if '%-4s'%name in gadget.std_name_to_HDF5:
-                new_name = name.strip().lower()
-            else:
-                new_name = name.strip().replace(' ','_')
+        if s._file_handlers[0]._format == 3 \
+                and '%-4s'%name not in gadget.std_name_to_HDF5:
+            new_name = name.strip()
         else:
             new_name = name.strip().lower()
+
+        # some renaming
         if new_name in ['id']:
             new_name = new_name.upper()
         elif new_name == 'z':
@@ -392,20 +390,22 @@ def Snap(filename, physical=False, cosmological=None, gad_units=None):
             new_name = 'temp'
         elif new_name == 'age':
             new_name = 'form_time'
+
         s._load_name[new_name] = name
         s._block_avail[new_name] = s._block_avail[name]
-        del s._block_avail[name]    # blocks should not appear twice, could
-                                    # confuse in __dict__ (tab completion etc.)
+        if name != new_name:
+            del s._block_avail[name]    # blocks should not appear twice
     # now the mass block is named 'mass' for all cases (HDF5 or other)
     s._block_avail['mass'] = [n>0 for n in s._N_part]
 
+    # calculate the dependencies and particle types of the derived blocks
     import derived
     changed = True
     while changed:
         changed = False
         for name, rule in derived._rules.iteritems():
             if name in s._load_name:
-                continue
+                continue    # this derived block can actually be loaded
             ptypes, deps = derived.ptypes_and_deps(rule, s)
             if name in s._block_avail:
                 if ptypes!=s._block_avail[name] \
@@ -415,6 +415,17 @@ def Snap(filename, physical=False, cosmological=None, gad_units=None):
                changed = True
             s._block_avail[name] = ptypes
             s._derive_rule_deps[name] = (rule, deps)
+    # now remove those derived blocks, that depend on non-existent blocks
+    not_available = set()
+    removed = -1
+    while removed != len(not_available):
+        removed = len(not_available)
+        for name, rd in s._derive_rule_deps.iteritems():
+            if not (any(s._block_avail[name]) and (rd[1]-not_available)):
+                not_available.add(name)
+        for name in not_available:
+            s._block_avail.pop(name,None)
+            s._derive_rule_deps.pop(name,None)
 
     s._descriptor = '"' + s._descriptor + '"'
 
@@ -444,8 +455,9 @@ class _Snap(object):
         self._load_name             = {}    # from attribute name to actual block
                                             # name as to use for loading
         self._block_avail           = {}    # keys are lower case, stripped names
-                                            # or the HDF5 names with underscores
+                                            # or the hdf5 names with underscores
         self._derive_rule_deps      = {}
+        self._blocks                = {}
         self._cosmological          = cosmological
         self._N_part                = [0] * 6
         self._time                  = 1.0
@@ -602,13 +614,12 @@ class _Snap(object):
                 self._root.redshift)
 
     def __dir__(self):
-        # Add the block names available for all particle types,
-        # such that they occure in tab completion in iPython, for instance.
-        # The second list seems to include excatly the properties.
+        # Add the families available such that they occure in tab completion in
+        # iPython, for instance.
+        # The other list added here seems to include excatly the properties.
         return self.__dict__.keys() + \
-                [k for k in self.__class__.__dict__.keys()
+                [k for k in self.root.__class__.__dict__.keys()
                         if not k.startswith('_')] + \
-                self.available_blocks() + \
                 self.families()
 
     def get_host_subsnap(self, block_name):
@@ -644,7 +655,7 @@ class _Snap(object):
 
         return None
 
-    def iter_blocks(self, present=True, block=True, name=False):
+    def iter_blocks(self, present=True, block=True, name=False, forthis=True):
         '''
         Iterate all blocks, even those that are not for all particles.
 
@@ -656,6 +667,8 @@ class _Snap(object):
                             blocks.
             block (bool):   Whether to yield the (full) block itself.
             name (bool):    Whether to yield the block name.
+            forthis (bool): Only include blocks that are available for this entire
+                            (sub-)snapshot.
 
         Yields:
             block (UnitArr):    The full block, if only this was requested,
@@ -664,56 +677,115 @@ class _Snap(object):
             (block, name):      both as a tuple, if both are requested.
             (And just nothing, if neither was requested.)
         '''
-        root = self._root
         done = set()
-        for block_name in root._block_avail.keys():
+        if forthis:
+            names = self._block.iterkeys() if present else self.available_blocks()
+        else:
+            names = self.root._block_avail.iterkeys()
+        for block_name in names:
             if block_name in done:
                 continue
             host = self.get_host_subsnap(block_name)
             if host is None:
                 continue
-            if not present or block_name in host.__dict__:
+            if not present or block_name in host._blocks:
                 if block and name:
-                    yield getattr(host, block_name), block_name
+                    yield host[block_name], block_name
                 elif block:
-                    yield getattr(host, block_name)
+                    yield host[block_name]
                 elif name:
                     yield block_name
 
-    def _set_block_attr(self, name):
+    def _set_block(self, name):
         '''
-        This gets called, if the attribute for a block is not yet set.
+        This gets called, if a block is not yet set in self._blocks.
 
         Overwritten for _SubSnap, where care is taken for sub-snapshots that are
         not directly sliced/mased from the block's host. Here, for the root, it
         simply calls self._get_block (and asserts that the block is available).
         '''
         assert name in self.available_blocks()
-        return self._get_block(name)
+        assert name not in self._blocks
+        block = self._get_block(name)
+        self._blocks[name] = block
+        return block
 
     def __getattr__(self, name):
-        # Load block, if available for all particle types.
-        if name in self.available_blocks():
-            return self._set_block_attr(name)
         # Create a family sub-snapshot and set it as attribute.
-        elif name in gadget.families:
-            fam_snap = SubSnap(self, name)
+        if name in gadget.families:
+            fam_snap = FamilySubSnap(self, name)
             setattr(self, name, fam_snap)
             return fam_snap
-        # There is such a block, but it is not available (for all particle types).
-        elif name in self._root._block_avail:
-            raise AttributeError("Block '%s' is not available for all " % name +
-                                 "particle types of this (sub-)snapshot.")
         # Explicitly set attributes (like self.redshift and self.gas), member
         # functions, and properties are already handles before __getattr__ is
         # called, hence, we now have an attribute error:
-        raise AttributeError("%r object has no " % type(self).__name__ + \
-                             "attribute %r" % name)
+        raise AttributeError('%r object has no ' % type(self).__name__ + \
+                             'attribute %r' % name)
 
-    def __getitem__(self, i):
-        # Handling of the index is fully done by the factory function.
-        return SubSnap(self, i)
+    def __getitem__(self, key):
+        # strings are block names
+        if isinstance(key, str):
+            block = self._blocks.get(key,None)
+            if block is not None:
+                return block
+            if key in self.available_blocks():
+                return self._set_block(key)
+            elif key in self._root._block_avail:
+                raise KeyError('Block "%s" is not available for all ' % key +
+                               'particle types of this (sub-)snapshot.')
+            else:
+                raise KeyError('(Sub-)Snapshot %r has no block "%s".' % (
+                                    self, key))
+        # postprone the import to here to speed up the access to blocks
+        from masks import SnapMask
+        if isinstance(key, (slice,np.ndarray,list,SnapMask,tuple)):
+            # Handling of the index is fully done by the factory function.
+            return SubSnap(self, key)
+        else:
+            raise KeyError(repr(key))
 
+    def __setitem__(self, key, value):
+        if key in self.available_blocks():
+            old = self._blocks.get(key,None)
+            if old is None:
+                warnings.warn('Need to load/derive an available blocks before ' +
+                              'overwriting it to some custom value!')
+                old = self[key]
+            from sim_arr import SimArr
+            if not isinstance(value, SimArr):
+                value = SimArr(value, snap=self)
+            if value.shape != old.shape:
+                raise RuntimeError('Already existing blocks must not change ' +
+                                   'their shape (here: "%s" with %r)!' % (
+                                       key,old.shape))
+            value.dependencies.update( old.dependencies )
+            value.invalidate_dependencies()
+            self._blocks[key] = value
+        else:
+            self._add_custom_block(value, key)
+
+    def __delitem__(self, name):
+        if name in self.available_blocks():
+            try:
+                del self._blocks[name]
+                if name not in self.root._load_name \
+                        and name not in self.root._derive_rule_deps:
+                    # delete custom blocks entirely
+                    del self._block_avail[name]
+            except KeyError:
+                pass
+        else:
+            raise KeyError('(Sub-)Snapshot %r has no block "%s".' % (
+                                    self, key))
+
+    # iterate over all available loaded blocks (including custom and derived
+    # blocks)
+    def __iter__(self):
+        for name, block in self.iter_blocks(present=True, block=True, name=True,
+                                            forthis=True):
+            yield name, block
+
+    # whether a block of familiy is in the (sub-)snapshot (by name)
     def __contains__(self, el):
         return el in self.available_blocks() or el in self.families()
 
@@ -789,7 +861,7 @@ class _Snap(object):
             self._convert_block_to_physical_units(block, name)
 
         host = self.get_host_subsnap(name)
-        setattr(host, name, block)
+        host._blocks[name] = block
 
         for trans in root._trans_at_load:
             if name in trans._change:
@@ -805,7 +877,7 @@ class _Snap(object):
         for derived_name, (rule, deps) in root._derive_rule_deps.iteritems():
             if name in deps:
                 host = self.get_host_subsnap(derived_name)
-                if derived_name in host.__dict__:
+                if derived_name in host._blocks:
                     block.dependencies.add(derived_name)
         block.invalidate_dependencies()
 
@@ -835,20 +907,20 @@ class _Snap(object):
         # pre-load all needed (and not yet loaded) blocks in order not to mess up
         # the output
         for dep in deps:
-            getattr(host, dep)
+            host[dep]
 
         if environment.verbose: print 'derive block %s...' % name,
         sys.stdout.flush()
         block = host.get(rule)
         for dep in deps:
-            getattr(host,dep).dependencies.add(name)
+            host[dep].dependencies.add(name)
         if environment.verbose: print 'done.'
         sys.stdout.flush()
 
-        setattr(host, name, block)
+        host._blocks[name] = block
         return block
 
-    def add_custom_block(self, data, name):
+    def _add_custom_block(self, data, name):
         '''
         Add a new custom block to the snapshot.
 
@@ -871,29 +943,20 @@ class _Snap(object):
         else:
             raise RuntimeError('Data length does not fit the (sub-)snapshot!')
 
-        root = self._root
-        if name in root._block_avail:
-            raise KeyError('Block "%s" already exists!' % name)
+        if name in self.root._block_avail:
+            raise NotImplementedError('Block name "%s" already exists ' % name +
+                                      'for other parts of the snapshot!\n' +
+                                      'Combining is not implemented.')
 
-        root._block_avail[name] = list(ptypes)
+        self.root._block_avail[name] = list(ptypes)
         host = self.get_host_subsnap(name)
         if host is not self:
-            del root._block_avail[name]
+            del self.root._block_avail[name]
             raise RuntimeError('Can only set new blocks for entire family '
                                'sub-snapshots or the root.')
 
         from sim_arr import SimArr
-        setattr( host, name, SimArr(data,snap=host) )
-
-        return getattr(host, name)
-
-    def refresh(self):
-        '''Update sliced/masked blocks of this snapshot.'''
-        # TODO: can be removed once the problem with the unit attribute of
-        # UnitArr's is solved
-        for name in self.iter_blocks(present=True, block=False, name=True):
-            if name in self.__dict__ and self is not self.get_host_subsnap(name):
-                delattr(self, name)
+        host._blocks[name] = SimArr(data,snap=host)
 
     def _get_block(self, name):
         '''
@@ -979,8 +1042,8 @@ class _Snap(object):
             There is no function to conveniently reverse this. You would have to
             unload (delete) all blocks, set phys_units_requested to False, and the
             reload the blocks (which is done automatically):
-            --> for bn in self.iter_blocks(block=False, name=True):
-            ...     delattr(self, bn)
+            --> for name, block in self:
+            ...     del self[name]
             --> self.phys_units_requested = False
 
         Args:
@@ -993,7 +1056,8 @@ class _Snap(object):
         root._phys_units_requested = bool(on_load)
 
         # convert all loaded blocks
-        for block, name in self.iter_blocks(name=True):
+        for block, name in self.iter_blocks(present=True, block=True, name=True,
+                                            forthis=False):
             self._convert_block_to_physical_units(block, name)
 
         # convert the boxsize
@@ -1008,7 +1072,7 @@ class _Snap(object):
         '''Load all blocks from file. (No block deriving, though.)'''
         for name in self._root._load_name:
             host = self.get_host_subsnap(name)
-            getattr(host, name)
+            host[name]
 
     def delete_blocks(self, derived=None, loaded=None):
         '''
@@ -1027,13 +1091,13 @@ class _Snap(object):
         if derived:
             for name, (rule, deps) in self._root._derive_rule_deps.iteritems():
                 host = self.get_host_subsnap(name)
-                if name in host.__dict__:
-                    delattr(host, name)
+                if name in host._blocks:
+                    del host[name]
         if loaded:
             for name in self._root._load_name:
                 host = self.get_host_subsnap(name)
-                if name in host.__dict__:
-                    delattr(host, name)
+                if name in host._blocks:
+                    del host[name]
 
     def get(self, expr, units=None):
         '''
@@ -1078,14 +1142,15 @@ class _Snap(object):
         for name, el in utils.iter_idents_in_expr(expr, True):
             if name not in e.namespace and name not in namespace:
                 try:
-                    namespace[name] = getattr(self,name)
-                except AttributeError:
+                    try:
+                        namespace[name] = getattr(self,name)
+                    except AttributeError:
+                        namespace[name] = self[name]
+                except KeyError:
                     if not isinstance(el, ast.Attribute):
                         raise ValueError("A unknown name ('%s') " % name +
                                          "appeared in expression for a new" +
                                          "block: '%s'" % expr)
-                except:
-                    raise
         res = e.eval(expr, namespace)
         res = res.view(SimArr)
         res._snap = self
@@ -1131,9 +1196,9 @@ class _SubSnap(_Snap):
         <Snap "snap_M1196_4x_470"[123:2079055:100]; N=20,790; z=0.000>
         >>> s[123:len(s):100].parts
         [9216, 10015, 568, 193, 798, 0]
-        >>> s.pos -= [34623, 35522, 33181]
+        >>> s['pos'] -= [34623, 35522, 33181]
         load block pos... done.
-        >>> mask = abs(s.pos).max(axis=-1) < 100
+        >>> mask = abs(s['pos']).max(axis=-1) < 100
         >>> s[mask]
         <Snap "snap_M1196_4x_470":masked; N=355,218; z=0.000>
         >>> s[mask][::100].parts
@@ -1143,47 +1208,48 @@ class _SubSnap(_Snap):
         >>> slim = s[::100]
         >>> slim.parts
         [9218, 10014, 568, 193, 798, 0]
-        >>> np.sum(slim.gas.mass >= 0.0002)
+        >>> np.sum(slim.gas['mass'] >= 0.0002)
         load block mass... done.
         UnitArr(1)
-        >>> slim_mask = slim.mass < 0.0002  # exludes one gas particle...
+        >>> slim_mask = slim['mass'] < 0.0002   # exludes one gas particle...
         >>> slim[slim_mask].parts
         [9217, 0, 0, 0, 798, 0]
-        >>> slim[slim_mask][100:9000:3].rho
+        >>> slim[slim_mask][100:9000:3]['rho']
         load block rho... done.
         SimArr([  3.18597343e-10,   8.68698516e-11,   2.53987748e-10, ...,
                   9.36064892e-10,   1.11472465e-09,   4.26807673e-10],
                dtype=float32, units="1e+10 Msol ckpc**-3 h_0**2", snap="snap_M1196_4x_470":gas)
-        >>> len(slim[slim_mask][100:9000:3].rho)
+        >>> len(slim[slim_mask][100:9000:3]['rho'])
         2967
         >>> mask = np.zeros(len(s), dtype=bool)
         >>> for pt in gadget.families['baryons']:
         ...     mask[sum(s.parts[:pt]):sum(s.parts[:pt+1])] = True
 
         s[mask], however, is not host (!)
-        >>> np.all( s[mask].elements == s.baryons.elements )
+        >>> np.all( s[mask]['elements'] == s.baryons['elements'] )
         load block elements... done.
         UnitArr(True, dtype=bool)
-        >>> len(slim[slim_mask].elements)
+        >>> len(slim[slim_mask]['elements'])
         10015
-        >>> assert s[2:-123:10].stars.form_time.shape[0] == len(s[2:-123:10].stars)
+        >>> assert s[2:-123:10].stars['form_time'].shape[0] == len(s[2:-123:10].stars)
         load block form_time... done.
-        >>> s[2:-123:10].stars.form_time
+        >>> s[2:-123:10].stars['form_time']
         SimArr([ 0.77399528,  0.950091  ,  0.81303227, ...,  0.2623567 ,
                  0.40703428,  0.28800005],
                dtype=float32, units="a_form", snap="snap_M1196_4x_470":stars)
-        >>> assert slim[slim_mask].stars.form_time.shape[0] == len(slim[slim_mask].stars)
-        >>> slim[slim_mask].stars.form_time[::100]
+        >>> assert slim[slim_mask].stars['form_time'].shape[0] == len(slim[slim_mask].stars)
+        >>> slim[slim_mask].stars['form_time'][::100]
         SimArr([ 0.9974333 ,  0.30829304,  0.64798123,  0.60468233,  0.18474203,
                  0.53754038,  0.18224117,  0.26500258],
                dtype=float32, units="a_form", snap="snap_M1196_4x_470":stars)
 
         # index list (+family) tests (see comments in SubSnap)
-        >>> r = np.sqrt(np.sum(s.pos**2, axis=1))
-        >>> assert np.all( s[r<123].pos == s[np.where(r<123)].pos )
-        >>> assert np.all( s[s.pos[:,0]>0].pos == s[np.where(s.pos[:,0]>0)].pos )
-        >>> assert np.all( s.stars[s.stars.inim>s.stars.mass.mean()].pos ==
-        ...         s.stars[np.where(s.stars.inim>s.stars.mass.mean())].pos )
+        >>> r = np.sqrt(np.sum(s['pos']**2, axis=1))
+        >>> assert np.all( s[r<123]['pos'] == s[np.where(r<123)]['pos'] )
+        >>> assert np.all( s[s['pos'][:,0]>0]['pos']
+        ...             == s[np.where(s['pos'][:,0]>0)]['pos'] )
+        >>> assert np.all( s.stars[s.stars['inim']>s.stars['mass'].mean()]['pos'] ==
+        ...         s.stars[np.where(s.stars['inim']>s.stars['mass'].mean())]['pos'] )
         load block inim... done.
     '''
     def _calc_N_part_from_slice(self, N_part_base, _slice):
@@ -1215,8 +1281,9 @@ class _SubSnap(_Snap):
                                                  N_cum_base)]
 
     def __init__(self, base, mask, N_part=None):
-        self._base = base
-        self._root = base._root
+        self._base      = base
+        self._root      = base._root
+        self._blocks    = {}
 
         if isinstance(mask, slice):
             if mask.step == 0:
@@ -1237,7 +1304,7 @@ class _SubSnap(_Snap):
             if mask.step is not None:
                 self._descriptor += ':' + str(mask.step)
             self._descriptor += ']'
-        elif isinstance(mask, np.ndarray) and mask.dtype == 'bool':
+        elif isinstance(mask, np.ndarray) and mask.dtype == bool:
             mask = mask.view(np.ndarray)
             if len(mask) != len(base):
                 raise ValueError('Mask has to have the same length as the ' + \
@@ -1288,7 +1355,7 @@ class _SubSnap(_Snap):
                 mask = np.concatenate(pmasks)
                 return mask
         else:
-            assert isinstance(self._mask, np.ndarray) and self._mask.dtype == 'bool'
+            assert isinstance(self._mask, np.ndarray) and self._mask.dtype==bool
             if utils.is_consecutive(ptypes):
                 start = sum(base._N_part[:ptypes[0]])
                 end   = sum(base._N_part[:ptypes[-1]+1])
@@ -1302,26 +1369,29 @@ class _SubSnap(_Snap):
                 mask = np.concatenate(pmasks)
                 return mask
 
-    def _set_block_attr(self, name):
+    def _set_block(self, name):
         '''
-        This gets called, if the attribute for a block is not yet set.
+        This gets called, if a block is not yet set in self._blocks.
 
         Here for a _SubSnap, one has to handle the case where the block is not
         available for the base. It has to be stored appropiately then.
         '''
-        if hasattr(self._base,name):
-            return getattr(self._base,name)[self._mask]
+        if name in self._base.available_blocks():
+            # do not store the masked snapshot, but only the base one
+            return self._base[name][self._mask]
         else:
-            # Due to calling by __getattr__, the following should always be
+            # Due to calling by __getitem__, the following should always be
             # fulfilled:
             assert name in self.available_blocks()
+            assert name not in self._blocks
             host = self.get_host_subsnap(name)
             if host is self:
                 block = self._get_block(name)  # no slicing/masking needed!
+                self._blocks[name] = block
                 return block
             else:
                 # delegate the loading to the host
-                block = getattr(host, name)
+                block = host[name]
                 #################################################################
                 # The general situation here:
                 #
@@ -1344,17 +1414,18 @@ class _SubSnap(_Snap):
                     sub = sub._base
                 for mask in reversed(masks):
                     block = block[mask]
-                setattr(self, name, block)
+                # do not store the masked snapshot, but only the base one
                 return block
 
 def SubSnap(base, mask):
     '''
-    A factory function for creating sub-snapshots.
+    A factory function for creating masked/sliced sub-snapshots.
 
-    Sub-snapshots should always be instantiated with this function.
+    Sub-snapshots should always be instantiated with this function or the bracket
+    notation (or FamilySubSnap).
 
     Args:
-        base (Snap):    The snapshot to create a sub-snapshot from.
+        base (Snap):    The snapshot to create the sub-snapshot from.
 
         mask:           The mask to use. It can be:
 
@@ -1369,10 +1440,6 @@ def SubSnap(base, mask):
                             sub-snapshot then consists of all the particles for
                             which the entry is True. Otherwise the same as for a
                             slice.
-
-                        * family name (str):
-                            Creates a sub-snapshot of all the particles of the
-                            given family of the base snapshot.
 
                         * particle types (list):
                             Create a sub-snapshot of the specified particle types
@@ -1407,15 +1474,9 @@ def SubSnap(base, mask):
     from masks import SnapMask
 
     if isinstance(mask,slice) \
-            or (isinstance(mask,np.ndarray) and mask.dtype=='bool'):
+            or (isinstance(mask,np.ndarray) and mask.dtype==bool):
         # slices and masks are handled directly by _SubSnap
         return _SubSnap(base, mask)
-
-    elif isinstance(mask,str) and mask in gadget.families:
-        # family sub-snapshot
-        family_s = SubSnap(base, gadget.families[mask])
-        family_s._descriptor = base._descriptor + ':' + mask
-        return family_s
 
     elif isinstance(mask,list):
         ptypes = sorted(set(mask))
@@ -1457,4 +1518,29 @@ def SubSnap(base, mask):
 
     else:
         raise KeyError('Mask of type %s not understood.' % type(mask).__name__)
+
+def FamilySubSnap(base, fam):
+    '''
+    A factory function for creating a sub-snapshot of all the particles of the
+    given family of the base snapshot.
+
+    Sub-snapshots for families should always be instantiated with this function or
+    by accessing attributes. The latter caches the sub-snapshot.
+
+    Args:
+        base (Snap):        The snapshot to create the family sub-snapshot from.
+        fam (str):          The name of the family (as in `gadget.families`) to
+                            restrict to.
+
+    Returns:
+        fam_subsnap (Snap): The sub-snapshot of `base` that is restricted to the
+                            specified family.
+    '''
+    if fam not in gadget.families:
+        raise ValueError('Unknown familiy "%s"!' % fam)
+
+    # family sub-snapshot
+    family_s = SubSnap(base, gadget.families[fam])
+    family_s._descriptor = base._descriptor + ':' + fam
+    return family_s
 

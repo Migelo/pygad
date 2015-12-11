@@ -5,7 +5,7 @@ Example:
     >>> from ..environment import module_dir
     >>> from ..snapshot import Snap
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=True)
-    >>> center = UnitArr([33816.9, 34601.1, 32681.0], s.pos.units)
+    >>> center = UnitArr([33816.9, 34601.1, 32681.0], s['pos'].units)
     load block pos... done.
     convert block pos to physical units... done.
     >>> radially_binned(s.stars, 'Fe/mass', av='mass', center=center,
@@ -82,23 +82,23 @@ def radially_binned(s, qty, av=None, r_edges=None, proj=None, center=None):
 
     if center is None:
         center = [0,0,0] if proj is None else [0,0]
-    center = UnitQty(center, s.pos.units, subs=s)
+    center = UnitQty(center, s['pos'].units, subs=s)
 
     if proj is None:
-        r = s.r if np.all(center==0) else dist(s.pos,center)
+        r = s['r'] if np.all(center==0) else dist(s['pos'],center)
     else:
         if proj not in range(3):
             raise ValueError('Have to project along 0, 1, or 2!')
         if np.all(center==0) and proj==2:
-            r = s.rcyl
+            r = s['rcyl']
         else:
             axes = tuple( set([0,1,2]) - set([proj]) )
-            r = dist(s.pos[:,axes],center)
+            r = dist(s['pos'][:,axes],center)
     r_ind = r.argsort()
 
     if r_edges is None:
         r_edges = UnitArr(np.linspace(0,20,51), 'kpc')
-    r_edges = UnitQty(r_edges, s.pos.units, subs=s)
+    r_edges = UnitQty(r_edges, s['pos'].units, subs=s)
 
     # r_edges as indices in r_ind
     ind_edges = np.array( [np.abs(r[r_ind]-rr).argmin() for rr in r_edges] )
@@ -136,7 +136,7 @@ def profile_dens(s, qty, av=None, r_edges=None, proj=None, center=None):
     '''
     if r_edges is None:
         r_edges = UnitArr(np.linspace(0,20,51), 'kpc')
-    r_edges = UnitQty(r_edges, s.pos.units, subs=s)
+    r_edges = UnitQty(r_edges, s['pos'].units, subs=s)
 
     Q = radially_binned(s, qty, av=av, r_edges=r_edges, proj=proj, center=center)
     if proj is None:
@@ -210,11 +210,11 @@ def NFW_fit(s, center=None, Rmin=None, Rmax=None, Nfit=100, r_edges=None):
     if r_edges is None:
         if Rmin is None: Rmin = '1 kpc'
         if Rmax is None: Rmax = '100 kpc'
-        Rmin = float(UnitScalar(Rmin,s.pos.units,subs=s))
-        Rmax = float(UnitScalar(Rmax,s.pos.units,subs=s))
+        Rmin = float(UnitScalar(Rmin,s['pos'].units,subs=s))
+        Rmax = float(UnitScalar(Rmax,s['pos'].units,subs=s))
         r_edges = np.array([0]+list(np.logspace(np.log10(Rmin),np.log10(Rmax),Nfit)))
     else:
-        r_edges = UnitQty(r_edges, s.pos.units, subs=s)
+        r_edges = UnitQty(r_edges, s['pos'].units, subs=s)
     # get something like the midpoints
     r = np.array( [r_edges[1]] + list((r_edges[2:]+r_edges[1:-1])/2.) )
     rho = profile_dens(s, 'mass', center=center, r_edges=r_edges, proj=None)
@@ -231,6 +231,6 @@ def NFW_fit(s, center=None, Rmin=None, Rmax=None, Nfit=100, r_edges=None):
     err = (_NFW_log10(log_r, log_rho0, log_Rs) - log_rho).std()
 
     return (UnitArr(10.0**log_rho0, rho.units),
-            UnitArr(10.0**log_Rs, s.pos.units),
+            UnitArr(10.0**log_Rs, s['pos'].units),
             err)
 

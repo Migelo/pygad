@@ -45,12 +45,12 @@ def profile(s, Rmax, qty, av=None, units=None, dens=True, proj=None,
         fig (Figure):       The figure of the axis plotted on.
         ax (AxesSubplot):   The axis plotted on.
     '''
-    Rmax = UnitScalar(Rmax, s.pos.units)
+    Rmax = UnitScalar(Rmax, s['pos'].units)
     if logbin:
         if minlog is None:
             minlog = Rmax / 100.0
         else:
-            minlog = UnitScalar(minlog, s.pos.units)
+            minlog = UnitScalar(minlog, s['pos'].units)
         r_edges = np.logspace(np.log10(minlog), np.log10(float(Rmax)), N)
         r_edges = np.array( [0] + list(r_edges) )
         r = 10.0**((np.log10(r_edges[1:-1]) + np.log10(r_edges[2:])) / 2.0)
@@ -79,7 +79,7 @@ def profile(s, Rmax, qty, av=None, units=None, dens=True, proj=None,
     ax.set_yscale('log')
 
     ax.set_xlabel(r'$%s$ [$%s$]' % ('r' if proj is None else 'R',
-                                    s.pos.units.latex()))
+                                    s['pos'].units.latex()))
     if ylabel is None:
         name = ''
         if isinstance(av,str):

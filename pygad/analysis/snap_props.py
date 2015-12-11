@@ -17,7 +17,7 @@ Example:
     Center of mass is *not* center of galaxy / halo!
     >>> Translation([-34792.2, -35584.8, -33617.9]).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_320"... done.
-    >>> sub = s[s.r < '20 kpc']
+    >>> sub = s[s['r'] < '20 kpc']
     derive block r... done.
     >>> orientate_at(sub, 'L', total=True)
     load block vel... done.
@@ -25,7 +25,7 @@ Example:
     derive block angmom... done.
     apply Rotation to "vel" of "snap_M1196_4x_320"... done.
     apply Rotation to "pos" of "snap_M1196_4x_320"... done.
-    >>> sub.angmom.sum(axis=0)
+    >>> sub['angmom'].sum(axis=0)
     derive block momentum... done.
     derive block angmom... done.
     UnitArr([  3.35956104e-02,  -1.74680334e-02,   1.10114893e+04],
@@ -107,18 +107,15 @@ def mass_weighted_mean(s, qty):
         mean (UnitArr):     The mass weighted mean.
     '''
     if isinstance(qty, str):
-        if hasattr(s,qty):
-            qty = getattr(s, qty)
-        else:
-            qty = s.get(qty)
+        qty = s.get(qty)
     else:
         qty = UnitArr(qty)
     if len(s) == 0:
         return UnitArr([0]*qty.shape[-1], units=qty.units, dtype=qty.dtype)
     # only using the np.ndarray views does not speed up
-    mwgt = np.tensordot(s.mass, qty, axes=1).view(UnitArr)
-    mwgt.units = s.mass.units * qty.units
-    normalized_mwgt = mwgt / s.mass.sum()
+    mwgt = np.tensordot(s['mass'], qty, axes=1).view(UnitArr)
+    mwgt.units = s['mass'].units * qty.units
+    normalized_mwgt = mwgt / s['mass'].sum()
     return normalized_mwgt
 
 def center_of_mass(snap):
@@ -138,12 +135,12 @@ def reduced_inertia_tensor(s):
 
     Returns:
         I (np.matrix):  The reduced inertia tensor. (Without units, but they would
-                        be s.mass.units/s.pos.units.)
+                        be s['mass'].units/s['pos'].units.)
     '''
     # a bit faster with the np.ndarray views
-    r2 = (s.r**2).view(np.ndarray)
-    m = s.mass.view(np.ndarray)
-    pos = s.pos.view(np.ndarray)
+    r2 = (s['r']**2).view(np.ndarray)
+    m = s['mass'].view(np.ndarray)
+    pos = s['pos'].view(np.ndarray)
     I_xx = np.sum(m * pos[:,0]**2 / r2)
     I_yy = np.sum(m * pos[:,1]**2 / r2)
     I_zz = np.sum(m * pos[:,2]**2 / r2)
@@ -184,7 +181,7 @@ def orientate_at(s, mode, qty=None, total=False, remember=True):
     '''
     if qty is None:
         if mode == 'L':
-            qty = s.angmom.sum(axis=0)
+            qty = s['angmom'].sum(axis=0)
         elif mode == 'red I':
             qty = reduced_inertia_tensor(s)
         else:
@@ -219,7 +216,7 @@ def los_velocity_dispersion(s, proj=2):
         proj (int):     The line of sight is along this axis (0=x, 1=y, 2=z).
     '''
     # array of los velocities
-    v = s.vel[:,proj].ravel()
+    v = s['vel'][:,proj].ravel()
     av_v = mass_weighted_mean(s, v)
     sigma_v = np.sqrt( mass_weighted_mean(s, (v-av_v)**2) )
     
