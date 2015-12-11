@@ -60,9 +60,9 @@ Example:
     load block hsml... done.
     convert block hsml to physical units... done.
     UnitArr(1.740805e+05, units="Msol kpc**-3")
-    >>> SPH_qty_at(s, 'rho', s.gas.pos[331798])
+    >>> SPH_qty_at(s, 'rho', s.gas['pos'][331798])
     UnitArr(5.330261e+04, units="Msol kpc**-3")
-    >>> s.gas.rho[331798]
+    >>> s.gas['rho'][331798]
     56831.004
 
     #to slow...!
@@ -238,7 +238,7 @@ def SPH_qty_at(s, qty, r, units=None, kernel=None):
     '''
     # TODO: find ways to speed it up!
     # TODO: parallelize
-    r = UnitQty(r, s.pos.units, subs=s)
+    r = UnitQty(r, s['pos'].units, subs=s)
     if not (r.shape==(3,) or (r.shape[1:]==(3,) and len(r.shape)==2)):
         raise ValueError('Position `r` needs to have shape (3,) or (N,3)!')
     if isinstance(qty, str):
@@ -256,11 +256,11 @@ def SPH_qty_at(s, qty, r, units=None, kernel=None):
         units = Unit(units)
     qty = np.asarray(qty)
 
-    m_rho_hsml3 = (s.gas.mass / s.gas.rho / s.gas.hsml**3) \
+    m_rho_hsml3 = (s.gas['mass'] / s.gas['rho'] / s.gas['hsml']**3) \
                 .in_units_of(1,subs=s).view(np.ndarray)
     r = r.view(np.ndarray)
-    gas_pos = s.gas.pos.view(np.ndarray)
-    hsml = s.gas.hsml.in_units_of(s.pos.units,subs=s).view(np.ndarray)
+    gas_pos = s.gas['pos'].view(np.ndarray)
+    hsml = s.gas['hsml'].in_units_of(s['pos'].units,subs=s).view(np.ndarray)
 
     if kernel is None:
         from ..gadget import config
@@ -326,7 +326,7 @@ def scatter_gas_qty_to_stars(s, qty, name=None, units=None, kernel=None):
         else:
             raise RuntimeError('No name for the quantity is given!')
 
-    Q = SPH_qty_at(s, qty=qty, r=s.stars.pos, units=units, kernel=kernel)
+    Q = SPH_qty_at(s, qty=qty, r=s.stars['pos'], units=units, kernel=kernel)
 
     return s.stars.add_custom_block(Q, name)
 
