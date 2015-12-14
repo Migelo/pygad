@@ -162,12 +162,10 @@ def fill_star_from_info(snap, SFI):
     sfiididx = np.argsort( SFI[:,0] )
     sididx = np.argsort( stars['ID'] )
 
-    stars.add_custom_block(UnitArr(np.empty(len(stars),dtype=float),units='kpc'),
-                           'rform')
+    stars['rform'] = UnitArr( np.empty(len(stars),dtype=float), units='kpc' )
     stars.rform[sididx] = SFI[:,2][sfiididx]
 
-    stars.add_custom_block(UnitArr(np.empty(len(stars),dtype=float)),
-                           'rR200form')
+    stars['rR200form'] = np.empty(len(stars),dtype=float)
     stars.rR200form[sididx] = SFI[:,3][sfiididx]
 
 def read_traced_gas(filename, types=None):
