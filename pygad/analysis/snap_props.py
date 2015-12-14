@@ -326,7 +326,6 @@ def scatter_gas_qty_to_stars(s, qty, name=None, units=None, kernel=None):
         else:
             raise RuntimeError('No name for the quantity is given!')
 
-    Q = SPH_qty_at(s, qty=qty, r=s.stars['pos'], units=units, kernel=kernel)
-
-    return s.stars.add_custom_block(Q, name)
+    s.stars[name] = SPH_qty_at(s, qty=qty, r=s.stars['pos'], units=units, kernel=kernel)
+    return s.stars[name]
 
