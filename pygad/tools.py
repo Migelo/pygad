@@ -119,12 +119,6 @@ def prepare_zoom(s, info='deduce', fullsph=False, gal_R200=0.10):
     Translation(-center).apply(s)
     # center the velocities
     s['vel'] -= mass_weighted_mean(s[s['r']<'1 kpc'], 'vel')
-    # orientate at the angular momentum of the baryons wihtin 10 kpc
-    if info:
-        L = info['L_baryons']
-        orientate_at(s, 'vec', L, total=True)
-    else:
-        orientate_at(s[s['r'] < '10 kpc'].baryons, 'L', total=True)
 
     # cut the halo (<R200)
     if info:
@@ -136,7 +130,17 @@ def prepare_zoom(s, info='deduce', fullsph=False, gal_R200=0.10):
     print 'M200:', M200
     halo = s[BallMask(R200, fullsph=fullsph)]
 
-    # cut the inner part (< 15% R200)
+    # orientate at the angular momentum of the baryons wihtin 10 kpc
+    if info:
+        L = info['L_baryons']
+        orientate_at(s, 'vec', L, total=True)
+    else:
+        orientate_at(s[BallMask(gal_R200*R200, fullsph=False)].baryons,
+                     'L',
+                     total=True
+        )
+
+    # cut the inner part as the galaxy
     gal = s[BallMask(gal_R200*R200, fullsph=fullsph)]
     Ms = gal.stars['mass'].sum()
     print 'M*:  ', Ms

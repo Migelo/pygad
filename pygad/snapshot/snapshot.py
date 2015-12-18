@@ -328,7 +328,7 @@ def Snap(filename, physical=False, cosmological=None, gad_units=None):
 
     s._block_avail = { block.name:block.ptypes for block in greader.infos() }
 
-    s._N_part   = list(greader.header['N_part_all'])
+    s._N_part   = map(int, greader.header['N_part_all'])
     s._time     = greader.header['time']
     s._redshift = greader.header['redshift']
     s._boxsize  = SimArr(greader.header['boxsize'],
@@ -353,13 +353,13 @@ def Snap(filename, physical=False, cosmological=None, gad_units=None):
     if greader.header['N_files'] > 1:
         s._descriptor += '.0-'+str(greader.header['N_files'])
         # enshure Python int's to avoid overflows
-        N_part = list( greader.header['N_part'] )
+        N_part = map( int, greader.header['N_part'] )
         for n in xrange(1, greader.header['N_files']): # first already done
             filename = base + '.' + str(n) + suffix
             greader = gadget.FileReader(filename)
             s._file_handlers.append( greader )
             # enshure Python int's to avoid overflows
-            for i in xrange(6): N_part[i] += greader.header['N_part'][i]
+            for i in xrange(6): N_part[i] += int(greader.header['N_part'][i])
             # update loadable blocks:
             for block in greader.infos():
                 if block.name in s._block_avail:
@@ -776,7 +776,7 @@ class _Snap(object):
                 pass
         else:
             raise KeyError('(Sub-)Snapshot %r has no block "%s".' % (
-                                    self, key))
+                                    self, name))
 
     # iterate over all available loaded blocks (including custom and derived
     # blocks)
