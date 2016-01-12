@@ -13,7 +13,7 @@ Also doctest other parts of this sub-module:
     >>> doctest.testmod(sim_arr)
     TestResults(failed=0, attempted=10)
     >>> doctest.testmod(masks)
-    TestResults(failed=0, attempted=31)
+    TestResults(failed=0, attempted=32)
 '''
 from snapshot import *
 from derived import *
