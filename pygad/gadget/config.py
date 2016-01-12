@@ -39,6 +39,7 @@ block_order = []
 elements = []
 general = {
     'kernel': '<undefined>',
+    'vol_def_x': '<undefined>',
     'IMF': '<undefined>',
     'SSP_dir': '<undefined>',
     }
@@ -96,7 +97,7 @@ def read_config(config):
     cfg.optionxform = str
     cfg.read(filename)
 
-    test_section(cfg, 'general', ['kernel', 'IMF'])
+    test_section(cfg, 'general', ['kernel', 'vol_def_x', 'IMF'])
     test_section(cfg, 'families', ['gas', 'stars', 'dm', 'bh', 'baryons'])
     test_section(cfg, 'base units', ['LENGTH', 'VELOCITY', 'MASS'])
 
@@ -118,6 +119,10 @@ def read_config(config):
     if kernel not in kernels.kernels:
         raise ValueError('Kernel "%s" is unknown!' % kernel)
     general['kernel'] = kernel
+    x = cfg.get('general', 'vol_def_x')
+    if x == '1':
+        x = 'ones(len(gas))'
+    general['vol_def_x'] = x
     IMF = cfg.get('general', 'IMF')
     if IMF not in ['Kroupa', 'Salpeter', 'Chabrier']:
         raise ValueError('IMF "%s" is unknown!' % IMF)
