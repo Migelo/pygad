@@ -3,6 +3,10 @@
 # egg info folder created by `python setup.py develop`
 pygad.egg-info
 
+# compiled C code
+*.o
+*.so
+
 # iPython Notebook checkpoints
 .ipynb_checkpoints
 

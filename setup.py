@@ -8,10 +8,16 @@ except:
 import numpy
 import os
 import subprocess
+import sys
 
+
+# check if just unintalling with setuptools
+# and "python setup.py develop --uninstall"
+uninstall = (sys.argv == ['setup.py', 'develop', '--uninstall'])
 
 # define all package data
-package_data = {'pygad.units':          ['units.cfg'],
+package_data = {'pygad.C':              ['cpygad.so'],
+                'pygad.units':          ['units.cfg'],
                 'pygad.gadget':         ['gadget.cfg'],
                 'pygad.snapshot':       ['derived.cfg'],
                 'pygad.ssp':            ['SSP-model/*']}
@@ -25,6 +31,11 @@ for root, dirs, files in os.walk(setup_dir):
         continue
     if '__init__.py' in files:
         modules.append( submod )
+
+# compile the C part (has to be done before importing
+if not uninstall:
+    print 'compiling the fast C parts of pygad'
+    subprocess.check_call(['make'], cwd=setup_dir+'/pygad/C')
 
 # get version for setup and fix version in module's `pygad.version`
 from pygad.environment import git_descr
