@@ -5,32 +5,28 @@ Examples:
     >>> from ..environment import module_dir
     >>> from ..snapshot import Snap
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=True)
-    >>> import snap_props
-    >>> com = snap_props.center_of_mass(s.gas)
+    >>> center = shrinking_sphere(s.stars, center=[s.boxsize/2]*3,
+    ...                           R=s.boxsize*np.sqrt(3))
     load block pos... done.
     convert block pos to physical units... done.
-    load block mass... done.
-    convert block mass to physical units... done.
-    >>> star_dists = utils.periodic_distance_to(s.stars['pos'], com, s.boxsize)
-    >>> center = shrinking_sphere(s.stars, center=com,
-    ...                           R=np.percentile(star_dists,98)/2.)
     do a shrinking sphere...
       starting values:
-        center = [ 33794.24609375  34521.62109375  32648.1328125 ] [kpc]
-        R      = 931.161151123 [kpc]
+        center = [ 34999.99976045  34999.99976045  34999.99976045] [kpc]
+        R      = 1.212436e+05 [kpc]
+    load block mass... done.
+    convert block mass to physical units... done.
     done.
     >>> center
-    UnitArr([ 33816.90234375,  34601.11328125,  32681.01171875],
-            dtype=float32, units="kpc")
+    UnitArr([ 33816.9017345 ,  34601.11199658,  32681.01209451], units="kpc")
     >>> R200, M200 = virial_info(s, center)
     >>> print R200, M200
-    177.000391642 [kpc] 1.001030e+12 [Msol]
+    177.000365334 [kpc] 1.001023e+12 [Msol]
     >>> Translation(-center).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_320"... done.
     >>> sub = s[s['r'] < 0.10*R200]
     derive block r... done.
     >>> half_mass_radius(sub.stars)
-    UnitArr(4.31187898891, units="kpc")
+    UnitArr(4.31200747373, units="kpc")
     >>> eff_radius(sub, 'V', proj=None)
     load block form_time... done.
     derive block age... done.
@@ -49,22 +45,22 @@ Examples:
     interpolate in metallicity...
     done.
     derive block lum_v... done.
-    UnitArr(3.27137010062, units="kpc")
+    UnitArr(3.27053620882, units="kpc")
     >>> eff_radius(sub, 'V', proj=2)
     derive block rcyl... done.
-    UnitArr(2.92262951906, units="kpc")
+    UnitArr(2.92146861909, units="kpc")
     >>> half_qty_radius(sub.stars, qty='mass', proj=2)
-    UnitArr(3.76825188782, units="kpc")
+    UnitArr(3.7688323337, units="kpc")
     >>> print map(str,flow_rates(s, '50 kpc'))
     load block vel... done.
     derive block vrad... done.
-    ['420.879786667 [Msol yr**-1]', '370.061994667 [Msol yr**-1]']
+    ['419.673898667 [Msol yr**-1]', '371.26784 [Msol yr**-1]']
     >>> shell_flow_rates(s.gas, UnitArr([48,52],'kpc'))
-    UnitArr(-7.098015e+00, units="Msol yr**-1")
+    UnitArr(-7.097851e+00, units="Msol yr**-1")
     >>> shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'in')
-    UnitArr(-1.463577e+01, units="Msol yr**-1")
+    UnitArr(-1.463570e+01, units="Msol yr**-1")
     >>> shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'out')
-    UnitArr(7.53775332834, units="Msol yr**-1")
+    UnitArr(7.53784771595, units="Msol yr**-1")
     >>> ifr, ofr = flow_rates(s.gas, '50 kpc')
     >>> print ifr
     11.5465066667 [Msol yr**-1]
@@ -88,6 +84,7 @@ from snap_props import *
 from ..octree import *
 from ..snapshot import *
 from .. import environment
+from .. import C
 
 def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
                      stop_N=10):
@@ -109,13 +106,13 @@ def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
     Returns:
         center (UnitArr):       The center.
     '''
-    center = UnitQty(center,s['pos'].units,subs=s,dtype=float)
-    R = UnitScalar(R,s['pos'].units,subs=s,dtype=float)
+    center0 = UnitQty(center,s['pos'].units,subs=s,dtype=np.float64)
+    R = UnitScalar(R,s['pos'].units,subs=s)
 
     if environment.verbose:
         print 'do a shrinking sphere...'
         print '  starting values:'
-        print '    center = %s' % center
+        print '    center = %s' % center0
         print '    R      = %s' % R
         sys.stdout.flush()
 
@@ -124,60 +121,34 @@ def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
     if not 0 < stop_N:
         raise ValueError('"stop_N" must be positive!')
 
-    # for speed-up
-    pos  = s['pos'].view(np.ndarray)
-    mass = s['mass'].view(np.ndarray)
-    boxsize = float(s.boxsize.in_units_of(s['pos'].units))
+    pos  = s['pos'].astype(np.float64)
+    mass = s['mass'].astype(np.float64)
+    assert len(pos) == len(mass)
+    boxsize = s.boxsize.in_units_of(s['pos'].units)
 
-    # this can speed up the function a lot, too
-    # reduce working arrays, if the current sphere contains many less particles
-    # than the current working arrays (this can speed up the function a lot)
-    if len(pos) < 0.5*len(pos.base if pos.base is not None else pos):
+    # needed since C does not know about stridings
+    if pos.base is not None:
         pos  = pos.copy()
         mass = mass.copy()
 
-    center = center.view(np.ndarray)
-    R = float(R)
-    center_off = np.array([0]*3,float)  # for recentering inbetween
-    indices = (np.arange(len(pos)),)    # start with all positions
-    while len(indices[0]) > stop_N:
-        # calculate distance from current center
-        if periodic:
-            r = utils.utils._ndarray_periodic_distance_to(pos[indices],
-                                                          center, boxsize)
-        else:
-            r = dist(pos[indices], center).view(np.ndarray)
-        # reduce working arrays, if the current sphere contains many less
-        # particles than the current working arrays (this can speed up the
-        # function a lot)
-        if len(indices[0]) > 1e4 and \
-                len(indices[0]) < 0.05*len(pos.base if pos.base is not None
-                                               else pos):
-            # with a safety-margin (but still reduce: 0.05*2**3 = 0.4)
-            indices = (indices[0][np.where(r < 2.0*R)],)
-            pos  = pos[indices].copy()
-            mass = mass[indices].copy()
-            indices = (np.arange(len(pos)),)    # start again with all positions
-            continue
-        # get indices of particles within the current sphere
-        indices = (indices[0][np.where(r < R)],)
-        # calculate the new center of mass unless there are no particles left
-        if len(indices[0]) == 0: break
-        center = np.tensordot(mass[indices], pos[indices], axes=1) \
-                    / mass[indices].sum()
-        # shrink the sphere
-        R *= shrink_factor
-        # fall back to non-periodic centering, if the sphere got small enough
-        if periodic and R < 0.1*boxsize:
-            pos = pos - center  # need a copy
-            pos[pos > boxsize/2.] -= boxsize
-            pos[pos < -boxsize/2.] += boxsize
-            center_off = center
-            center = np.array([0]*3,float)
-            periodic = False
-
-    center += center_off
-
+    center = np.empty((3,), dtype=np.float64)
+    if periodic:
+        C.cpygad.shrinking_sphere_periodic(
+                                  C.c_void_p(center.ctypes.data),
+                                  C.c_size_t(len(pos)),
+                                  C.c_void_p(pos.ctypes.data),
+                                  C.c_void_p(mass.ctypes.data),
+                                  C.c_void_p(center0.ctypes.data), C.c_double(R),
+                                  C.c_double(shrink_factor), C.c_size_t(stop_N),
+                                  C.c_double(boxsize))
+    else:
+        C.cpygad.shrinking_sphere_nonperiodic(
+                                  C.c_void_p(center.ctypes.data),
+                                  C.c_size_t(len(pos)),
+                                  C.c_void_p(pos.ctypes.data),
+                                  C.c_void_p(mass.ctypes.data),
+                                  C.c_void_p(center0.ctypes.data), C.c_double(R),
+                                  C.c_double(shrink_factor), C.c_size_t(stop_N))
     center = center.view(UnitArr)
     center.units = s['pos'].units
 
