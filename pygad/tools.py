@@ -58,7 +58,7 @@ def read_info_file(filename):
                     raise
     return info
 
-def prepare_zoom(s, info='deduce', fullsph=False, gal_R200=0.10):
+def prepare_zoom(s, info='deduce', shrink_on='stars', fullsph=False, gal_R200=0.10):
     '''
     A convenience function to load a snapshot from a zoomed-in simulation that is
     not yet centered or orienated.
@@ -76,6 +76,12 @@ def prepare_zoom(s, info='deduce', fullsph=False, gal_R200=0.10):
                             `info_%03d.txt`, where the `%03d` is filled with the
                             snapshot number. The latter is taken as the last three
                             characters of the first dot / the end of the filename.
+        shrink_on (str, list):
+                            Define the part of the snapshot to perform the
+                            shrinking sphere on, if there is no info file found or
+                            info==None. It can be 'all' (use the entire
+                            (sub-)snapshot `s`), a family name, or a list of
+                            particle types (e.g. [0,1,4]).
         fullsph (bool):     Whether to mask all particles that overlap into the
                             halo region (that is also include SPH particles that
                             are outside the virial radius, but their smoothing
@@ -112,19 +118,23 @@ def prepare_zoom(s, info='deduce', fullsph=False, gal_R200=0.10):
     if info:
         center = info['center']
     else:
-        center = shrinking_sphere(s.stars,
+        if isinstance(shrink_on, str):
+            if shrink_on == 'all':
+                shrink_on = s
+            else:
+                shrink_on = getattr(s, shrink_on)
+        elif isinstance(shrink_on, list):
+            shrink_on = s[shrink_on]
+        else:
+            raise ValueError('`shrink_on` must be a family name or a list ' + \
+                             'of particle types, but was: %s' % (shrink_on,))
+        center = shrinking_sphere(shrink_on,
                                   [float(s.boxsize)/2.]*3,
                                   np.sqrt(3)*s.boxsize)
     print 'center at:', center
     Translation(-center).apply(s)
     # center the velocities
     s['vel'] -= mass_weighted_mean(s[s['r']<'1 kpc'], 'vel')
-    # orientate at the angular momentum of the baryons wihtin 10 kpc
-    if info:
-        L = info['L_baryons']
-        orientate_at(s, 'vec', L, total=True)
-    else:
-        orientate_at(s[s['r'] < '10 kpc'].baryons, 'L', total=True)
 
     # cut the halo (<R200)
     if info:
@@ -136,7 +146,17 @@ def prepare_zoom(s, info='deduce', fullsph=False, gal_R200=0.10):
     print 'M200:', M200
     halo = s[BallMask(R200, fullsph=fullsph)]
 
-    # cut the inner part (< 15% R200)
+    # orientate at the angular momentum of the baryons wihtin 10 kpc
+    if info:
+        L = info['L_baryons']
+        orientate_at(s, 'vec', L, total=True)
+    else:
+        orientate_at(s[BallMask(gal_R200*R200, fullsph=False)].baryons,
+                     'L',
+                     total=True
+        )
+
+    # cut the inner part as the galaxy
     gal = s[BallMask(gal_R200*R200, fullsph=fullsph)]
     Ms = gal.stars['mass'].sum()
     print 'M*:  ', Ms

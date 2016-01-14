@@ -76,6 +76,7 @@ Examples:
     >>> antisub = gal[~IDMask(IDs)]
     >>> assert not bool( set(antisub['ID']).intersection(sub['ID']) )
     >>> assert len(antisub) + len(sub) == len(gal)
+    >>> assert set(sub['ID']) == set(gal[IDMask(set(IDs))]['ID'])
 '''
 __all__ = ['SnapMask', 'BallMask', 'BoxMask', 'DiscMask', 'IDMask']
 
@@ -353,7 +354,10 @@ class IDMask(SnapMask):
     
     def __init__(self, IDs):
         super(IDMask,self).__init__()
-        self._IDs = np.asarray(IDs)
+        if isinstance(IDs, set):
+            self._IDs = np.array(list(IDs))
+        else:
+            self._IDs = np.asarray(IDs)
         
     def inverted(self):
         inv = IDMask(self._IDs)
