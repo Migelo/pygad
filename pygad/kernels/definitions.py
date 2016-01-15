@@ -24,19 +24,45 @@ Examples and doctests:
 
     Test for the equality of all the vector versions and for normation:
     >>> for name, kernel in kernels.iteritems():
-    ...     kernel_vec = vector_kernels[name]
-    ...     u = np.linspace(0,1,100)
-    ...     w = kernel_vec(u)
-    ...     for uu,ww in zip(u,w):
-    ...         if not np.all(np.abs(ww - kernel(uu)) < 1e-6):
-    ...             print name, 'has issues with its vector version'
-    ...             break
-    ...     I = np.sum(4*np.pi*u**2 * w) / (len(w)-1)
-    ...     if not abs(I-1.0) < 1e-6:
-    ...         print name, 'is not normed to 1, but to', I
+    ...     for vec_kernels in [vector_kernels, c_vector_kernels]:
+    ...         if name not in vec_kernels:
+    ...             continue
+    ...         kernel_vec = vec_kernels[name]
+    ...         u = np.linspace(0,1,100)
+    ...         w = kernel_vec(u)
+    ...         for uu,ww in zip(u,w):
+    ...             if not np.all(np.abs(ww - kernel(uu)) < 1e-6):
+    ...                 print name, 'has issues with its vector version'
+    ...                 break
+    ...         I = np.sum(4*np.pi*u**2 * w) / (len(w)-1)
+    ...         if not abs(I-1.0) < 1e-6:
+    ...             print name, 'is not normed to 1, but to', I
 '''
+__all__ = [
+        'kernels', 'vector_kernels',
+        'cubic', 'cubic_vec',
+        'quintic', 'quintic_vec',
+        'Wendland_C4', 'Wendland_C4_vec',
+        'Wendland_C6', 'Wendland_C6_vec',
+
+        'c_cubic_vec',
+]
 
 import numpy as np
+
+from .. import C
+
+# calling the single valued C funcion is slower than just the Python version
+def c_cubic_vec(u):
+    u = np.asarray(u, dtype=np.float64)
+    if len(u.shape)!=1:
+        raise ValueError()
+    w = np.empty(len(u),dtype=np.float64)
+
+    C.cpygad.cubic_vec(C.c_void_p(u.ctypes.data), C.c_size_t(len(u)),
+                       C.c_void_p(w.ctypes.data))
+
+    return w
 
 def cubic(u):
     '''
@@ -58,13 +84,13 @@ def cubic(u):
         return 5.09295817894 * (1.-u)**3
 def cubic_vec(u):
     '''The vector version of the cubic kernel.'''
+    u = np.asarray(u)
     w = np.empty(len(u))
     mask = u < 0.5
     u_masked = u[mask]
     w[mask] = 2.5464790894703255 * (1.+6.*(u_masked-1.)*u_masked**2)
     mask = ~mask
-    u_masked = u[mask]
-    w[mask] = 5.09295817894 * (1.-u_masked)**3
+    w[mask] = 5.09295817894 * (1.-u[mask])**3
     return w
 
 def quintic(u):
@@ -93,6 +119,7 @@ def quintic(u):
         return 17.403593027098754 * ((1.-u)**5)
 def quintic_vec(u):
     '''The vector version of the quintic kernel.'''
+    u = np.asarray(u)
     w = (1.-u)**5
     mask = u < 0.6666666666666667
     u_masked = u[mask]
@@ -116,6 +143,7 @@ def Wendland_C4(u):
     return 4.923856051905513 * (1.-u)**6 * (1. + (6. + 11.6666666667*u)*u)
 def Wendland_C4_vec(u):
     '''The vector version of the Wendland C4 kernel.'''
+    u = np.asarray(u)
     return 4.923856051905513 * ( (1.-u)**6 * (1. + (6. + 11.6666666667*u)*u) )
 
 def Wendland_C6(u):
@@ -132,6 +160,7 @@ def Wendland_C6(u):
     return 6.78895304126366 * (1.-u)**8 * (1. + (8. + (25. + 32.*u)*u)*u)
 def Wendland_C6_vec(u):
     '''The vector version of the Wendland C6 kernel.'''
+    u = np.asarray(u)
     return 6.78895304126366 * ( (1.-u)**8 * (1. + (8. + (25. + 32.*u)*u)*u) )
 
 kernels = {
@@ -146,4 +175,8 @@ vector_kernels = {
         'Wendland C4':  Wendland_C4_vec,
         'Wendland C6':  Wendland_C6_vec,
         }
+c_vector_kernels = {
+        'cubic':        c_cubic_vec,
+        }
+
 
