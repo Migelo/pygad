@@ -20,13 +20,13 @@ Examples:
     UnitArr([ 33816.9017345 ,  34601.11199658,  32681.01209451], units="kpc")
     >>> R200, M200 = virial_info(s, center)
     >>> print R200, M200
-    177.000365334 [kpc] 1.001023e+12 [Msol]
+    177.2100882 [kpc] 1.004540e+12 [Msol]
     >>> Translation(-center).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_320"... done.
     >>> sub = s[s['r'] < 0.10*R200]
     derive block r... done.
     >>> half_mass_radius(sub.stars)
-    UnitArr(4.31200747373, units="kpc")
+    UnitArr(4.31281473734, units="kpc")
     >>> eff_radius(sub, 'V', proj=None)
     load block form_time... done.
     derive block age... done.
@@ -50,7 +50,7 @@ Examples:
     derive block rcyl... done.
     UnitArr(2.92146861909, units="kpc")
     >>> half_qty_radius(sub.stars, qty='mass', proj=2)
-    UnitArr(3.7688323337, units="kpc")
+    UnitArr(3.77014113536, units="kpc")
     >>> print map(str,flow_rates(s, '50 kpc'))
     load block vel... done.
     derive block vrad... done.
