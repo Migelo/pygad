@@ -1,5 +1,4 @@
 #include "general.h"
-#include <stdlib.h>
 
 template<bool periodic>
 void shrinking_sphere(double *center,
@@ -26,7 +25,11 @@ void shrinking_sphere_nonperiodic(
     shrinking_sphere<false>(center, N, pos, mass, center0, R0, shrink_factor, stop_N, 0.0);
 }
 
-#include <stdio.h>
+extern "C"
+void virial_info(size_t N, const double *mass, const double *r,
+                 double rho_threshold, size_t N_min, double *info);
+
+
 template<bool periodic>
 void shrinking_sphere(double *center,
                       size_t N, const double *pos, const double *mass,

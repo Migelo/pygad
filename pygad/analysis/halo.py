@@ -158,7 +158,7 @@ def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
 
     return center
 
-def virial_info(s, center=None, odens=200.0, N_min=50):
+def virial_info(s, center=None, odens=200.0, N_min=10):
     '''
     Return the virial radius (R_odens) and the virial mass (M_odens) of the
     structure at 'center'.
@@ -177,17 +177,13 @@ def virial_info(s, center=None, odens=200.0, N_min=50):
                                 mass to be returned.
         N_min (int):            The minimum number of particles required to form
                                 the halo (have a density higher than
-                                odens * rho_crit).
+                                odens * rho_crit). If not reached, the return
+                                values are NaN.
 
     Returns:
         R_odens, M_odens (both UnitArr):
                                 The virial radius & mass (or corresponding
                                 R_odens, M_odens)
-
-    Raises:
-        RuntimeError:           If the average density of the entire
-                                (sub-)snapshot is larger than <odens> times the
-                                critical density.
     '''
     if center is None:
         center = [0,0,0]
@@ -201,26 +197,24 @@ def virial_info(s, center=None, odens=200.0, N_min=50):
         r = s['r']
     else:
         r = dist(s['pos'], center)
-    r_ind = r.argsort()
-    M_enc = np.cumsum(s['mass'][r_ind])[utils.perm_inv(r_ind)]
-    rho = M_enc / ((4.0 / 3.0 * np.pi) * r**3)
 
-    if rho[r_ind[N_min]] < odens*rho_crit:
-        print >> sys.stderr, 'WARNING: the mean density within the inner ' + \
-                             '%d particles (' % N_min + \
-                             '%.3g' % (rho[r_ind[N_min]]/rho_crit) + \
-                             '*rho_crit) does not exceed %g*rho_crit ' % odens + \
-                             '(rho_crit = %s)!' % UnitArr(rho_crit,
-                                     (s['mass'].units/s['pos'].units**3).gather())
-        return UnitArr(0.0,s['pos'].units), UnitArr(0.0,s['mass'].units)
-    if rho[r_ind[-1]] > odens*rho_crit:
-        raise RuntimeError('The mean density within all particles is larger ' + \
-                           'than %d rho_crit (%gx)!' % (odens,
-                                                        rho[r_ind[-1]]/rho_crit))
-
-    ind_odens = np.abs(rho - odens*rho_crit).argmin()
-    return UnitArr(r[ind_odens],s['pos'].units), \
-           UnitArr(M_enc[ind_odens],s['mass'].units)
+    mass = s['mass'].astype(np.float64)
+    r    = r.astype(np.float64)
+    if mass.base is not None:
+        mass = mass.copy()
+        r    = r.copy()
+    info = np.empty((2,), dtype=np.float64)
+    C.cpygad.virial_info(C.c_size_t(len(r)),
+                         C.c_void_p(mass.ctypes.data),
+                         C.c_void_p(r.ctypes.data),
+                         C.c_double(odens*rho_crit),
+                         C.c_size_t(N_min),
+                         C.c_void_p(info.ctypes.data),
+    )
+    if info[0] == 0.0:
+        info[:] = np.nan
+    return UnitArr(info[0],s['pos'].units), \
+           UnitArr(info[1],s['mass'].units)
 
 def half_qty_radius(s, qty, Qtot=None, center=None, proj=None):
     '''

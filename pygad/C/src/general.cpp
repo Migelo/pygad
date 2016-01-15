@@ -1,5 +1,14 @@
 #include "general.h"
 
+#include <algorithm>
+
+void argsort(size_t N, const double *x, size_t *idcs) {
+    for (size_t i=0; i<N; i++)
+        idcs[i] = i;
+    std::sort(idcs, idcs+N,
+              [&](size_t a, size_t b) {return x[a]<x[b];} );
+}
+
 double dist2_periodic(const double *x1, const double *x2, double P) {
     double d2 = 0.0;
     for (int i=0; i<DIM; i++) {
