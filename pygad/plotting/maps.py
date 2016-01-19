@@ -127,7 +127,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         mask &= (extent[n,0]<=s['pos'][:,axis]) & (s['pos'][:,axis]<=extent[n,1])
         for pt in config.families['gas']:
             gas = s[ [pt,] ]
-            mask[gas._mask] &= (extent[n,0]<=gas['pos'][:,axis]+gas['hsml']) \
+            mask[gas._mask] |= (extent[n,0]<=gas['pos'][:,axis]+gas['hsml']) \
                     & (gas['pos'][:,axis]-gas['hsml']<=extent[n,1])
     s = s[mask]
     if isinstance(qty, (list,tuple)):   # enable masking for non-standard
@@ -195,7 +195,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         if units is not None:
             im_bright.convert_to(units, subs=s)
     if logscale:
-        if 'log' in qty:
+        if isinstance(qty,str) and 'log' in qty:
             import sys
             print >> sys.stderr, 'WARNING: in log-scale, but "qty" already ' + \
                                  'contains "log"!'
@@ -267,7 +267,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         ax.set_xlabel(x_label)
         y_label = r'$%s$ [$%s$]' % ({0:'x',1:'y',2:'z'}[yaxis], s['pos'].units.latex())
         ax.set_ylabel(y_label)
-    if scaleind == 'line':
+    elif scaleind == 'line':
         width = extent[:,1] - extent[:,0]
         scale = width.min() / 4.0
         order = 10.0**int(np.log10(scale))
