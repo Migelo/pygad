@@ -95,6 +95,9 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                             well as for the scale bar.
         interpolation (str):The interpolation to use between pixels. See imshow
                             for more details.
+        softening (UnitQty):A list of te softening lengthes that are taken for
+                            smoothing the maps of the paticle types. Is
+                            consequently has to have length 6. Default: None.
         **kwargs:           Further keyword arguments are to pass to map_qty. I
                             want to mention 'softening' here, which is a list of
                             the sotening lengthes used to smooth the maps of the

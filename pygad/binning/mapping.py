@@ -76,10 +76,9 @@ def map_qty(s, extent, qty, av=None, Npx=200, res=None, xaxis=0, yaxis=1, soften
                             both, x and y, or seperate values for them.
         xaxis (int):        The coordinate for the x-axis. (0:'x', 1:'y', 2:'z')
         yaxis (int):        The coordinate for the y-axis. (0:'x', 1:'y', 2:'z')
-        softening (UnitQty):A list of the softening lengthes of the particle
-                            types, that are taken for smoothing the maps of the
-                            particles types. It has to have length 6.
-                            Default: None.
+        softening (UnitQty):A list of te softening lengthes that are taken for
+                            smoothing the maps of the paticle types. Is
+                            consequently has to have length 6. Default: None.
         sph (bool):         If set to True, do not use the softening length for
                             smoothing the SPH particles' quantity, but the actual
                             SPH smoothing lengthes, which differ from particle to
