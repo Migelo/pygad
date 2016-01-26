@@ -216,7 +216,8 @@ def age_from_form(form, subs, cosmic_time=None, cosmo=None, units='Gyr', paralle
         if cosmo is None:
             cosmo = snap.cosmology
         if cosmic_time is None:
-            cosmic_time = snap.time
+            cosmic_time = UnitScalar(snap.time, gadget.get_block_units('AGE '),
+                                     subs=subs)
 
     form = form.copy().view(UnitArr)
 
@@ -254,7 +255,6 @@ def age_from_form(form, subs, cosmic_time=None, cosmo=None, units='Gyr', paralle
 
     else:
         # 't_form' -> actual age
-        cosmic_time = UnitScalar(cosmic_time, gadget.get_block_units('AGE '), subs=subs)
         cosmic_time = UnitScalar(cosmic_time, form.units, subs=subs)
         form = cosmic_time - form
 
