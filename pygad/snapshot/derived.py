@@ -154,7 +154,7 @@ def calc_temps(s, gamma=5./3.):
         T (UnitArr):    The temperatures for the particles of s.
     '''
     if s.properties['flg_entropy_instead_u']:
-        raise NotImplementedError('Temperatures cannot be calculated from ' + 
+        raise NotImplementedError('Temperatures cannot be calculated from ' +
                                   'entropy, yet. However, '
                                   'flg_entropy_instead_u is True.')
 
@@ -254,6 +254,7 @@ def age_from_form(form, subs, cosmic_time=None, cosmo=None, units='Gyr', paralle
 
     else:
         # 't_form' -> actual age
+        cosmic_time = UnitScalar(cosmic_time, gadget.get_block_units('AGE '), subs=subs)
         cosmic_time = UnitScalar(cosmic_time, form.units, subs=subs)
         form = cosmic_time - form
 
@@ -261,4 +262,3 @@ def age_from_form(form, subs, cosmic_time=None, cosmo=None, units='Gyr', paralle
         form.convert_to(units, subs=subs)
 
     return form
-
