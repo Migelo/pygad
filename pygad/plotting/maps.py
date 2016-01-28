@@ -245,7 +245,10 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
             cqty = colors if colors is not None else qty
             if isinstance(cqty,str):
                 cname = cqty
-                cunits = None if len(s)==0 else s.get(cqty).units
+                if colors is not None:
+                    cunits = None if len(s)==0 else s.get(cqty).units
+                else:
+                    cunits = units if units is not None else None if len(s)==0 else s.get(cqty).units
             else:
                 cname = ''
                 cunits = units if units is not None else getattr(cqty,'units',None)
