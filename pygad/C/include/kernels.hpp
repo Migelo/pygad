@@ -1,4 +1,4 @@
-#include "general.h"
+#include "general.hpp"
 
 enum KernelType {
     UNDEFINED_KERNEL,

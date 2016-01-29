@@ -1,4 +1,4 @@
-#include "general.h"
+#include "general.hpp"
 
 template<bool periodic>
 void shrinking_sphere(double *center,
@@ -55,8 +55,8 @@ void shrinking_sphere(double *center,
         for (size_t ii=0; ii<Nidcs; ii++) {
             size_t i = idcs[ii];
             const double *r = pos + (DIM*i);
-            double d2 = periodic ? dist2_periodic(r, center, boxsize)
-                                 : dist2(r, center);
+            double d2 = periodic ? dist2_periodic<DIM>(r, center, boxsize)
+                                 : dist2<DIM>(r, center);
             if (d2 < R2) {
                 for (int k=0; k<DIM; k++)
                     com[k] += mass[i] * r[k];

@@ -1,4 +1,4 @@
-#include "kernels.h"
+#include "kernels.hpp"
 
 static Kernel<3> cubic_kernel(CUBIC_SPLINE);
 static Kernel<3> quartic_kernel(QUARTIC_SPLINE);

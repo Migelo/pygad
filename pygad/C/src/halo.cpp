@@ -1,4 +1,4 @@
-#include "halo.h"
+#include "halo.hpp"
 
 void virial_info(size_t N, const double *mass, const double *r,
                  double rho_threshold, size_t N_min, double *info) {
