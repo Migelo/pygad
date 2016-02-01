@@ -37,7 +37,7 @@ doctests:
     TestResults(failed=0, attempted=5)
     >>> print >> sys.stderr, 'testing module octree...'
     >>> doctest.testmod(octree)
-    TestResults(failed=0, attempted=2)
+    TestResults(failed=0, attempted=3)
     >>> print >> sys.stderr, 'testing module ssp...'
     >>> doctest.testmod(ssp)
     TestResults(failed=0, attempted=2)
