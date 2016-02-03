@@ -401,9 +401,14 @@ def Snap(filename, physical=False, cosmological=None, gad_units=None):
     # calculate the dependencies and particle types of the derived blocks
     import derived
     changed = True
+    rules = derived._rules.copy()
+    if 'dV' not in rules:
+        x = gadget.config.general['vol_def_x']
+        if x != '<undefined>':
+            rules['dV'] = '%s / kernel_weighted(gas,%s)' % (x,x)
     while changed:
         changed = False
-        for name, rule in derived._rules.iteritems():
+        for name, rule in rules.iteritems():
             if name in s._load_name:
                 continue    # this derived block can actually be loaded
             ptypes, deps = derived.ptypes_and_deps(rule, s)
@@ -422,6 +427,8 @@ def Snap(filename, physical=False, cosmological=None, gad_units=None):
         removed = len(not_available)
         for name, rd in s._derive_rule_deps.iteritems():
             if not (any(s._block_avail[name]) and (rd[1]-not_available)):
+                if name=='dV' and len(rd[1])==0:
+                    continue
                 not_available.add(name)
         for name in not_available:
             s._block_avail.pop(name,None)
@@ -928,6 +935,15 @@ class _Snap(object):
             data (array-like):  The new block (of appropiate size, i.e. length of
                                 this (sub-)snapshot).
             name (str):         The name of the new block.
+
+        Returns:
+            block (SimArr):     The reference to the new block.
+
+        Raises:
+            RuntimeError:       If the length of the data does not fit the length
+                                of the (sub-)snapshot; or if the latter is not the
+                                correct "host" of the new block.
+            KeyError:           If there already exists a block of that name.
         '''
         if len(data) == len(self):
             ptypes = [bool(N) for N in self.parts]
@@ -1113,13 +1129,16 @@ class _Snap(object):
         # prepare evaluator
         from numpy.core.umath_tests import inner1d
         import derived
+        from .. import analysis
         namespace = {'dist':dist, 'Unit':Unit, 'Units':Units, 'UnitArr':UnitArr,
                      'UnitQty':UnitQty, 'UnitScalar':UnitScalar,
                      'inner1d':inner1d, 'inter_bc_qty':inter_bc_qty,
                      'perm_inv':utils.perm_inv, 'solar':physics.solar,
                      'WMAP7':physics.WMAP7, 'Planck2013':physics.Planck2013,
                      'FLRWCosmo':physics.FLRWCosmo, 'a2z':physics.a2z,
-                     'z2a':physics.z2a}
+                     'z2a':physics.z2a,
+                     'kernel_weighted':analysis.kernel_weighted,
+                     'len':len}
         for n,obj in [(n,getattr(derived,n)) for n in dir(derived)]:
             if hasattr(obj, '__call__') and n!='ptypes_and_deps' \
                     and n!='read_derived_rules':
