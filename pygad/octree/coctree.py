@@ -100,6 +100,8 @@ cpygad.get_octree_tot_part.restype = c_size_t
 cpygad.get_octree_tot_part.argtypes = [c_void_p]
 cpygad.get_octree_max_H.restype = c_double
 cpygad.get_octree_max_H.argtypes = [c_void_p]
+cpygad.get_octree_max_H.restype = c_double
+cpygad.get_octree_max_H.argtypes = [c_void_p]
 cpygad.get_octree_max_depth.restype = c_int
 cpygad.get_octree_max_depth.argtypes = [c_void_p]
 cpygad.get_octree_node_count.restype = c_size_t
@@ -107,7 +109,8 @@ cpygad.get_octree_node_count.argtypes = [c_void_p, c_int]
 cpygad.get_octree_in_region.restypes = c_int
 cpygad.get_octree_in_region.argtypes = [c_void_p, c_void_p]
 cpygad.fill_octree.argtypes = [c_void_p, c_size_t, c_void_p]
-cpygad.update_octree_max_H.argtypes = [c_void_p, c_size_t, c_void_p]
+cpygad.update_octree_max_H.argtypes = [c_void_p, c_void_p]
+cpygad.update_octree_const_max_H.argtypes = [c_void_p, c_double]
 cpygad.get_octree_child.restype = c_void_p
 cpygad.get_octree_child.argtypes = [c_void_p, c_int]
 cpygad.get_octree_octant.restype = c_uint
@@ -153,7 +156,7 @@ class cOctree(object):
         pos = np.asarray(pos, dtype=np.float64)
         if pos.shape[1:] != (3,):
             raise ValueError('Positions have to have shape (N,3)!')
-        if not pos.flags['OWNDATA']:
+        if pos.base is not None:
             pos = pos.copy()
 
         x_min = np.min(pos, axis=0)
@@ -267,19 +270,21 @@ class cOctree(object):
         tree).
 
         Args:
-            H (array-like):     The smoothing lengthes of the particles. Has to
-                                have shape (N,) or can be None (all smoothing
-                                lengthes then are zero).
+            H (array-like, float):  The smoothing lengthes of the particles. Has
+                                    to have shape (N,) or can be a float (all
+                                    smoothing lengthes then are the same).
         '''
-        if H is not None:
+        from numbers import Number
+        if isinstance(H, Number):
+            H = float(H)
+            cpygad.update_octree_const_max_H(self.__node_ptr, H)
+        else:
             H = np.asarray(H, dtype=np.float64)
             if H.shape!=(self.tot_num_part,):
                 raise ValueError('Smoothing lengthes have to have shape (N,)!')
-            if not H.flags['OWNDATA']:
+            if H.base is not None:
                 H = H.copy()
-
-        cpygad.update_octree_max_H(self.__node_ptr, self.tot_num_part,
-                                   H.ctypes.data if H is not None else None)
+            cpygad.update_octree_max_H(self.__node_ptr, H.ctypes.data)
 
     def find_ngbs_within(self, r, H, pos, periodic=np.inf, max_ngbs=100):
         '''
@@ -304,7 +309,7 @@ class cOctree(object):
         pos = np.asarray(pos, dtype=np.float64)
         if pos.shape[1:] != (3,):
             raise ValueError('Positions have to have shape (N,3)!')
-        if not pos.flags['OWNDATA']:
+        if pos.base is not None:
             pos = pos.copy()
         max_ngbs = int(max_ngbs)
         periodic = float(periodic)
@@ -346,9 +351,9 @@ class cOctree(object):
         H = np.asarray(H, dtype=np.float64)
         if H.shape != (len(pos),):
             raise ValueError('Positions have to have shape (N,)!')
-        if not pos.flags['OWNDATA']:
+        if pos.base is not None:
             pos = pos.copy()
-        if not H.flags['OWNDATA']:
+        if H.base is not None:
             H = H.copy()
         max_ngbs = int(max_ngbs)
         periodic = float(periodic)

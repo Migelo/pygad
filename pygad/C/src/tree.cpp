@@ -62,12 +62,13 @@ extern "C" void fill_octree(void *const octree, size_t N, const double *const po
     for (size_t i=0; i<N; i++)
         tree->add_point(pos, i);
 }
-extern "C" void update_octree_max_H(void *const octree, size_t N, const double *const H) {
+extern "C" void update_octree_max_H(void *const octree, const double *const H) {
     Tree<3> *tree = (Tree<3> *)octree;
-    if (H)
-        tree->fill_max_H(H);
-    else
-        tree->fill_max_H_zero();
+    tree->fill_max_H(H);
+}
+extern "C" void update_octree_const_max_H(void *const octree, double H) {
+    Tree<3> *tree = (Tree<3> *)octree;
+    tree->fill_max_H(H);
 }
 extern "C" void get_octree_ngbs_within(void *const octree,
                                        const double r[3], double H,

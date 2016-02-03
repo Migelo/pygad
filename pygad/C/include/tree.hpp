@@ -40,7 +40,7 @@ class Tree {
 
         void add_point(const double *pos, size_t idx, int depth=0);
         void fill_max_H(const double *H);
-        void fill_max_H_zero();
+        void fill_max_H(double H);
 
         size_t count_nodes(bool count_non_leaves=true) const;
         size_t count_particles() const;
@@ -82,7 +82,8 @@ extern "C" int get_octree_in_region(const void *const octree, const double r[3])
 extern "C" void *get_octree_child(void *const octree, int i);
 extern "C" unsigned get_octree_octant(void *const octree, const double r[3]);
 extern "C" void fill_octree(void *const octree, size_t N, const double *const pos);
-extern "C" void update_octree_max_H(void *const octree, size_t N, const double *const H);
+extern "C" void update_octree_max_H(void *const octree, const double *const H);
+extern "C" void update_octree_const_max_H(void *const octree, double H);
 extern "C" void get_octree_ngbs_within(void *const octree,
                                        const double r[3], double H,
                                        size_t max_ngbs, size_t *ngbs, size_t *N_ngbs,
@@ -226,13 +227,13 @@ void Tree<d>::fill_max_H(const double *H) {
 }
 
 template<int d>
-void Tree<d>::fill_max_H_zero() {
-    _max_H = 0.0;
+void Tree<d>::fill_max_H(double H) {
+    _max_H = H;
     if (not _leaf) {
         for (unsigned i=0; i<NC; i++) {
             Tree<d> *node = _child.node[i];
             if (node)
-                node->fill_max_H_zero();
+                node->fill_max_H(H);
         }
     }
 }

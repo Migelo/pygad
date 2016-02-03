@@ -47,7 +47,6 @@ doctests:
     >>> print >> sys.stderr, 'testing module analysis...'
     >>> doctest.testmod(analysis)
     TestResults(failed=0, attempted=4)
-
     >>> print >> sys.stderr, 'testing module tools...'
     >>> doctest.testmod(tools)
     TestResults(failed=0, attempted=0)
