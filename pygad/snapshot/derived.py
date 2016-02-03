@@ -154,7 +154,7 @@ def calc_temps(s, gamma=5./3.):
         T (UnitArr):    The temperatures for the particles of s.
     '''
     if s.properties['flg_entropy_instead_u']:
-        raise NotImplementedError('Temperatures cannot be calculated from ' + 
+        raise NotImplementedError('Temperatures cannot be calculated from ' +
                                   'entropy, yet. However, '
                                   'flg_entropy_instead_u is True.')
 
@@ -216,7 +216,8 @@ def age_from_form(form, subs, cosmic_time=None, cosmo=None, units='Gyr', paralle
         if cosmo is None:
             cosmo = snap.cosmology
         if cosmic_time is None:
-            cosmic_time = snap.time
+            cosmic_time = UnitScalar(snap.time, gadget.get_block_units('AGE '),
+                                     subs=subs)
 
     form = form.copy().view(UnitArr)
 
@@ -261,4 +262,3 @@ def age_from_form(form, subs, cosmic_time=None, cosmo=None, units='Gyr', paralle
         form.convert_to(units, subs=subs)
 
     return form
-

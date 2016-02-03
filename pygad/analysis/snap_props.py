@@ -13,6 +13,8 @@ Example:
     >>> center_of_mass(s)
     UnitArr([ 34799.42578125,  33686.4765625 ,  32010.89453125],
             dtype=float32, units="ckpc h_0**-1")
+
+    Center of mass is *not* center of galaxy / halo!
     >>> Translation([-34792.2, -35584.8, -33617.9]).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_320"... done.
     >>> sub = s[s['r'] < '20 kpc']
@@ -46,9 +48,43 @@ Example:
             [ 0.        ,  0.        ,  1.8855924 ]])
     >>> los_velocity_dispersion(sub)
     UnitArr(167.344421387, dtype=float32, units="km s**-1")
+
+    >>> s.to_physical_units()
+    convert block pos to physical units... done.
+    convert block r to physical units... done.
+    convert block mass to physical units... done.
+    convert boxsize to physical units... done.
+    >>> SPH_qty_at(s, 'rho', [0,0,0])
+    load block rho... done.
+    convert block rho to physical units... done.
+    load block hsml... done.
+    convert block hsml to physical units... done.
+    UnitArr(1.740805e+05, units="Msol kpc**-3")
+    >>> SPH_qty_at(s, 'rho', s.gas['pos'][331798])
+    UnitArr(5.330261e+04, units="Msol kpc**-3")
+    >>> s.gas['rho'][331798]
+    56831.004
+
+    #to slow...!
+    #>>> scatter_gas_qty_to_stars(s, 'Z', name='gas_Z')
+    load block elements... done.
+    derive block H... done.
+    derive block He... done.
+    derive block metals... done.
+    derive block Z... done.
+    load block hsml... done.
+    build tree...
+    done.
+    scatter property of 64,158 star particles...
+    done.
+    didn't found neighbours 30440 times
+    UnitArr([  6.62012251e-09,   2.28143236e-09,   1.77712193e-14, ...,
+               0.00000000e+00,   0.00000000e+00,   0.00000000e+00])
 '''
 __all__ = ['mass_weighted_mean', 'center_of_mass', 'reduced_inertia_tensor',
-           'orientate_at', 'los_velocity_dispersion']
+           'orientate_at', 'los_velocity_dispersion',
+           'kernel_weighted', 'SPH_qty_at', 'scatter_gas_qty_to_stars',
+          ]
 
 import numpy as np
 from ..units import *
@@ -185,4 +221,200 @@ def los_velocity_dispersion(s, proj=2):
     sigma_v = np.sqrt( mass_weighted_mean(s, (v-av_v)**2) )
     
     return sigma_v
+
+def _calc_ys(qty, all_gas_pos, gas_pos, hsml, kernel):
+    y = np.empty( (len(gas_pos),)+qty.shape[1:] )
+    for i in xrange(len(gas_pos)):
+        hi = hsml[i]
+        d = dist(all_gas_pos, gas_pos[i]) / hi
+        mask = d < 1.0
+        y[i] = np.sum((qty[mask].T * (kernel(d[mask]) / hi**3)).T,
+                      axis=0)
+    return y
+def kernel_weighted(s, qty, units=None, kernel=None, parallel=None):
+    '''
+    Calculate a kernel weighted SPH quantity for all the gas particles:
+             N
+            ___         /  \ 
+      y  =  \    x  W  | h  |
+       i    /__   j  ij \ i/
+            j+1
+
+    Args:
+        s (Snap):               The (sub-)snapshot to take the gas (quantity)
+                                from.
+        qty (str, array-like):  The name of the gas quantity or a array-like
+                                object with length of the gas.
+        units (str, Unit):      The units to convert the result in. If None, no
+                                conversion is done.
+        kernel (str):           The kernel to use. The default is to take the
+                                kernel given in the `gadget.cfg`.
+
+    Returns:
+        y (UnitArr):            The kernel weigthed SPH property for all the gas
+                                particles.
+    '''
+    # TODO: find ways to speed it up! -- parallelisation very inefficient
+    gas = s.gas
+    if isinstance(qty, str):
+        qty = gas.get(qty)
+    else:
+        if len(qty) != len(gas):
+            from ..utils import nice_big_num_str
+            raise RuntimeError('The length of the quantity ' + \
+                               '(%s) does not ' % nice_big_num_str(len(qty)) + \
+                               'match the number of gas ' + \
+                               '(%s)!' % nice_big_num_str(len(gas)))
+    units = getattr(qty,'units',None) if units is None else Unit(units)
+    qty = np.asarray(qty)
+
+    gas_pos = gas['pos'].view(np.ndarray)
+    hsml = gas['hsml'].in_units_of(s['pos'].units,subs=s).view(np.ndarray)
+
+    if kernel is None:
+        from ..gadget import config
+        kernel = config.general['kernel']
+    from ..kernels import vector_kernels
+    kernel = vector_kernels[kernel]
+
+    if parallel is None:
+        parallel = len(gas) > 1000
+    if parallel:
+        from multiprocessing import Pool, cpu_count
+        N_threads = cpu_count()
+        pool = Pool(N_threads)
+        res = [None] * N_threads
+        chunk = [[i*len(gas)/N_threads, (i+1)*len(gas)/N_threads]
+                    for i in xrange(N_threads)]
+        import warnings
+        with warnings.catch_warnings():
+            # warnings.catch_warnings doesn't work in parallel
+            # environment...
+            warnings.simplefilter("ignore") # for _z2Gyr_vec
+            for i in xrange(N_threads):
+                res[i] = pool.apply_async(_calc_ys,
+                        (qty, gas_pos,
+                         gas_pos[chunk[i][0]:chunk[i][1]],
+                         hsml[chunk[i][0]:chunk[i][1]],
+                         kernel))
+        y = np.empty( (len(gas_pos),)+qty.shape[1:] )
+        for i in xrange(N_threads):
+            y[chunk[i][0]:chunk[i][1]] = res[i].get()
+    else:
+        y = _calc_ys(qty, gas_pos, hsml, kernel)
+
+    return UnitArr(y, units)
+
+def SPH_qty_at(s, qty, r, units=None, kernel=None, dV='dV'):
+    '''
+    Calculate a SPH quantity with the scatter approach at a given position.
+
+    Args:
+        s (Snap):               The (sub-)snapshot to take the gas (quantity)
+                                from.
+        qty (str, array-like):  The name of the gas quantity or a array-like
+                                object with length of the gas.
+        r (UnitQty):            The position(s) to evaluate the SPH quantity at.
+        units (str, Unit):      The units to conver to. If None, no conversion is
+                                done and the results is gioven in the units
+                                encountered.
+        kernel (str):           The kernel to use. The default is to take the
+                                kernel given in the `gadget.cfg`.
+        dV (str, array-like):   The volume measure of the SPH particles.
+
+    Returns:
+        Q (UnitArr):            The SPH property at the given position.
+    '''
+    # TODO: find ways to speed it up!
+    # TODO: parallelize
+    r = UnitQty(r, s['pos'].units, subs=s)
+    if not (r.shape==(3,) or (r.shape[1:]==(3,) and len(r.shape)==2)):
+        raise ValueError('Position `r` needs to have shape (3,) or (N,3)!')
+    if isinstance(qty, str):
+        qty = s.gas.get(qty)
+    else:
+        if len(qty) != len(s.gas):
+            from ..utils import nice_big_num_str
+            raise RuntimeError('The length of the quantity ' + \
+                               '(%s) does not ' % nice_big_num_str(len(qty)) + \
+                               'match the number of gas ' + \
+                               '(%s)!' % nice_big_num_str(len(s.gas)))
+    units = getattr(qty,'units',None) if units is None else Unit(units)
+    qty = np.asarray(qty)
+
+    r = r.view(np.ndarray)
+    gas_pos = s.gas['pos'].view(np.ndarray)
+    hsml = s.gas['hsml'].in_units_of(s['pos'].units,subs=s).view(np.ndarray)
+    dV_hsml3 = (s.get(dV) / hsml**3) \
+            .in_units_of(1,subs=s).view(np.ndarray)
+
+    if kernel is None:
+        from ..gadget import config
+        kernel = config.general['kernel']
+    from ..kernels import vector_kernels
+    kernel = vector_kernels[kernel]
+
+    if r.shape == (3,):
+        d = dist(gas_pos, r) / hsml
+        mask = d < 1.0
+        Q = np.sum((qty[mask].T * (kernel(d[mask]) * dV_hsml3[mask])).T,
+                   axis=0)
+    else:
+        Q = np.empty( (len(r),)+qty.shape[1:] )
+        for i,x in enumerate(r):
+            d = dist(gas_pos, x) / hsml
+            mask = d < 1.0
+            Q[i] = np.sum((qty[mask].T * (kernel(d[mask]) * dV_hsml3[mask])).T,
+                          axis=0)
+
+    return UnitArr(Q, units)
+
+def scatter_gas_qty_to_stars(s, qty, name=None, units=None, kernel=None, dV='dV'):
+    '''
+    Calculate a gas property at the positions of the stars and store it as a
+    stellar property.
+
+    This function calculates the gas property at the positions of the star
+    particles by the so-called scatter approach, i.e. by evaluating the gas
+    property of every gas particle at the stellar positions, kernel-weighted by
+    the kernel of the gas particled the property comes from. Finally these
+    quantities are stored as a new block for the stars of the snapshot. (Make
+    shure there is no such block yet.)
+
+    Args:
+        s (Snap):               The snapshot to spread the properties of.
+        qty (array-like, str):  The name of the block or the block itself to
+                                spread onto the neighbouring SPH (i.e. gas)
+                                particles.
+        name (str):             The name of the new SPH block. If it is None and
+                                `qty` is a string, is taken as the name.
+        units (str, Unit):      The units to store the property in. If None, no
+                                conversion is done and the results is stored in
+                                the units encountered.
+        kernel (str):           The kernel to use. The default is to take the
+                                kernel given in the `gadget.cfg`.
+        dV (str, array-like):   The volume measure of the SPH particles.
+
+    Returns:
+        Q (UnitArr):            The new SPH block.
+
+    Raises:
+        RuntimeError:       From this function directly:
+                                If no name was given, though the qty is not a
+                                string; or if the length of `qty` does not match
+                                the number of stars in `s`.
+                            From setting the new block:
+                                If the length of the data does not fit the length
+                                of the (sub-)snapshot; or if the latter is not the
+                                correct "host" of the new block.
+        KeyError:           If there already exists a block of that name.
+    '''
+    if name is None:
+        if isinstance(qty, str):
+            name = qty
+        else:
+            raise RuntimeError('No name for the quantity is given!')
+
+    s.stars[name] = SPH_qty_at(s, qty=qty, r=s.stars['pos'], units=units, kernel=kernel)
+    return s.stars[name]
 
