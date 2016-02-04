@@ -118,7 +118,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         extent = UnitArr([np.percentile(s['pos'][:,xaxis], [1,99]),
                           np.percentile(s['pos'][:,yaxis], [1,99])],
                          s['pos'].units)
-    extent, Npx, res = grid_props(extent=extent, Npx=Npx, res=res)
+    extent, Npx, res = grid_props(extent=extent, Npx=Npx, res=res, d=2)
     if isinstance(extent, UnitArr):
         extent = extent.in_units_of(s['pos'].units, subs=s)
     if isinstance(res, UnitArr):

@@ -25,7 +25,7 @@ class Tree {
         size_t tot_part() const {return _tot_part;}
         unsigned num_children() const {return _num_child;}
         const Tree<d> *child(int i) const {
-            assert(0<=i and i<_num_child);
+            assert(0<=i and i<(int)_num_child);
             return _child.node[i];
         }
         Tree<d> *child(int i) {
@@ -69,7 +69,11 @@ class Tree {
 
 extern "C" void *new_octree_uninitialized();
 extern "C" void *new_octree(const double center_[3], double side_2_);
+extern "C" void *new_octree_from_pos(size_t N, const double *const pos);
 extern "C" void free_octree(void *const octree);
+extern "C" void fill_octree(void *const octree, size_t N, const double *const pos);
+extern "C" void update_octree_max_H(void *const octree, const double *const H);
+extern "C" void update_octree_const_max_H(void *const octree, double H);
 extern "C" void get_octree_center(const void *const octree, double center[3]);
 extern "C" double get_octree_side_2(const void *const octree);
 extern "C" int get_octree_is_leaf(const void *const octree);
@@ -81,9 +85,6 @@ extern "C" size_t get_octree_node_count(const void *const octree, int count_non_
 extern "C" int get_octree_in_region(const void *const octree, const double r[3]);
 extern "C" void *get_octree_child(void *const octree, int i);
 extern "C" unsigned get_octree_octant(void *const octree, const double r[3]);
-extern "C" void fill_octree(void *const octree, size_t N, const double *const pos);
-extern "C" void update_octree_max_H(void *const octree, const double *const H);
-extern "C" void update_octree_const_max_H(void *const octree, double H);
 extern "C" void get_octree_ngbs_within(void *const octree,
                                        const double r[3], double H,
                                        size_t max_ngbs, size_t *ngbs, size_t *N_ngbs,

@@ -17,6 +17,51 @@ extern "C" void *new_octree_uninitialized() {
 extern "C" void *new_octree(const double center_[3], double side_2_) {
     return new Tree<3>(center_, side_2_);
 }
+extern "C" void *new_octree_from_pos(size_t N, const double *const pos) {
+    // find extent of positions
+    double min[3], max[3];
+    for (int k=0; k<3; k++) {
+        min[k] = pos[k];
+        max[k] = pos[k];
+    }
+    for (size_t j=1; j<N; j++) {
+        for (size_t k=0; k<3; k++) {
+            if (min[k] > pos[3*j+k])
+                min[k] = pos[3*j+k];
+            if (max[k] < pos[3*j+k])
+                max[k] = pos[3*j+k];
+        }
+    }
+
+    // calculate center and side length
+    double center[3];
+    double side_2 = 0.0;
+    for (int k=0; k<3; k++) {
+        center[k] = (min[k]+max[k]) / 2.0;
+        side_2 = fmax(side_2, (max[k]-min[k])/2.0);
+    }
+
+    // build tree
+    Tree<3> *tree = new Tree<3>(center, side_2);
+    assert(tree);
+    for (size_t j=0; j<N; j++)
+        tree->add_point(pos, j);
+
+    return tree;
+}
+extern "C" void fill_octree(void *const octree, size_t N, const double *const pos) {
+    Tree<3> *tree = (Tree<3> *)octree;
+    for (size_t i=0; i<N; i++)
+        tree->add_point(pos, i);
+}
+extern "C" void update_octree_max_H(void *const octree, const double *const H) {
+    Tree<3> *tree = (Tree<3> *)octree;
+    tree->fill_max_H(H);
+}
+extern "C" void update_octree_const_max_H(void *const octree, double H) {
+    Tree<3> *tree = (Tree<3> *)octree;
+    tree->fill_max_H(H);
+}
 extern "C" void free_octree(void *const octree) {
     delete (Tree<3> *const)octree;
 }
@@ -56,19 +101,6 @@ extern "C" void *get_octree_child(void *const octree, int i) {
 extern "C" unsigned get_octree_octant(void *const octree, const double r[3]) {
     Tree<3> *const tree = (Tree<3> *)octree;
     return tree->get_oct(r);
-}
-extern "C" void fill_octree(void *const octree, size_t N, const double *const pos) {
-    Tree<3> *tree = (Tree<3> *)octree;
-    for (size_t i=0; i<N; i++)
-        tree->add_point(pos, i);
-}
-extern "C" void update_octree_max_H(void *const octree, const double *const H) {
-    Tree<3> *tree = (Tree<3> *)octree;
-    tree->fill_max_H(H);
-}
-extern "C" void update_octree_const_max_H(void *const octree, double H) {
-    Tree<3> *tree = (Tree<3> *)octree;
-    tree->fill_max_H(H);
 }
 extern "C" void get_octree_ngbs_within(void *const octree,
                                        const double r[3], double H,

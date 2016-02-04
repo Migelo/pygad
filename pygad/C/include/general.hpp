@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <cassert>
 
+#include <omp.h>
+
 #pragma once
 
 #define DIM     3

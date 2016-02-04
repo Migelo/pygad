@@ -85,9 +85,8 @@ from ..C import *
 import sys
 import numpy as np
 
-cpygad.new_octree_uninitialized.restype = c_void_p
-cpygad.new_octree.restype = c_void_p
-cpygad.new_octree.argtypes = [c_void_p, c_double]
+cpygad.new_octree_from_pos.restype = c_void_p
+cpygad.new_octree_from_pos.argtypes = [c_size_t, c_void_p]
 cpygad.free_octree.argtypes = [c_void_p]
 cpygad.get_octree_center.argtypes = [c_void_p, c_void_p]
 cpygad.get_octree_side_2.restype = c_double
@@ -159,15 +158,9 @@ class cOctree(object):
         if pos.base is not None:
             pos = pos.copy()
 
-        x_min = np.min(pos, axis=0)
-        x_max = np.max(pos, axis=0)
-        side_2 = max(x_max-x_min)
-        center = (x_max+x_min) / 2.0
-
-        self.__node_ptr = cpygad.new_octree(center.ctypes.data, side_2)
+        self.__node_ptr = cpygad.new_octree_from_pos(len(pos), pos.ctypes.data)
         self.__child_of_root = None
-        cpygad.fill_octree(self.__node_ptr, len(pos), pos.ctypes.data)
-        
+
         if H is not None:
             self.update_max_H(H)
     

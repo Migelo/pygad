@@ -22,6 +22,10 @@ class Kernel {
 
         Kernel();
         Kernel(KernelType type_);
+        Kernel(const char *name);
+
+        void init(KernelType type_);
+        void init(const char *name);
 
         KernelType type() const {return _type;}
         KernelType norm() const {return _norm;}
@@ -70,6 +74,20 @@ template<int d>
 Kernel<d>::Kernel(KernelType type_)
     : _type(type_)
 {
+    init(type_);
+}
+
+template<int d>
+Kernel<d>::Kernel(const char *name)
+{
+    init(name);
+}
+
+template<int d>
+void Kernel<d>::init(KernelType type_)
+{
+    _type = type_;
+
     switch (_type) {
         case CUBIC_SPLINE:
             _w = _cubic_kernel;
@@ -141,5 +159,19 @@ Kernel<d>::Kernel(KernelType type_)
             fprintf(stderr, "ERROR: unkown kernel!\n");
             _w = NULL;  // should never happen
     }
+}
+
+template<int d>
+void Kernel<d>::init(const char *name)
+{
+    for (int type=UNDEFINED_KERNEL+1; type<NUM_DEF_KERNELS; type++) {
+        if (!strcmp(name, kernel_name[type])) {
+            init((KernelType)type);
+            return;
+        }
+    }
+
+    fprintf(stderr, "ERROR: unknown kernel '%s'\n", name);
+    init(UNDEFINED_KERNEL);
 }
 
