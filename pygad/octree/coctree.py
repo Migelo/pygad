@@ -19,7 +19,7 @@ Doctests:
 
     some very basic testing of the interfacing
     >>> x_min, x_max = pos.min(axis=0), pos.max(axis=0)
-    >>> center, side_2 = (x_max+x_min)/2.0, max(x_max-x_min)
+    >>> center, side_2 = (x_max+x_min)/2.0, max(x_max-x_min)/2.0
     >>> assert np.linalg.norm(tree.center-center)/L<1e-6
     >>> assert abs(tree.side_2-side_2)/L<1e-6
     >>> assert tree.tot_num_part == N
