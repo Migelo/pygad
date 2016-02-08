@@ -1,3 +1,4 @@
+#pragma once
 #include <cstddef>
 #include <cmath>
 #include <cstdlib>
@@ -6,8 +7,6 @@
 #include <cassert>
 
 #include <omp.h>
-
-#pragma once
 
 #define DIM     3
 

@@ -1,3 +1,4 @@
+#pragma once
 #include "general.hpp"
 
 template<bool periodic>

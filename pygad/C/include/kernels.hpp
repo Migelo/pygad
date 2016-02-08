@@ -1,3 +1,4 @@
+#pragma once
 #include "general.hpp"
 
 enum KernelType {
@@ -32,6 +33,7 @@ class Kernel {
         const char *name() const {return kernel_name[_type];}
 
         double value_ql1(double q, double H) const {
+            assert(0.0 <= q and q <= 1.0);
             return pow(H,-d) * _norm * _w(q);
         }
         double value(double q, double H) const {
@@ -72,13 +74,14 @@ Kernel<d>::Kernel()
 
 template<int d>
 Kernel<d>::Kernel(KernelType type_)
-    : _type(type_)
+    : _type(type_), _norm(), _w()
 {
     init(type_);
 }
 
 template<int d>
 Kernel<d>::Kernel(const char *name)
+    : _type(), _norm(), _w()
 {
     init(name);
 }
@@ -156,8 +159,10 @@ void Kernel<d>::init(KernelType type_)
             break;
 
         default:
-            fprintf(stderr, "ERROR: unkown kernel!\n");
-            _w = NULL;  // should never happen
+            assert(false && "unknown kernel type!");
+            fprintf(stderr, "ERROR: unkown kernel type %d!\n", type_);
+            _w = [](double q){return q;};
+            _norm = 1.0;
     }
 }
 

@@ -1,5 +1,6 @@
 #include "binning.hpp"
 #include "kernels.hpp"
+#include "tree.hpp"
 
 extern "C"
 void eval_sph_at(size_t M,
