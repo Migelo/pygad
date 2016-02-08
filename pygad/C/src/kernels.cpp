@@ -24,6 +24,11 @@ const char* kernel_name[NUM_DEF_KERNELS] = {
     "Wendland C6",
 };
 
+double _gsl_integ_w_along_b(double l, void *params) {
+    struct _gsl_integ_w_along_b_param_t *param = (struct _gsl_integ_w_along_b_param_t *)params;
+    return param->w( std::sqrt(l*l + std::pow(param->b,2.0)) );
+}
+
 double _cubic_kernel(double q) {
     double w = pow(1.0-q,3.0);
     if (q<0.5) {

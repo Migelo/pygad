@@ -1,6 +1,8 @@
 #pragma once
 #include "general.hpp"
 
+#include <gsl/gsl_integration.h>
+
 enum KernelType {
     UNDEFINED_KERNEL,
 
@@ -27,6 +29,8 @@ class Kernel {
 
         void init(KernelType type_);
         void init(const char *name);
+        void generate_projection(int N);
+        int proj_table_size() const {return _proj.size();}
 
         KernelType type() const {return _type;}
         KernelType norm() const {return _norm;}
@@ -40,12 +44,19 @@ class Kernel {
             return q<1.0 ? value_ql1(q,H) : 0.0;
         }
 
+        double proj_value_ql1(double q, double H) const;
+        double proj_value(double q, double H) const {
+            return q<1.0 ? proj_value_ql1(q,H) : 0.0;
+        }
+
         double operator()(double q, double H) const {return value(q,H);}
 
     private:
         KernelType _type;
         double _norm;
         double (*_w)(double q);
+
+        std::vector<double> _proj;
 };
 
 extern "C" double cubic(double q, double H);
@@ -70,6 +81,7 @@ template<int d>
 Kernel<d>::Kernel()
     : _type(UNDEFINED_KERNEL), _norm(1.0), _w([](double q){return q;})
 {
+    generate_projection(126);
 }
 
 template<int d>
@@ -164,6 +176,8 @@ void Kernel<d>::init(KernelType type_)
             _w = [](double q){return q;};
             _norm = 1.0;
     }
+
+    generate_projection(126);
 }
 
 template<int d>
@@ -178,5 +192,50 @@ void Kernel<d>::init(const char *name)
 
     fprintf(stderr, "ERROR: unknown kernel '%s'\n", name);
     init(UNDEFINED_KERNEL);
+}
+
+struct _gsl_integ_w_along_b_param_t {
+    double (*w)(double);
+    double b;
+};
+double _gsl_integ_w_along_b(double q, void *w);
+template<int d>
+void Kernel<d>::generate_projection(int N) {
+    assert(0<N);
+    //printf("projecting kernel '%s'\n", name());
+
+    _proj.resize(N+1);
+    _proj[N] = 0.0;
+    size_t Nws = 4096;
+    gsl_integration_workspace *ws = gsl_integration_workspace_alloc(Nws);
+    gsl_function F;
+    F.function = _gsl_integ_w_along_b;
+    struct _gsl_integ_w_along_b_param_t params;
+    params.w = _w;
+    F.params = (void *)&params;
+    double res, error;
+    for (int i=0; i<N; i++) {
+        params.b = double(i) / N;   // impact parameter to integrate at
+        double l_max = std::sqrt(1.0 - std::pow(params.b, 2.0));
+        gsl_integration_qag(&F, 0.0, l_max,
+                            1e-13, 1e-13, Nws, GSL_INTEG_GAUSS61,
+                            ws, &res, &error);
+        if (error > 1e-12)
+            fprintf(stderr, "WARNING: Error in kernel integration >1e-12!\n");
+        assert(res >= 0.0 && "line-of-sight integration of kernel cannot be negative!");
+        _proj[i] = 2.0 * res;
+    }
+    gsl_integration_workspace_free(ws);
+}
+
+template<int d>
+double Kernel<d>::proj_value_ql1(double q, double H) const {
+    assert(0.0 <= q and q <= 1.0);
+    double qi = q * _proj.size();
+    int i1=int(qi), i2=std::min<int>(i1+1, _proj.size()-1);
+    assert(0<=i1 and (unsigned)i1 < _proj.size());
+    double alpha = qi-i1;
+    double proj_w = (1.0-alpha)*_proj[i1] + alpha*_proj[i2];
+    return pow(H,-d+1) * _norm * proj_w;
 }
 
