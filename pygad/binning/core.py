@@ -124,7 +124,7 @@ def gridbin(pnts, vals=None, bins=50, extent=None, normed=False, stats=None,
 
     return gridded
 
-def grid_props(extent='100 kpc', Npx=500, res=None, d=None):
+def grid_props(extent='100 kpc', Npx=256, res=None, d=None):
     '''
     Calculate the grid properties from given values.
 
