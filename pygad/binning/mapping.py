@@ -49,7 +49,7 @@ from ..kernels import *
 from .. import environment
 
 def map_qty(s, extent, qty, av=None, Npx=256, res=None, xaxis=0, yaxis=1, softening=None,
-            sph=True, sph_threshold=20, kernel=None):
+            sph=True, kernel=None):
     '''
     A fast pure-Python routine for binning SPH quantities onto a map.
 
@@ -73,15 +73,13 @@ def map_qty(s, extent, qty, av=None, Npx=256, res=None, xaxis=0, yaxis=1, soften
         yaxis (int):        The coordinate for the y-axis. (0:'x', 1:'y', 2:'z')
         softening (UnitQty):A list of te softening lengthes that are taken for
                             smoothing the maps of the paticle types. Is
-                            consequently has to have length 6. Default: None.
+                            consequently has to have length 6. The entries for gas
+                            particle types are ignored, if sph=True.
+                            Default: None.
         sph (bool):         If set to True, do not use the softening length for
                             smoothing the SPH particles' quantity, but the actual
                             SPH smoothing lengthes, which differ from particle to
-                            particle. Much slower, though! It calls
-                            binning.sph.map_sph_qty in the backend.
-        sph_threshold (int):The threshold between image smoothing and kernel use
-                            in the sub-routine 'sph.map_sph_qty'. See its
-                            documentation for more details.
+                            particle.
         kernel (str):       The kernel to use for smoothing. (Default: 'kernel'
                             from config file `gadget.cfg`)
 
@@ -101,10 +99,10 @@ def map_qty(s, extent, qty, av=None, Npx=256, res=None, xaxis=0, yaxis=1, soften
             av = s.get(av)
         grid, px2 = map_qty(s, extent, av*qty, av=None, Npx=Npx, res=res,
                             xaxis=xaxis, yaxis=yaxis, softening=softening,
-                            sph=sph, sph_threshold=sph_threshold, kernel=kernel)
+                            sph=sph, kernel=kernel)
         norm, px2 = map_qty(s, extent, av, av=None, Npx=Npx, res=res,
                             xaxis=xaxis, yaxis=yaxis, softening=softening,
-                            sph=sph, sph_threshold=sph_threshold, kernel=kernel)
+                            sph=sph, kernel=kernel)
         grid /= norm
         grid[np.isnan(grid)] = 0.0
         return grid, px2
@@ -137,14 +135,6 @@ def map_qty(s, extent, qty, av=None, Npx=256, res=None, xaxis=0, yaxis=1, soften
         sph = s.gas
         sph_qty = qty[s.gas._mask]
         if len(sph) != 0:
-            """
-            # res gets calculated from Npx, since the latter is an integer, the
-            # result is more stable when passing Npx rather than res.
-            from sph import map_sph_qty
-            sph_binned, px2 = map_sph_qty(sph, extent=extent, qty=sph_qty, Npx=Npx,
-                                          res=None, xaxis=xaxis, yaxis=yaxis,
-                                          threshold=sph_threshold, kernel=kernel)
-            """
             from cbinning import SPH_to_2Dgrid
             dV = sph['dV'].in_units_of(sph['pos'].units**3)
             sph_binned, px2 = SPH_to_2Dgrid(sph, qty=sph_qty/dV, extent=extent,
