@@ -115,7 +115,7 @@ def map_qty(s, extent, qty, av=None, Npx=200, res=None, xaxis=0, yaxis=1, soften
         return grid, px2
 
     # prepare arguments
-    extent, Npx, res = grid_props(extent=extent, Npx=Npx, res=res)
+    extent, Npx, res = grid_props(extent=extent, Npx=Npx, res=res, d=2)
     if isinstance(extent, UnitArr):
         extent = extent.in_units_of(s['pos'].units, subs=s)
     if isinstance(res, UnitArr):

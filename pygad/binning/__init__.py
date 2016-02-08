@@ -12,6 +12,7 @@ Also doctest other parts of this sub-module:
 '''
 
 from core import *
+from cbinning import *
 from sph import *
 from mapping import *
 
