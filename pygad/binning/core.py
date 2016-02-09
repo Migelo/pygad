@@ -19,7 +19,7 @@ Examples:
     derive block angmom... done.
     apply Rotation to "vel" of "snap_M1196_4x_470"... done.
     apply Rotation to "pos" of "snap_M1196_4x_470"... done.
-    >>> sub = s[BoxMask('50 kpc',fullsph=False)]
+    >>> sub = s[BoxMask('100 kpc',fullsph=False)]
     >>> assert np.all(gridbin2d(sub['pos'][:,0],sub['pos'][:,1])
     ...             ==gridbin(sub['pos'][:,(0,1)]))
     >>> m1 = gridbin2d(sub['pos'][:,0], sub['pos'][:,1], sub['mass'], bins=100)
