@@ -27,7 +27,7 @@ Example:
     >>> s.loadable_blocks()
     ['vel', 'mass', 'ID', 'pos']
     >>> ' '.join(s.deriveable_blocks())
-    'Epot jzjc rcyl vrad r momentum E angmom Ekin vcirc jcirc'
+    'Epot jzjc rcyl angmom momentum E vrad Ekin vcirc r jcirc dV'
     >>> assert set(s.all_blocks()) == set(s.loadable_blocks() + s.deriveable_blocks())
     >>> mwgt_pos = np.tensordot(s['mass'], s['pos'], axes=1).view(UnitArr)
     load block mass... done.
@@ -86,8 +86,8 @@ Example:
 
     >>> s.to_physical_units()
     convert block pos to physical units... done.
-    convert block r to physical units... done.
     convert block rho to physical units... done.
+    convert block r to physical units... done.
     convert boxsize to physical units... done.
     >>> sub = s[s['r'] < UnitScalar('30 kpc')]
     >>> sub
@@ -126,7 +126,7 @@ Example:
     >>> 'r' in s
     True
     >>> for a in s.available_blocks(): print a,
-    Epot pot pos jzjc rcyl vrad r mass vel momentum E ID Ekin vcirc angmom jcirc
+    Epot pot pos jzjc rcyl mass vel angmom momentum E vrad ID Ekin vcirc r jcirc
     >>> s.delete_blocks(derived=True)
     >>> 'r' in s
     True
