@@ -1,12 +1,11 @@
-GSL_INCLUDE	= ${GSL_HOME}/include -I/opt/local/include
-GSL_LIB		= ${GSL_HOME}/lib -I/opt/local/lib
+GSL_HOME	:= ${GSL_HOME} /opt/local
 
 CC 		= g++
 CFLAGS 	= -Wall -std=c++11 -Ofast -DNDEBUG -fopenmp
 #CFLAGS 	= -Wall -std=c++11 -O2 -fopenmp
 #CFLAGS 	= -Wall -std=c++11 -O0 -DDEBUG
-IPATH	= $(addprefix -I,$(GSL_INCLUDE))
-LPATH	= $(addprefix -L,$(GSL_LIB))
+IPATH	= $(addprefix -I, $(addsuffix /include, $(GSL_HOME)))
+LPATH	= $(addprefix -L, $(addsuffix /lib, $(GSL_HOME)))
 LDFLAGS = -lm -fopenmp -lgsl -lgslcblas
 
 LIB		= cpygad.so
