@@ -64,7 +64,7 @@ Example:
     >>> from .. import analysis
     >>> com = analysis.center_of_mass(sub)
     >>> d = np.sqrt(sum((tree.com - com)**2))
-    >>> if not d < 0.1:
+    >>> if not d < 0.5:
     ...     print 'com      =', tree.com
     ...     print 'tree.com =', com
     >>> del_quantity(tree, 'com')

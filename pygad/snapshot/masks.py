@@ -30,10 +30,11 @@ Examples:
     load block hsml... done.
     >>> sub
     <Snap "snap_M1196_4x_470":ball(r=60.0 [kpc]); N=198,248; z=0.000>
-    >>> sub['r'].max().in_units_of('kpc',subs=s)
-    UnitArr(9.905400e+03, units="kpc")
-    >>> SubSnap(sub,list(set(range(6))-set(gadget.families['gas'])))['r'].max().in_units_of('kpc',subs=s)
-    UnitArr(59.9990167027, units="kpc")
+    >>> if abs(sub['r'].max().in_units_of('Mpc',subs=s) - 9.905) > 0.01:
+    ...     print sub['r'].max().in_units_of('Mpc',subs=s)
+    >>> no_gas_max_r = SubSnap(sub,list(set(range(6))-set(gadget.families['gas'])))['r'].max()
+    >>> if abs( no_gas_max_r.in_units_of('kpc',subs=s)  -  60.0 ) > 0.01:
+    ...     print no_gas_max_r
     >>> s.to_physical_units()
     convert block hsml to physical units... done.
     convert block pos to physical units... done.

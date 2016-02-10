@@ -5,14 +5,11 @@ Example:
     >>> from ..environment import module_dir
     >>> from ..snapshot import Snap
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=False)
-    >>> mass_weighted_mean(s, 'pos')
+    >>> if np.linalg.norm(mass_weighted_mean(s,'pos') - center_of_mass(s)) > 1e-3:
+    ...     print mass_weighted_mean(s,'pos')
+    ...     print center_of_mass(s,)
     load block pos... done.
     load block mass... done.
-    UnitArr([ 34799.42578125,  33686.4765625 ,  32010.89453125],
-            dtype=float32, units="ckpc h_0**-1")
-    >>> center_of_mass(s)
-    UnitArr([ 34799.42578125,  33686.4765625 ,  32010.89453125],
-            dtype=float32, units="ckpc h_0**-1")
 
     Center of mass is *not* center of galaxy / halo!
     >>> Translation([-34792.2, -35584.8, -33617.9]).apply(s)
@@ -46,8 +43,8 @@ Example:
     matrix([[ 0.14794385,  0.        ,  0.        ],
             [ 0.        ,  0.41260123,  0.        ],
             [ 0.        ,  0.        ,  1.8855924 ]])
-    >>> los_velocity_dispersion(sub)
-    UnitArr(167.344421387, dtype=float32, units="km s**-1")
+    >>> if abs( los_velocity_dispersion(sub) - '170 km/s' ) > '5 k/s':
+    ...     print los_velocity_dispersion(sub)
 
     >>> s.to_physical_units()
     convert block pos to physical units... done.

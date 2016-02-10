@@ -33,16 +33,15 @@ Example:
     load block mass... done.
     >>> mwgt_pos.units = s['mass'].units * s['pos'].units
     >>> com = mwgt_pos / s['mass'].sum()
-    >>> com
-    UnitArr([ 50.25789261,  50.2459259 ,  50.14157867],
-            dtype=float32, units="cMpc h_0**-1")
+    >>> np.linalg.norm(com - UnitArr([50.2]*3, 'cMpc/h_0')) < 0.5
+    True
 
     And the physical distance between the center of mass and the unweighted mean
     of the positions is:
     (Conversion from 'ckpc/h_0' to 'kpc' is done automatically: the values for 'a'
     and 'h_0' are taken from the associated snapshot and substitued.)
-    >>> np.sqrt(np.sum( (com - s['pos'].mean(axis=0))**2 )).in_units_of('Mpc', subs=s)
-    UnitArr(0.00863040331751, dtype=float32, units="Mpc")
+    >>> np.sqrt(np.sum( (com - s['pos'].mean(axis=0))**2 )).in_units_of('kpc', subs=s) < 10.0
+    UnitArr(True, dtype=bool)
 
     Whereas the physical dimensions of the simulation's box are:
     >>> s.boxsize

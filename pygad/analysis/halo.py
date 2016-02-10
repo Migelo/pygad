@@ -13,25 +13,25 @@ Examples:
     convert block mass to physical units... done.
     >>> star_dists = utils.periodic_distance_to(s.stars['pos'], com, s.boxsize)
     >>> center = shrinking_sphere(s.stars, center=com,
-    ...                           R=np.percentile(star_dists,98)/2.)
+    ...                           R=np.percentile(star_dists,98)/2.) # doctest: +ELLIPSIS
     do a shrinking sphere...
       starting values:
-        center = [ 33794.24609375  34521.62109375  32648.1328125 ] [kpc]
-        R      = 931.161151123 [kpc]
+        center = ...
+        R      = ...
     done.
-    >>> center
-    UnitArr([ 33816.90234375,  34601.11328125,  32681.01171875],
-            dtype=float32, units="kpc")
+    >>> if np.linalg.norm( center - UnitArr([33816.9, 34601.1, 32681.0], 'kpc') ) > 1.0:
+    ...     print center
     >>> R200, M200 = virial_info(s, center)
-    >>> print R200, M200
-    177.000391642 [kpc] 1.001030e+12 [Msol]
+    >>> if abs(R200 - '177 kpc') > 3 or abs(M200 - '1e12 Msol') / '1e12 Msol' > 0.1:
+    ...     print R200, M200
     >>> Translation(-center).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_320"... done.
     >>> sub = s[s['r'] < 0.10*R200]
     derive block r... done.
-    >>> half_mass_radius(sub.stars)
-    UnitArr(4.31187898891, units="kpc")
-    >>> eff_radius(sub, 'V', proj=None)
+    >>> if abs(half_mass_radius(sub.stars) - '4.3 kpc') > '0.1 kpc':
+    ...     print half_mass_radius(sub.stars)
+    >>> if abs(eff_radius(sub, 'V', proj=None) - '3.3 kpc') > '0.3 kpc':
+    ...     print eff_radius(sub, 'V', proj=None)
     load block form_time... done.
     derive block age... done.
     load block elements... done.
@@ -49,27 +49,25 @@ Examples:
     interpolate in metallicity...
     done.
     derive block lum_v... done.
-    UnitArr(3.27137010062, units="kpc")
-    >>> eff_radius(sub, 'V', proj=2)
+    >>> if abs(eff_radius(sub, 'V', proj=2) - '2.9') > '0.2 kpc':
+    ...     print eff_radius(sub, 'V', proj=2)
     derive block rcyl... done.
-    UnitArr(2.92262951906, units="kpc")
-    >>> half_qty_radius(sub.stars, qty='mass', proj=2)
-    UnitArr(3.76825188782, units="kpc")
-    >>> print map(str,flow_rates(s, '50 kpc'))
+    >>> if abs(half_qty_radius(sub.stars, qty='mass', proj=2) - '3.77 kpc') > '0.1 kpc':
+    ...     print half_qty_radius(sub.stars, qty='mass', proj=2)
+    >>> ifr, ofr = flow_rates(s, '50 kpc')
     load block vel... done.
     derive block vrad... done.
-    ['420.879786667 [Msol yr**-1]', '370.061994667 [Msol yr**-1]']
-    >>> shell_flow_rates(s.gas, UnitArr([48,52],'kpc'))
-    UnitArr(-7.098015e+00, units="Msol yr**-1")
-    >>> shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'in')
-    UnitArr(-1.463577e+01, units="Msol yr**-1")
-    >>> shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'out')
-    UnitArr(7.53775332834, units="Msol yr**-1")
+    >>> if abs(ifr - '421 Msol/yr') > '5 Msol/yr' or abs(ofr - '370 Msol/yr') > '5 Msol/yr':
+    ...     print ifr, ofr
+    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc')) - '-7.1 Msol/yr') > '0.1 Msol/yr':
+    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'))
+    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'in') - '-14.7 Msol/yr') > '0.2 Msol/yr':
+    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'in')
+    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'out') - '7.5 Msol/yr') > '0.1 Msol/yr':
+    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'out')
     >>> ifr, ofr = flow_rates(s.gas, '50 kpc')
-    >>> print ifr
-    11.5465066667 [Msol yr**-1]
-    >>> print ofr
-    7.09649333333 [Msol yr**-1]
+    >>> if abs(ifr - '10.9 Msol/yr') > '0.1 Msol/yr' or abs(ofr - '7.1 Msol/yr') > '0.1 Msol/yr':
+    ...     print ifr, ofr
     >>> eta = ofr / s.gas['sfr'].sum()
     load block sfr... done.
     >>> print 'mass loading:', eta
