@@ -37,8 +37,8 @@ Examples:
     >>> s.to_physical_units()
     convert block hsml to physical units... done.
     convert block pos to physical units... done.
-    convert block r to physical units... done.
     convert block mass to physical units... done.
+    convert block r to physical units... done.
     convert boxsize to physical units... done.
     >>> sub = s[BoxMask('60 kpc',fullsph=False)]
     >>> sub

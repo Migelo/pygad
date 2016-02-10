@@ -51,16 +51,17 @@ Example:
 
     >>> s.to_physical_units()
     convert block pos to physical units... done.
-    convert block r to physical units... done.
     convert block mass to physical units... done.
+    convert block r to physical units... done.
     convert boxsize to physical units... done.
-    >>> SPH_qty_at(s, 'rho', [0,0,0])
+    >>> SPH_qty_at(s.gas, 'rho', [0,0,0])
     load block rho... done.
     convert block rho to physical units... done.
     load block hsml... done.
     convert block hsml to physical units... done.
+    derive block dV... done.
     UnitArr(1.740805e+05, units="Msol kpc**-3")
-    >>> SPH_qty_at(s, 'rho', s.gas['pos'][331798])
+    >>> SPH_qty_at(s.gas, 'rho', s.gas['pos'][331798])
     UnitArr(5.330261e+04, units="Msol kpc**-3")
     >>> s.gas['rho'][331798]
     56831.004
@@ -346,9 +347,10 @@ def SPH_qty_at(s, qty, r, units=None, kernel=None, dV='dV'):
 
     r = r.view(np.ndarray)
     gas_pos = s.gas['pos'].view(np.ndarray)
-    hsml = s.gas['hsml'].in_units_of(s['pos'].units,subs=s).view(np.ndarray)
+    hsml = s.gas['hsml'].in_units_of(s['pos'].units,subs=s)
     dV_hsml3 = (s.get(dV) / hsml**3) \
             .in_units_of(1,subs=s).view(np.ndarray)
+    hsml = hsml.view(np.ndarray)
 
     if kernel is None:
         from ..gadget import config
