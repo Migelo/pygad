@@ -234,7 +234,7 @@ class _UnitClass(object):
         a = self.standardize()
         b = other.standardize()
         return a._scale == b._scale and a._composition == b._composition
-        
+
     def __ne__(self, other):
         return not self.__eq__(other)
 
@@ -528,7 +528,7 @@ def define_from_cfg(config, allow_redef=False, warn=True, undefine_old=True):
         if path.exists(filename):
             break
     else:
-        raise RuntimeError('Config file "%s" does not exist!' % config)
+        raise IOError('Config file "%s" does not exist!' % config)
 
     if environment.verbose:
         print 'reading units definitions from "%s"' % filename
@@ -587,7 +587,7 @@ def define_from_cfg(config, allow_redef=False, warn=True, undefine_old=True):
 
 _re_mul_space = re.compile(r'(?<=\w|\)|\.)\s+(?=[A-Za-z_]|\()')
 _re_ident = re.compile(r'[A-Za-z_][\w]*')
-_re_frac_power = map(re.compile, 
+_re_frac_power = map(re.compile,
                      [r'\*\*(?P<nom>\d+)/(?P<den>\d+)(?=[^(e|\.)]|$)',
                       r'\*\*\(\s*(?P<nom>\d+)\s*/\s*(?P<den>\d+)\s*\)'])
 _unit_evaluator = Evaluator({'Fraction':Fraction}, my_math=math)
@@ -684,4 +684,3 @@ def Units(l, allow_undefined=False):
             return Units(map(str.strip,l.split(',')), allow_undefined)
         return [Unit(l, allow_undefined)]
     return [Unit(n, allow_undefined) for n in l]
-
