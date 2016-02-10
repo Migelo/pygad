@@ -74,8 +74,9 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml=None):
     if len(s) == 0:
         return UnitArr(np.zeros(tuple(Npx)), qty_units), res
 
-    # TODO: define mor general box masks
-    sub = s[BoxMask(np.max(extent[:,1]-extent[:,0]))]
+    if len(s.gas) not in [0,len(s)]:
+        raise NotImplementedError()
+    sub = s[BoxMask(extent)]
 
     pos = sub['pos'].view(np.ndarray).astype(np.float64)
     if hsml is None:
@@ -174,18 +175,12 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV', h
 
     if len(s.gas) not in [0,len(s)]:
         raise NotImplementedError()
-    mask = np.ones(len(s), dtype=bool)
-    for ext,ax in zip(extent, [xaxis, yaxis]):
-        if len(s.gas) == len(s):
-            mask &= (ext[0]<=s['pos'][:,ax]+s['hsml']) & \
-                        (s['pos'][:,ax]-s['hsml']<ext[1])
-        elif len(s.gas) == 0:
-            mask &= (ext[0]<=s['pos'][:,ax]) & (s['pos'][:,ax]<ext[1])
-        else:
-            raise NotImplementedError()
-    sub = s[mask]
+    ext3D = UnitArr(np.empty((3,2)), extent.units)
+    ext3D[:2] = extent
+    ext3D[2] = [-np.inf, +np.inf]
+    sub = s[BoxMask(ext3D)]
 
-    # TODO: why always need a copy? C vs Fortran alignment...
+    # TODO: why always need a copy? C vs Fortran alignment...!?
     pos = sub['pos'].view(np.ndarray)[:,(xaxis,yaxis)].astype(np.float64).copy()
     if hsml is None:
         hsml = sub['hsml'].in_units_of(s['pos'].units)
