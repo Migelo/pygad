@@ -5,6 +5,7 @@
 #include <cstring>
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 
 #include <omp.h>
 
