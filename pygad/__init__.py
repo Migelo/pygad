@@ -43,7 +43,7 @@ doctests:
     TestResults(failed=0, attempted=2)
     >>> print >> sys.stderr, 'testing module binning...'
     >>> doctest.testmod(binning)
-    TestResults(failed=0, attempted=3)
+    TestResults(failed=0, attempted=4)
     >>> print >> sys.stderr, 'testing module analysis...'
     >>> doctest.testmod(analysis)
     TestResults(failed=0, attempted=4)

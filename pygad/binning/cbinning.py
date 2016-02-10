@@ -3,6 +3,61 @@ Interface to the C implementations of binning.
 
 Testing:
     TODO! (test if 3D and 2D are consistent; mass conservation; uneven extensions)
+    >>> from ..environment import module_dir
+    >>> from ..snapshot import Snap
+    >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=True)
+    >>> from ..transformation import Translation
+    >>> Translation(-UnitArr([34.7828, 35.5898, 33.6147], 'cMpc/h_0')).apply(s)
+    >>> extent = UnitArr([[-0.5,0.7],[-1.0,2.0],[-2.0,2.0]], 'Mpc')
+    >>> sub = s[BoxMask(extent)]
+    load block pos... done.
+    convert block pos to physical units... done.
+    apply stored Translation to block pos... done.
+    load block hsml... done.
+    convert block hsml to physical units... done.
+    >>> Npx = np.array([ 30,  75, 100])
+    >>> map2D, res = SPH_to_2Dgrid(sub.gas, extent=extent[:2], qty='rho', Npx=Npx[:2])
+    create a 30 x 75 SPH-grid (1200 x 3000 [kpc])...
+    load block rho... done.
+    convert block rho to physical units... done.
+    load block mass... done.
+    convert block mass to physical units... done.
+    derive block dV... done.
+    done with SPH grid
+
+    Consistency check of total mass:
+    >>> mask = np.ones(len(sub.gas), dtype=bool)
+    >>> pos, hsml = sub.gas['pos'], sub.gas['hsml']
+    >>> for k in xrange(3):
+    ...     mask &= (extent[k,0]<pos[:,k]-hsml) & (pos[:,k]+hsml<extent[k,1])
+    >>> lower = sub.gas[mask]['mass'].sum()
+    >>> upper = sub.gas['mass'].sum()
+    >>> del mask
+    >>> if not (lower <= map2D.sum()*np.prod(res) <= upper):
+    ...     print lower, map2D.sum(), upper
+
+    Consistency check between 3D and 2D:
+    >>> map3D, res = SPH_to_3Dgrid(sub.gas, extent=extent    , qty='rho', Npx=Npx)
+    create a 30 x 75 x 100 SPH-grid (1200 x 3000 x 4000 [kpc])...
+    done with SPH grid
+    >>> map3D_proj = map3D.sum(axis=-1) * res.in_units_of('kpc')[2]*Unit('kpc')
+    >>> tot_rel_err = (map3D_proj.sum() - map2D.sum()) / map2D.sum()
+    >>> if tot_rel_err > 1e-3:
+    ...     print tot_rel_err
+    >>> px_rel_err = np.abs(map2D-map3D_proj)/map2D
+    >>> if np.mean(np.abs(px_rel_err)) > 0.01:
+    ...     print np.mean(np.abs(px_rel_err))
+    >>> if np.percentile(np.abs(px_rel_err), [99]) > 0.1:
+    ...     print np.percentile(np.abs(px_rel_err), [99])
+
+    Quick consistency check of higher resolution
+    >>> map2D_high, res = SPH_to_2Dgrid(sub.gas, extent=extent[:2], qty='rho',
+    ...                                 Npx=Npx[:2]*4)
+    create a 120 x 300 SPH-grid (1200 x 3000 [kpc])...
+    done with SPH grid
+    >>> tot_rel_err = np.sum(map3D_proj - map2D) / map2D.sum()
+    >>> if tot_rel_err > 0.001:
+    ...     print tot_rel_err
 
 TODO:
     * think about proper handing of non-SPH particles. how to give them hsml and
