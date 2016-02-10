@@ -11,14 +11,14 @@
 
 #define DIM     3
 
-template <typename T>
-constexpr T pow_int(T b, int p) {
-    if (p == 0)
-        return T(1);
-    else if (p < 0)
-        return T(1) / pow_int(b,-p);
-    return b * pow_int(b,p-1);
-};
+template <unsigned power>
+constexpr int pow_int(int base) {
+    return pow_int<power-1>(base) * base;
+}
+template <>
+constexpr int pow_int<0>(int base) {
+    return 1;
+}
 
 void argsort(size_t N, const double *x, size_t *idcs);
 

@@ -12,7 +12,7 @@ class Tree {
         static_assert(0<d, "Dimension has to be positive!");
         static const int dim=d;
         // number of children / maximum number of elements
-        static const int NC = pow_int(2,d);
+        static const int NC = pow_int<d>(2);
 
         Tree();
         Tree(const double center_[d], double side_2_);

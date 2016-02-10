@@ -1,8 +1,13 @@
+GSL_INCLUDE	= ${GSL_HOME}/include -I/opt/local/include
+GSL_LIB		= ${GSL_HOME}/lib -I/opt/local/lib
+
 CC 		= g++
-CFLAGS 	= -Wall -std=c++14 -Ofast -DNDEBUG -fopenmp
-#CFLAGS 	= -Wall -std=c++14 -O2 -fopenmp
-#CFLAGS 	= -Wall -std=c++14 -O0 -DDEBUG
-LDFLAGS = -L/opt/local/lib -lm -fopenmp -lgsl -lgslcblas
+CFLAGS 	= -Wall -std=c++11 -Ofast -DNDEBUG -fopenmp
+#CFLAGS 	= -Wall -std=c++11 -O2 -fopenmp
+#CFLAGS 	= -Wall -std=c++11 -O0 -DDEBUG
+IPATH	= $(addprefix -I,$(GSL_INCLUDE))
+LPATH	= $(addprefix -L,$(GSL_LIB))
+LDFLAGS = -lm -fopenmp -lgsl -lgslcblas
 
 LIB		= cpygad.so
 SRCDIR	= src
@@ -24,10 +29,10 @@ all: $(LIB)
 # also let depend on headers to enshure proper rebuilds
 $(OBJ) : $(BUILDIR)/%.o : $(SRCDIR)/%.cpp $(HEADERS) Makefile
 	@mkdir -p $(BUILDIR)
-	$(CC) $(CFLAGS) -I./$(INCLDIR) -c $< -o $@
+	$(CC) -fPIC $(CFLAGS) $(IPATH) -I./$(INCLDIR) -c $< -o $@
 
 $(LIB): $(OBJ) Makefile
-	$(CC) -shared $(LDFLAGS) $(OBJ) -o $@
+	$(CC) -fPIC -shared $(LPATH) $(OBJ) $(LDFLAGS) -o $@
 
 clean:
 	$(RM) -r $(BUILDIR)

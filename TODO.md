@@ -18,8 +18,6 @@
 - binning radially with SPH smoothing
 - modules to go over:
     * analysis (some more old function are lying around...)
-    * binning (I still have binning.sph.binning_old.py)
-    * plotting (there still is plotting_old.py)
 - utilise `__numpy_ufunc__` rather than `__array_wrap__` for add units in ufunc
   operations?
 - whole Gadget IO is not well structured – do something about it
