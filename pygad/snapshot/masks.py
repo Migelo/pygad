@@ -230,9 +230,7 @@ class BoxMask(SnapMask):
     @extent.setter
     def extent(self, value):
         extent = UnitQty(value, dtype=np.float64).copy()
-        if extent.shape == ():
-            extent = UnitArr([extent]*3, extent.units)
-        if extent.shape == (3,):
+        if extent.shape in [(), (3,)]:
             L = extent
             center = self.center
             extent = UnitArr(np.empty((3,2),dtype=np.float64), extent.units)
