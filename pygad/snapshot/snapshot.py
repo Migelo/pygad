@@ -54,7 +54,7 @@ Example:
     >>> s.load_all_blocks()
     load block vel... done.
     load block ID... done.
-    
+
     It is also possible to slice entire snapshot, e.g. to access single families
     of the snapshot (gas, stars, dm, bh, baryons) or to mask them with a
     np.ndarray of bools (for more information see SubSnap).
@@ -111,7 +111,7 @@ Example:
     SimArr([[ 48074.32421875,  49335.85546875,  46081.39453125],
             [ 48074.0234375 ,  49335.78515625,  46080.9921875 ],
             [ 48073.97265625,  49335.9453125 ,  46081.22265625],
-            ..., 
+            ...,
             [ 48067.1953125 ,  49359.1796875 ,  46065.84375   ],
             [ 48067.49609375,  49357.2578125 ,  46066.24609375],
             [ 48066.18359375,  49357.8046875 ,  46066.4296875 ]],
@@ -257,7 +257,7 @@ Example:
     SimArr([[ 34613.515625  ,  35521.81640625,  33178.60546875],
             [ 34613.296875  ,  35521.765625  ,  33178.31640625],
             [ 34613.26171875,  35521.8828125 ,  33178.48046875],
-            ..., 
+            ...,
             [ 34608.3828125 ,  35538.609375  ,  33167.41015625],
             [ 34608.59765625,  35537.2265625 ,  33167.69921875],
             [ 34607.65234375,  35537.62109375,  33167.83203125]],
@@ -317,7 +317,7 @@ def Snap(filename, physical=False, cosmological=None, gad_units=None):
     if not os.path.exists(filename):
         filename = base + '.0' + suffix
         if not os.path.exists(filename):
-            raise RuntimeError('Snapshot "%s%s" does not exist!' % (base, suffix))
+            raise IOError('Snapshot "%s%s" does not exist!' % (base, suffix))
 
     s = _Snap(gad_units=gad_units, physical=physical, cosmological=cosmological)
     s._filename   = os.path.abspath(base+suffix)
@@ -1040,7 +1040,7 @@ class _Snap(object):
     def to_physical_units(self, on_load=True):
         '''
         Convert all blocks and the boxsize to physical units.
-        
+
         Convert all loaded blocks to units without scale factors and Hubble
         parameters and without numerical factors (e.g. 'a kpc / h_0' -> 'kpc' and
         '1e10 Msol / h_0' -> 'Msol').
@@ -1084,7 +1084,7 @@ class _Snap(object):
     def delete_blocks(self, derived=None, loaded=None):
         '''
         Delete all blocks.
-        
+
         Args:
             derived, loaded (bools):
                         If both are None (the default), all blocks are deleted.
@@ -1178,7 +1178,7 @@ class _SubSnap(_Snap):
     '''
     A class for "sub-snapshots", that slice or mask an underlying (sub-)snapshot
     as a whole.
-    
+
     The slice / mask is basically propagated to the arrays of the base. To
     instantiate this class, one should use the factory function SubSnap.
 
@@ -1553,4 +1553,3 @@ def FamilySubSnap(base, fam):
     family_s = SubSnap(base, gadget.families[fam])
     family_s._descriptor = base._descriptor + ':' + fam
     return family_s
-
