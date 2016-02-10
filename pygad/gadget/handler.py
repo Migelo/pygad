@@ -15,7 +15,7 @@ import config
 import numpy as np
 import warnings
 import sys
-           
+
 class FileReader(object):
     '''
     A handler for reading Gadget files of all formats.
@@ -25,7 +25,7 @@ class FileReader(object):
     '''
     def __init__(self, filename):
         if not os.path.exists(filename):
-            raise RuntimeError('"%s" does not exist!' % filename)
+            raise IOError('"%s" does not exist!' % filename)
         self._filename = filename
         if h5py.is_hdf5(self._filename):
             self._format, self._endianness = 3, None
@@ -363,4 +363,3 @@ def write(snap, filename, blocks=None, gformat=2, endianness='native',
                 sys.stdout.flush()
             info = sorted(info.values(), key=lambda x: x.start_pos)
             write_info(gfile, info, gformat, endianness)
-
