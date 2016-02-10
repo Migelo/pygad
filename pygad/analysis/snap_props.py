@@ -88,11 +88,12 @@ Example:
     derive block Z... done.
     load block ne... done.
     load block temp... done.
-    >>> s.gas['lx']
-    SimArr([ 0.,  0.,  0., ...,  0.,  0.,  0.],
-           units="erg s**-1", snap="snap_M1196_4x_320":gas)
-    >>> s.gas['lx'].sum()
-    UnitArr(1.631726e+41, units="erg s**-1")
+    >>> s.gas['lx'].units
+    Unit("erg s**-1")
+    >>> if abs(np.mean(s.gas['lx']) - '1.74e35 erg/s') > '0.1e35 erg/s':
+    ...     print np.mean(s.gas['lx'])
+    >>> if abs(s.gas['lx'].sum() - '1.63e41 erg/s') > '0.05e41 erg/s':
+    ...     print s.gas['lx'].sum()
 '''
 __all__ = ['mass_weighted_mean', 'center_of_mass', 'reduced_inertia_tensor',
            'orientate_at', 'los_velocity_dispersion',
