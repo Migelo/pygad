@@ -41,9 +41,9 @@ Examples:
     convert block mass to physical units... done.
     convert block r to physical units... done.
     convert boxsize to physical units... done.
-    >>> sub = s[BoxMask('60 kpc',fullsph=False)]
+    >>> sub = s[BoxMask('120 kpc',fullsph=False)]
     >>> sub
-    <Snap "snap_M1196_4x_470":box(width/2=60.0 [kpc],strict); N=218,984; z=0.000>
+    <Snap "snap_M1196_4x_470":box([[-60,60],[-60,60],[-60,60]] [kpc],strict); N=218,984; z=0.000>
     >>> np.abs(sub['pos']).max(axis=0)
     UnitArr([ 59.99853516,  59.9999733 ,  59.99820328], dtype=float32, units="kpc")
 
@@ -183,11 +183,11 @@ class BallMask(SnapMask):
 
         if self.fullsph and 'gas' in s:
             for pt in gadget.families['gas']:
-                subgas = SubSnap(s, [pt])
-                r = dist(subgas['pos'],center) if not np.all(center==0) \
-                        else subgas['r']
+                sub = SubSnap(s, [pt])
+                r = dist(sub['pos'],center) if not np.all(center==0) \
+                        else sub['r']
                 mask[sum(s.parts[:pt]):sum(s.parts[:pt+1])] |= \
-                        r-subgas['hsml'] < R
+                        r-sub['hsml'] < R
 
         return mask.view(np.ndarray)
 
@@ -203,67 +203,86 @@ class BoxMask(SnapMask):
         is set.
 
     Args:
-        halfwidth (UnitScalar): The half-sidelength of the box (from center to
-                                a side along an axis).
-        center (UnitQty):       The center of the box. Default: origin.
+        extent (Unit, UnitArr): The size of the box. Can either be a .
+        center (UnitQty):       The center of the box, if extent is just a scalar.
+                                Otherwise it will be ignored. Default: origin.
         fullsph (bool):         If True, also include gas particles, that actually
                                 lie outside of the box, but their are smoothed
                                 into it.
     '''
-    def __init__(self, halfwidth, center=None, fullsph=True):
+    def __init__(self, extent, center=None, fullsph=True):
         super(BoxMask,self).__init__()
-        self.halfwidth = halfwidth
-        self.center = center
+        # might be needed for calculation of self.center in setting self.extent:
+        self._extent = UnitArr([[-1,1]]*3)
+        self.extent = extent
+        if center is not None:
+            self.center += center
         self.fullsph = fullsph
 
     def inverted(self):
-        inv = BoxMask(self._halfwidth, self._center, fullsph=self.fullsph)
+        inv = BoxMask(self._extent, fullsph=self.fullsph)
         inv._inverse = not self._inverse
         return inv
 
     @property
-    def halfwidth(self):
-        return self._halfwidth
+    def extent(self):
+        return self._extent
 
-    @halfwidth.setter
-    def halfwidth(self, value):
-        self._halfwidth = UnitScalar(value)
+    @extent.setter
+    def extent(self, value):
+        extent = UnitQty(value, dtype=np.float64).copy()
+        if extent.shape in [(), (3,)]:
+            L = extent
+            center = self.center
+            extent = UnitArr(np.empty((3,2),dtype=np.float64), extent.units)
+            extent[:,0] = center - L/2.0
+            extent[:,1] = center + L/2.0
+        if extent.shape != (3,2):
+            raise ValueError('Extent has to ba a scalar or an array of shape ' +
+                             '(3,) or (3,2), but got shape %s!' % (extent.shape,))
+        self._extent = extent
 
     @property
     def center(self):
-        return self._center
+        return (self._extent[:,1] + self._extent[:,0]) / 2.0
 
     @center.setter
     def center(self, value):
-        if value is not None:
-            self._center = UnitQty(value).copy()
-        else:
-            self._center = UnitQty([0]*3)
+        center_new = UnitQty(value, self._extent.units).copy()
+        if center_new.shape != (3,):
+            raise ValueError('Center has to have shape (3,)!')
+        diff = center_new - (self._extent[:,1]+self._extent[:,0])/2.0
+        extent[:,0] += diff
+        extent[:,1] += diff
 
     def __str__(self):
         s = '~' if self._inverse else ''
-        s += 'box('
-        if not np.all(self._center==0):
-            s += 'center=%s,' % self._center
-        s += 'width/2=%s' % self._halfwidth
+        s += 'box(['
+        for i in xrange(3):
+            s += '[%.4g,%.4g]%s' % (tuple(self._extent[i]) +
+                                        ('' if i==2 else ',',))
+        s += '] %s' % self._extent.units
         if not self.fullsph:
             s += ',strict'
         return s + ')'
 
     def _get_mask_for(self, s):
-        d = self._halfwidth.in_units_of(s['pos'].units,subs=s)
-        center = self._center.in_units_of(s['pos'].units,subs=s)
+        ext= self._extent.in_units_of(s['pos'].units,subs=s)
 
-        pos = s['pos']-center if not np.all(center==0) else s['pos']
-        mask = np.abs(pos).max(axis=1) < d
+        mask = (ext[0,0]<=s['pos'][:,0]) & (s['pos'][:,0]<=ext[0,1]) & \
+               (ext[1,0]<=s['pos'][:,1]) & (s['pos'][:,1]<=ext[1,1]) & \
+               (ext[2,0]<=s['pos'][:,2]) & (s['pos'][:,2]<=ext[2,1])
 
         if self.fullsph and 'gas' in s:
             for pt in gadget.families['gas']:
-                subgas = SubSnap(s, [pt])
-                pos = subgas['pos']-center if not np.all(center==0) \
-                        else subgas['pos']
+                sub = SubSnap(s, [pt])
                 mask[sum(s.parts[:pt]):sum(s.parts[:pt+1])] |= \
-                        np.abs(pos).max(axis=1)-subgas['hsml'] < d
+                        (ext[0,0]<=sub['pos'][:,0]+sub['hsml']) & \
+                            (sub['pos'][:,0]<=ext[0,1]-sub['hsml']) & \
+                        (ext[1,0]<=sub['pos'][:,1]+sub['hsml']) & \
+                            (sub['pos'][:,1]<=ext[1,1]-sub['hsml']) & \
+                        (ext[2,0]<=sub['pos'][:,2]+sub['hsml']) & \
+                            (sub['pos'][:,2]<=ext[2,1]-sub['hsml'])
 
         return mask.view(np.ndarray)
 
