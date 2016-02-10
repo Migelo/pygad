@@ -5,14 +5,11 @@ Example:
     >>> from ..environment import module_dir
     >>> from ..snapshot import Snap
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=False)
-    >>> mass_weighted_mean(s, 'pos')
+    >>> if np.linalg.norm(mass_weighted_mean(s,'pos') - center_of_mass(s)) > 1e-3:
+    ...     print mass_weighted_mean(s,'pos')
+    ...     print center_of_mass(s,)
     load block pos... done.
     load block mass... done.
-    UnitArr([ 34799.42578125,  33686.4765625 ,  32010.89453125],
-            dtype=float32, units="ckpc h_0**-1")
-    >>> center_of_mass(s)
-    UnitArr([ 34799.42578125,  33686.4765625 ,  32010.89453125],
-            dtype=float32, units="ckpc h_0**-1")
 
     Center of mass is *not* center of galaxy / halo!
     >>> Translation([-34792.2, -35584.8, -33617.9]).apply(s)
@@ -46,8 +43,8 @@ Example:
     matrix([[ 0.14794385,  0.        ,  0.        ],
             [ 0.        ,  0.41260123,  0.        ],
             [ 0.        ,  0.        ,  1.8855924 ]])
-    >>> los_velocity_dispersion(sub)
-    UnitArr(167.344421387, dtype=float32, units="km s**-1")
+    >>> if abs( los_velocity_dispersion(sub) - '170 km/s' ) > '5 k/s':
+    ...     print los_velocity_dispersion(sub)
 
     >>> s.to_physical_units()
     convert block pos to physical units... done.
@@ -80,42 +77,44 @@ Example:
               1.03715005e+03,   1.06398579e+03,   2.16652432e+02],
            units="Msol kpc**-3", snap="snap_M1196_4x_320":stars)
 
-    >>> SPH_qty_at(s, 'elements', s.gas['pos'][:200:100])
+    >>> v1 = SPH_qty_at(s, 'elements', s.gas['pos'][:200:10])
     load block elements... done.
     convert block elements to physical units... done.
-    UnitArr([[  5.03078656e+05,   3.38629810e+03,   2.82325244e+03,
-                2.00907266e+04,   2.60392407e+03,   1.98391785e+03,
-                1.41223262e+06,   1.33162231e+03,   5.57730957e+03,
-                9.51993042e+02,   1.20361496e+02,   4.72353955e+03],
-             [  2.41064234e+05,   5.55662003e+01,   6.92608490e+01,
-                5.19309509e+02,   4.00640755e+01,   3.92069435e+01,
-                7.60207812e+05,   1.35450637e+00,   1.34345795e+02,
-                1.83183250e+01,   3.22454572e+00,   1.57628281e+02]],
-            dtype=float32, units="Msol")
-    >>> SPH_qty_at(s, 'elements', s.gas['pos'][:200])[::100]
-    UnitArr([[  5.03078655e+05,   3.38629804e+03,   2.82325237e+03,
-                2.00907257e+04,   2.60392404e+03,   1.98391781e+03,
-                1.41223264e+06,   1.33162234e+03,   5.57730973e+03,
-                9.51993020e+02,   1.20361494e+02,   4.72353971e+03],
-             [  2.41064242e+05,   5.55661972e+01,   6.92608447e+01,
-                5.19309478e+02,   4.00640730e+01,   3.92069418e+01,
-                7.60207788e+05,   1.35450636e+00,   1.34345793e+02,
-                1.83183255e+01,   3.22454563e+00,   1.57628272e+02]], units="Msol")
+    >>> v2 = SPH_qty_at(s, 'elements', s.gas['pos'][:200])[::10]
+    >>> if np.max(np.abs(v1-v2)/v1) > 1e-6:
+    ...     print v1
+    ...     print v2
+       
+    >>> s.gas['lx'] = x_ray_luminosity(s, lumtable=module_dir+'../snaps/em.dat')
+    derive block H... done.
+    derive block He... done.
+    derive block metals... done.
+    derive block Z... done.
+    load block ne... done.
+    load block temp... done.
+    >>> s.gas['lx'].units
+    Unit("erg s**-1")
+    >>> if abs(np.mean(s.gas['lx']) - '1.74e35 erg/s') > '0.1e35 erg/s':
+    ...     print np.mean(s.gas['lx'])
+    >>> if abs(s.gas['lx'].sum() - '1.63e41 erg/s') > '0.05e41 erg/s':
+    ...     print s.gas['lx'].sum()
 '''
 __all__ = ['mass_weighted_mean', 'center_of_mass', 'reduced_inertia_tensor',
            'orientate_at', 'los_velocity_dispersion',
            'kernel_weighted', 'SPH_qty_at', 'scatter_gas_qty_to_stars',
+           'x_ray_luminosity'
           ]
 
 import numpy as np
 from ..units import *
 from ..transformation import *
+from pygad import physics
 
 def mass_weighted_mean(s, qty):
     '''
     Calculate the mass weighted mean of some quantity, i.e.
     sum(mass[i]*qty[i])/sum(mass).
-    
+
     Args:
         s (Snap):           The (sub-)snapshot the quantity belongs to (the masses
                             are taken from it, too).
@@ -240,7 +239,7 @@ def los_velocity_dispersion(s, proj=2):
     v = s['vel'][:,proj].ravel()
     av_v = mass_weighted_mean(s, v)
     sigma_v = np.sqrt( mass_weighted_mean(s, (v-av_v)**2) )
-    
+
     return sigma_v
 
 def _calc_ys(qty, all_gas_pos, gas_pos, hsml, kernel):
@@ -256,7 +255,7 @@ def kernel_weighted(s, qty, units=None, kernel=None, parallel=None):
     '''
     Calculate a kernel weighted SPH quantity for all the gas particles:
              N
-            ___         /  \ 
+            ___         /  \
       y  =  \    x  W  | h  |
        i    /__   j  ij \ i/
             j+1
@@ -496,3 +495,60 @@ def scatter_gas_qty_to_stars(s, qty, name=None, units=None, kernel=None, dV='dV'
     s.stars[name] = SPH_qty_at(s, qty=qty, r=s.stars['pos'], units=units, kernel=kernel)
     return s.stars[name]
 
+def x_ray_luminosity(s, lumtable='em.dat', tempbin=None, lx0bin=None, dlxbin=None):
+    '''
+    Calculate X-ray luminosity of gas particles using a prepared emission table
+    from XSPEC.
+
+    Args:
+        s (Snap):               The snapshot to use.
+        lumtable (str):         The filename of the XSPEC emission table to use
+                                (default: 'em.dat' in current directory)
+        tempbin, lx0bin, dlxbin (array-like):
+                                Temperature, Lx0 and dLx bins: Can be passed
+                                instead of lumtable file (e.g. to avoid reading
+                                in the same file multiple times in a loop)
+    '''
+    Zref = 0.4          # metallicity (in solar units) used for XSPEC calculations
+    red = 0.001         # redshift assumed for XSPEC luminosity table
+    Da = UnitArr(4.3*1e3, units='kpc').in_units_of('cm')   #angular diameter
+                        # distance corresponding to redshift 0.001 in cm (would be
+                        # better if directly calculated from redshift)
+
+    # Read in temperature bins and corresponding Lx0(T,Z=Zref) and (dLx/dZ)(T)
+    # (both in 1e44 erg/s (per Zsol))
+    if tempbin == None:
+        tempbin, lx0bin, dlxbin = np.loadtxt(lumtable, usecols=(0,3,5), unpack=True)
+
+    tlow = tempbin[0] - 0.5*(tempbin[1]-tempbin[0]) # lower temperature bin limit
+    Z = s.gas['Z'] / physics.solar.Z()              # metallicity in solar units
+    mp = physics.m_p.in_units_of('g')               # proton mass
+    # emission measure of gas particles (n_e * n_H * V)
+    em = np.float64(s.gas['ne']) * np.float64(s.gas['H']).in_units_of('g')**2 * \
+         np.float64(s.gas['rho']).in_units_of('g/cm**3') / \
+         (np.float64(s.gas['mass']).in_units_of('g')*mp**2)
+    # rescaling factor for precomputed luminosities
+    norm = UnitArr(1e-14,units='cm**5') * em / (4 * np.pi * (Da*(1+red))**2)
+    lx = np.zeros(s.gas['rho'].shape[0])         # array for X-ray luminosity
+    temp = s.gas['temp']*1.3806e-16/1.6022e-9    # gas temperatures in keV
+    indices = np.zeros(s.gas['rho'].shape[0])    # array for fitting tempbin
+                                                 # indices for gas particles
+    dtemp = np.zeros(s.gas['rho'].shape[0])+1e30 # minimal differences of gas
+                                  # particle temperature and binned temperatures
+
+    # loop over tempbin array to find nearest tempbin for all gas particle
+    # temperatures
+    for i in xrange(0,tempbin.shape[0]):
+        dtemp[np.where(np.abs(temp-tempbin[i]) < dtemp)] = \
+                np.abs(temp[np.where(np.abs(temp-tempbin[i])<dtemp)] - tempbin[i])
+        indices[np.where(np.abs(temp-tempbin[i]) == dtemp)] = i
+
+    # calculate X-ray luminosities for all gas particles
+    for i in xrange(0,tempbin.shape[0]):
+        lx[np.where(indices == i)] = lx0bin[i] + \
+                (Z[np.where(indices==i)] - Zref) * dlxbin[i]
+    lx = lx * norm * 1e44           # luminosities of all gas particles [erg/s]
+    lx[np.where(temp < tlow)] = 0   # particles below threshold temperature do not
+                                    # contribute to Lx
+    lx.units = 'erg/s'
+    return lx

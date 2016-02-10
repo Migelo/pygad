@@ -35,10 +35,11 @@ Example:
                1.50912836e+05,   9.56563740e+04,   5.45304130e+04],
             units="Msol kpc**-3")
     >>> rho0, Rs, err = NFW_fit(s, center, Rmax='300 kpc')  # R200 ~ 178 kpc
-    >>> rho0, Rs
-    (UnitArr(4.462102e+07, units="Msol kpc**-3"), UnitArr(9.67529161167, units="kpc"))
-    >>> err
-    0.13459859563062554
+    >>> if (abs(rho0 - '4.46e7 Msol/kpc**3') > '0.03e7 Msol/kpc**3'
+    ...             or abs(Rs - '9.68 kpc') > '0.02 kpc'):
+    ...     print rho0, Rs
+    >>> if abs(err - 0.13) > 0.01:
+    ...     print err
     >>> smassprof1 = radially_binned(s.stars, 'mass', center=center)
     >>> from ..transformation import Translation
     >>> Translation(-center).apply(s)

@@ -6,28 +6,29 @@ Examples:
     >>> from ..snapshot import Snap
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=True)
     >>> center = shrinking_sphere(s.stars, center=[s.boxsize/2]*3,
-    ...                           R=s.boxsize*np.sqrt(3))
+    ...                           R=s.boxsize*np.sqrt(3)) # doctest: +ELLIPSIS
     load block pos... done.
     convert block pos to physical units... done.
     do a shrinking sphere...
       starting values:
-        center = [ 34999.99976045  34999.99976045  34999.99976045] [kpc]
-        R      = 1.212436e+05 [kpc]
+        center = ...
+        R      = ...
     load block mass... done.
     convert block mass to physical units... done.
     done.
-    >>> center
-    UnitArr([ 33816.9017345 ,  34601.11199658,  32681.01209451], units="kpc")
+    >>> if np.linalg.norm( center - UnitArr([33816.9, 34601.1, 32681.0], 'kpc') ) > 1.0:
+    ...     print center
     >>> R200, M200 = virial_info(s, center)
-    >>> print R200, M200
-    177.2100882 [kpc] 1.004540e+12 [Msol]
+    >>> if abs(R200 - '177 kpc') > 3 or abs(M200 - '1e12 Msol') / '1e12 Msol' > 0.1:
+    ...     print R200, M200
     >>> Translation(-center).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_320"... done.
     >>> sub = s[s['r'] < 0.10*R200]
     derive block r... done.
-    >>> half_mass_radius(sub.stars)
-    UnitArr(4.31281473734, units="kpc")
-    >>> eff_radius(sub, 'V', proj=None)
+    >>> if abs(half_mass_radius(sub.stars) - '4.3 kpc') > '0.1 kpc':
+    ...     print half_mass_radius(sub.stars)
+    >>> if abs(eff_radius(sub, 'V', proj=None) - '3.3 kpc') > '0.3 kpc':
+    ...     print eff_radius(sub, 'V', proj=None)
     load block form_time... done.
     derive block age... done.
     load block elements... done.
@@ -45,31 +46,31 @@ Examples:
     interpolate in metallicity...
     done.
     derive block lum_v... done.
-    UnitArr(3.27053620882, units="kpc")
-    >>> eff_radius(sub, 'V', proj=2)
+    >>> if abs(eff_radius(sub, 'V', proj=2) - '2.9') > '0.2 kpc':
+    ...     print eff_radius(sub, 'V', proj=2)
     derive block rcyl... done.
-    UnitArr(2.92146861909, units="kpc")
-    >>> half_qty_radius(sub.stars, qty='mass', proj=2)
-    UnitArr(3.77014113536, units="kpc")
-    >>> print map(str,flow_rates(s, '50 kpc'))
+    >>> if abs(half_qty_radius(sub.stars, qty='mass', proj=2) - '3.77 kpc') > '0.1 kpc':
+    ...     print half_qty_radius(sub.stars, qty='mass', proj=2)
+    >>> ifr, ofr = flow_rates(s, '50 kpc')
     load block vel... done.
     derive block vrad... done.
-    ['419.673898667 [Msol yr**-1]', '371.26784 [Msol yr**-1]']
-    >>> shell_flow_rates(s.gas, UnitArr([48,52],'kpc'))
-    UnitArr(-7.097851e+00, units="Msol yr**-1")
-    >>> shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'in')
-    UnitArr(-1.463570e+01, units="Msol yr**-1")
-    >>> shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'out')
-    UnitArr(7.53784771595, units="Msol yr**-1")
+    >>> if abs(ifr - '421 Msol/yr') > '5 Msol/yr' or abs(ofr - '370 Msol/yr') > '5 Msol/yr':
+    ...     print ifr, ofr
+    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc')) - '-7.1 Msol/yr') > '0.1 Msol/yr':
+    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'))
+    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'in') - '-14.7 Msol/yr') > '0.2 Msol/yr':
+    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'in')
+    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'out') - '7.5 Msol/yr') > '0.1 Msol/yr':
+    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'out')
     >>> ifr, ofr = flow_rates(s.gas, '50 kpc')
-    >>> print ifr
-    11.5465066667 [Msol yr**-1]
-    >>> print ofr
-    7.09649333333 [Msol yr**-1]
+
+    TODO: This inflow rate seems to be unstable between different machines...!
+    >>> if abs(ifr - '11.0 Msol/yr') > '1.0 Msol/yr' or abs(ofr - '7.1 Msol/yr') > '0.1 Msol/yr':
+    ...     print ifr, ofr
     >>> eta = ofr / s.gas['sfr'].sum()
     load block sfr... done.
-    >>> print 'mass loading:', eta
-    mass loading: 1.54604865966
+    >>> if abs(eta - 1.546) > 0.01:
+    ...     print 'mass loading:', eta
 '''
 __all__ = ['shrinking_sphere', 'virial_info', 'half_qty_radius',
            'half_mass_radius', 'eff_radius', 'shell_flow_rates', 'flow_rates']

@@ -104,7 +104,7 @@ def read_derived_rules(config, store_as_default=True, delete_old=False):
         if exists(filename):
             break
     else:
-        raise RuntimeError('Config file "%s" does not exist!' % config)
+        raise IOError('Config file "%s" does not exist!' % config)
 
     if environment.verbose:
         print 'reading config file "%s"' % filename
