@@ -79,7 +79,7 @@ Example:
     UnitArr([  6.62012251e-09,   2.28143236e-09,   1.77712193e-14, ...,
                0.00000000e+00,   0.00000000e+00,   0.00000000e+00])
        
-    >>> s.gas['lx'] = x_ray_luminosity(s, lumtable='em.dat')
+    >>> s.gas['lx'] = x_ray_luminosity(s, lumtable=module_dir+'em.dat')
     load block elements... done.
     convert block elements to physical units... done.
     derive block H... done.
