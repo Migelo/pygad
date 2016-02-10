@@ -78,6 +78,21 @@ Example:
     didn't found neighbours 30440 times
     UnitArr([  6.62012251e-09,   2.28143236e-09,   1.77712193e-14, ...,
                0.00000000e+00,   0.00000000e+00,   0.00000000e+00])
+       
+    >>> s.gas['lx'] = x_ray_luminosity(s, lumtable='em.dat')
+    load block elements... done.
+    convert block elements to physical units... done.
+    derive block H... done.
+    derive block He... done.
+    derive block metals... done.
+    derive block Z... done.
+    load block ne... done.
+    load block temp... done.
+    >>> s.gas['lx']
+    SimArr([ 0.,  0.,  0., ...,  0.,  0.,  0.],
+           units="erg s**-1", snap="snap_M1196_4x_320":gas)
+    >>> s.gas['lx'].sum()
+    UnitArr(1.631726e+41, units="erg s**-1")
 '''
 __all__ = ['mass_weighted_mean', 'center_of_mass', 'reduced_inertia_tensor',
            'orientate_at', 'los_velocity_dispersion',
