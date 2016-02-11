@@ -15,18 +15,19 @@ import warnings
 
 def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
           extent=None, Npx=200, res=None, xaxis=0, yaxis=1, vlim=None, cmap=None,
-          colors=None, colors_av=None, clogscale=False, clim=None, ax=None,
-          showcbar=True, cbartitle=None, scaleind='line', scaleunits=None,
-          fontcolor='white', interpolation='nearest', **kwargs):
+          normcmaplum=True, desat=0.1, colors=None, colors_av=None,
+          clogscale=False, clim=None, ax=None, showcbar=True, cbartitle=None,
+          scaleind='line', scaleunits=None, fontcolor='white',
+          interpolation='nearest', **kwargs):
     '''
     Show an image of the snapshot.
 
-    By default the mass is plotted with the colormap 'jet'. For stars only,
-    however, the (V-band weighted) stellar ages are plotted with the colormap
-    general.cm_age and image brightness is the visual stellar luminosity (V-band);
-    for gas only the mass-weighted log10(temperature) is colorcoded with 'rainbow'
-    and the image brightness is the surface density; and for dark matter only the
-    colormap general.cm_k_g is used.
+    By default the mass is plotted with the colormap 'cubehelix' if `colors` is
+    None or 'Bright' if `colors` is set. For stars only, however, the (V-band
+    weighted) stellar ages are plotted with the colormap 'Age' and image luminance
+    is the visual stellar luminosity (V-band); for gas only the mass-weighted
+    log10(temperature) is colorcoded with 'Bright' and the image luminance is the
+    surface density; and for dark matter only the colormap 'BlackGreen' is used.
 
     The defaults -- if `qty` and `av` are None -- are:
         for stars only:
@@ -36,13 +37,13 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     if additionally `colors` and `colors_av` are None as well, the following
     defautls apply:
         for stars only:
-            colors='age.in_units_of("Gyr")', colors_av='lum_v', cmap=cm_age,
+            colors='age.in_units_of("Gyr")', colors_av='lum_v', cmap='Age',
             clim=[0,13], cbartitle = '(V-band weighted) age $[\mathrm{Gyr}]$'
         for gas only:
-            colors='log10(temp.in_units_of("K"))', colors_av='mass', cmap=rainbow,
+            colors='log10(temp.in_units_of("K"))', colors_av='mass', cmap='Bright',
             clim=[3.0,6.0], cbartitle=r'$\log_{10}(T\,[\mathrm{K}])$'
         for otherwise:
-            cmap=(cm_k_g if len(s.baryons)==0 else cm_k_p),
+            cmap=('BlackGreen' if len(s.baryons)==0 else 'BlackPurple'),
             cbartitle=(r'$\log_{10}(\Sigma\,[%s])$' % units.latex())
 
     Args:
@@ -52,7 +53,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                             that can be passed to s.get and returns such an array.
         av (UnitQty, str):  The quantity to average over. Otherwise as 'qty'.
         units (str, Unit):  The units to plot in (qty respectively qty/area).
-        logscale (bool):    Whether to plot the image brightness in log-scale.
+        logscale (bool):    Whether to plot the image luminance in log-scale.
                             Default: True
         surface_dens (bool):Whether to plot the surface density of qty rather than
                             just sum it up along the line of sight per pixel.
@@ -70,9 +71,16 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         yaxis (int):        The coordinate for the y-axis. (0:'x', 1:'y', 2:'z')
         vlim (sequence):    The limits of the quantity for the plot.
         cmap (str,Colormap):The colormap to use. If colors==None it is applied to
-                            qty, otherwise to colors. Default: 'jet'.
+                            qty, otherwise to colors. Default: 'cubehelix' if
+                            `colors` is not set, else 'Bright'.
+        normcmaplum (bool): If there are colors and luminance information,
+                            norm the colormap's luminance.
+        desat (float):      If there are colors and luminance information,
+                            desaturate the colormap by this factor before norming
+                            its luminance. (See `plotting.general.isolum_cmap` for
+                            more information!)
         colors (UnitQty, str):
-                            The array for color coding (qty is just brightness
+                            The array for color coding (qty is just luminance
                             unless this is None). Otherwise same as qty.
         colors_av (UnitQty, str):
                             Same as av, but for colors.
@@ -140,7 +148,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
 
     if qty is None and av is None:
         """
-        elif (len(s)!=0 and len(s.gas)==len(s)) \
+        if (len(s)!=0 and len(s.gas)==len(s)) \
                 or (s.descriptor.endswith('gas') and len(s)==0):
             qty, av = 'mass', None
             if logscale is None:        logscale = True
@@ -161,60 +169,61 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
             if (len(s)!=0 and len(s.stars)==len(s)) \
                     or (s.descriptor.endswith('stars') and len(s)==0):
                 colors, colors_av = 'age.in_units_of("Gyr")', 'lum_v'
-                if cmap is None:        cmap = cm_age
+                if cmap is None:        cmap = 'Age'
                 if clim is None:        clim = [0,13]
                 if cbartitle is None:   cbartitle = '(V-band weighted) age ' + \
                                                     '$[\mathrm{Gyr}]$'
             elif (len(s)!=0 and len(s.gas)==len(s)) \
                     or (s.descriptor.endswith('gas') and len(s)==0):
                 colors, colors_av = 'log10(temp.in_units_of("K"))', 'mass'
-                if cmap is None:        cmap = 'rainbow'
+                if cmap is None:        cmap = 'Bright'
                 if clim is None:        clim = [3.0,6.0]
                 if cbartitle is None:   cbartitle = r'$\log_{10}(T\,[\mathrm{K}])$'
             else:
-                if cmap is None:        cmap = cm_k_g if len(s.baryons)==0 else cm_k_p
+                if cmap is None:        cmap = 'BlackGreen' if len(s.baryons)==0 \
+                                                    else 'BlackPurple'
                 if cbartitle is None:   cbartitle = r'$\log_{10}(\Sigma\,[%s])$' % (
                                                         units.latex() )
     if logscale is None: logscale = True
     if surface_dens is None: surface_dens = True
-    if cmap is None: cmap = 'jet'
+    if cmap is None: cmap = 'cubehelix' if colors is None else 'Bright'
 
-    # create brightness map
+    # create luminance map
     if len(s) == 0:
         if isinstance(qty,str) and units is None:
             raise RuntimeError('Snapshot is empty and no units for the image are '
                                'given -- cannot create an empty map of correct '
                                'units!')
         if vlim is None: vlim = [1,2]
-        im_bright = UnitArr(vlim[0]*np.zeros(Npx),
-                            units if units is not None else
-                                getattr(qty,'units',None))
+        im_lum = UnitArr(vlim[0]*np.zeros(Npx),
+                         units if units is not None else
+                             getattr(qty,'units',None))
         px2 = np.prod(res)
     else:
-        im_bright, px2 = map_qty(s, extent=extent, qty=qty, av=av, Npx=Npx, res=res,
-                                 xaxis=xaxis, yaxis=yaxis, **kwargs)
+        im_lum, px2 = map_qty(s, extent=extent, qty=qty, av=av, Npx=Npx, res=res,
+                              xaxis=xaxis, yaxis=yaxis, **kwargs)
         if surface_dens:
-            im_bright /= px2
+            im_lum /= px2
         if units is not None:
-            im_bright.convert_to(units, subs=s)
+            im_lum.convert_to(units, subs=s)
     if logscale:
         if isinstance(qty,str) and 'log' in qty:
             import sys
             print >> sys.stderr, 'WARNING: in log-scale, but "qty" already ' + \
                                  'contains "log"!'
-        im_bright = np.log10(im_bright)
+        im_lum = np.log10(im_lum)
         if vlim is not None:
             vlim = map(np.log10, vlim)
 
     if vlim is None:
-        tmp = im_bright[np.isfinite(im_bright)]
+        tmp = im_lum[np.isfinite(im_lum)]
         if len(tmp)==0:
-            raise RuntimeError('The brightness array has no finite values!')
-        vlim = np.percentile(tmp, [5,99.99])
+            raise RuntimeError('The luminance array has no finite values!')
+        vlim = np.percentile(tmp, [10,99.9])
         del tmp
 
     if colors is None:
-        im = im_bright
+        im = im_lum
         clim = vlim
     elif len(s)==0:
         im = np.zeros(tuple(Npx)+(3,))  # at vlim[0] -> black with any color coding
@@ -225,7 +234,9 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
             im_col = np.log10(im_col)
         if clim is None:
             clim = np.percentile(im_col[np.isfinite(im_col)], [0.1,99.9])
-        im = color_code(im_bright, im_col, cmap=cmap, vlim=vlim, clim=clim)
+        if normcmaplum:
+            cmap = isolum_cmap(cmap, desat=desat)
+        im = color_code(im_lum, im_col, cmap=cmap, vlim=vlim, clim=clim)
 
     if scaleunits is not None:
         extent.convert_to(scaleunits, subs=s)

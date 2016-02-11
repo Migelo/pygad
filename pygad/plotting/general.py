@@ -1,15 +1,26 @@
 '''
 Module for general convenience routines for plotting.
 
-Doctests impossible, since they would require visual inspection...
+Only very little doctests are possible, since it is mostly visual inspection
+required...
+    >>> for cmap in ['jet', 'rainbow', 'plasma', 'viridis',
+    ...              'Age', 'NoBlue', 'NoBlue_r', 'Bright']:
+    ...     if isinstance(cmap, str):
+    ...         cmap = plt.cm.get_cmap(cmap)
+    ...     normed_cmap = isolum_cmap(cmap)
+    ...     colors = normed_cmap(np.arange(normed_cmap.N))
+    ...     lum = luminance(colors)
+    ...     if np.any( np.abs(lum - np.mean(lum)) > 1e-6 ):
+    ...         print '%s:'%cmap.name, np.mean(lum), np.percentile(lum,[0,100])
 '''
-__all__ = ['cm_k_b', 'cm_k_y', 'cm_age', 'cm_k_g', 'cm_k_p', 'color_code',
-           'show_image', 'scatter_map']
+__all__ = ['cm_k_b', 'cm_k_y', 'cm_age', 'cm_k_g', 'cm_k_p', 'cm_nobl',
+           'cm_nobl_r', 'cm_temp',
+           'luminance', 'isolum_cmap', 'color_code', 'show_image', 'scatter_map']
 
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from ..units import *
 from ..binning import *
 
@@ -79,17 +90,126 @@ cm_age = LinearSegmentedColormap('Age',
                    (1.0,  0.05, 0.05))
         })
 
-def color_code(im_bright, im_col, cmap='jet', vlim=None, clim=None):
+cm_nobl = LinearSegmentedColormap('NoBlue',
+        {'red':   ((0.0,  1.00, 1.00),
+                   (0.5,  1.00, 1.00),
+                   (0.75, 0.00, 0.00),
+                   (1.0,  0.00, 0.00)),
+         'green': ((0.0,  0.00, 0.00),
+                   (0.25, 0.00, 0.00),
+                   (0.5,  1.00, 1.00),
+                   (1.0,  1.00, 1.00)),
+         'blue':  ((0.0,  1.00, 1.00),
+                   (0.25, 0.00, 0.00),
+                   (0.75, 0.00, 0.00),
+                   (1.0,  1.00, 1.00))
+        })
+cm_nobl.set_bad('black')
+cm_nobl_r = LinearSegmentedColormap('NoBlue_r',
+        {'red':   ((0.0,  0.00, 0.00),
+                   (0.25, 0.00, 0.00),
+                   (0.5,  1.00, 1.00),
+                   (1.0,  1.00, 1.00)),
+         'green': ((0.0,  1.00, 1.00),
+                   (0.5,  1.00, 1.00),
+                   (0.75, 0.00, 0.00),
+                   (1.0,  0.00, 0.00)),
+         'blue':  ((0.0,  1.00, 1.00),
+                   (0.25, 0.00, 0.00),
+                   (0.75, 0.00, 0.00),
+                   (1.0,  1.00, 1.00))
+        })
+cm_nobl_r.set_bad('black')
+
+cm_temp = LinearSegmentedColormap('Bright',
+        {'red':   ((0.0,  0.50, 0.50),
+                   (0.2,  0.00, 0.00),
+                   (0.37, 0.00, 0.00),
+                   (0.62, 1.00, 1.00),
+                   (1.0,  1.00, 1.00)),
+         'green': ((0.0,  0.50, 0.50),
+                   (0.2,  1.00, 1.00),
+                   (0.62, 1.00, 1.00),
+                   (0.87, 0.00, 0.00),
+                   (1.0,  0.15, 0.15)),
+         'blue':  ((0.0,  1.00, 1.00),
+                   (0.35, 1.00, 1.00),
+                   (0.6,  0.00, 0.00),
+                   (0.87, 0.00, 0.00),
+                   (1.0,  0.15, 0.15))
+        })
+cm_temp.set_bad('black')
+
+for cmap in [cm_k_b, cm_k_g, cm_k_p, cm_k_y, cm_age, cm_nobl, cm_nobl_r, cm_temp]:
+    mpl.cm.register_cmap(name=cmap.name, cmap=cmap)
+
+# cf. http://alienryderflex.com/hsp.html
+RGB_lum_weight = np.array([0.299, 0.587, 0.114])
+def luminance(colors):
+    '''
+    Return the luminance of (a) color(s).
+
+    Args:
+        colors (array-like):    Either a single color in rgb space (shape (3,) or
+                                (4,)) of an array of these (shape (N,3) of (N,4)).
+                                The alpha channel is ignored.
+
+    Returns:
+        lum (np.ndarray):       The luminance of the color(s).
+    '''
+    colors = np.asarray(colors)
+    if len(colors.shape) == 1:
+        c = colors[:3]
+    else:
+        c = colors[:,:3]
+    return np.sqrt( np.dot(c**2, RGB_lum_weight) )
+
+def isolum_cmap(cmap, desat=None):
+    '''
+    Return version of the colormap with constant luminance.
+
+    Args:
+        cmap (str, Colormap):   The colormap to norm in luminance.
+        desat (float):          If not None, a factor of how much to desatureate
+                                the colormap first. This allows higher luminance.
+
+    Returns:
+        isolum (Colormap):      The iso-luminance colormap.
+    '''
+    if isinstance(cmap, str):
+        cmap = plt.cm.get_cmap(cmap)
+    colors = cmap(np.arange(cmap.N))
+
+    if desat is not None:
+        if not (0.0 <= desat <= 1.0):
+            raise ValueError('`desat` needs to be in [0,1], but is %s!' % desat)
+        hsv = mpl.colors.rgb_to_hsv(colors[:, :3])
+        hsv[:, 1] *= 1.0-desat
+        colors[:, :3] = mpl.colors.hsv_to_rgb(hsv)
+    
+    # convert RGBA to perceived greyscale luminance
+    # cf. http://alienryderflex.com/hsp.html
+    lum = luminance(colors)
+    for i in xrange(3):
+        colors[:, i] /= lum
+    # if rgb=(1,1,1), then lum=sqrt(3)>1
+    colors[:, :3] /= np.max(colors[:,:3])
+    lum = luminance(colors)
+    
+    return mpl.colors.LinearSegmentedColormap.from_list(cmap.name + '_lumnormed',
+                                                        colors, cmap.N)        
+
+def color_code(im_lum, im_col, cmap='Bright', vlim=None, clim=None):
     '''
     Colorcode a mono-chrome image with onother one.
 
     Args:
-        im_bright (np.ndarray): The mono-chrome image to color code. In other
+        im_lum (np.ndarray):    The mono-chrome image to color code. In other
                                 words: the map of the brightness values. Needs to
                                 be of shape (w,h).
         im_col (np.ndarray):    The image/map values that are converted into
                                 colors. Needs to be of the same shape as
-                                im_bright: (w,h).
+                                im_lum: (w,h).
         cmap (str, Colormap):   The colormap to use to convert the values of
                                 im_col into actual colors.
         vlim (sequence):        The limits for brightnesses.
@@ -99,23 +219,23 @@ def color_code(im_bright, im_col, cmap='jet', vlim=None, clim=None):
         im (np.ndarray):        The rgb image (shape (w,h,3)).
     '''
     if vlim is None:
-        vlim = np.percentile(im_bright[np.isfinite(im_bright)], [0,100])
+        vlim = np.percentile(im_lum[np.isfinite(im_lum)], [0,100])
     if clim is None:
         clim = np.percentile(im_col[np.isfinite(im_col)], [0,100])
 
-    im_bright = scale01(im_bright, vlim)
+    im_lum = scale01(im_lum, vlim)
     im_col = scale01(im_col, clim)
 
     if isinstance(cmap,str): cmap = mpl.cm.get_cmap(cmap)
     im = cmap(im_col)
 
-    im[:,:,0] *= im_bright
-    im[:,:,1] *= im_bright
-    im[:,:,2] *= im_bright
+    im[:,:,0] *= im_lum
+    im[:,:,1] *= im_lum
+    im[:,:,2] *= im_lum
 
     return im
 
-def show_image(im, extent=None, cmap='jet', vlim=None, aspect=None,
+def show_image(im, extent=None, cmap='Bright', vlim=None, aspect=None,
                interpolation='nearest', ax=None, **kwargs):
     '''
     Show an image with the 'physicsit's orientation'.
@@ -234,15 +354,15 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
     if isinstance(qty,str):
         qtyname = qty
         qty = s.get(qty)
-    if isinstance(cmap,str):
-        cmap = mpl.cm.get_cmap(cmap)
-    elif cmap is None:
+    if cmap is None:
         if colors is None:
-            cmap = mpl.cm.get_cmap('Blues')
+            cmap = 'Blues'
         else:
-            cmap = mpl.cm.get_cmap('jet')
+            cmap = 'cubehelix' if colors is None else 'Bright'
             if cbartxtcol is None:
                 cbartxtcol = 'w'
+    if isinstance(cmap,str):
+        cmap = mpl.cm.get_cmap(cmap)
     if isinstance(colors,str):
         cname = colors
         colors = s.get(colors)
