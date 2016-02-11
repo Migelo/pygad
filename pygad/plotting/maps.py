@@ -11,6 +11,7 @@ from general import *
 from ..units import *
 from ..binning import *
 from ..gadget import config
+from ..snapshot import BoxMask
 import warnings
 
 def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
@@ -124,15 +125,16 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     if isinstance(res, UnitArr):
         res = res.in_units_of(s['pos'].units, subs=s)
 
+    zaxis = (set([0,1,2]) - set([xaxis, yaxis])).pop()
+    assert set([xaxis, yaxis, zaxis]) == set([0,1,2])
+
     # mask snapshot for faster plotting
-    mask = np.ones(len(s), bool)
-    for n, axis in enumerate([xaxis, yaxis]):
-        mask &= (extent[n,0]<=s['pos'][:,axis]) & (s['pos'][:,axis]<=extent[n,1])
-        for pt in config.families['gas']:
-            gas = s[ [pt,] ]
-            mask[gas._mask] |= (extent[n,0]<=gas['pos'][:,axis]+gas['hsml']) \
-                    & (gas['pos'][:,axis]-gas['hsml']<=extent[n,1])
-    s = s[mask]
+    ext3D = UnitArr(np.empty((3,2)), extent.units)
+    ext3D[xaxis] = extent[0]
+    ext3D[yaxis] = extent[1]
+    ext3D[zaxis] = [-np.inf, +np.inf]
+    s = s[BoxMask(ext3D)]
+
     if isinstance(qty, (list,tuple)):   # enable masking for non-standard
         qty = np.ndarray(qty)           # containers
     if isinstance(qty, np.ndarray):     # includes the derived UnitArr and SimArr

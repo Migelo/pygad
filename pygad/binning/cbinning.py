@@ -214,6 +214,9 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV', h
     if kernel is None:
         kernel = gadget.general['kernel']
 
+    zaxis = (set([0,1,2]) - set([xaxis, yaxis])).pop()
+    assert set([xaxis, yaxis, zaxis]) == set([0,1,2])
+
     if environment.verbose:
         print 'create a %d x %d' % tuple(Npx),
         print 'SPH-grid (%.4g x %.4g' % tuple(extent[:,1]-extent[:,0]),
@@ -231,8 +234,9 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV', h
     if len(s.gas) not in [0,len(s)]:
         raise NotImplementedError()
     ext3D = UnitArr(np.empty((3,2)), extent.units)
-    ext3D[:2] = extent
-    ext3D[2] = [-np.inf, +np.inf]
+    ext3D[xaxis] = extent[0]
+    ext3D[yaxis] = extent[1]
+    ext3D[zaxis] = [-np.inf, +np.inf]
     sub = s[BoxMask(ext3D)]
 
     # TODO: why always need a copy? C vs Fortran alignment...!?

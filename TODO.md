@@ -2,24 +2,32 @@
 
 ---
 
-### reading EAGLE snapshots
+### important
 
-* make use of the blocks `Config`, `Constants`, `HashTable`, `Parameters`, `RuntimePars`, and `Units`
-* read (Smoothed)ElementAbundance as blocks
-* block 'Z' is currently understood as the 'elements' block – that's wrong!
-* read snipshots...?
+- fix issue #11 (utilise `__numpy_ufunc__` rather than `__array_wrap__` for adding units in ufunc operations)
+- get a constant luminous colormap!
+- binning radially with SPH smoothing (from 3D and 2D maps)
+- cleaner way to determine block names and units
+- issue #2: halo finder interface
+- issue #1: Vector / streamline plots
 
 ---
 
-### more
 
-- always read the default-config files and only overwrite parameters by the custom ones?!
+### reading EAGLE snapshots
+
+- make use of the blocks `Config`, `Constants`, `HashTable`, `Parameters`, `RuntimePars`, and `Units`
+- read (Smoothed)ElementAbundance as blocks
+- block 'Z' is currently understood as the 'elements' block – that's wrong!
+- read snipshots...?
+
+---
+
+### more ideas
+
 - create images with arbitrary quantities on r-, b-, and g-channel!
-- binning radially with SPH smoothing
-- modules to go over:
-    * analysis (some more old function are lying around...)
-- utilise `__numpy_ufunc__` rather than `__array_wrap__` for add units in ufunc
-  operations?
+- always read the default-config files and only overwrite parameters by the custom ones?!
+- go over analysis (some more old function are lying around...)
 - whole Gadget IO is not well structured – do something about it
 - use unit information from HDF5 files, if available
 - improve writing snapshots
