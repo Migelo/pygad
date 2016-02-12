@@ -3,7 +3,7 @@ Module for general convenience routines for plotting.
 
 Only very little doctests are possible, since it is mostly visual inspection
 required...
-    >>> for cmap in ['jet', 'rainbow', 'plasma', 'viridis',
+    >>> for cmap in ['jet', 'rainbow',
     ...              'Age', 'NoBlue', 'NoBlue_r', 'Bright']:
     ...     if isinstance(cmap, str):
     ...         cmap = plt.cm.get_cmap(cmap)

@@ -50,10 +50,9 @@ doctests:
     >>> print >> sys.stderr, 'testing module tools...'
     >>> doctest.testmod(tools)
     TestResults(failed=0, attempted=0)
+    >>> print >> sys.stderr, 'testing module plotting...'
     >>> doctest.testmod(plotting)
     TestResults(failed=0, attempted=2)
-
-    no doctests for plotting -- need to see the results
 
 For development:
     In order to make the include of pygad work:

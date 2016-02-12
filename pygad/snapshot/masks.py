@@ -45,8 +45,8 @@ Examples:
     >>> sub = s[BoxMask('120 kpc',fullsph=False)]
     >>> sub
     <Snap "snap_M1196_4x_470":box([[-60,60],[-60,60],[-60,60]] [kpc],strict); N=218,984; z=0.000>
-    >>> np.abs(sub['pos']).max(axis=0)
-    UnitArr([ 59.99997711,  59.99907684,  59.99814606], dtype=float32, units="kpc")
+    >>> if np.linalg.norm( np.abs(sub['pos']).max(axis=0) - [120/2]*3 ) > 0.1:
+    ...     print np.abs(sub['pos']).max(axis=0)
 
     >>> discmask = DiscMask(0.85,rmax='60.0 kpc')
     >>> disc = s[discmask]
