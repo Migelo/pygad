@@ -4,9 +4,13 @@
 
 ### important
 
-- fix issue #11 (utilise `__numpy_ufunc__` rather than `__array_wrap__` for adding units in ufunc operations)
+- fix issue #11 (utilise `__numpy_ufunc__` rather than `__array_wrap__` for
+  adding units in ufunc operations)
 - get a constant luminous colormap!
 - binning radially with SPH smoothing (from 3D and 2D maps)
+- implement different methods to collapse 3D grids (integration, mean, median,
+  stddev, ...)
+- bin onto infinitesimal thin slices (what about integral conservation?)
 - cleaner way to determine block names and units
 - issue #2: halo finder interface
 - issue #1: Vector / streamline plots

@@ -2,7 +2,6 @@
 Interface to the C implementations of binning.
 
 Testing:
-    TODO! (test if 3D and 2D are consistent; mass conservation; uneven extensions)
     >>> from ..environment import module_dir
     >>> from ..snapshot import Snap
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=True)
@@ -37,7 +36,7 @@ Testing:
     ...     print lower, map2D.sum(), upper
 
     Consistency check between 3D and 2D:
-    >>> map3D, res = SPH_to_3Dgrid(sub.gas, extent=extent    , qty='rho', Npx=Npx)
+    >>> map3D, res = SPH_to_3Dgrid(sub.gas, extent=extent, qty='rho', Npx=Npx)
     create a 30 x 75 x 100 SPH-grid (1200 x 3000 x 4000 [kpc])...
     done with SPH grid
     >>> map3D_proj = map3D.sum(axis=-1) * res.in_units_of('kpc')[2]*Unit('kpc')
@@ -58,17 +57,6 @@ Testing:
     >>> tot_rel_err = np.sum(map3D_proj - map2D) / map2D.sum()
     >>> if tot_rel_err > 0.001:
     ...     print tot_rel_err
-
-TODO:
-    * think about proper handing of non-SPH particles. how to give them hsml and
-      dV? what if hsml==0 (would give empty map)
-    * seperate function for general case?
-    * implement pure binning routine without smoothing?
-    * add warning about narrow grids (issue of particles that overlap with
-      border...!)
-    * think about infinitesimal slices
-    * finally think about different methods of creating 2D maps: integration,
-      projection, average, etc.
 '''
 __all__ = ['SPH_to_3Dgrid', 'SPH_to_2Dgrid']
 
@@ -83,37 +71,54 @@ from .. import C
 from numbers import Number
 from ..snapshot import BoxMask
 
-def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml=None):
+def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml'):
     '''
-    TODO
+    Bin some SPH quantity onto a 3D grid, fully accouting for the smoothing
+    lengths.
+
+    This method also enshures that the integral over the region of the grid is
+    conserved; meaning that no particles can "fall through the grid", not even
+    partially.
 
     Args:
-        s (Snap):           The gas-only (sub-)snapshot to bin from.
-        qty (UnitQty, str): The quantity to map. It can be a UnitArr of length
-                            L=len(s) and dimension 1 (i.e. shape (L,)) or a string
-                            that can be passed to s.get and returns such an array.
-        extent (UnitQty):   The extent of the map. It can be a scalar and then is
-                            taken to be the total side length of a cube around
-                            the origin or a sequence of the minima and maxima of
-                            the directions: [[xmin,xmax],[ymin,ymax],[zmin,zmax]].
-        Npx (int, sequence):The number of pixel per side. Either an integer that
-                            is taken for all three sides or a 3-tuple of such,
-                            each value for one direction.
-        kernel (str):       The kernel to use for smoothing. (By default use the
-                            kernel defined in `gadget.cfg`.)
-        dV:                 TODO!
-        hsml:               TODO!
+        s (Snap):               The gas-only (sub-)snapshot to bin from.
+        qty (UnitQty, str):     The quantity to map. It can be a UnitArr of length
+                                L=len(s) and dimension 1 (i.e. shape (L,)) or a
+                                string that can be passed to s.get and returns
+                                such an array.
+        extent (UnitQty):       The extent of the map. It can be a scalar and then
+                                is taken to be the total side length of a cube
+                                around the origin or a sequence of the minima and
+                                maxima of the directions:
+                                [[xmin,xmax],[ymin,ymax],[zmin,zmax]].
+        Npx (int, sequence):    The number of pixel per side. Either an integer
+                                that is taken for all three sides or a 3-tuple of
+                                such, each value for one direction.
+        kernel (str):           The kernel to use for smoothing. (By default use
+                                the kernel defined in `gadget.cfg`.)
+        dV (str, UnitQty, Unit):The volume element to use. Can be a block name, a
+                                block itself or a Unit that is taken as constant
+                                volume for all particles.
+        hsml (str, UnitQty, Unit):
+                                The smoothing lengths to use. Defined analoguous
+                                to dV.
 
     Returns:
         grid (UnitArr):     The binned SPH quantity.
         px_area (UnitArr):  The area of a pixel.
     '''
     # prepare arguments
-    extent, Npx, res = grid_props(extent=extent, Npx=Npx, res=None, d=3)
+    extent, Npx, res = grid_props(extent=extent, Npx=Npx, res=None, dim=3)
     extent = UnitQty(extent, s['pos'].units, subs=s)
     res = UnitQty(res, s['pos'].units, subs=s)
     if kernel is None:
         kernel = gadget.general['kernel']
+
+    if res.max()/res.min() > 5:
+        import sys
+        print >> sys.stderr, 'WARNING: 3D grid has very uneven ratio of ' + \
+                             'smallest to largest resolution (ratio %.2g)!' % (
+                                     res.max()/res.min())
 
     if environment.verbose:
         print 'create a %d x %d x %d' % tuple(Npx),
@@ -134,17 +139,17 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml=None):
     sub = s[BoxMask(extent)]
 
     pos = sub['pos'].view(np.ndarray).astype(np.float64)
-    if hsml is None:
-        hsml = sub['hsml'].in_units_of(s['pos'].units)
-    elif isinstance(hsml, (Number,str,Unit)):
+    if isinstance(hsml, str):
+        hsml = sub[hsml].in_units_of(s['pos'].units)
+    elif isinstance(hsml, (Number,Unit)):
         hsml = UnitScalar(hsml,s['pos'].units)*np.ones(len(sub), dtype=np.float64)
-    else:
-        hsml = hsml[sub._mask]
+    else:   # should be some array
+        hsml = UnitQty(hsml,s['pos'].units,subs=s)[sub._mask]
     hsml = hsml.view(np.ndarray).astype(np.float64)
     if isinstance(dV, str):
         dV = sub[dV].in_units_of(s['pos'].units**3)
     elif dV is None:
-        dV = hsml**3
+        dV = (hsml/2.0)**3
     else:
         dV = UnitArr(dV[sub._mask], s['pos'].units**3)
     dV = dV.view(np.ndarray).astype(np.float64)
@@ -157,6 +162,12 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml=None):
         dV.copy()
     if qty.base is not None:
         qty.copy()
+
+    if np.percentile(hsml, 30) > np.min(Npx*res.in_units_of(s['pos'].units)):
+        import sys
+        print >> sys.stderr, 'WARNING: the 30-percentile (relevant) ' + \
+                             'smoothing length is smaller than the smallest ' + \
+                             'sidelength of the grid!'
 
     extent = extent.view(np.ndarray).astype(np.float64).copy()
     grid = np.empty(np.prod(Npx), dtype=np.float64)
@@ -179,27 +190,38 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml=None):
 
     return grid, res
 
-def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV', hsml=None):
+def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
+                  hsml='hsml'):
     '''
-    TODO
+    Bin some SPH quantity onto a 2D grid, fully accouting for the smoothing
+    lengths.
+
+    This method also enshures that the integral over the region of the grid is
+    conserved; meaning that no particles can "fall through the grid", not even
+    partially.
 
     Args:
-        s (Snap):           The gas-only (sub-)snapshot to bin from.
-        qty (UnitQty, str): The quantity to map. It can be a UnitArr of length
-                            L=len(s) and dimension 1 (i.e. shape (L,)) or a string
-                            that can be passed to s.get and returns such an array.
-        extent (UnitQty):   The extent of the map. It can be a scalar and then is
-                            taken to be the total side length of a cube around
-                            the origin or a sequence of the minima and maxima of
-                            the directions: [[xmin,xmax],[ymin,ymax],[zmin,zmax]].
-        Npx (int, sequence):The number of pixel per side. Either an integer that
-                            is taken for all three sides or a 3-tuple of such,
-                            each value for one direction.
-        axis:               TODO!
-        kernel (str):       The kernel to use for smoothing. (By default use the
-                            kernel defined in `gadget.cfg`.)
-        dV:                 TODO!
-        hsml:               TODO!
+        s (Snap):               The gas-only (sub-)snapshot to bin from.
+        qty (UnitQty, str):     The quantity to map. It can be a UnitArr of length
+                                L=len(s) and dimension 1 (i.e. shape (L,)) or a
+                                string that can be passed to s.get and returns
+                                such an array.
+        extent (UnitQty):       The extent of the map. It can be a scalar and then
+                                is taken to be the total side length of a square
+                                around the origin or a sequence of the minima and
+                                maxima of the directions:
+                                [[xmin,xmax],[ymin,ymax]].
+        Npx (int, sequence):    The number of pixel per side. Either an integer
+                                that is taken for both sides or a 2-tuple of such,
+                                each value for one direction.
+        kernel (str):           The kernel to use for smoothing. (By default use
+                                the kernel defined in `gadget.cfg`.)
+        dV (str, UnitQty, Unit):The volume element to use. Can be a block name, a
+                                block itself or a Unit that is taken as constant
+                                volume for all particles.
+        hsml (str, UnitQty, Unit):
+                                The smoothing lengths to use. Defined analoguous
+                                to dV.
 
     Returns:
         grid (UnitArr):     The binned SPH quantity.
@@ -208,11 +230,17 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV', h
     # prepare arguments
     if len(set([0,1,2]) - set([xaxis, yaxis])) != 1:
         raise ValueError('Illdefined axes (x=%s, y=%s)!' % (xaxis, yaxis))
-    extent, Npx, res = grid_props(extent=extent, Npx=Npx, res=None, d=2)
+    extent, Npx, res = grid_props(extent=extent, Npx=Npx, res=None, dim=2)
     extent = UnitQty(extent, s['pos'].units, subs=s)
     res = UnitQty(res, s['pos'].units, subs=s)
     if kernel is None:
         kernel = gadget.general['kernel']
+
+    if res.max()/res.min() > 5:
+        import sys
+        print >> sys.stderr, 'WARNING: 2D grid has very uneven ratio of ' + \
+                             'smallest to largest resolution (ratio %.2g)' % (
+                                     res.max()/res.min())
 
     zaxis = (set([0,1,2]) - set([xaxis, yaxis])).pop()
     assert set([xaxis, yaxis, zaxis]) == set([0,1,2])
@@ -241,17 +269,17 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV', h
 
     # TODO: why always need a copy? C vs Fortran alignment...!?
     pos = sub['pos'].view(np.ndarray)[:,(xaxis,yaxis)].astype(np.float64).copy()
-    if hsml is None:
-        hsml = sub['hsml'].in_units_of(s['pos'].units)
-    elif isinstance(hsml, (Number,str,Unit)):
+    if isinstance(hsml, str):
+        hsml = sub[hsml].in_units_of(s['pos'].units)
+    elif isinstance(hsml, (Number,Unit)):
         hsml = UnitScalar(hsml,s['pos'].units)*np.ones(len(sub), dtype=np.float64)
-    else:
-        hsml = hsml[sub._mask]
+    else:   # should be some array
+        hsml = UnitQty(hsml,s['pos'].units,subs=s)[sub._mask]
     hsml = hsml.view(np.ndarray).astype(np.float64)
     if isinstance(dV, str):
         dV = sub[dV].in_units_of(s['pos'].units**3)
     elif dV is None:
-        dV = hsml**3
+        dV = (hsml/2.0)**3
     else:
         dV = UnitArr(dV[sub._mask], s['pos'].units**3)
     dV = dV.view(np.ndarray).astype(np.float64)

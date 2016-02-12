@@ -124,7 +124,7 @@ def gridbin(pnts, vals=None, bins=50, extent=None, normed=False, stats=None,
 
     return gridded
 
-def grid_props(extent='100 kpc', Npx=256, res=None, d=None):
+def grid_props(extent, Npx=256, res=None, dim=None):
     '''
     Calculate the grid properties from given values.
 
@@ -139,11 +139,11 @@ def grid_props(extent='100 kpc', Npx=256, res=None, d=None):
         res (UnitQty):      The resolution / pixel side length. If this is given,
                             Npx is ignored. It can also be either the same for
                             all directions or a seperate values for each of them.
-        d (int):            The number of dimensions of the grid. If possible, it
+        dim (int):          The number of dimensions of the grid. If possible, it
                             will be inferred from the arguments, if it is None.
 
     Returns:
-        extent (UnitQty):   The extent as a (d,2)-array:
+        extent (UnitQty):   The extent as a (dim,2)-array:
                             [[x1min,x1max],[x2min,x2max],...]
         Npx (sequence):     The number of pixels per side: [<in x1>,<in x2>,...].
         res (UnitQty):      The resolution in the different directions. It might
@@ -153,30 +153,30 @@ def grid_props(extent='100 kpc', Npx=256, res=None, d=None):
     extent = UnitQty(extent, dtype=float)
     Npx = np.array(Npx, dtype=int) if Npx is not None else None
     res = UnitQty(res, getattr(res,'units',None), dtype=float)
-    if d is None:
+    if dim is None:
         if extent is not None and extent.shape != ():
-            d = len(extent)
+            dim = len(extent)
         elif Npx is not None and Npx.shape != ():
-            d = len(Npx)
+            dim = len(Npx)
         elif res is not None and res.shape != ():
-            d = len(res)
+            dim = len(res)
         else:
             ValueError('Number of dimensions not given and cannot be inferred!')
 
     if extent.shape == ():
-        widths = UnitQty([extent]*d, getattr(extent,'units',None))
+        widths = UnitQty([extent]*dim, getattr(extent,'units',None))
         w2 = extent / 2.
-        extent = UnitArr([[-w2,w2]]*d, getattr(w2,'units',None))
+        extent = UnitArr([[-w2,w2]]*dim, getattr(w2,'units',None))
     else:
-        extent = extent.reshape((d,2,))
+        extent = extent.reshape((dim,2,))
         widths = UnitArr(extent[:,1]-extent[:,0])
 
     if res is None:
         if Npx.shape == ():
-            Npx = np.array([Npx]*d)
+            Npx = np.array([Npx]*dim)
     else:
         if res.shape==():
-            res = np.array([res]*d, res.units)
+            res = np.array([res]*dim, res.units)
         Npx = np.ceil( widths / res ).astype(int)
     res = widths / Npx
 
