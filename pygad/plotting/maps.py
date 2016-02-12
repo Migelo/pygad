@@ -16,9 +16,6 @@ import warnings
 
 def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
           extent=None, Npx=256, res=None, xaxis=0, yaxis=1, vlim=None, cmap=None,
-          colors=None, colors_av=None, clogscale=False, clim=None, ax=None,
-          showcbar=True, cbartitle=None, scaleind='line', scaleunits=None,
-          fontcolor='white', interpolation='nearest', **kwargs):
           normcmaplum=True, desat=0.1, colors=None, colors_av=None,
           clogscale=False, clim=None, ax=None, showcbar=True, cbartitle=None,
           scaleind='line', scaleunits=None, fontcolor='white',
