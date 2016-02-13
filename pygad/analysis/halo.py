@@ -49,7 +49,7 @@ Examples:
     interpolate in metallicity...
     done.
     derive block lum_v... done.
-    >>> if abs(eff_radius(sub, 'V', proj=2) - '2.9') > '0.2 kpc':
+    >>> if abs(eff_radius(sub, 'V', proj=2) - '2.9 kpc') > '0.2 kpc':
     ...     print eff_radius(sub, 'V', proj=2)
     derive block rcyl... done.
     >>> if abs(half_qty_radius(sub.stars, qty='mass', proj=2) - '3.77 kpc') > '0.1 kpc':
@@ -231,7 +231,8 @@ def virial_info(s, center=None, odens=200.0, N_min=50):
     else:
         r = dist(s['pos'], center)
     r_ind = r.argsort()
-    M_enc = np.cumsum(s['mass'][r_ind])[utils.perm_inv(r_ind)]
+    M_enc = UnitArr(np.cumsum(s['mass'][r_ind])[utils.perm_inv(r_ind)],
+                    s['mass'].units)
     rho = M_enc / ((4.0 / 3.0 * np.pi) * r**3)
 
     if rho[r_ind[N_min]] < odens*rho_crit:

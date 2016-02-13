@@ -223,7 +223,7 @@ def age_from_form(form, subs, cosmic_time=None, cosmo=None, units='Gyr', paralle
 
     if str(form.units).endswith('_form]'):
         # (a ->) z -> Gyr (-> time_units)
-        if form._units == 'a_form':
+        if form.units == 'a_form':
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 form.setfield(np.vectorize(physics.a2z)(form), dtype=form.dtype)
