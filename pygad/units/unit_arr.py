@@ -80,18 +80,34 @@ Examples:
     >>> (0.5 * M_earth * v_earth**2).in_units_of('J')
     UnitArr(2.648129e+33, units="J")
 
+    Unit conversion at construction:
+    >>> UnitArr('10**8 km', units='AU')
+    UnitArr(0.668458712227, units="AU")
+    >>> UnitArr(UnitArr([1e8, 1e9], 'km'), units='AU')
+    UnitArr([ 0.66845871,  6.68458712], units="AU")
+
+    conversion to native types
+    >>> s = UnitScalar(1.2, 'm')
+    >>> float(s)
+    1.2
+    >>> int(s)
+    1
+    >>> l = UnitArr([2.4], 'km')
+    >>> float(l)
+    2.4
+    >>> s / l
+    UnitArr([ 0.5], units="km**-1 m")
+    >>> float(s/l)
+    0.0005
+    >>> float( UnitArr([1.2], 'km/cm') )
+    120000.0
+
     Pickling:
     >>> import pickle
     >>> v_pickled = pickle.dumps(UnitArr([1,2,3], 'inch'))
     >>> v_unpickled = pickle.loads(v_pickled)
     >>> v_unpickled.units
     Unit("inch")
-
-    Unit conversion at construction:
-    >>> UnitArr('10**8 km', units='AU')
-    UnitArr(0.668458712227, units="AU")
-    >>> UnitArr(UnitArr([1e8, 1e9], 'km'), units='AU')
-    UnitArr([ 0.66845871,  6.68458712], units="AU")
 
     Some tests for underlying implementation
     >>> v = UnitArr([1.5,-2.,3.], units='m/s')
@@ -299,13 +315,6 @@ class UnitArr(np.ndarray):
             value = Unit(value)
         self._unit_carrier._units = value
 
-    @property
-    def value(self):
-        '''Return the value, if this is just a single value.'''
-        if self.shape:
-            raise RuntimeError('This is not a single value.')
-        return self.dtype.type(self)
-
     def __float__(self):
         try:
             a = self.astype(float).in_units_of(1)
@@ -356,7 +365,7 @@ class UnitArr(np.ndarray):
     def __repr__(self):
         if not self.shape and self.dtype.kind == 'f':
             r = 'UnitArr('
-            f = float(self)
+            f = float(self.view(np.ndarray)) # avoid conversion of units!
             r += str(f) if (1e-3<=f<=1e3) else ('%e' % f)
             if self.dtype not in ['int', 'float']:
                 r += ', dtype=' + str(self.dtype)
@@ -380,7 +389,7 @@ class UnitArr(np.ndarray):
 
     def __str__(self):
         if not self.shape and self.dtype.kind == 'f':
-            f = float(self)
+            f = float(self.view(np.ndarray))    # avoid conversion of units!
             s = str(f) if (1e-3<=f<=1e3) else ('%e' % f)
         else:
             s = np.ndarray.__str__(self)
