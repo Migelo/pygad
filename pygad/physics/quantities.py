@@ -516,10 +516,12 @@ def Jeans_length(T, rho, mu=m_u, units='kpc'):
         ValueError:         If multiple parameters have nonidentical shapes.
 
     Examples:
-        >>> Jeans_length('10 K', '1e6 u/cm**3', units='pc')
-        UnitArr(0.0306686617722, units="pc")
-        >>> Jeans_length(1e4, '1 u/cm**3', units='pc')
-        UnitArr(969.828239894, units="pc")
+        >>> if abs(Jeans_length('10 K', '1e6 u/cm**3', units='pc') -
+        ...        '0.03067 pc') > '1e-4 pc':
+        ...     print Jeans_length('10 K', '1e6 u/cm**3', units='pc')
+        >>> if abs(Jeans_length(1e4, '1 u/cm**3', units='pc') -
+        ...        '969.8 pc') > '0.5 pc':
+        ...     print Jeans_length(1e4, '1 u/cm**3', units='pc')
     '''
     k = [] # array for lengths of given arrays
     T = UnitQty(T, units='K', dtype=np.float64)
