@@ -51,8 +51,8 @@ import pygad
 import matplotlib.pyplot as plt
 s = pygad.Snap('path/to/snap')
 snap, halo = pygad.tools.prepare_zoom(s)
-R200, M200 = pygad.analysis.virial_info(snap, extent='5 Mpc')
-fig, ax, cbar = pygad.plotting.image(snap.gas)
+R200, M200 = pygad.analysis.virial_info(snap)
+fig, ax, cbar = pygad.plotting.image(snap.gas, extent='5 Mpc')
 ax.add_artist(plot.Circle([0,0], R200, facecolor='none', edgecolor='w'))
 plt.draw()
 ```
