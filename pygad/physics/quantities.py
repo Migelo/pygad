@@ -1,19 +1,26 @@
 '''
 Some general quantities and constants.
 
-Example:
+Examples:
     >>> solar.Z()   # TODO: Why so low, isn't it more like 0.02?
     0.012946810000000086
-    >>> G
-    UnitArr(6.673840e-11, units="m**3 kg**-1 s**-2")
-    >>> m_p
-    UnitArr(1.672622e-27, units="kg")
+    >>> assert abs(sum(solar.Z_massfrac) - 1.0) < 1e-3
+    >>> c
+    UnitArr(2.997925e+08, units="m s**-1")
+    >>> if abs(G - '6.67408e-11 m**3/kg/s**2') > '1e-14 m**3/kg/s**2':
+    ...     print G
+    >>> if abs(kB - '1.380649e-23 J/K') > '2e-29 J/K':
+    ...     print kB
+    >>> if abs(N_A - '6.022141e23 mol**-1') > '2e17 mol**-1':
+    ...     print N_A
+    >>> if abs(m_u - '1.660539e-27 kg') > '2e-33 kg':
+    ...     print m_u
+    >>> for m in [m_p, m_n, 1822.9*m_e]:
+    ...     assert abs(m/m_u - 1.0) < 0.02
 
     TODO: Why is this actually not closer to one?!
-    >>> sum(solar.Z_massfrac)
-    0.99971229335
 '''
-__all__ = ['alpha_elements', 'G', 'c', 'kB', 'N_A', 'R', 'm_p', 'm_n', 'm_u',
+__all__ = ['alpha_elements', 'G', 'c', 'kB', 'N_A', 'R', 'e', 'm_p', 'm_n', 'm_u',
            'm_e', 'solar', 'SMH_Moster_2013', 'SMH_Behroozi_2013',
            'SMH_Kravtsov_2014', 'Reff_van_der_Wel_2014', 'SFR_Elbaz_2007',
            'Jeans_length', 'Jeans_mass']
@@ -40,6 +47,8 @@ kB = UnitArr(scipy.constants.value('Boltzmann constant'),
 N_A = UnitArr(scipy.constants.value('Avogadro constant'),
               scipy.constants.unit('Avogadro constant').replace('^','**'))
 R = N_A * kB    # ideal gas constant
+e = UnitArr(scipy.constants.value('elementary charge'),
+            scipy.constants.unit('elementary charge').replace('^','**'))
 m_p = UnitArr(scipy.constants.value('proton mass'),
               scipy.constants.unit('proton mass').replace('^','**'))
 m_n = UnitArr(scipy.constants.value('neutron mass'),
@@ -565,13 +574,20 @@ def Jeans_mass(T, rho, mu=m_u, units='Msol'):
         ValueError:         If multiple parameters have nonidentical shapes.
 
     Examples:
-        >>> Jeans_mass('10 K', '1e6 u/cm**3')
-        UnitArr(2.9637322241, units="Msol")
-        >>> Jeans_mass(UnitArr([1e2,1e3,1e4,1e5],'K'), '1.0 u/cm**3')
-        UnitArr([  9.37214420e+04,   2.96373222e+06,   9.37214420e+07,
-                   2.96373222e+09], units="Msol")
-        >>> Jeans_mass(UnitArr([1e4,1e4,1e2],'K'), UnitArr([1e-2,1e0,1e2],'u/cm**3'))
-        UnitArr([  9.37214420e+08,   9.37214420e+07,   9.37214420e+03], units="Msol")
+        >>> M = Jeans_mass('10 K', '1e6 u/cm**3')
+        >>> if abs(M - '2.964 Msol') > '1e-3 Msol':
+        ...     print M
+        >>> M = Jeans_mass(UnitArr([1e2,1e3,1e4,1e5],'K'), '1.0 u/cm**3')
+        >>> if np.any(np.abs(M -
+        ...         UnitArr([9.372e+04,2.964e+06,9.372e+07,2.964e+09],'Msol'))
+        ...         / M > 1e-3):
+        ...     print M
+        ...     print np.abs(M -
+        ...         UnitArr([9.372e+04,2.964e+06,9.372e+07,2.964e+09],'Msol')) / M
+        >>> M = Jeans_mass(UnitArr([1e4,1e4,1e2],'K'), UnitArr([1e-2,1e0,1e2],'u/cm**3'))
+        >>> if np.any(np.abs(M -
+        ...         UnitArr([9.372e+08, 9.372e+07, 9.372e+03],'Msol')) / M > 1e-3):
+        ...     print M
     ''' 
     rho = UnitQty(rho, units='g/cm**3', dtype=np.float64)
 

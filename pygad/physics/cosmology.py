@@ -5,15 +5,13 @@ cosmologies.
 Example:
     >>> from ..environment import module_dir
     >>> cosmo = WMAP7()
-    >>> cosmo.universe_age()
-    UnitArr(13.7689702445, units="Gyr")
-    >>> cosmo.cosmic_time(1.5)
-    UnitArr(4.3752151566, units="Gyr")
+    >>> if abs(cosmo.universe_age() - '13.77 Gyr') > '1e-2 Gyr':
+    ...     print cosmo.universe_age()
+    >>> if abs(cosmo.cosmic_time(1.5) - '4.375 Gyr') > '1e-3 Gyr':
+    ...     print cosmo.cosmic_time(1.5)
     >>> z = cosmo.lookback_time_2z('5 Gyr') # reshift before 5 Gyr
-    >>> z
-    0.4915040090605358
-    >>> z2a(z)                              # and corresponding scale factor
-    0.6704641716852489
+    >>> assert abs(z - 0.4915) < 1e-4
+    >>> assert abs(z2a(z) - 0.6705) < 1e-4  # and corresponding scale factor
 '''
 __all__ = ['a2z', 'z2a', 'Planck2013', 'WMAP7', 'FLRWCosmo']
 
@@ -135,41 +133,28 @@ class FLRWCosmo(object):
         1.0
         >>> cosmo.is_flat()
         True
-        >>> cosmo.h(1)
-        1.2324771803161305
-        >>> cosmo.f_c
-        0.16666666666666669
-        >>> cosmo.universe_age()
-        UnitArr(13.4762079087, units="Gyr")
-        >>> cosmo.cosmic_time(z=2.0)
-        UnitArr(3.2288370786, units="Gyr")
-        >>> cosmo.rho_crit()
-        UnitArr(135.961969367, units="Msol kpc**-3")
-        >>> cosmo.rho_crit(z=10)
-        UnitArr(5.438479e+04, units="Msol kpc**-3")
-        >>> cosmo.lookback_time_2z('5 Gyr')
-        0.4938323725410206
+        >>> assert abs(cosmo.h(1) - 1.2325) < 1e-4
+        >>> assert abs(cosmo.f_c - 0.166667) < 1e-4
+        >>> assert abs(cosmo.universe_age() - '13.48 Gyr') < '0.02 Gyr'
+        >>> assert abs(cosmo.cosmic_time(2.0) - '3.229 Gyr') < '0.01 Gyr'
+        >>> assert abs(cosmo.rho_crit()-'136.0 Msol/kpc**3') < '1. Msol/kpc**3'
+        >>> assert abs(cosmo.rho_crit(10)-'5.44e4 Msol/kpc**3') < '1e2 Msol/kpc**3'
+        >>> assert abs(cosmo.lookback_time_2z('5 Gyr') - 0.49383) < 1e-4
         >>> cosmo.H()
         UnitArr(70.0, units="km s**-1 Mpc**-1")
-        >>> cosmo.H(z=1.0)
-        UnitArr(123.247718032, units="km s**-1 Mpc**-1")
+        >>> assert abs(cosmo.H(z=1.0) - '123.25 km/s/Mpc') < '0.1 km/s/Mpc'
         >>> z = 1.234
-        >>> cosmo.comoving_distance(z)
-        UnitArr(3.83915090517, units="Gpc")
-        >>> cosmo.trans_comoving_distance(z)
-        UnitArr(3.83915090517, units="Gpc")
-        >>> cosmo.angular_diameter_distance(z)
-        UnitArr(1.71850980536, units="Gpc")
-        >>> cosmo.luminosity_distance(z)
-        UnitArr(8.57666312215, units="Gpc")
-        >>> cosmo.apparent_angle('1 kpc', z)
-        UnitArr(0.120025388045, units="arcsec")
-        >>> cosmo.angle_to_length('1 arcsec', z)
-        UnitArr(8.33157064758, units="kpc")
-        >>> cosmo.angle_to_length(1e-6, z)
-        UnitArr(1.71850980536, units="kpc")
-        >>> cosmo.angle_to_length(cosmo.apparent_angle('1 kpc',z), z)
-        UnitArr(1.0, units="kpc")
+        >>> assert abs(cosmo.comoving_distance(z) - '3.839 Gpc') < '1e-3 Gpc'
+        >>> assert abs(cosmo.trans_comoving_distance(z) - '3.839 Gpc') < '1e-3 Gpc'
+        >>> assert abs(cosmo.angular_diameter_distance(z) - '1.719 Gpc') < '1e-3 Gpc'
+        >>> assert abs(cosmo.luminosity_distance(z) - '8.577 Gpc') < '1e-3 Gpc'
+        >>> assert (abs(cosmo.apparent_angle('1 kpc', z) - '0.1200 arcsec')
+        ...         < '1e-4 arcsec')
+        >>> assert (abs(cosmo.angle_to_length('1 arcsec', z) - '8.332 kpc')
+        ...         < '1e-3 kpc')
+        >>> assert abs(cosmo.angle_to_length(1e-6, z) - '1.719 kpc') < '1e-3 kpc'
+        >>> assert (abs(cosmo.angle_to_length(cosmo.apparent_angle('1 kpc',z), z) -
+        ...         '1 kpc') < '1e-5 kpc')
     '''
 
     def __init__(self, h_0, Omega_Lambda, Omega_m, Omega_b=None, sigma_8=None,
