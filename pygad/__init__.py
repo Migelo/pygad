@@ -37,7 +37,7 @@ doctests:
     TestResults(failed=0, attempted=5)
     >>> print >> sys.stderr, 'testing module octree...'
     >>> doctest.testmod(octree)
-    TestResults(failed=0, attempted=2)
+    TestResults(failed=0, attempted=3)
     >>> print >> sys.stderr, 'testing module ssp...'
     >>> doctest.testmod(ssp)
     TestResults(failed=0, attempted=2)
@@ -47,14 +47,12 @@ doctests:
     >>> print >> sys.stderr, 'testing module analysis...'
     >>> doctest.testmod(analysis)
     TestResults(failed=0, attempted=4)
-
     >>> print >> sys.stderr, 'testing module tools...'
     >>> doctest.testmod(tools)
     TestResults(failed=0, attempted=0)
+    >>> print >> sys.stderr, 'testing module plotting...'
     >>> doctest.testmod(plotting)
     TestResults(failed=0, attempted=2)
-
-    no doctests for plotting -- need to see the results
 
 For development:
     In order to make the include of pygad work:

@@ -10,12 +10,20 @@ It supports all Gadget formats (in our experience better than [pynbody]).
 
 ### Prerequisites
 
-Written entirely in `Python 2.7`, it only requires a running Python environment and the following additional quasi-standard modules:
+Written entirely in `Python 2.7` and `C++` (the latter only for speed relevant parts), it only requires a running Python 2.7 environment and the following additional quasi-standard modules:
 
 * `numpy`
 * `scipy`
 * `matplotlib`
 * `hdf5` (only required if reading/writing format 3 snapshots)
+
+as well as the free library
+
+* `GSL`
+
+and the `g++` compiler that needs to support the C++11 standard.
+
+
 
 ### Get and Install pygad
 

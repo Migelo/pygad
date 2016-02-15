@@ -8,12 +8,13 @@ Examples:
     >>> from ..transformation import *
     >>> from ..analysis import *
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470', physical=False)
-    >>> Translation(-shrinking_sphere(s.stars,[0]*3,2*s.boxsize)).apply(s)
+    >>> Translation(-shrinking_sphere(s.stars, [s.boxsize/2]*3,
+    ...                               np.sqrt(3)*s.boxsize)).apply(s)
     load block pos... done.
     do a shrinking sphere...
       starting values:
-        center = [ 0.  0.  0.] [ckpc h_0**-1]
-        R      = 1.440000e+05 [ckpc h_0**-1]
+        center = [ 36000.  36000.  36000.] [ckpc h_0**-1]
+        R      = 1.247077e+05 [ckpc h_0**-1]
     load block mass... done.
     done.
     apply Translation to "pos" of "snap_M1196_4x_470"... done.
@@ -29,7 +30,7 @@ Examples:
     derive block r... done.
     load block hsml... done.
     >>> sub
-    <Snap "snap_M1196_4x_470":ball(r=60.0 [kpc]); N=198,248; z=0.000>
+    <Snap "snap_M1196_4x_470":ball(r=60.0 [kpc]); N=198,250; z=0.000>
     >>> if abs(sub['r'].max().in_units_of('Mpc',subs=s) - 9.905) > 0.01:
     ...     print sub['r'].max().in_units_of('Mpc',subs=s)
     >>> no_gas_max_r = SubSnap(sub,list(set(range(6))-set(gadget.families['gas'])))['r'].max()
@@ -44,8 +45,8 @@ Examples:
     >>> sub = s[BoxMask('120 kpc',fullsph=False)]
     >>> sub
     <Snap "snap_M1196_4x_470":box([[-60,60],[-60,60],[-60,60]] [kpc],strict); N=218,984; z=0.000>
-    >>> np.abs(sub['pos']).max(axis=0)
-    UnitArr([ 59.99853516,  59.9999733 ,  59.99820328], dtype=float32, units="kpc")
+    >>> if np.linalg.norm( np.abs(sub['pos']).max(axis=0) - [120/2]*3 ) > 0.1:
+    ...     print np.abs(sub['pos']).max(axis=0)
 
     >>> discmask = DiscMask(0.85,rmax='60.0 kpc')
     >>> disc = s[discmask]
@@ -59,13 +60,13 @@ Examples:
     <Snap "snap_M1196_4x_470":disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc]); N=36,419; z=0.000>
     >>> gal = s[s['r']<'60 kpc']
     >>> np.array(disc.parts,float) / np.array(gal.parts)
-    array([ 0.78445298,  0.02730335,         nan,         nan,  0.26439983,
+    array([ 0.78431754,  0.02731191,         nan,         nan,  0.26441513,
                    nan])
     >>> bulge = gal[discmask.inverted()]
     >>> bulge
-    <Snap "snap_M1196_4x_470":masked:~disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc]); N=159,915; z=0.000>
+    <Snap "snap_M1196_4x_470":masked:~disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc]); N=159,918; z=0.000>
     >>> float(len(disc)) / len(bulge)
-    0.22773973673514053
+    0.2277354644255181
 
     >>> IDs = bulge['ID'][:1000:3]
     load block ID... done.

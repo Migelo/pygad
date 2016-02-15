@@ -23,24 +23,19 @@ Example:
     derive block r... done.
     load block hsml... done.
     convert block hsml to physical units... done.
-    >>> m_b, px2 = map_qty(sub.baryons, '120 kpc', 'mass', Npx=150)
-    create a 150 x 150 map (120 x 120 [kpc])...
-    create a 150 x 150 SPH-map (120 x 120 [kpc])...
-      do binning + smoothing for hsml < 20 px...
-      done.
-      calculate pixel center kernel-weighted quantity for
-        925 particles with hsml > 16.0 [kpc] (px = 0.8 [kpc])...
-      done.
-    >>> m_s, px2 = map_qty(sub.stars, '120 kpc', 'mass', Npx=150)
-    create a 150 x 150 map (120 x 120 [kpc])...
-    >>> m_g, px2 = map_qty(sub.gas, '120 kpc', 'mass', Npx=150)
-    create a 150 x 150 map (120 x 120 [kpc])...
-    create a 150 x 150 SPH-map (120 x 120 [kpc])...
-      do binning + smoothing for hsml < 20 px...
-      done.
-      calculate pixel center kernel-weighted quantity for
-        925 particles with hsml > 16.0 [kpc] (px = 0.8 [kpc])...
-      done.
+    >>> m_b, px2 = map_qty(sub.baryons, '120 kpc', 'mass', Npx=256)
+    create a 256 x 256 map (120 x 120 [kpc])...
+    load block rho... done.
+    convert block rho to physical units... done.
+    derive block dV... done.
+    create a 256 x 256 SPH-grid (120 x 120 [kpc])...
+    done with SPH grid
+    >>> m_s, px2 = map_qty(sub.stars, '120 kpc', 'mass', Npx=256)
+    create a 256 x 256 map (120 x 120 [kpc])...
+    >>> m_g, px2 = map_qty(sub.gas, '120 kpc', 'mass', Npx=256)
+    create a 256 x 256 map (120 x 120 [kpc])...
+    create a 256 x 256 SPH-grid (120 x 120 [kpc])...
+    done with SPH grid
     >>> rel_err = np.abs(m_b - (m_s+m_g)) / m_b
     >>> assert rel_err.max() < 1e-10
 '''
@@ -53,8 +48,8 @@ from ..gadget import *
 from ..kernels import *
 from .. import environment
 
-def map_qty(s, extent, qty, av=None, Npx=200, res=None, xaxis=0, yaxis=1, softening=None,
-            sph=True, sph_threshold=20, kernel=None):
+def map_qty(s, extent, qty, av=None, Npx=256, res=None, xaxis=0, yaxis=1, softening=None,
+            sph=True, kernel=None):
     '''
     A fast pure-Python routine for binning SPH quantities onto a map.
 
@@ -78,15 +73,13 @@ def map_qty(s, extent, qty, av=None, Npx=200, res=None, xaxis=0, yaxis=1, soften
         yaxis (int):        The coordinate for the y-axis. (0:'x', 1:'y', 2:'z')
         softening (UnitQty):A list of te softening lengthes that are taken for
                             smoothing the maps of the paticle types. Is
-                            consequently has to have length 6. Default: None.
+                            consequently has to have length 6. The entries for gas
+                            particle types are ignored, if sph=True.
+                            Default: None.
         sph (bool):         If set to True, do not use the softening length for
                             smoothing the SPH particles' quantity, but the actual
                             SPH smoothing lengthes, which differ from particle to
-                            particle. Much slower, though! It calls
-                            binning.sph.map_sph_qty in the backend.
-        sph_threshold (int):The threshold between image smoothing and kernel use
-                            in the sub-routine 'sph.map_sph_qty'. See its
-                            documentation for more details.
+                            particle.
         kernel (str):       The kernel to use for smoothing. (Default: 'kernel'
                             from config file `gadget.cfg`)
 
@@ -106,16 +99,16 @@ def map_qty(s, extent, qty, av=None, Npx=200, res=None, xaxis=0, yaxis=1, soften
             av = s.get(av)
         grid, px2 = map_qty(s, extent, av*qty, av=None, Npx=Npx, res=res,
                             xaxis=xaxis, yaxis=yaxis, softening=softening,
-                            sph=sph, sph_threshold=sph_threshold, kernel=kernel)
+                            sph=sph, kernel=kernel)
         norm, px2 = map_qty(s, extent, av, av=None, Npx=Npx, res=res,
                             xaxis=xaxis, yaxis=yaxis, softening=softening,
-                            sph=sph, sph_threshold=sph_threshold, kernel=kernel)
+                            sph=sph, kernel=kernel)
         grid /= norm
         grid[np.isnan(grid)] = 0.0
         return grid, px2
 
     # prepare arguments
-    extent, Npx, res = grid_props(extent=extent, Npx=Npx, res=res)
+    extent, Npx, res = grid_props(extent=extent, Npx=Npx, res=res, dim=2)
     if isinstance(extent, UnitArr):
         extent = extent.in_units_of(s['pos'].units, subs=s)
     if isinstance(res, UnitArr):
@@ -139,14 +132,17 @@ def map_qty(s, extent, qty, av=None, Npx=200, res=None, xaxis=0, yaxis=1, soften
         return grid, np.prod(res)
 
     if sph:
-        from sph import map_sph_qty
         sph = s.gas
+        sph_qty = qty[s.gas._mask]
         if len(sph) != 0:
-            # res gets calculated from Npx, since the latter is an integer, the
-            # result is more stable when passing Npx rather than res.
-            sph_binned, px2 = map_sph_qty(sph, extent=extent, qty=qty, Npx=Npx,
-                                          res=None, xaxis=xaxis, yaxis=yaxis,
-                                          threshold=sph_threshold, kernel=kernel)
+            from cbinning import SPH_to_2Dgrid
+            dV = sph['dV'].in_units_of(sph['pos'].units**3)
+            sph_binned, px2 = SPH_to_2Dgrid(sph, qty=sph_qty/dV, extent=extent,
+                                            Npx=Npx, xaxis=xaxis, yaxis=yaxis,
+                                            kernel=kernel)
+            px2 = np.prod(px2)
+            sph_binned *= px2
+
             assert abs((px2 - np.prod(res)) / px2) < 1e-3
             grid += sph_binned
 

@@ -124,51 +124,61 @@ def gridbin(pnts, vals=None, bins=50, extent=None, normed=False, stats=None,
 
     return gridded
 
-def grid_props(extent='100 kpc', Npx=500, res=None):
+def grid_props(extent, Npx=256, res=None, dim=None):
     '''
     Calculate the grid properties from given values.
 
     Args:
         extent (UnitQty):   This can either be a scalar, it then defines the
                             (total) with of the grid; or a full extent of a
-                            sequence of maximim and minimum for x and y:
-                            [[xmin,xmax],[ymin,ymax]].
+                            sequence of maximim and minimum for all coordinates:
+                            [[x1min,x1max],[x2min,x2max],...].
         Npx (int, sequence):The number of pixels per side. It can either be a
-                            single value that is taken for both sides or pair with
-                            the first value for the x-direction and the second one
-                            for the y-direction.
+                            single value that is taken for all sides or a tuple
+                            with values for each direction.
         res (UnitQty):      The resolution / pixel side length. If this is given,
                             Npx is ignored. It can also be either the same for
-                            both, x and y, or seperate values for them.
+                            all directions or a seperate values for each of them.
+        dim (int):          The number of dimensions of the grid. If possible, it
+                            will be inferred from the arguments, if it is None.
 
     Returns:
-        extent (UnitQty):   The extent as a (2,2)-array: [[xmin,xmax],[ymin,ymax]]
-        Npx (sequence):     The number of pixels per side: [<in x>, <in y>]
-        res (UnitQty):      The resolution in x and y. It might differ from the
-                            one passed, since the number of pixels has to be an
-                            interger.
+        extent (UnitQty):   The extent as a (dim,2)-array:
+                            [[x1min,x1max],[x2min,x2max],...]
+        Npx (sequence):     The number of pixels per side: [<in x1>,<in x2>,...].
+        res (UnitQty):      The resolution in the different directions. It might
+                            differ from the one passed (if passed), since the
+                            numbers of pixels have to be intergers.
     '''
     extent = UnitQty(extent, dtype=float)
+    Npx = np.array(Npx, dtype=int) if Npx is not None else None
+    res = UnitQty(res, getattr(res,'units',None), dtype=float)
+    if dim is None:
+        if extent is not None and extent.shape != ():
+            dim = len(extent)
+        elif Npx is not None and Npx.shape != ():
+            dim = len(Npx)
+        elif res is not None and res.shape != ():
+            dim = len(res)
+        else:
+            ValueError('Number of dimensions not given and cannot be inferred!')
+
     if extent.shape == ():
-        width = UnitQty([extent,extent], getattr(extent,'units',None))
+        widths = UnitQty([extent]*dim, getattr(extent,'units',None))
         w2 = extent / 2.
-        extent = UnitArr([[-w2,w2],[-w2,w2]], getattr(w2,'units',None))
+        extent = UnitArr([[-w2,w2]]*dim, getattr(w2,'units',None))
     else:
-        extent = extent.reshape((2,2))
-        width = UnitArr(extent[:,1]-extent[:,0])
+        extent = extent.reshape((dim,2,))
+        widths = UnitArr(extent[:,1]-extent[:,0])
 
     if res is None:
-        try:
-            Npx = int(Npx)
-            Npx = np.array([Npx]*2)
-        except:
-            Npx = np.array( map(int, Npx) )
+        if Npx.shape == ():
+            Npx = np.array([Npx]*dim)
     else:
-        if isinstance(res, np.ndarray) and res.shape==():
-            res = [res,res]
-        res = UnitQty(res, getattr(res,'units',None), dtype=float)
-        Npx = np.ceil( width / res ).astype(int)
-    res = width / Npx
+        if res.shape==():
+            res = np.array([res]*dim, res.units)
+        Npx = np.ceil( widths / res ).astype(int)
+    res = widths / Npx
 
     return extent, Npx, res
 

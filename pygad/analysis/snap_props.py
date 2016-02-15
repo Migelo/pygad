@@ -62,26 +62,30 @@ Example:
     UnitArr(5.330261e+04, units="Msol kpc**-3")
     >>> s.gas['rho'][331798]
     56831.004
+    >>> SPH_qty_at(s, 'rho', s.gas['pos'][:1000:100])
+    UnitArr([  2.85217152e+08,   2.99014187e+01,   1.25738525e+01,
+               8.15994930e+00,   1.05293274e+01,   1.17380829e+01,
+               3.57516813e+00,   6.43977594e+00,   7.23333836e-01,
+               3.83610177e+00], dtype=float32, units="Msol kpc**-3")
+    >>> SPH_qty_at(s, 'rho', s.gas['pos'][:1000])[::100]
+    UnitArr([  2.85217151e+08,   2.99014196e+01,   1.25738527e+01,
+               8.15994893e+00,   1.05293272e+01,   1.17380827e+01,
+               3.57516815e+00,   6.43977587e+00,   7.23333840e-01,
+               3.83610195e+00], units="Msol kpc**-3")
+    >>> scatter_gas_qty_to_stars(s, 'rho', name='gas_rho')
+    SimArr([  3.39356901e+07,   3.74830586e+07,   2.57179940e+08, ...,
+              1.03715005e+03,   1.06398579e+03,   2.16652432e+02],
+           units="Msol kpc**-3", snap="snap_M1196_4x_320":stars)
 
-    #to slow...!
-    #>>> scatter_gas_qty_to_stars(s, 'Z', name='gas_Z')
-    load block elements... done.
-    derive block H... done.
-    derive block He... done.
-    derive block metals... done.
-    derive block Z... done.
-    load block hsml... done.
-    build tree...
-    done.
-    scatter property of 64,158 star particles...
-    done.
-    didn't found neighbours 30440 times
-    UnitArr([  6.62012251e-09,   2.28143236e-09,   1.77712193e-14, ...,
-               0.00000000e+00,   0.00000000e+00,   0.00000000e+00])
-       
-    >>> s.gas['lx'] = x_ray_luminosity(s, lumtable=module_dir+'../snaps/em.dat')
+    >>> v1 = SPH_qty_at(s, 'elements', s.gas['pos'][:200:10])
     load block elements... done.
     convert block elements to physical units... done.
+    >>> v2 = SPH_qty_at(s, 'elements', s.gas['pos'][:200])[::10]
+    >>> if np.max(np.abs(v1-v2)/v1) > 1e-6:
+    ...     print v1
+    ...     print v2
+       
+    >>> s.gas['lx'] = x_ray_luminosity(s, lumtable=module_dir+'../snaps/em.dat')
     derive block H... done.
     derive block He... done.
     derive block metals... done.
@@ -341,8 +345,6 @@ def SPH_qty_at(s, qty, r, units=None, kernel=None, dV='dV'):
     Returns:
         Q (UnitArr):            The SPH property at the given position.
     '''
-    # TODO: find ways to speed it up!
-    # TODO: parallelize
     r = UnitQty(r, s['pos'].units, subs=s)
     if not (r.shape==(3,) or (r.shape[1:]==(3,) and len(r.shape)==2)):
         raise ValueError('Position `r` needs to have shape (3,) or (N,3)!')
@@ -360,29 +362,87 @@ def SPH_qty_at(s, qty, r, units=None, kernel=None, dV='dV'):
 
     r = r.view(np.ndarray)
     gas_pos = s.gas['pos'].view(np.ndarray)
-    hsml = s.gas['hsml'].in_units_of(s['pos'].units,subs=s)
-    dV_hsml3 = (s.get(dV) / hsml**3) \
-            .in_units_of(1,subs=s).view(np.ndarray)
-    hsml = hsml.view(np.ndarray)
+    hsml = s.gas['hsml'].in_units_of(s['pos'].units,subs=s).view(np.ndarray)
+    dV = s.gas.get(dV).in_units_of(s['pos'].units**3,subs=s).view(np.ndarray)
 
     if kernel is None:
         from ..gadget import config
         kernel = config.general['kernel']
     from ..kernels import vector_kernels
-    kernel = vector_kernels[kernel]
+    kernel_func = vector_kernels[kernel]
 
     if r.shape == (3,):
         d = dist(gas_pos, r) / hsml
         mask = d < 1.0
-        Q = np.sum((qty[mask].T * (kernel(d[mask]) * dV_hsml3[mask])).T,
+        Q = np.sum((qty[mask].T * (kernel_func(d[mask]) * dV[mask] /
+                                        hsml[mask]**3)).T,
                    axis=0)
-    else:
-        Q = np.empty( (len(r),)+qty.shape[1:] )
+    elif len(r) < 100:
+        dV_hsml3 = dV / hsml**3
+        Q = np.empty( (len(r),)+qty.shape[1:], dtype=qty.dtype )
         for i,x in enumerate(r):
             d = dist(gas_pos, x) / hsml
             mask = d < 1.0
-            Q[i] = np.sum((qty[mask].T * (kernel(d[mask]) * dV_hsml3[mask])).T,
+            Q[i] = np.sum((qty[mask].T * (kernel_func(d[mask]) *
+                                            dV_hsml3[mask])).T,
                           axis=0)
+    else:
+        from .. import C
+        # C function expects doubles and cannot deal with views:
+        r = r.astype(np.float64)
+        gas_pos = gas_pos.astype(np.float64)
+        hsml = hsml.astype(np.float64)
+        dV = dV.astype(np.float64)
+        qty = qty.astype(np.float64)
+        if r.base is not None:
+            r = r.copy()
+        if gas_pos.base is not None:
+            gas_pos = gas_pos.copy()
+            hsml = hsml.copy()
+            dV = dV.copy()
+        #TODO: handle different types than double
+        if len(qty.shape)==1:
+            Q = np.empty( len(r), dtype=np.float64 )
+            if qty.base is not None:
+                qty = qty.copy()
+            C.cpygad.eval_sph_at(
+                    C.c_size_t(len(r)),
+                    C.c_void_p(r.ctypes.data),
+                    C.c_void_p(Q.ctypes.data),
+                    C.c_size_t(len(gas_pos)),
+                    C.c_void_p(gas_pos.ctypes.data),
+                    C.c_void_p(hsml.ctypes.data),
+                    C.c_void_p(dV.ctypes.data),
+                    C.c_void_p(qty.ctypes.data),
+                    C.create_string_buffer(kernel),
+                    None    # build new tree
+            )
+        elif len(qty.shape)==2:
+            # C function needs contiquous arrays and cannot deal with
+            # mutli-dimenensional ones...
+            Q = np.empty( (qty.shape[1],len(r)), dtype=np.float64 )
+            qty = qty.T
+            if qty.base is not None:
+                qty = qty.copy()
+            # avoid the reconstruction of the octree
+            from ..octree import cOctree
+            tree = cOctree(gas_pos, hsml)
+            for k in xrange(Q.shape[0]):
+                C.cpygad.eval_sph_at(
+                        C.c_size_t(len(r)),
+                        C.c_void_p(r.ctypes.data),
+                        C.c_void_p(Q[k].ctypes.data),
+                        C.c_size_t(len(gas_pos)),
+                        C.c_void_p(gas_pos.ctypes.data),
+                        C.c_void_p(hsml.ctypes.data),
+                        C.c_void_p(dV.ctypes.data),
+                        C.c_void_p(qty[k].ctypes.data),
+                        C.create_string_buffer(kernel),
+                        C.c_void_p(tree._cOctree__node_ptr),
+                )
+            Q = Q.T
+        else:
+            raise ValueError('Cannot handle more than two dimension in qty!')
 
     return UnitArr(Q, units)
 

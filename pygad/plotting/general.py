@@ -392,9 +392,7 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
         if vlim is not None:
             vlim = np.log10(vlim)
     if vlim is None:
-        finitegrid = grid[np.isfinite(grid)]
-        vlim = [finitegrid.min(), finitegrid.max()]
-        del finitegrid
+        vlim = np.percentile(grid[np.isfinite(grid)], [0,100])
 
     if colors is None:
         clim = vlim
@@ -420,7 +418,7 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
         grid = color_code(grid, col, cmap=cmap, vlim=vlim, clim=clim)
 
     fig, ax, im = show_image(grid, extent=extent, cmap=cmap, aspect=aspect, ax=ax,
-                             **kwargs)
+                             clim=clim, **kwargs)
 
     if showcbar:
         from mpl_toolkits.axes_grid1.inset_locator import inset_axes
