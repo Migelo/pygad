@@ -43,8 +43,8 @@ Examples:
     convert block r to physical units... done.
     convert boxsize to physical units... done.
     >>> sub = s[BoxMask('120 kpc',fullsph=False)]
-    >>> sub
-    <Snap "snap_M1196_4x_470":box([[-60,60],[-60,60],[-60,60]] [kpc],strict); N=218,984; z=0.000>
+    >>> sub # doctest:+ELLIPSIS
+    <Snap "snap_M1196_4x_470":box([[-60,60],[-60,60],[-60,60]] [kpc],strict); N=218,98...; z=0.000>
     >>> if np.linalg.norm( np.abs(sub['pos']).max(axis=0) - [120/2]*3 ) > 0.1:
     ...     print np.abs(sub['pos']).max(axis=0)
 
