@@ -48,7 +48,7 @@ from ..gadget import *
 from ..kernels import *
 from .. import environment
 
-def map_qty(s, extent, qty, av=None, Npx=256, res=None, xaxis=0, yaxis=1, softening=None,
+def map_qty(s, extent, qty, av=None, Npx=256, xaxis=0, yaxis=1, softening=None,
             sph=True, kernel=None):
     '''
     A fast pure-Python routine for binning SPH quantities onto a map.
@@ -66,9 +66,6 @@ def map_qty(s, extent, qty, av=None, Npx=256, res=None, xaxis=0, yaxis=1, soften
         Npx (int, sequence):The number of pixel per side. Either an integer that
                             is taken for both sides or a pair of such, the first
                             for the x-direction, the second for the y-direction.
-        res (UnitQty):      The resolution / pixel side length. If this is given,
-                            Npx is ignored. It can also be either the same for
-                            both, x and y, or seperate values for them.
         xaxis (int):        The coordinate for the x-axis. (0:'x', 1:'y', 2:'z')
         yaxis (int):        The coordinate for the y-axis. (0:'x', 1:'y', 2:'z')
         softening (UnitQty):A list of te softening lengthes that are taken for
@@ -97,10 +94,10 @@ def map_qty(s, extent, qty, av=None, Npx=256, res=None, xaxis=0, yaxis=1, soften
     if av is not None:
         if isinstance(av, str):
             av = s.get(av)
-        grid, px2 = map_qty(s, extent, av*qty, av=None, Npx=Npx, res=res,
+        grid, px2 = map_qty(s, extent, av*qty, av=None, Npx=Npx,
                             xaxis=xaxis, yaxis=yaxis, softening=softening,
                             sph=sph, kernel=kernel)
-        norm, px2 = map_qty(s, extent, av, av=None, Npx=Npx, res=res,
+        norm, px2 = map_qty(s, extent, av, av=None, Npx=Npx,
                             xaxis=xaxis, yaxis=yaxis, softening=softening,
                             sph=sph, kernel=kernel)
         grid /= norm
@@ -108,11 +105,9 @@ def map_qty(s, extent, qty, av=None, Npx=256, res=None, xaxis=0, yaxis=1, soften
         return grid, px2
 
     # prepare arguments
-    extent, Npx, res = grid_props(extent=extent, Npx=Npx, res=res, dim=2)
-    if isinstance(extent, UnitArr):
-        extent = extent.in_units_of(s['pos'].units, subs=s)
-    if isinstance(res, UnitArr):
-        res = res.in_units_of(s['pos'].units, subs=s)
+    extent, Npx, res = grid_props(extent=extent, Npx=Npx, dim=2)
+    extent = extent.in_units_of(s['pos'].units, subs=s)
+    res = res.in_units_of(s['pos'].units, subs=s)
     if xaxis not in range(3) or yaxis not in range(3) or xaxis==yaxis:
         raise ValueError('The x- and y-axis have to be 0, 1, or 2 and different!')
     if softening is not None:

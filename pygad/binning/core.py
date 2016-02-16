@@ -2,6 +2,46 @@
 General image manipulation routines.
 
 Examples:
+    >>> for e in grid_props('100 kpc', Npx=100, dim=2): print e
+    [[-50.  50.]
+     [-50.  50.]] [kpc]
+    [100 100]
+    [ 1.  1.] [kpc]
+    >>> for e in grid_props(UnitArr([[-5,5],[-10,3]],'kpc'), Npx=20): print e
+    [[ -5.   5.]
+     [-10.   3.]] [kpc]
+    [20 20]
+    [ 0.5   0.65] [kpc]
+    >>> for e in grid_props(UnitArr([[-5,5],[-10,3]],'kpc'), Npx=[20,26]): print e
+    [[ -5.   5.]
+     [-10.   3.]] [kpc]
+    [20 26]
+    [ 0.5  0.5] [kpc]
+    >>> for e in grid_props(UnitArr([5,10],'kpc'), Npx=100): print e
+    [[-2.5  2.5]
+     [-5.   5. ]] [kpc]
+    [100 100]
+    [ 0.05  0.1 ] [kpc]
+    >>> for e in grid_props('1 Mpc', Npx=100, dim=3): print e
+    [[-0.5  0.5]
+     [-0.5  0.5]
+     [-0.5  0.5]] [Mpc]
+    [100 100 100]
+    [ 0.01  0.01  0.01] [Mpc]
+    >>> for e in grid_props([1,2], Npx=[100,50]): print e
+    [[-0.5  0.5]
+     [-1.   1. ]]
+    [100  50]
+    [ 0.01  0.04]
+    >>> grid_props('1 Mpc', Npx=100)
+    Traceback (most recent call last):
+    ...
+    ValueError: Number of dimensions not given and cannot be inferred!
+    >>> grid_props([1,2], Npx=[100,50,80])
+    Traceback (most recent call last):
+    ...
+    ValueError: Dimension mismatch of the parameters!
+
     >>> from ..environment import module_dir
     >>> from ..snapshot import *
     >>> from ..analysis import *
@@ -124,21 +164,19 @@ def gridbin(pnts, vals=None, bins=50, extent=None, normed=False, stats=None,
 
     return gridded
 
-def grid_props(extent, Npx=256, res=None, dim=None):
+def grid_props(extent, Npx=256, dim=None):
     '''
     Calculate the grid properties from given values.
 
     Args:
         extent (UnitQty):   This can either be a scalar, it then defines the
-                            (total) with of the grid; or a full extent of a
-                            sequence of maximim and minimum for all coordinates:
+                            (total) with of the grid, a list of widths for each
+                            dimension, or a full extent of a sequence of maximim
+                            and minimum for all coordinates:
                             [[x1min,x1max],[x2min,x2max],...].
         Npx (int, sequence):The number of pixels per side. It can either be a
                             single value that is taken for all sides or a tuple
                             with values for each direction.
-        res (UnitQty):      The resolution / pixel side length. If this is given,
-                            Npx is ignored. It can also be either the same for
-                            all directions or a seperate values for each of them.
         dim (int):          The number of dimensions of the grid. If possible, it
                             will be inferred from the arguments, if it is None.
 
@@ -152,32 +190,35 @@ def grid_props(extent, Npx=256, res=None, dim=None):
     '''
     extent = UnitQty(extent, dtype=float)
     Npx = np.array(Npx, dtype=int) if Npx is not None else None
-    res = UnitQty(res, getattr(res,'units',None), dtype=float)
     if dim is None:
         if extent is not None and extent.shape != ():
             dim = len(extent)
         elif Npx is not None and Npx.shape != ():
             dim = len(Npx)
-        elif res is not None and res.shape != ():
-            dim = len(res)
         else:
-            ValueError('Number of dimensions not given and cannot be inferred!')
+            raise ValueError('Number of dimensions not given and cannot be inferred!')
+    for v in (extent, Npx):
+        if v is not None and v.ndim!=0:
+            if len(v) != dim:
+                raise ValueError('Dimension mismatch of the parameters!')
 
     if extent.shape == ():
         widths = UnitQty([extent]*dim, getattr(extent,'units',None))
         w2 = extent / 2.
         extent = UnitArr([[-w2,w2]]*dim, getattr(w2,'units',None))
+    elif extent.ndim == 1:
+        widths = extent
+        w2s = extent / 2.
+        extent = UnitArr([[-w2,w2] for w2 in w2s], getattr(w2s,'units',None))
     else:
         extent = extent.reshape((dim,2,))
         widths = UnitArr(extent[:,1]-extent[:,0])
+    # now extent is in final form and widths is defined
 
-    if res is None:
-        if Npx.shape == ():
-            Npx = np.array([Npx]*dim)
-    else:
-        if res.shape==():
-            res = np.array([res]*dim, res.units)
-        Npx = np.ceil( widths / res ).astype(int)
+    if Npx.shape == ():
+        Npx = np.array([Npx]*dim)
+    # now also Npx is in final form (of shape (dim,))
+
     res = widths / Npx
 
     return extent, Npx, res

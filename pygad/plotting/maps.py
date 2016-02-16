@@ -15,7 +15,7 @@ from ..snapshot import BoxMask
 import warnings
 
 def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
-          extent=None, Npx=256, res=None, xaxis=0, yaxis=1, vlim=None, cmap=None,
+          extent=None, Npx=256, xaxis=0, yaxis=1, vlim=None, cmap=None,
           normcmaplum=True, desat=0.1, colors=None, colors_av=None,
           clogscale=False, clim=None, ax=None, showcbar=True, cbartitle=None,
           scaleind='line', scaleunits=None, fontcolor='white',
@@ -65,9 +65,6 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         Npx (int, sequence):The number of pixel per side. Either an integer that
                             is taken for both sides or a pair of such, the first
                             for the x-direction, the second for the y-direction.
-        res (UnitQty):      The resolution / pixel side length. If this is given,
-                            Npx is ignored. It can also be either the same for
-                            both, x and y, or seperate values for them.
         xaxis (int):        The coordinate for the x-axis. (0:'x', 1:'y', 2:'z')
         yaxis (int):        The coordinate for the y-axis. (0:'x', 1:'y', 2:'z')
         vlim (sequence):    The limits of the quantity for the plot.
@@ -127,11 +124,9 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         extent = UnitArr([np.percentile(s['pos'][:,xaxis], [1,99]),
                           np.percentile(s['pos'][:,yaxis], [1,99])],
                          s['pos'].units)
-    extent, Npx, res = grid_props(extent=extent, Npx=Npx, res=res, dim=2)
-    if isinstance(extent, UnitArr):
-        extent = extent.in_units_of(s['pos'].units, subs=s)
-    if isinstance(res, UnitArr):
-        res = res.in_units_of(s['pos'].units, subs=s)
+    extent, Npx, res = grid_props(extent=extent, Npx=Npx, dim=2)
+    extent = extent.in_units_of(s['pos'].units, subs=s)
+    res = res.in_units_of(s['pos'].units, subs=s)
 
     zaxis = (set([0,1,2]) - set([xaxis, yaxis])).pop()
     assert set([xaxis, yaxis, zaxis]) == set([0,1,2])
@@ -202,7 +197,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                              getattr(qty,'units',None))
         px2 = np.prod(res)
     else:
-        im_lum, px2 = map_qty(s, extent=extent, qty=qty, av=av, Npx=Npx, res=res,
+        im_lum, px2 = map_qty(s, extent=extent, qty=qty, av=av, Npx=Npx,
                               xaxis=xaxis, yaxis=yaxis, **kwargs)
         if surface_dens:
             im_lum /= px2
@@ -231,7 +226,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         im = np.zeros(tuple(Npx)+(3,))  # at vlim[0] -> black with any color coding
     else:
         im_col, px2 = map_qty(s, extent=extent, qty=colors, av=colors_av, Npx=Npx,
-                              res=res, xaxis=xaxis, yaxis=yaxis, **kwargs)
+                              xaxis=xaxis, yaxis=yaxis, **kwargs)
         if clogscale:
             im_col = np.log10(im_col)
         if clim is None:

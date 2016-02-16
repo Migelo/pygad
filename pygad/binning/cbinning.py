@@ -108,7 +108,7 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml'):
         px_area (UnitArr):  The area of a pixel.
     '''
     # prepare arguments
-    extent, Npx, res = grid_props(extent=extent, Npx=Npx, res=None, dim=3)
+    extent, Npx, res = grid_props(extent=extent, Npx=Npx, dim=3)
     extent = UnitQty(extent, s['pos'].units, subs=s)
     res = UnitQty(res, s['pos'].units, subs=s)
     if kernel is None:
@@ -230,7 +230,7 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
     # prepare arguments
     if len(set([0,1,2]) - set([xaxis, yaxis])) != 1:
         raise ValueError('Illdefined axes (x=%s, y=%s)!' % (xaxis, yaxis))
-    extent, Npx, res = grid_props(extent=extent, Npx=Npx, res=None, dim=2)
+    extent, Npx, res = grid_props(extent=extent, Npx=Npx, dim=2)
     extent = UnitQty(extent, s['pos'].units, subs=s)
     res = UnitQty(res, s['pos'].units, subs=s)
     if kernel is None:
