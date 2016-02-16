@@ -106,10 +106,7 @@ class SimArr(UnitArr):
         return duplicate
 
     def __deepcopy__(self, *a):
-        if a:
-            duplicate = UnitArr.__deepcopy__(self, *a).view(SimArr)
-        else:
-            duplicate = UnitArr.__deepcopy__(self).view(SimArr)
+        duplicate = UnitArr.__deepcopy__(self).view(SimArr)
         duplicate._snap = self.snap
         duplicate._dependencies = self.dependencies.copy()
         return duplicate

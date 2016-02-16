@@ -331,9 +331,9 @@ class UnitArr(np.ndarray):
 
     def __copy__(self, *a):
         if a:
-            dupl = np.ndarray.__copy__(self, *a)
+            dupl = np.ndarray.copy(self, *a)
         else:
-            dupl = np.ndarray.__copy__(self)
+            dupl = np.ndarray.copy(self)
         dupl = dupl.view(UnitArr)
         dupl._unit_carrier = dupl
         if self.units is None:
@@ -343,11 +343,7 @@ class UnitArr(np.ndarray):
         return dupl
 
     def __deepcopy__(self, *a):
-        if a:
-            dupl = np.ndarray.__deepcopy__(self, *a)
-        else:
-            dupl = np.ndarray.__deepcopy__(self)
-        dupl = dupl.view(UnitArr)
+        dupl = np.ndarray.__deepcopy__(self).view(UnitArr)
         dupl._unit_carrier = dupl
         if self.units is None:
             dupl._units = None
