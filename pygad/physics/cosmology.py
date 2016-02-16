@@ -466,7 +466,7 @@ class FLRWCosmo(object):
         '''
         l = UnitScalar(l)
         dA = self.angular_diameter_distance(z, units=l.units)
-        theta = UnitArr((l/dA).in_units_of(1), 'rad')
+        theta = UnitArr(float(l/dA), 'rad')
         return theta.in_units_of(units)
 
     def angle_to_length(self, theta, z, units='kpc'):

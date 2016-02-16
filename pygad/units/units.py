@@ -83,7 +83,7 @@ reading units definitions from "pygad/units/units.cfg"
 'M_\\\\odot\\\\,h_0^{-1}'
 '''
 __all__ = ['UnitError', 'define', 'set_latex_repr', 'undefine', 'undefine_all',
-           'defined_units', 'define_from_cfg', 'Unit', 'Units']
+           'defined_units', 'define_from_cfg', 'Unit', 'Units', 'Fraction']
 
 from numbers import Number
 from fractions import Fraction

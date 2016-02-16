@@ -180,7 +180,7 @@ def _create_header(s, gad_units=None, double_prec=None):
     header['N_part_all']    = s.parts
     header['flg_cool']      = int(bool(s.properties['flg_cool']))
     header['N_files']       = 1
-    header['boxsize']       = s.boxsize.in_units_of(gad_units['LENGTH']).value
+    header['boxsize']       = float(s.boxsize.in_units_of(gad_units['LENGTH']))
     header['Omega_m']       = s.cosmology.Omega_m
     header['Omega_Lambda']  = s.cosmology.Omega_Lambda
     header['h_0']           = s.cosmology.h_0

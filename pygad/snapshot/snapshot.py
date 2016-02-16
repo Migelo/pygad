@@ -74,8 +74,7 @@ Example:
     SimArr([ 59671.72500919,  59671.40716648,  59671.54775578, ...,
              59672.52310468,  59671.98484173,  59671.74536916],
            units="ckpc h_0**-1", snap="snap_M1196_4x_470")
-    >>> np.all( s['r'] == dist(s['pos']) ).value
-    True
+    >>> assert np.all( s['r'] == dist(s['pos']) )
     >>> s['pos'] -= UnitArr([34622.7,35522.7,33180.5], 'ckpc/h_0')
     >>> s['r']
     derive block r... done.
@@ -1235,9 +1234,8 @@ class _SubSnap(_Snap):
         ...     mask[sum(s.parts[:pt]):sum(s.parts[:pt+1])] = True
 
         s[mask], however, is not host (!)
-        >>> np.all( s[mask]['elements'] == s.baryons['elements'] )
+        >>> assert np.all( s[mask]['elements'] == s.baryons['elements'] )
         load block elements... done.
-        UnitArr(True, dtype=bool)
         >>> len(slim[slim_mask]['elements'])
         10015
         >>> assert s[2:-123:10].stars['form_time'].shape[0] == len(s[2:-123:10].stars)

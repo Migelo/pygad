@@ -7,88 +7,118 @@ Note:
     work with 'a.view(np.ndarray)' and add the units again at the end, rather than
     directly working with the UnitArr 'a'.
 
-Example:
-    >>> from ..environment import module_dir
-    >>> s = UnitArr([[1,-2], [-3,1], [2,3]], dtype=np.float64, units='km/h')
-    >>> s.in_units_of('cm/s')   # in different units (without touching s)
-    UnitArr([[ 27.77777778, -55.55555556],
-             [-83.33333333,  27.77777778],
-             [ 55.55555556,  83.33333333]], units="cm s**-1")
-    >>> s -= [3, 4]                     # one can calculate with the arrays
-    >>> s /= 10                         # as one is used to
-    >>> s
-    UnitArr([[-0.2, -0.6],
-             [-0.6, -0.3],
-             [-0.1, -0.1]], units="km h**-1")
-    >>> s += UnitArr(1, units='cm/s')   # different units are converted implicitly
-    >>> s = 2.5 * s
-    >>> s
-    UnitArr([[-0.5 , -1.5 ],
-             [-1.5 , -0.75],
-             [-0.25, -0.25]], units="h**-1 km")
-    >>> s[2,0]
-    -0.25
-    >>> s[2,0] = 5
-    >>> s
-    UnitArr([[-0.5 , -1.5 ],
-             [-1.5 , -0.75],
-             [ 5.  , -0.25]], units="h**-1 km")
-    >>> np.mean(s,axis=0)
-    UnitArr([ 1.        , -0.83333333], units="h**-1 km")
-    >>> np.std(s,axis=0)**2
-    UnitArr([ 8.16666667,  0.26388889], units="h**-2 km**2")
-    >>> np.all(np.abs(np.var(s,axis=0) - np.std(s,axis=0)**2) < 1e-6)
-    UnitArr(True, dtype=bool)
-    >>> s[::2].convert_to('m/s')    # converts all, not just every 2nd row!
-    >>> s
-    UnitArr([[-0.13888889, -0.41666667],
-             [-0.41666667, -0.20833333],
-             [ 1.38888889, -0.06944444]], units="h**-1 km")
-    >>> s.units = 'ckpc / h_0'
-    >>> s.in_units_of('kpc', subs={'a':0.8, 'h_0':0.7})
-    UnitArr([[-0.15873016, -0.47619048],
-             [-0.47619048, -0.23809524],
-             [ 1.58730159, -0.07936508]], units="kpc")
-    >>> UnitArr('10 kpc')
-    UnitArr(10.0, units="kpc")
-    >>> UnitArr('10', 'kpc')
-    UnitArr(10.0, units="kpc")
-    >>> UnitArr('10 m', units='kpc')
-    Traceback (most recent call last):
-    ...
-    ValueError: conflicting units in UnitArr instantiation!
-    >>> dist(s)
-    UnitArr([ 0.43920523,  0.4658475 ,  1.39062392], units="ckpc h_0**-1")
+Examples:
+    >>> v = UnitArr([[1,-2], [-3,1], [2,3]], dtype=np.float64, units='m/s')
+    >>> v
+    UnitArr([[ 1., -2.],
+             [-3.,  1.],
+             [ 2.,  3.]], units="m s**-1")
+    >>> v.units
+    Unit("m s**-1")
+    >>> v[0]
+    UnitArr([ 1., -2.], units="m s**-1")
+    >>> v[0,0]
+    1.0
 
-    >>> UnitScalar(3.)
-    UnitArr(3.0)
-    >>> UnitScalar(42, units='m')
-    UnitArr(42, units="m")
-    >>> UnitScalar('5 kpc')
-    UnitArr(5.0, units="kpc")
-    >>> UnitScalar(UnitArr(0.1,'kpc'), units='pc')
-    UnitArr(100.0, units="pc")
-    >>> from units import Unit
-    >>> UnitScalar(Unit('Msol'))
-    UnitArr(1.0, units="Msol")
-    >>> UnitScalar([1,2,3])
-    Traceback (most recent call last):
-    ...
-    ValueError: object is an array!
-    >>> UnitQty([1,2,3])
-    UnitArr([1, 2, 3])
-    >>> import numpy as np
-    >>> UnitQty(np.arange(4), 'km')
-    UnitArr([0, 1, 2, 3], units="km")
-    >>> UnitQty('3 km')
-    UnitArr(3.0, units="km")
-    >>> UnitQty('3 a kpc / h_0', 'kpc', subs={'a':0.5, 'h_0':0.5})
-    UnitArr(3.0, units="kpc")
+    >>> v = UnitArr([1.5,-2.,3.], units='m/s')
+    >>> w = UnitArr(v, 'km/h')
+    >>> w
+    UnitArr([  5.4,  -7.2,  10.8], units="km h**-1")
+    >>> v.in_units_of('km/h')   # does not change v
+    UnitArr([  5.4,  -7.2,  10.8], units="km h**-1")
+    >>> v
+    UnitArr([ 1.5, -2. ,  3. ], units="m s**-1")
+    >>> v.convert_to('km/h')    # convertion in-place
+    >>> v
+    UnitArr([  5.4,  -7.2,  10.8], units="km h**-1")
+    >>> UnitArr(UnitArr(v, 'm/s'), 'm/s')
+    UnitArr([ 1.5, -2. ,  3. ], units="m s**-1")
+    >>> v
+    UnitArr([  5.4,  -7.2,  10.8], units="km h**-1")
+    >>> v[:2].convert_to('m/s') # for consistency: convert entire array!
+    >>> v
+    UnitArr([ 1.5, -2. ,  3. ], units="m s**-1")
+    >>> v.units = 'kg'  # just setting the units, no conversion
+    >>> v
+    UnitArr([ 1.5, -2. ,  3. ], units="kg")
+    >>> sub = v[1:]
+    >>> v[:2].units = 's'   # for consistency: convert entire array!
+    >>> v
+    UnitArr([ 1.5, -2. ,  3. ], units="s")
+    >>> sub     # units are changed for the view as well!
+    UnitArr([-2.,  3.], units="s")
+
+    >>> v + v
+    UnitArr([ 3., -4.,  6.], units="s")
+    >>> v + UnitArr('1 min')
+    UnitArr([ 61.5,  58. ,  63. ], units="s")
+    >>> v *= 2.3
+    >>> v
+    UnitArr([ 3.45, -4.6 ,  6.9 ], units="s")
+    >>> v -= [1.05, -5.1, 2.9]     # understood as in current units
+    >>> v
+    UnitArr([ 2.4,  0.5,  4. ], units="s")
+    >>> v * v
+    UnitArr([  5.76,   0.25,  16.  ], units="s**2")
+    >>> np.sqrt(v)
+    UnitArr([ 1.54919334,  0.70710678,  2.        ], units="s**1/2")
+    >>> np.mean(v)
+    UnitArr(2.3, units="s")
+    >>> v.sum()
+    UnitArr(6.9, units="s")
+    >>> v.prod()
+    UnitArr(4.8, units="s**3")
+    >>> for prop in [np.sum, np.cumsum, np.mean, np.std, np.median, np.ptp,
+    ...              np.transpose, np.min, np.max]:
+    ...     assert prop(v).units == v.units
+    ...     assert prop(v)._unit_carrier is not v._unit_carrier
+    >>> M_earth = UnitArr('5.972e24 kg')
+    >>> R_earth = UnitArr('12740 km', dtype=float) / 2.0
+    >>> v_earth = UnitArr('29.78 km/s')
+    >>> M_earth / (4/3.*np.pi * R_earth**3)
+    UnitArr(5.515856e+12, units="kg km**-3")
+    >>> (0.5 * M_earth * v_earth**2).in_units_of('J')
+    UnitArr(2.648129e+33, units="J")
+
+    Unit conversion at construction:
+    >>> UnitArr('10**8 km', units='AU')
+    UnitArr(0.668458712227, units="AU")
+    >>> UnitArr(UnitArr([1e8, 1e9], 'km'), units='AU')
+    UnitArr([ 0.66845871,  6.68458712], units="AU")
+
+    conversion to native types
+    >>> s = UnitScalar(1.2, 'm')
+    >>> float(s)
+    1.2
+    >>> int(s)
+    1
+    >>> l = UnitArr([2.4], 'km')
+    >>> float(l)
+    2.4
+    >>> s / l
+    UnitArr([ 0.5], units="km**-1 m")
+    >>> float(s/l)
+    0.0005
+    >>> float( UnitArr([1.2], 'km/cm') )
+    120000.0
+
+    Pickling:
+    >>> import pickle
+    >>> v_pickled = pickle.dumps(UnitArr([1,2,3], 'inch'))
+    >>> v_unpickled = pickle.loads(v_pickled)
+    >>> v_unpickled.units
+    Unit("inch")
+
+    Some tests for underlying implementation
+    >>> v = UnitArr([1.5,-2.,3.], units='m/s')
+    >>> assert v.copy()._unit_carrier is not v._unit_carrier
+    >>> assert v.astype(float)._unit_carrier is not v._unit_carrier
+    >>> assert v.T._unit_carrier is not v._unit_carrier
+    >>> assert (v+v)._unit_carrier is not v._unit_carrier
 '''
 __all__ = ['UnitArr', 'dist', 'UnitQty', 'UnitScalar']
 
 import numpy as np
-import copy
 import numpy.core.umath_tests
 import units
 from units import *
@@ -97,9 +127,8 @@ from fractions import Fraction
 import warnings
 import functools
 import numbers
-from .. import environment
 
-def UnitQty(obj, units=None, subs=None, dtype=None):
+def UnitQty(obj, units=None, subs=None, dtype=None, copy=False):
     '''
     Convert to a UnitArr with enshured units.
 
@@ -110,22 +139,49 @@ def UnitQty(obj, units=None, subs=None, dtype=None):
                                 these units.
         subs (dict, Snap):      Substitutions as passe to UnitArr.convert_to.
         dtype (np.dtype, str):  The requested dtype.
+
+    Returns:
+        obj (UnitArr):          A unit array with the desired properties.
+
+    Examples:
+        >>> a = UnitArr([1,2,3], 'm')
+        >>> UnitQty(a, units='m') is a
+        True
+        >>> UnitQty(a, copy=True) is a
+        False
+        >>> UnitQty(a, units='cm', dtype=float)
+        UnitArr([ 100.,  200.,  300.], units="cm")
+        >>> a
+        UnitArr([1, 2, 3], units="m")
+        >>> a = UnitArr([1.,2.,3.], 'm')
+        >>> UnitQty(a, units='cm')
+        UnitArr([ 100.,  200.,  300.], units="cm")
+        >>> a
+        UnitArr([ 1.,  2.,  3.], units="m")
+        >>> UnitQty([1,2,3.5], units='s')
+        UnitArr([ 1. ,  2. ,  3.5], units="s")
+        >>> UnitQty('2.5 AU')
+        UnitArr(2.5, units="AU")
+        >>> UnitQty('0.5 min', units='s')
+        UnitArr(30.0, units="s")
+        >>> UnitQty('2.5 ckpc/h_0', 'kpc', subs=dict(a=0.35, h_0=0.7))
+        UnitArr(1.25, units="kpc")
+        >>> UnitQty(Unit('2.5 AU'))
+        UnitArr(2.5, units="AU")
+        >>> UnitQty([2.5, -0.3])
+        UnitArr([ 2.5, -0.3])
+        >>> UnitQty(2.5, 'AU')
+        UnitArr(2.5, units="AU")
+        >>> UnitQty({}) # doctest:+ELLIPSIS
+        Traceback (most recent call last):
+        ...
+        ValueError: Only native dtype allowed for UnitArr, not object!
     '''
-    if not isinstance(obj, UnitArr):
-        if obj is None:
-            return None
-        obj = UnitArr(obj)
-
-    if dtype is not None:
-        obj = obj.astype(dtype)
-
-    if units is not None:
-        if obj.units is not None:
-            obj = obj.in_units_of(units, subs=subs)
-        else:
-            obj.units = units
-
-    return obj
+    if isinstance(obj, UnitArr) and not copy:
+        if (units is None or obj.units == units) and \
+                (dtype is None or obj.dtype == dtype):
+            return obj
+    return UnitArr(obj, units=units, subs=subs, dtype=dtype, copy=True)
 
 def UnitScalar(obj, units=None, subs=None, dtype=None):
     '''
@@ -143,12 +199,36 @@ def UnitScalar(obj, units=None, subs=None, dtype=None):
 
     Raises:
         ValueError:             If the obj is actually an array.
+
+    Examples:
+        >>> UnitScalar(1.2, 'm')
+        UnitArr(1.2, units="m")
+        >>> UnitScalar('2.5 ckpc/h_0', 'kpc', subs=dict(a=0.35, h_0=0.7))
+        UnitArr(1.25, units="kpc")
+        >>> UnitScalar([1.2], 'm')
+        Traceback (most recent call last):
+        ...
+        ValueError: object is not a scalar!
+        >>> UnitScalar([1,2,3])
+        Traceback (most recent call last):
+        ...
+        ValueError: object is not a scalar!
     '''
     obj = UnitQty(obj, units=units, subs=subs, dtype=dtype)
-    if getattr(obj, 'shape', None):
-        raise ValueError('object is an array!')
+    if obj.shape:
+        raise ValueError('object is not a scalar!')
     return obj
 
+def with_own_units(func):
+    '''Decorate a function return value with the units of the first argument.'''
+    def u_func(self, *args, **kwargs):
+        a = UnitQty(func(self.view(np.ndarray), *args, **kwargs))
+        a._unit_carrier = a
+        a._units = self.units
+        return a
+    u_func.__name__ = func.__name__
+    u_func.__doc__ = func.__doc__
+    return u_func
 
 class UnitArr(np.ndarray):
     '''
@@ -169,28 +249,71 @@ class UnitArr(np.ndarray):
 
     _ufunc_registry = {}
 
-    def __new__(subtype, data, units=None, **kwargs):
+    def __new__(subtype, data, units=None, subs=None, **kwargs):
+        # handle cases where `obj` is a string of a unit:
         if isinstance(data, str):
             data = Unit(data)
         if isinstance(data, _UnitClass):
-            if data.composition:
-                if units is not None:
-                    raise ValueError('conflicting units in UnitArr instantiation!')
+            if units is None:
                 data, units = data.scale, data.free_of_factors()
             else:
-                data = data.scale
+                data = data.in_units_of(units, subs=subs)
 
-        new = np.array(data, **kwargs).view(subtype)
+        # actually create the new object
+        obj = np.array(data, **kwargs).view(subtype)
+        # bool needed in some situations (such as np.median(UnitArr))
+        if obj.dtype.kind not in 'uifb':
+            raise ValueError('Only native dtype allowed for UnitArr, not %s!' %
+                             obj.dtype)
 
-        if units is None:
-            #units = getattr(data, '_units', None)
-            new._units = getattr(data, '_units', None)#Unit(1) if units is None else units
-        elif isinstance(units, _UnitClass):
-            new._units = units
-        else:
-            new._units = Unit(units)
+        # all UnitArr's need to have a _unit_carrier
+        obj._unit_carrier = obj
+        obj._unit_carrier._units = getattr(data, 'units', None)
 
-        return new
+        # bring data into desired units
+        if units is not None:
+            if obj.units is not None:
+                obj.convert_to(units, subs=subs)
+            else:
+                obj.units = units
+
+        return obj
+
+    def __array_finalize__(self, obj):
+        self._unit_carrier = getattr(obj, '_unit_carrier', self)
+        self._unit_carrier._units = getattr(obj, 'units', None)
+
+    def __array_wrap__(self, array, context=None):
+        if context is None:
+            return array
+
+        try:
+            ua = array.view(UnitArr)
+            ua._unit_carrier = ua
+            ufunc = context[0]
+            units = UnitArr._ufunc_registry[ufunc](*context[1])
+            if units is not None:
+                units = units.gather()
+                units._composition.sort()
+            ua.units = units
+            return ua
+        except KeyError:
+            warnings.warn('Operation \'%s\' on units is ' % ufunc.__name__ + \
+                          '*not* defined! Return normal numpy array.')
+            return np.asarray(array)
+        except:
+            raise
+
+    @property
+    def units(self):
+        '''The units of the array.'''
+        return self._unit_carrier._units
+
+    @units.setter
+    def units(self, value):
+        if value is not None:
+            value = Unit(value)
+        self._unit_carrier._units = value
 
     def __float__(self):
         try:
@@ -206,99 +329,43 @@ class UnitArr(np.ndarray):
             a = self
         return int(a.view(np.ndarray))
 
-    def __array_finalize__(self, obj):
-        if obj is None:
-            return
-        else:
-            self._units = getattr(obj, '_units', None)
-            if isinstance(self.base, UnitArr):
-                self.base._units = self._units
-
-    def __array_wrap__(self, array, context=None):
-        if context is None:
-            return array.view(UnitArr)
-
-        try:
-            n_arr = array.view(UnitArr)
-            ufunc = context[0]
-            # prevent warnings in parallel automatic conversions
-            # TODO: find better way!
-            if ufunc.__name__ not in ['lookback_time_in_Gyr (vectorized)',
-                    'lookback_time_2z (vectorized)']:
-                n_arr.units = UnitArr._ufunc_registry[ufunc](*context[1])
-            if n_arr._units:
-                n_arr._units = n_arr._units.gather()
-                n_arr._units._composition.sort()
-            return n_arr
-        except KeyError:
-            #if ufunc.__name__.split()[-1] != '(vectorized)':
-            warnings.warn('Operation \'%s\' on units is ' % ufunc.__name__ + \
-                          '*not* defined! Return normal numpy array.')
-            return array.view(np.ndarray)
-        except:
-            raise
-
-    @property
-    def units(self):
-        '''The units of the array.'''
-        return self._units
-
-    @units.setter
-    def units(self, value):
-        if isinstance(value, _UnitClass):
-            value = value
-        elif value is not None:
-            value = Unit(value)
-
-        self._units = value
-        if isinstance(self.base, UnitArr):
-            self.base._units = value
-
-    @property
-    def value(self):
-        '''Return the value, if this is just a single value.'''
-        if self.shape:
-            raise RuntimeError('This is not a single value.')
-        return self.dtype.type(self)
-
     def __copy__(self, *a):
         if a:
-            duplicate = np.ndarray.__copy__(self, *a).view(UnitArr)
+            dupl = np.ndarray.__copy__(self, *a)
         else:
-            duplicate = np.ndarray.__copy__(self).view(UnitArr)
-        if self._units is None:
-            duplicate._units = None
+            dupl = np.ndarray.__copy__(self)
+        dupl = dupl.view(UnitArr)
+        dupl._unit_carrier = dupl
+        if self.units is None:
+            dupl._units = None
         else:
-            duplicate._units = _UnitClass(self._units._scale,
-                                          copy.deepcopy(self._units._composition))
-        return duplicate
+            dupl._units = self.units
+        return dupl
 
     def __deepcopy__(self, *a):
         if a:
-            duplicate = np.ndarray.__deepcopy__(self, *a).view(UnitArr)
+            dupl = np.ndarray.__deepcopy__(self, *a)
         else:
-            duplicate = np.ndarray.__deepcopy__(self).view(UnitArr)
-        if self._units is None:
-            duplicate._units = None
+            dupl = np.ndarray.__deepcopy__(self)
+        dupl = dupl.view(UnitArr)
+        dupl._unit_carrier = dupl
+        if self.units is None:
+            dupl._units = None
         else:
-            duplicate._units = _UnitClass(self._units._scale,
-                                          copy.deepcopy(self._units._composition))
-        return duplicate
+            dupl._units = self.units
+        return dupl
 
     def copy(self, order=None):
         '''Create a real copy.'''
-        return self.__copy__()
-        """
         if order:
-            return self.__copy__(order) # does not work
+            return self.__copy__(order)
         else:
             return self.__copy__()
-        """
 
     def __repr__(self):
         if not self.shape and self.dtype.kind == 'f':
             r = 'UnitArr('
-            f = float(self)
+            f = float(self.view(np.ndarray)) # avoid conversion of units!
             r += str(f) if (1e-3<=f<=1e3) else ('%e' % f)
             if self.dtype not in ['int', 'float']:
                 r += ', dtype=' + str(self.dtype)
@@ -306,90 +373,60 @@ class UnitArr(np.ndarray):
         else:
             r = np.ndarray.__repr__(self)
             r = 'UnitArr' + r[r.find('('):].replace('\n', '\n  ')
-        if self._units is not None and self._units != 1:
-            r = r[:-1] + (', units="%s")' % str(self._units)[1:-1])
-            if len(r)-r.rfind('\n')>82:
-                right = r.find('dtype=')
-                if right == -1:
-                    right = r.find('units=')
-                arr_end = r.rfind('],')+2
-                if arr_end == 1: arr_end = r.find(',')+1
-                r = r[:arr_end]+'\n'+' '*8+r[right:]
+        if hasattr(self,'units'):
+            if self.units is not None and self.units != 1:
+                r = r[:-1] + (', units="%s")' % str(self.units)[1:-1])
+                if len(r)-r.rfind('\n')>82:
+                    right = r.find('dtype=')
+                    if right == -1:
+                        right = r.find('units=')
+                    arr_end = r.rfind('],')+2
+                    if arr_end == 1: arr_end = r.find(',')+1
+                    r = r[:arr_end]+'\n'+' '*8+r[right:]
+        else:
+            r = r[:-1] + ', no units!)'
         return r
 
     def __str__(self):
         if not self.shape and self.dtype.kind == 'f':
-            f = float(self)
+            f = float(self.view(np.ndarray))    # avoid conversion of units!
             s = str(f) if (1e-3<=f<=1e3) else ('%e' % f)
         else:
             s = np.ndarray.__str__(self)
-        if self._units is not None and self._units != 1:
-            s += ' %s' % self._units
+        if self.units is not None and self.units != 1:
+            s += ' %s' % self.units
         return s
 
+    # needed for pickling
     def __reduce__(self):
-        T = np.ndarray.__reduce__(self)
-        T = (T[0], T[1],
-             (self._units, T[2][0], T[2][1], T[2][2], T[2][3], T[2][4]))
-        return T
+        pickled_state = np.ndarray.__reduce__(self)
+        return (pickled_state[0], pickled_state[1],
+                pickled_state[2] + (self.units,))
 
-    def __setstate__(self, args):
-        self._units = args[0] if isinstance(args[0], _UnitClass) else None
-        np.ndarray.__setstate__(self, args[1:])
+    # needed for unpickling
+    def __setstate__(self, state):
+        self.units = state[-1]
+        np.ndarray.__setstate__(self, state[:-1])
 
-    def astype(self, dtype, order='K', casting='unsafe', subok=True, copy=True):
+    def astype(self, dtype, *args, **kwargs):
         '''
         Convert the type of the array.
 
         Internally np.ndarray.astype is called. See the documentation for more
         details.
-
-        Args:
-            dtype (str, dtype):     Typecode or data-type to convert to.
-            casting {'no', 'equiv', 'safe', 'same_kind', 'unsafe'}:
-                                    Controls the kind of casting that may occur.
-                                    For more details see np.ndarray.astype.
-            subok (bool):           If True, the sub-class will be
-                                    passed-through, otherwise the returned array
-                                    will be forced to be a base-class array.
-            copy (bool):            If set to false (and dtype requirement is
-                                    fulfilled, see np.array.astype), the input
-                                    UnitArr with the original data (casted) is
-                                    returned.
         '''
-        new = np.ndarray.astype(self, dtype, order, casting, subok, copy)
-        new._units = self._units
+        new = np.ndarray.astype(self, dtype, *args, **kwargs)
+        new._unit_carrier = new
+        new._units = self.units
         return new
-
-    def in_units_of(self, units, subs=None, copy=False):
-        '''
-        Return the array in other units.
-
-        Args:
-            units (Unit, str):  The target units.
-            subs (Snap, dict):  See 'convert_to'.
-            copy (bool):        If set to false, return the array itself, if the
-                                target units are the same as the current ones.
-
-        Returns:
-            converted (UnitArr):    The new, converted array. If copy is False and
-                                    the target units are the same as the current
-                                    ones, however, simply self is returned.
-
-        Raises:
-            UnitError:          In case the current units and the target units are
-                                not convertable.
-        '''
-        if not isinstance(units, (_UnitClass,str,numbers.Number)):
-            raise TypeError('Cannot convert type %s to units!' % \
-                            type(units).__name__)
-        c = self.copy()
-        c.convert_to(units=units, subs=subs)
-        return c
 
     def convert_to(self, units, subs=None):
         '''
         Convert the array into other units in place.
+
+        If this is just a view of a bigger underlying UnitArr, this entire
+        underlying is converted in order to avoid different units within the same
+        array.
 
         Args:
             units (Unit, str):  The units to convert to.
@@ -404,59 +441,70 @@ class UnitArr(np.ndarray):
             UnitError:          In case the current units and the target units are
                                 not convertable.
         '''
-        if not isinstance(units, _UnitClass):
-            units = Unit(units)
-        if self._units == units:
-            if str(self._units) != str(units):
+        units = Unit(units)
+        if self.units == units:
+            if str(self.units) != str(units):
                 self.units = units
             return
-        elif self._units is None:
+        elif self.units is None:
             self.units = units
             return
 
-        # if this is not the entire array, pass down to base
-        if isinstance(self.base, UnitArr):
-            self.base.convert_to(units, subs=subs)
-            self._units = units
-            return
-
         from ..snapshot.snapshot import _Snap
-        if subs is None:
-            subs = {}
-        elif isinstance(subs, _Snap):
+        if isinstance(subs, _Snap):
             snap, subs = subs, {}
             subs['a'] = snap.scale_factor
             subs['z'] = snap.redshift
             subs['h_0'] = snap.cosmology.h_0
 
-        fac = self._units.in_units_of(units, subs=subs)
-        view = self.view(np.ndarray)
-        try:
-            view *= fac
-        except:
-            view *= np.array(fac, dtype=view.dtype)
-        self.units = units
+        uc = self._unit_carrier
+        if uc.dtype.kind != 'f':
+            raise RuntimeError('Cannot convert UnitArr inplace, that do not ' + \
+                               'have floating point data type!')
+        fac = uc._units.in_units_of(units, subs=subs)
+        view = uc.view(np.ndarray)
+        view *= fac
+        uc._units = units
 
-    def __getitem__(self, i):
-        item = np.ndarray.__getitem__(self, i)
-        if isinstance(i, slice) or \
-                (isinstance(i, tuple) and len(i)==1 \
-                    and isinstance(i[0], np.ndarray)):
-            item._units = self._units
-        return item
+    def in_units_of(self, units, subs=None, copy=False):
+        '''
+        Return the array in other units.
 
-    def __getslice__(self, a, b):
-        return self.__getitem__(slice(a,b))
+        Args:
+            units (Unit, str):  The target units.
+            subs (Snap, dict):  See 'convert_to'.
+            copy (bool):        If set to False, return the array itself, if the
+                                target units are the same as the current ones.
+
+        Returns:
+            converted (UnitArr):    The new, converted array. If copy is False and
+                                    the target units are the same as the current
+                                    ones, however, simply self is returned.
+
+        Raises:
+            UnitError:          In case the current units and the target units are
+                                not convertable.
+        '''
+        if not isinstance(units, (_UnitClass,str,numbers.Number)):
+            raise TypeError('Cannot convert type %s to units!' % \
+                            type(units).__name__)
+        units = Unit(units)
+        if not copy and units == self.units:
+            return self
+        c = self.copy()
+        c.convert_to(units=units, subs=subs)
+        return c
+
 
     def __setitem__(self, i, value):
         # if both value and self have units and they are different,
         # take care of them
-        if isinstance(value, UnitArr) and value._units is not None \
-                and self._units is not None and value._units != self._units:
-            np.ndarray.__setitem__(self, i, value.in_units_of(self._units))
-        elif isinstance(value, _UnitClass) and self._units is not None and \
-                value != self._units:
-            np.ndarray.__setitem__(self, i, value.in_units_of(self._units))
+        if isinstance(value, UnitArr) and value.units is not None \
+                and self.units is not None and value.units != self.units:
+            np.ndarray.__setitem__(self, i, value.in_units_of(self.units))
+        elif isinstance(value, _UnitClass) and self.units is not None and \
+                value != self.units:
+            np.ndarray.__setitem__(self, i, value.in_units_of(self.units))
         else:
             np.ndarray.__setitem__(self, i, value)
 
@@ -472,7 +520,7 @@ class UnitArr(np.ndarray):
         return x
 
     def _generic_add(self, x, op):
-        return op(self, UnitQty(x,self._units))
+        return op(self, UnitQty(x,self.units))
 
     def __add__(self, x):
         return self._generic_add(x, op=np.add)
@@ -499,51 +547,49 @@ class UnitArr(np.ndarray):
         return np.floor_divide(self, UnitQty(x))
 
     def __mod__(self, x):
-        return np.remainder(self, UnitQty(x))
+        return np.remainder(self, UnitQty(x,self.units))
 
     def __imul__(self, x):
         x = UnitQty(x)
-        if self._units is None:
-            self._units = x._units
-        elif x._units is not None:
-            self.units *= x._units
+        if self.units is None:
+            self.units = x.units
+        elif x.units is not None:
+            self.units *= x.units
         np.ndarray.__imul__(self, x)
         return self
 
     def __idiv__(self, x):
         x = UnitQty(x)
-        if x._units is not None:
-            if self._units is None:
-                self.units = 1 / x._units
+        if x.units is not None:
+            if self.units is None:
+                self.units = 1 / x.units
             else:
-                self.units /= x._units
+                self.units /= x.units
         np.ndarray.__idiv__(self, x)
         return self
 
     def __itruediv__(self, x):
         x = UnitQty(x)
-        if x._units is not None:
-            if self._units is None:
-                self.units = 1 / x._units
+        if x.units is not None:
+            if self.units is None:
+                self.units = 1 / x.units
             else:
-                self.units /= x._units
+                self.units /= x.units
         np.ndarray.__itruediv__(self, x)
         return self
 
     def __ifloordiv__(self, x):
         x = UnitQty(x)
-        if x._units is not None:
-            if self._units is None:
-                self.units = 1 / x._units
+        if x.units is not None:
+            if self.units is None:
+                self.units = 1 / x.units
             else:
-                self.units /= x._units
+                self.units /= x.units
         np.ndarray.__ifloordiv__(self, x)
         return self
 
     def __imod__(self, x):
-        x = UnitQty(x)
-        if self._units is not None and x._units is not None:
-            x = x.in_units_of(self._units)
+        x = UnitQty(x, self.units)
         np.ndarray.__imod__(self, x)
         return self
 
@@ -554,82 +600,78 @@ class UnitArr(np.ndarray):
             res = np.ndarray.__pow__(self,x)
         return res
 
-    """
-    def append(self, array):
-        '''
-        Append a numpy array or a UnitArr to this one.
-
-        Args:
-            array (np.ndarray, UnitArr):
-                    The array to append. It has to have a compatible data-type as
-                    this array. If it is a UnitArr, the units are converted
-                    automatically before appending.
-        '''
-        if not hasattr(array, 'shape'):
-            array = np.array(array, dtype=self._array.dtype)
-        if self._array.shape[1:] != array.shape[1:]:
-            raise ValueError('The array to append has to have ' + \
-                             'compatible shapes!')
-        if isinstance(array, UnitArr) and self._units != array._units:
-            array = array.copy()    # do not destroy the input
-            array.convert_to(self._units)
-        if self._array.flags.owndata:
-            self._array.resize((self._array.shape[0]+array.shape[0],) + \
-                               self._array.shape[1:])
-            self._array[-array.shape[0]:] = array
-        else:
-            self._array = np.concatenate( (self._array, array), axis=0)
-    """
-
-    def cumsum(self, axis=None, dtype=None, out=None):
-        x = np.ndarray.cumsum(self, axis, dtype, out)
-        x.units = self._units
-        return x
-
-    def prod(self, axis=None, dtype=None, out=None):
-        x = np.ndarray.prod(self, axis, dtype, out)
-        if self._units is not None:
+    def prod(self, axis=None, *args, **kwargs):
+        x = np.ndarray.prod(self, axis, *args, **kwargs).view(UnitArr)
+        if self.units is not None:
             if axis is None:
-                x.units = self._units ** np.prod(self.shape)
+                x.units = self.units ** np.prod(self.shape)
             else:
-                x.units = self._units ** self.shape[axis]
+                x.units = self.units ** self.shape[axis]
         return x
 
-    def sum(self, *args, **kwargs):
-        x = np.ndarray.sum(self, *args, **kwargs)
-        x.units = self._units
-        return x
-
-    def mean(self, *args, **kwargs):
-        x = np.ndarray.mean(self, *args, **kwargs)
-        x.units = self._units
-        return x
-
-    def max(self, *args, **kwargs):
-        x = np.ndarray.max(self, *args, **kwargs)
-        x.units = self._units
-        return x
-
-    def min(self, *args, **kwargs):
-        x = np.ndarray.min(self, *args, **kwargs)
-        x.units = self._units
-        return x
-
-    def ptp(self, *args, **kwargs):
-        x = np.ndarray.ptp(self, *args, **kwargs)
-        x.units = self._units
-        return x
-
-    def std(self, *args, **kwargs):
-        x = np.ndarray.std(self, *args, **kwargs)
-        x.units = self._units
-        return x
+    def cumprod(self, axis=None, *args, **kwargs):
+        raise NotImplementedError('Units of a cumulative product would not ' + \
+                                  'be constant!')
 
     def var(self, *args, **kwargs):
-        x = np.ndarray.var(self, *args, **kwargs)
-        if self._units is not None:
-            x.units = self._units**2
+        x = np.ndarray.var(self, *args, **kwargs).view(UnitArr)
+        if self.units is not None:
+            x.units = self.units**2
         return x
+
+    @with_own_units
+    def sum(self, *args, **kwargs):
+        return np.ndarray.sum(self, *args, **kwargs)
+
+    @with_own_units
+    def cumsum(self, *args, **kwargs):
+        return np.ndarray.cumsum(self, *args, **kwargs)
+
+    @property
+    def T(self):
+        return self.transpose()
+
+    @with_own_units
+    def transpose(self, *args, **kwargs):
+        return np.ndarray.transpose(self, *args, **kwargs)
+
+    @with_own_units
+    def byteswap(self, *args, **kwargs):
+        return np.ndarray.byteswap(self, *args, **kwargs)
+
+    @with_own_units
+    def conj(self, *args, **kwargs):
+        return np.conj(self, *args, **kwargs)
+
+    @with_own_units
+    def conjugate(self, *args, **kwargs):
+        return np.conjugate(self, *args, **kwargs)
+
+    @with_own_units
+    def min(self, *args, **kwargs):
+        return np.ndarray.min(self, *args, **kwargs)
+
+    @with_own_units
+    def max(self, *args, **kwargs):
+        return np.ndarray.max(self, *args, **kwargs)
+
+    @with_own_units
+    def mean(self, *args, **kwargs):
+        return np.mean(self, *args, **kwargs)
+
+    @with_own_units
+    def std(self, *args, **kwargs):
+        return np.std(self, *args, **kwargs)
+
+    @with_own_units
+    def ptp(self, *args, **kwargs):
+        return np.ptp(self, *args, **kwargs)
+
+    def argpartition(self, *args, **kwargs):
+        return np.ndarray.argpartition(self.view(np.ndarray), *args, **kwargs)
+
+    def argsort(self, *args, **kwargs):
+        return np.ndarray.argsort(self.view(np.ndarray), *args, **kwargs)
 
 def dist(arr, pos=None, metric='euclidean', p=2, V=None, VI=None, w=None):
     '''
@@ -650,8 +692,8 @@ def dist(arr, pos=None, metric='euclidean', p=2, V=None, VI=None, w=None):
         dists (UnitArr):    Basically cdist(arr, [pos], [...]).ravel() with units.
     '''
     from scipy.spatial.distance import cdist
-    arr_units = getattr(arr, '_units', None)
-    pos_units = getattr(pos, '_units', None)
+    arr_units = getattr(arr, 'units', None)
+    pos_units = getattr(pos, 'units', None)
     if pos is None:
         if not isinstance(arr, np.ndarray): # includes UnitArr
             arr = np.array(arr)
@@ -665,26 +707,26 @@ def dist(arr, pos=None, metric='euclidean', p=2, V=None, VI=None, w=None):
     else:
         units = None
     res = cdist(arr, [pos]).ravel().view(UnitArr)
-    res._units = units
+    res.units = units
     return res
 
 for f in (np.ndarray.__lt__, np.ndarray.__le__, np.ndarray.__eq__,
-        np.ndarray.__ne__, np.ndarray.__gt__, np.ndarray.__ge__):
+          np.ndarray.__ne__, np.ndarray.__gt__, np.ndarray.__ge__):
     # N.B. cannot use functools.partial because it doesn't implement the
     # descriptor protocol
     @functools.wraps(f, assigned=("__name__", "__doc__"))
     def wrapper_function(self, other, comparison_op=f):
         try:
-            if hasattr(self,'snap'):
-                other = UnitQty(other, self._units, subs=self.snap)
+            if hasattr(self,'snap'):    # e.g. for SimArr
+                other = UnitQty(other, self.units, subs=self.snap)
             else:
-                other = UnitQty(other, self._units)
+                other = UnitQty(other, self.units)
         except units.UnitError as e:
             if not e.msg.endswith('convertable!'):
                 return NotImplemented
             other = UnitQty(other)
             if isinstance(other, UnitArr):
-                raise units.UnitError('%r and %r ' % (self._units, other._units) +
+                raise units.UnitError('%r and %r ' % (self.units, other.units) +
                                       'are not comparible.')
         except:
             raise
@@ -695,37 +737,38 @@ for f in (np.ndarray.__lt__, np.ndarray.__le__, np.ndarray.__eq__,
 
 @UnitArr.ufunc_rule(np.add)
 @UnitArr.ufunc_rule(np.subtract)
+@UnitArr.ufunc_rule(np.minimum)
+@UnitArr.ufunc_rule(np.maximum)
 def _same_units_binary(a, b):
-    a_units = getattr(a, '_units', None)
-    b_units = getattr(b, '_units', None)
+    a_units = getattr(a, 'units', None)
+    b_units = getattr(b, 'units', None)
     if a_units is not None and b_units is not None:
         if a_units == b_units:
             return a_units
         else:
             a_units.in_units_of(b_units)
-            raise units.UnitError('Units are not the same, however, they are ' +
+            raise units.UnitError('Units are not the same but they are ' +
                                   'convertable. Use operator instead of ' +
                                   'function or convert manually.')
-    elif a_units is not None:
-        return a_units
     else:
-        return b_units
+        return a_units if a_units is not None else b_units
 
 @UnitArr.ufunc_rule(np.negative)
 @UnitArr.ufunc_rule(np.abs)
 @UnitArr.ufunc_rule(np.floor)
 @UnitArr.ufunc_rule(np.ceil)
 @UnitArr.ufunc_rule(np.transpose)
-#@UnitArr.ufunc_rule(np.minimum)    not unary
-#@UnitArr.ufunc_rule(np.maximum)    not unary
+@UnitArr.ufunc_rule(np.conjugate)
 def _same_units_unary(a):
-    return a._units
+    return a.units
 
 @UnitArr.ufunc_rule(np.multiply)
+@UnitArr.ufunc_rule(np.cross)
+@UnitArr.ufunc_rule(np.dot)
 @UnitArr.ufunc_rule(np.core.umath_tests.inner1d)
 def _mul_units(a, b):
-    a_units = getattr(a, '_units', None)
-    b_units = getattr(b, '_units', None)
+    a_units = getattr(a, 'units', None)
+    b_units = getattr(b, 'units', None)
     if a_units is not None and b_units is not None:
         ab_units = a_units * b_units
         return ab_units
@@ -738,8 +781,8 @@ def _mul_units(a, b):
 @UnitArr.ufunc_rule(np.true_divide)
 @UnitArr.ufunc_rule(np.floor_divide)
 def _div_units(a, b):
-    a_units = getattr(a, '_units', None)
-    b_units = getattr(b, '_units', None)
+    a_units = getattr(a, 'units', None)
+    b_units = getattr(b, 'units', None)
     if a_units is not None and b_units is not None:
         ab_units = a_units / b_units
         return ab_units
@@ -750,19 +793,26 @@ def _div_units(a, b):
 
 @UnitArr.ufunc_rule(np.remainder)
 def _remainder_units(a, b):
-    return getattr(a, '_units', None)
+    a_units = getattr(a, 'units', None)
+    b_units = getattr(b, 'units', None)
+    if a_units is not None and b_units is not None and a_units != b_units:
+        a_units.in_units_of(b_units)
+        raise units.UnitError('Units are not the same but they are ' +
+                              'convertable. Use operator instead of ' +
+                              'function or convert manually.')
+    return a_units
 
 @UnitArr.ufunc_rule(np.sqrt)
 def _sqrt_units(a):
-    if a._units is not None:
-        return a._units**Fraction(1,2)
+    if a.units is not None:
+        return a.units**Fraction(1,2)
     else:
         return None
 
 @UnitArr.ufunc_rule(np.square)
 def _square_units(a):
-    if a._units is not None:
-        return a._units**2
+    if a.units is not None:
+        return a.units**2
     else:
         return None
 
@@ -788,8 +838,8 @@ def _bitwise_op_units(a, b):
 
 @UnitArr.ufunc_rule(np.power)
 def _pow_units(a, b):
-    if getattr(a,'_units',None) is not None:
-        return a._units**b
+    if getattr(a,'units',None) is not None:
+        return a.units**b
     else:
         return None
 

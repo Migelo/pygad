@@ -10,8 +10,7 @@ Examples:
     >>> sa[:2]
     SimArr([ 1.,  2.], units="a kpc h_0**-1", snap="snap_M1196_4x_470")
     >>> sa.in_units_of('kpc')
-    SimArr([ 1.38888889,  2.77777778,  4.16666667],
-           units="kpc", snap="snap_M1196_4x_470")
+    UnitArr([ 1.38888889,  2.77777778,  4.16666667], units="kpc")
     >>> sa.convert_to('kpc')
     >>> sa
     SimArr([ 1.38888889,  2.77777778,  4.16666667],
@@ -36,13 +35,34 @@ class SimArr(UnitArr):
     even if a is a SimArr.
     '''
 
-    def __new__(subtype, data, units=None, snap=None, **kwargs):
-        new = UnitArr(data, units=units, **kwargs).view(subtype)
-
-        new._snap = snap
-        new._dependencies = set()
+    def __new__(subtype, data, units=None, snap=None, subs=None, **kwargs):
+        ua = UnitArr(data, units=units, subs=subs, **kwargs)
+        
+        new = ua.view(subtype)
+        copy = kwargs.get('copy',True)
+        new._unit_carrier = new if copy else getattr(ua, '_unit_carrier', new)
+        new._unit_carrier._units = getattr(ua, 'units', None)
+        new._snap = snap if snap else getattr(data, 'snap', None)
+        new._dependencies = getattr(data, '_dependencies', set())
 
         return new
+
+    # operations of unit array should always return simple UnitArr
+    # otherwise one would have 'memeory leaks' where the hidden references to
+    # snapshots do not get deleted
+    def __array__(self, dtype=None):
+        ua = self.view(UnitArr)
+        del ua._snap
+        del ua._dependencies
+        return ua
+
+    def __array_finalize__(self, obj):
+        UnitArr.__array_finalize__(self, obj)
+        self._snap = getattr(obj, '_snap', None)
+        self._dependencies = getattr(obj, '_dependencies', set())
+
+    def __array_wrap__(self, array, context=None):
+        return UnitArr.__array_wrap__(self, array, context)
 
     @property
     def snap(self):
@@ -76,27 +96,6 @@ class SimArr(UnitArr):
                 r = r[:arr_end]+'\n'+' '*7+r[right:]
         return r
 
-    def __array_finalize__(self, obj):
-        if obj is None:
-            return
-        elif isinstance(obj, UnitArr):
-            UnitArr.__array_finalize__(self, obj)
-            self._snap = getattr(obj, 'snap', None)
-            if isinstance(self.base, SimArr):
-                self.base._snap = self._snap
-                del self._snap
-            self._dependencies = getattr(obj, 'dependencies', set())
-            if isinstance(self.base, SimArr):
-                self.base._dependencies = self._dependencies
-                del self._dependencies
-
-    def __array_wrap__(self, array, context=None):
-        n_arr = UnitArr.__array_wrap__(self, array, context).view(SimArr)
-        if not isinstance(n_arr.base, SimArr):
-            n_arr._snap = self._snap
-            n_arr._dependencies = self._dependencies
-        return n_arr
-
     def __copy__(self, *a):
         if a:
             duplicate = UnitArr.__copy__(self, *a).view(SimArr)
@@ -115,19 +114,22 @@ class SimArr(UnitArr):
         duplicate._dependencies = self.dependencies.copy()
         return duplicate
 
-    def in_units_of(self, units, subs=None, copy=False):
-        '''See UnitArr for documentation. This, however, returns a UnitArr view.'''
-        if not copy and self.units == units:
-            return self
-        if subs is None:
-            subs = self.snap
-        return super(SimArr, self).in_units_of(units, subs=subs, copy=copy)
-
     def convert_to(self, units, subs=None):
         '''See UnitArr for documentation.'''
         if subs is None:
             subs = self.snap
-        super(SimArr, self).convert_to(units, subs=subs)
+        #super(SimArr, self).convert_to(units, subs=subs)
+        UnitArr.convert_to(self, units, subs=subs)
+
+    def in_units_of(self, units, subs=None, copy=False):
+        '''See UnitArr for documentation. This, however, returns a UnitArr view.'''
+        if subs is None:
+            subs = self.snap
+        conv = UnitArr.in_units_of(self, units, subs=subs, copy=copy)
+        if conv is not self:
+            del conv._snap
+            del conv._dependencies
+        return conv.view(UnitArr)
 
     def invalidate_dependencies(self):
         '''
@@ -141,22 +143,6 @@ class SimArr(UnitArr):
             host = self.snap.get_host_subsnap(dep)
             if dep in host._blocks:
                 del host[dep]
-
-
-# arithmetic functions that yield new arrays shall return UnitArr's
-def _arith_wrapper(f):
-    def arith__(self, other):
-        res = f(self, other)
-        if res is not NotImplemented:
-            res = res.view(UnitArr)
-        return res
-    arith__.__name__ = f.__name__
-    return arith__
-for fn in ('__add__', '__radd__', '__sub__', '__rsub__', '__mul__', '__rmul__',
-           '__div__', '__rdiv__', '__truediv__', '__floordiv__', '__mod__',
-           '__pow__', '__eq__', '__gt__', '__lt__', '__ge__', '__le__',
-           '__rshift__', '__lshift__'):
-    setattr(SimArr, fn, _arith_wrapper(getattr(UnitArr,fn)))
 
 # __i*__ functions shall not erase the _snap and _dependencies attributes and
 # shall invalidate all dependent SimArr's
@@ -185,6 +171,22 @@ def _set_wrapper(f):
 for fn in ('__setitem__', '__setslice__'):
     setattr(SimArr, fn, _set_wrapper(getattr(UnitArr,fn)))
 
+"""
+# arithmetic functions that yield new arrays shall return UnitArr's
+def _arith_wrapper(f):
+    def arith__(self, other):
+        res = f(self, other)
+        if res is not NotImplemented:
+            res = res.view(UnitArr)
+        return res
+    arith__.__name__ = f.__name__
+    return arith__
+for fn in ('__add__', '__radd__', '__sub__', '__rsub__', '__mul__', '__rmul__',
+           '__div__', '__rdiv__', '__truediv__', '__floordiv__', '__mod__',
+           '__pow__', '__eq__', '__gt__', '__lt__', '__ge__', '__le__',
+           '__rshift__', '__lshift__'):
+    setattr(SimArr, fn, _arith_wrapper(getattr(UnitArr,fn)))
+
 # "properties" should be UnitArr's
 def _prop_wrapper(f):
     def prop__(self, *a, **kw):
@@ -196,4 +198,5 @@ def _prop_wrapper(f):
     return prop__
 for fn in ('cumsum', 'prod', 'sum', 'max', 'min', 'ptp', 'mean', 'std', 'var'):
     setattr(SimArr, fn, _prop_wrapper(getattr(UnitArr,fn)))
+"""
 

@@ -26,7 +26,6 @@ __all__ = ['alpha_elements', 'G', 'c', 'kB', 'N_A', 'R', 'e', 'm_p', 'm_n', 'm_u
            'Jeans_length', 'Jeans_mass']
 
 import numpy as np
-import sys
 import warnings
 import scipy.constants
 from ..units import *
@@ -369,7 +368,6 @@ def SMH_Kravtsov_2014(M_halo, type='200c', return_scatter=False):
     log10_SM = _Behroozi_function(np.log10(M_halo), log10_M1, log10_eps, alpha, delta, gamma)
     if return_scatter:
         warnings.warn('Scatter of 0.2 dex in Kravtsov et al. (2014) not shure!')
-        #print >> sys.stderr, 'WARNING: scatter of 0.2 dex in Kravtsov et al. (2014) not shure!'
         return 10**log10_SM/M_halo, \
                10**(log10_SM-0.2)/M_halo, 10**(log10_SM+0.2)/M_halo
     else:
@@ -486,7 +484,7 @@ def SFR_Elbaz_2007(M_star, z=0.0, return_scatter=False):
     else:
         return SFR
 
-def Jeans_length(T, rho, mu=m_u, units='kpc'):
+def Jeans_length(T, rho, mu='1 u', units='kpc'):
     '''
     The Jeans length.
 
@@ -546,7 +544,7 @@ def Jeans_length(T, rho, mu=m_u, units='kpc'):
     L2.convert_to(Unit(units)**2)
     return np.sqrt(L2)
     
-def Jeans_mass(T, rho, mu=m_u, units='Msol'):
+def Jeans_mass(T, rho, mu='1 u', units='Msol'):
     '''
     The Jeans mass.
 

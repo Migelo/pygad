@@ -46,7 +46,7 @@ Examples:
     interpolate in metallicity...
     done.
     derive block lum_v... done.
-    >>> if abs(eff_radius(sub, 'V', proj=2) - '2.9') > '0.2 kpc':
+    >>> if abs(eff_radius(sub, 'V', proj=2) - '2.9 kpc') > '0.2 kpc':
     ...     print eff_radius(sub, 'V', proj=2)
     derive block rcyl... done.
     >>> if abs(half_qty_radius(sub.stars, qty='mass', proj=2) - '3.77 kpc') > '0.1 kpc':
