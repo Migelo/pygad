@@ -27,7 +27,7 @@ Examples:
 
     # Results of operations with SimArr's must be UnitArr and must not have any
     # (hidden) references to the snapshot anymore!
-    >>> if s is not None:
+    >>> while s is not None:
     ...     assert not hasattr(s, '_snap')
     ...     assert not hasattr(s, '_dependencies')
     ...     s = s.base
