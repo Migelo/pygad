@@ -394,6 +394,9 @@ def rot_from_axis_angle(u, angle):
         angle (UnitScalar):     The angle in radians around the axis u (right-hand
                                 rotation). (Default units: rad)
 
+    Returns:
+        rot (Rotation):         The corresponding rotation (not only the matrix!).
+
     Example:
         >>> print rot_from_axis_angle([1,0,0], np.pi/2.0)
         Rotation([[ 1.000, 0.000, 0.000],[ 0.000, 0.000,-1.000],[ 0.000, 1.000, 0.000]])
@@ -430,13 +433,17 @@ def rot_to_z(z):
         z (array-like): The vector defining the new z-axis. (Does not have to be
                         normalized.)
 
-    >>> assert np.all(rot_to_z([0,0,1]).rotmat == np.eye(3))
-    >>> z = rot_to_z([1,2,3]).apply_to_block(np.array([[1,2,3]]))
-    >>> assert abs(z[0,0])<1e-9 and abs(z[0,1])<1e-9
-    >>> print rot_to_z([0,1,1])
-    Rotation([[ 1.000, 0.000, 0.000],[ 0.000, 0.707,-0.707],[ 0.000, 0.707, 0.707]])
-    >>> print rot_to_z([0.5,-1,0])
-    Rotation([[ 0.800, 0.400,-0.447],[ 0.400, 0.200, 0.894],[ 0.447,-0.894, 0.000]])
+    Returns:
+        rot (Rotation): The corresponding rotation.
+
+    Examples:
+        >>> assert np.all(rot_to_z([0,0,1]).rotmat == np.eye(3))
+        >>> z = rot_to_z([1,2,3]).apply_to_block(np.array([[1,2,3]]))
+        >>> assert abs(z[0,0])<1e-9 and abs(z[0,1])<1e-9
+        >>> print rot_to_z([0,1,1])
+        Rotation([[ 1.000, 0.000, 0.000],[ 0.000, 0.707,-0.707],[ 0.000, 0.707, 0.707]])
+        >>> print rot_to_z([0.5,-1,0])
+        Rotation([[ 0.800, 0.400,-0.447],[ 0.400, 0.200, 0.894],[ 0.447,-0.894, 0.000]])
     '''
     z = np.array(z,dtype=float)
     if z.shape != (3,):
