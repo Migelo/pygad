@@ -25,39 +25,29 @@ Examples:
     >>> Translation(-center).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_320"... done.
 
-    >>> FoF, N_FoF = find_FoF_groups(s.highres.dm, '2.5 kpc')
-    perfrom a FoF search (l = 2.5 [kpc], N >= 50)...
-    found 201 groups
+    >>> FoF, N_FoF = find_FoF_groups(s.highres.dm, '2.5 kpc')    # doctest: +ELLIPSIS
+    perfrom a FoF search (l = 2.5 [kpc], N >= 100)...
+    found 106 groups
     the 3 most massive ones are:
-      group 0:   3.57e+11 [Msol]  @  [1.02, -1.02, 1.1] [kpc]
-      group 1:   8.05e+10 [Msol]  @  [491, 941, 428] [kpc]
-      group 2:   2.52e+10 [Msol]  @  [872, 1.36e+03, 729] [kpc]
+      group 0:   3.57e+11 [Msol]  @  [1..., -1..., 1...] [kpc]
+      group 1:   8.05e+10 [Msol]  @  [4..., 9..., 4...] [kpc]
+      group 2:   2.52e+10 [Msol]  @  [8..., 1...e+03, 7...] [kpc]
     >>> halo0 = s.highres.dm[FoF==0]
     >>> if abs(halo0['mass'].sum() - '3.57e11 Msol') > '0.02e11 Msol':
     ...     print halo0['mass'].sum()
-    >>> FoF, N_FoF = find_FoF_groups(s.baryons, '2.5 kpc')
-    perfrom a FoF search (l = 2.5 [kpc], N >= 50)...
-    found 15 groups
-    the 3 most massive ones are:
-      group 0:   3.93e+10 [Msol]  @  [-0.116, 0.55, 0.0737] [kpc]
-      group 1:   7.14e+09 [Msol]  @  [492, 940, 428] [kpc]
-      group 2:   4.83e+09 [Msol]  @  [871, 1.36e+03, 729] [kpc]
-    >>> gal0 = s.baryons[FoF==0]
-    >>> if abs(gal0['mass'].sum() - '3.93e10 Msol') > '0.02e10 Msol':
-    ...     print gal0['mass'].sum()
 
-    >>> galaxies = generate_FoF_catalogue(s.stars, l='3 kpc', min_parts=1e2)
-    perfrom a FoF search (l = 3 [kpc], N >= 100)...
-    found 4 groups
+    >>> galaxies = generate_FoF_catalogue(s.stars, l='3 kpc', min_N=3e2)    # doctest: +ELLIPSIS
+    perfrom a FoF search (l = 3 [kpc], N >= 300)...
+    found 3 groups
     the 3 most massive ones are:
-      group 0:   2.33e+10 [Msol]  @  [0.0296, 0.358, -0.0857] [kpc]
-      group 1:   2.33e+09 [Msol]  @  [492, 940, 429] [kpc]
-      group 2:   2.14e+09 [Msol]  @  [871, 1.36e+03, 729] [kpc]
+      group 0:   2.33e+10 [Msol]  @  [0..., 0..., -0...] [kpc]
+      group 1:   2.33e+09 [Msol]  @  [4..., 9..., 4...] [kpc]
+      group 2:   2.14e+09 [Msol]  @  [8..., 1...e+03, 7...] [kpc]
     initialize halo classes from FoF group IDs...
     load block ID... done.
     done.
-    >>> galaxies[0]
-    <Halo /w M = 2.3e+10 [Msol] @ com = [0.03, 0.36, -0.086] [kpc]>
+    >>> galaxies[0] # doctest: +ELLIPSIS
+    <Halo /w M = 2.3e+10 [Msol] @ com = [0..., 0..., -0...] [kpc]>
     >>> gal = s[galaxies[0]]
     >>> assert len(gal) == len(galaxies[0])
     >>> assert set(gal['ID']) == set(galaxies[0].IDs)
@@ -214,14 +204,14 @@ def virial_info(s, center=None, odens=200.0, N_min=10):
     return UnitArr(info[0],s['pos'].units), \
            UnitArr(info[1],s['mass'].units)
 
-def find_FoF_groups(s, l, min_parts=50, sort=True, verbose=environment.verbose):
+def find_FoF_groups(s, l, min_N=100, sort=True, verbose=environment.verbose):
     '''
     Perform a friends-of-friends search on a (sub-)snapshot.
 
     Args:
         s (Snap):           The (sub-)snapshot to perform the FoF finder on.
         l (UnitScalar):     The linking length to use for the FoF finder.
-        min_parts (int):    The minimum number of particles in a FoF group to
+        min_N (int):        The minimum number of particles in a FoF group to
                             actually define it as such.
         sort (bool):        Whether to sort the groups by mass. If True, the group
                             with ID 0 will be the most massive one and the in
@@ -234,11 +224,11 @@ def find_FoF_groups(s, l, min_parts=50, sort=True, verbose=environment.verbose):
     '''
     l = UnitScalar(l, s['pos'].units, subs=s)
     sort = bool(sort)
-    min_parts = int(min_parts)
+    min_N = int(min_N)
 
     if verbose:
         print 'perfrom a FoF search (l = %.2g %s, N >= %g)...' % (
-                l, l.units, min_parts)
+                l, l.units, min_N)
         sys.stdout.flush()
 
     pos = s['pos'].astype(np.float64)
@@ -254,7 +244,7 @@ def find_FoF_groups(s, l, min_parts=50, sort=True, verbose=environment.verbose):
                              C.c_void_p(pos.ctypes.data),
                              C.c_void_p(mass.ctypes.data),
                              C.c_double(l),
-                             C.c_size_t(min_parts),
+                             C.c_size_t(min_N),
                              C.c_int(int(sort)),
                              C.c_void_p(FoF.ctypes.data),
                              C.c_double(boxsize),
