@@ -25,7 +25,7 @@ Examples:
     >>> Translation(-center).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_320"... done.
 
-    >>> FoF, N_FoF = find_FoFs(s.highres.dm, '2.5 kpc')
+    >>> FoF, N_FoF = find_FoF_groups(s.highres.dm, '2.5 kpc')
     perfrom a FoF search (l = 2.5 [kpc], N >= 50)...
     found 201 groups
     the 3 most massive ones are:
@@ -35,7 +35,7 @@ Examples:
     >>> halo0 = s.highres.dm[FoF==0]
     >>> if abs(halo0['mass'].sum() - '3.57e11 Msol') > '0.02e11 Msol':
     ...     print halo0['mass'].sum()
-    >>> FoF, N_FoF = find_FoFs(s.baryons, '2.5 kpc')
+    >>> FoF, N_FoF = find_FoF_groups(s.baryons, '2.5 kpc')
     perfrom a FoF search (l = 2.5 [kpc], N >= 50)...
     found 15 groups
     the 3 most massive ones are:
@@ -45,12 +45,37 @@ Examples:
     >>> gal0 = s.baryons[FoF==0]
     >>> if abs(gal0['mass'].sum() - '3.93e10 Msol') > '0.02e10 Msol':
     ...     print gal0['mass'].sum()
+
+    >>> galaxies = generate_FoF_catalogue(s.stars, l='3 kpc', min_parts=1e2)
+    perfrom a FoF search (l = 3 [kpc], N >= 100)...
+    found 4 groups
+    the 3 most massive ones are:
+      group 0:   2.33e+10 [Msol]  @  [0.0296, 0.358, -0.0857] [kpc]
+      group 1:   2.33e+09 [Msol]  @  [492, 940, 429] [kpc]
+      group 2:   2.14e+09 [Msol]  @  [871, 1.36e+03, 729] [kpc]
+    initialize halo classes from FoF group IDs...
+    load block ID... done.
+    done.
+    >>> galaxies[0]
+    <Halo /w M = 2.3e+10 [Msol] @ com = [0.03, 0.36, -0.086] [kpc]>
+    >>> gal = s[galaxies[0]]
+    >>> assert len(gal) == len(galaxies[0])
+    >>> assert set(gal['ID']) == set(galaxies[0].IDs)
+    >>> assert np.all(gal.parts == np.array(galaxies[0].parts))
+    >>> assert gal['mass'].sum() == galaxies[0].props['mass']
+    >>> assert gal.stars['mass'].sum() == galaxies[0].Mstars
+    >>> galaxies[0]._calc_prop('ssc', s)
+    >>> if np.linalg.norm(galaxies[0].ssc - galaxies[0].com) > '1.0 kpc':
+    ...     print galaxies[0].ssc
+    ...     print galaxies[0].com
 '''
-__all__ = ['shrinking_sphere', 'virial_info', 'find_FoFs']
+__all__ = ['shrinking_sphere', 'virial_info', 'find_FoF_groups', 'Halo',
+           'generate_FoF_catalogue']
 
 import numpy as np
 from .. import utils
 from ..units import *
+from ..utils import *
 import sys
 from ..transformation import *
 from .. import gadget
@@ -60,7 +85,7 @@ from .. import environment
 from .. import C
 
 def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
-                     stop_N=10):
+                     stop_N=10, verbose=environment.verbose):
     '''
     Find the densest point by shrinking sphere technique.
 
@@ -82,7 +107,7 @@ def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
     center0 = UnitQty(center,s['pos'].units,subs=s,dtype=np.float64)
     R = UnitScalar(R,s['pos'].units,subs=s)
 
-    if environment.verbose:
+    if verbose:
         print 'do a shrinking sphere...'
         print '  starting values:'
         print '    center = %s' % center0
@@ -125,7 +150,7 @@ def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
     center = center.view(UnitArr)
     center.units = s['pos'].units
 
-    if environment.verbose:
+    if verbose:
         print 'done.'
         sys.stdout.flush()
 
@@ -189,7 +214,7 @@ def virial_info(s, center=None, odens=200.0, N_min=10):
     return UnitArr(info[0],s['pos'].units), \
            UnitArr(info[1],s['mass'].units)
 
-def find_FoFs(s, l, min_parts=50, sort=True):
+def find_FoF_groups(s, l, min_parts=50, sort=True, verbose=environment.verbose):
     '''
     Perform a friends-of-friends search on a (sub-)snapshot.
 
@@ -204,14 +229,15 @@ def find_FoFs(s, l, min_parts=50, sort=True):
 
     Returns:
         FoF (np.ndarray):   A block of FoF group IDs for the particles of `s`.
+                            (IDs are ordered in mass, if `sort=True`).
         N_FoF (int):        The number of FoF groups found.
     '''
     l = UnitScalar(l, s['pos'].units, subs=s)
     sort = bool(sort)
     min_parts = int(min_parts)
 
-    if environment.verbose:
-        print 'perfrom a FoF search (l = %.2g %s, N >= %d)...' % (
+    if verbose:
+        print 'perfrom a FoF search (l = %.2g %s, N >= %g)...' % (
                 l, l.units, min_parts)
         sys.stdout.flush()
 
@@ -238,7 +264,7 @@ def find_FoFs(s, l, min_parts=50, sort=True):
     # do not count the particles with no halo!
     N_FoF = len(set(FoF)) - 1
 
-    if environment.verbose:
+    if verbose:
         print 'found %d groups' % N_FoF
         N_list = min(N_FoF, 3)
         if N_list:
@@ -255,4 +281,191 @@ def find_FoFs(s, l, min_parts=50, sort=True):
         sys.stdout.flush()
 
     return FoF, N_FoF
+
+class Halo(object):
+    '''
+    A class representing an halo or some group of an snapshot represented by IDs.
+
+    Internally the defining IDs are stored and on creation some properties (such
+    as total mass and R200) are calculated.
+
+    Args:
+        halo (Snap):                The sub-snapshot that defines the halo.
+
+        alternatively:
+
+        IDs (set, array-like):      The IDs that define the halo.
+        snap (Snap):                Some (sub-)snapshot that entirely contains the
+                                    halo defining IDs.
+
+        calc (set, list, tuple):    A list of the properties to calculate at
+                                    isinstantiation. 'mass', 'com', and 'parts'
+                                    are always calculated.
+    '''
+    __long_name_prop__ = {
+            'mass':     'total mass',
+            'Mstars':   'total stellar mass',
+            'Mgas':     'total gas mass',
+            'Mdm':      'total dark matter mass',
+            'parts':    'number of particles per species',
+            'com':      'center of mass',
+            'ssc':      'shrinking sphere center',
+            'Rmax':     'maximum distance of a particle from com',
+            'Rvir':     'Rvir (Mo+ 2002): (3*M / (4*pi * 18*pi**2 * rho_c))**(1/3.)',
+            'R200':     'R200 (Mo+ 2002): (3*M / (4*pi * 200*rho_c))**(1/3.)',
+            'R500':     'R500 (Mo+ 2002): (3*M / (4*pi * 500*rho_c))**(1/3.)',
+    }
+
+    @staticmethod
+    def all_prop_list():
+        return Halo.__long_name_prop__.keys()
+
+    def __init__(self, halo=None, IDs=None, snap=None, calc=None):
+        if halo is None:
+            halo = snap[IDMask(IDs)]
+            if len(halo) != len(IDs):
+                raise ValueError('The given snapshot does not contain all ' + \
+                                 'specified IDs!')
+        else:
+            if IDs is not None or snap is not None:
+                raise ValueError('If the sub-snapshot`halo` is given, the ' + \
+                                 'Halo will be defined by this and `IDs` ' + \
+                                 'and `snap` must be None to avoid confusion!')
+
+        # the defining property:
+        self._IDs = halo['ID'].copy()
+
+        # derive some properties
+        self._props = {}
+        if calc is None:
+            # remove time consuming calculations
+            calc = set(Halo.all_prop_list()) - set(['ssc'])
+        if calc == 'all':
+            calc = Halo.all_prop_list()
+        calc = set(calc) - set(['mass', 'com', 'parts'])
+        self._calc_prop('mass', halo=halo)
+        self._calc_prop('com', halo=halo)
+        self._calc_prop('parts', halo=halo)
+        for prop in calc:
+            self._calc_prop(prop, halo=halo)
+
+    def _calc_prop(self, prop, snap=None, halo=None):
+        if halo is None:
+            halo = snap[self.mask]
+
+        if prop == 'mass':
+            val = halo['mass'].sum()
+        elif prop == 'com':
+            val = center_of_mass(halo)
+        elif prop == 'parts':
+            val = tuple(halo.parts)   # shall not change!
+        elif prop in ['Mstars', 'Mgas', 'Mdm']:
+            sub = getattr(halo, prop[1:], None)
+            if sub is None:
+                val = UnitScalar(0.0, halo['mass'].units)
+            else:
+                val = sub['mass'].sum()
+        elif prop == 'ssc':
+            R_max = np.percentile(periodic_distance_to(halo['pos'],
+                                                       self.com,
+                                                       halo.boxsize),
+                                  70)
+            val = shrinking_sphere(halo, center=self.com,
+                                   R=R_max, verbose=False)
+        elif prop == 'Rmax':
+            val = periodic_distance_to(halo['pos'], self.com,
+                                       halo.boxsize).max()
+        elif prop in ['Rvir', 'R200', 'R500']:
+            if prop == 'Rvir':
+                odens = 18. * np.pi**2
+            else:
+                odens = int(prop[1:])
+            rho_crit = halo.cosmology.rho_crit( z=halo.redshift )
+            rho_crit.convert_to(halo['mass'].units/halo['pos'].units**3,
+                                subs=halo)
+            r3 = 3.0 * self.mass / (4.0*np.pi * odens*rho_crit)
+            val = r3 ** Fraction(1,3)
+        else:
+            raise ValueError('Unknown property "%s"!' % prop)
+
+        self._props[prop] = val
+
+    @property
+    def IDs(self):
+        return self._IDs.copy()
+
+    @property
+    def mask(self):
+        '''The ID mask of the halo to mask a snapshot.'''
+        # avoid copying the IDs
+        mask = IDMask.__new__(IDMask)
+        SnapMask.__init__(mask)
+        mask._IDs = self._IDs
+        return mask
+
+    @property
+    def props(self):
+        '''All properties.'''
+        return self._props.copy()
+
+    def prop_descr(self, name):
+        '''Long description of a property.'''
+        return Halo.__long_name_prop__.get(name, 'unknown')
+
+    def __getattr__(self, name):
+        attr = self._props.get(name, None)
+        if attr is not None:
+            return attr
+        raise AttributeError('%s has no attribute "%s"!' % (self, name))
+
+    def __repr__(self):
+        r = '<Halo'
+        r += ' /w M = %.2g %s' % (self.mass, self.mass.units)
+        r += ' @ com = [%.2g, %.2g, %.2g] %s' % (
+                tuple(self.com) + (self.com.units,))
+        r += '>'
+        return r
+
+    def __len__(self):
+        return sum(self._props['parts'])
+
+def generate_FoF_catalogue(s, l=None, calc=None, FoF=None,
+                           verbose=environment.verbose, **kwargs):
+    '''
+    Generate a list of Halos defined by FoF groups.
+
+    Args:
+        s (Snap):           The snapshot to generate the FoF groups for.
+        l (UnitScalar):     The linking length for the FoF groups.
+        calc (set, list, tuple):
+                            A list of the properties to calculate at instantiation
+                            of the Halo instances.
+        FoF (np.array):     An array with group IDs for each particle in the
+                            snapshot `s`. If given, `l` is ignored and the FoF
+                            groups are not calculated within this function.
+        verbose (bool):     Verbosity.
+        **kwargs:           passed to `find_FoF_groups`.
+
+    Returns:
+        halos (list):       A list of all the groups as Halo instances. (Sorted in
+                            mass, it not `sort=False` in the `kwargs`.)
+    '''
+    calc = kwargs.pop('calc', None)
+
+    if FoF is None:
+        FoF, N_FoF = find_FoF_groups(s, l=l, **kwargs)
+    else:
+        N_FoF = len(set(FoF)) - 1
+
+    if verbose:
+        print 'initialize halo classes from FoF group IDs...'
+        sys.stdout.flush()
+
+    halos = [ Halo(s[FoF==i],calc=calc) for i in xrange(N_FoF) ]
+
+    if verbose:
+        print 'done.'
+        sys.stdout.flush()
+
+    return halos
 
