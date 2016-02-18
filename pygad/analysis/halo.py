@@ -18,58 +18,12 @@ Examples:
     done.
     >>> if np.linalg.norm( center - UnitArr([33816.9, 34601.1, 32681.0], 'kpc') ) > 1.0:
     ...     print center
+
     >>> R200, M200 = virial_info(s, center)
     >>> if abs(R200 - '177 kpc') > 3 or abs(M200 - '1e12 Msol') / '1e12 Msol' > 0.1:
     ...     print R200, M200
     >>> Translation(-center).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_320"... done.
-    >>> sub = s[s['r'] < 0.10*R200]
-    derive block r... done.
-    >>> if abs(half_mass_radius(sub.stars) - '4.3 kpc') > '0.1 kpc':
-    ...     print half_mass_radius(sub.stars)
-    >>> if abs(eff_radius(sub, 'V', proj=None) - '3.3 kpc') > '0.3 kpc':
-    ...     print eff_radius(sub, 'V', proj=None)
-    load block form_time... done.
-    derive block age... done.
-    load block elements... done.
-    convert block elements to physical units... done.
-    derive block H... done.
-    derive block He... done.
-    derive block metals... done.
-    derive block Z... done.
-    derive block mag_v... interpolate SSP tables for qty "Vmag"...
-    read tables...
-    table limits:
-      age [yr]:    1.00e+05 - 2.00e+10
-      metallicity: 1.00e-04 - 5.00e-02
-    interpolate in age...
-    interpolate in metallicity...
-    done.
-    derive block lum_v... done.
-    >>> if abs(eff_radius(sub, 'V', proj=2) - '2.9 kpc') > '0.2 kpc':
-    ...     print eff_radius(sub, 'V', proj=2)
-    derive block rcyl... done.
-    >>> if abs(half_qty_radius(sub.stars, qty='mass', proj=2) - '3.77 kpc') > '0.1 kpc':
-    ...     print half_qty_radius(sub.stars, qty='mass', proj=2)
-    >>> ifr, ofr = flow_rates(s, '50 kpc')
-    load block vel... done.
-    derive block vrad... done.
-    >>> if abs(ifr - '421 Msol/yr') > '5 Msol/yr' or abs(ofr - '370 Msol/yr') > '5 Msol/yr':
-    ...     print ifr, ofr
-    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc')) - '-7.1 Msol/yr') > '0.1 Msol/yr':
-    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'))
-    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'in') - '-14.7 Msol/yr') > '0.2 Msol/yr':
-    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'in')
-    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'out') - '7.5 Msol/yr') > '0.1 Msol/yr':
-    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'out')
-    >>> ifr, ofr = flow_rates(s.gas, '50 kpc')
-
-    >>> if abs(ifr - '11.0 Msol/yr') > '1.0 Msol/yr' or abs(ofr - '7.1 Msol/yr') > '0.1 Msol/yr':
-    ...     print ifr, ofr
-    >>> eta = ofr / s.gas['sfr'].sum()
-    load block sfr... done.
-    >>> if abs(eta - 1.546) > 0.01:
-    ...     print 'mass loading:', eta
 
     >>> FoF, N_FoF = find_FoFs(s.highres.dm, '2.5 kpc')
     perfrom a FoF search (l = 2.5 [kpc], N >= 50)...
@@ -92,9 +46,7 @@ Examples:
     >>> if abs(gal0['mass'].sum() - '3.93e10 Msol') > '0.02e10 Msol':
     ...     print gal0['mass'].sum()
 '''
-__all__ = ['shrinking_sphere', 'virial_info', 'half_qty_radius',
-           'half_mass_radius', 'eff_radius', 'shell_flow_rates', 'flow_rates',
-           'find_FoFs']
+__all__ = ['shrinking_sphere', 'virial_info', 'find_FoFs']
 
 import numpy as np
 from .. import utils
@@ -102,7 +54,7 @@ from ..units import *
 import sys
 from ..transformation import *
 from .. import gadget
-from snap_props import *
+from properties import *
 from ..snapshot import *
 from .. import environment
 from .. import C
@@ -236,185 +188,6 @@ def virial_info(s, center=None, odens=200.0, N_min=10):
         info[:] = np.nan
     return UnitArr(info[0],s['pos'].units), \
            UnitArr(info[1],s['mass'].units)
-
-def half_qty_radius(s, qty, Qtot=None, center=None, proj=None):
-    '''
-    Calculate the radius at which half of a quantity is confined in.
-
-    Args:
-        s (Snap):               The (sub-)snapshot to use.
-        qty (str, UnitQty):     The quantity to calculate the half-X-radius for.
-        Qtot (float, UnitArr):  The total amount of the quantity. If not given,
-                                the total quantity of the (sub-)snapshot is used.
-        center (array-like):    The center of the structure to calculate the
-                                properties for. (default: [0,0,0])
-        proj (int):             If set, do the calculation for the projection
-                                along the specified axis (0=x, 1=y, 2=z).
-
-    Returns:
-        r12 (UnitArr):          The half-X-radius.
-    '''
-    if len(s) == 0:
-        # leads to exceptions otherwise
-        return UnitArr(0.0, s['pos'].units)
-
-    if center is None:
-        center = UnitQty([0]*3)
-    else:
-        center = UnitQty(center)
-    center = center.in_units_of(s['pos'].units,subs=s)
-
-    if isinstance(proj,int):
-        proj_mask = tuple([i for i in xrange(3) if i!=proj])
-        if len(center)==3:
-            center = center[(proj_mask,)]
-
-    if np.all(center==0):
-        if isinstance(proj,int):
-            r = s['rcyl'] if proj==2 else dist(s['pos'][:,proj_mask])
-        else:
-            r = s['r']
-    else:
-        r = dist(s['pos'][:,proj_mask],center) if isinstance(proj,int) \
-                else dist(s['pos'],center)
-    r_ind = r.argsort()
-
-    if isinstance(qty,str):
-        qty = s.get(qty)
-    else:
-        qty = UnitQty(qty)
-
-    Q = np.cumsum(qty[r_ind])
-    if Qtot is None:
-        Qtot = Q[-1]
-    else:
-        Qtot = UnitScalar(Qtot,qty.units,subs=s,dtype=float)
-
-    Q_half_ind = np.abs(Q - Qtot/2.).argmin()
-    if Q_half_ind == len(Q)-1:
-        print >> sys.stderr, 'WARNING: The half-qty radius is larger than ' + \
-                             'the (sub-)snapshot passed!'
-    elif Q_half_ind < 10:
-        print >> sys.stderr, 'WARNING: The half-qty radius is not resolved ' + \
-                             'for %s!' % s
-    return UnitArr(r[r_ind][Q_half_ind], s['pos'].units)
-
-def half_mass_radius(s, M=None, center=None, proj=None):
-    '''
-    Calculate the (by default 3D) half-mass-radius of the structure at the center.
-
-    For more details see analysis.half_qty_radius.
-
-    Args:
-        s (Snap):               The (sub-)snapshot to use.
-        M (float, UnitArr):     The total mass.
-        center (array-like):    The center of the structure. (default: [0,0,0])
-        proj (int):             If set, do the calculation for the projection
-                                along the specified axis (0=x, 1=y, 2=z).
-
-    Returns:
-        r12 (UnitArr):          The half-mass-radius.
-    '''
-    return half_qty_radius(s, qty='mass', Qtot=M, center=center)
-
-def eff_radius(s, band=None, L=None, center=None, proj=2):
-    '''
-    Calculate the (by default 2D) half-light-radius of the structure at the
-    center.
-
-    For more details see analysis.half_qty_radius.
-
-    Args:
-        s (Snap):               The (sub-)snapshot to use.
-        band (str):             The band in which the effective radius is
-                                calculated. If it is None or 'bol', the bolometric
-                                luminosity is taken.
-        L (float, UnitArr):     The total luminosity.
-        center (array-like):    The center of the structure. (default: [0,0,0])
-        proj (int):             The axis to project along.
-
-    Returns:
-        r12 (UnitArr):          The half-light-radius.
-    '''
-    qty = 'lum'
-    if band is not None and band != 'bol':
-        qty += '_' + band.lower()
-    return half_qty_radius(s.stars, qty=qty, Qtot=L, center=center, proj=proj)
-
-def shell_flow_rates(s, Rlim, direction='both', units='Msol/yr'):
-    '''
-    Estimate flow rate in spherical shell.
-    
-    The estimation is done by caluculating m*v/d on a particle base, where d is
-    the thickness of the shell.
-
-    Args:
-        s (Snap):               The (sub-)snapshot to use.
-        Rlim (UnitQty):         The inner and outer radius of the shell.
-        direction ('in', 'out', 'both'):
-                                The direction to take into account. If 'in', only
-                                take onflowing gas particles into the calculation;
-                                analog for 'out'; and do not restrict to particles
-                                with 'both'.
-        units (Unit, str):      The units in which to return the flow rate.
-
-    Returns:
-        flow (UnitArr):         The estimated flow rate.
-    '''
-    Rlim = UnitQty(Rlim, s['r'].units)
-    if not Rlim.shape == (2,):
-        raise ValueError('Rlim must have shape (2,)!')
-    shell = s[(Rlim[0]<s['r']) & (s['r']<Rlim[1])]
-
-    if direction=='both':
-        pass
-    elif direction=='in':
-        shell = shell[shell['vrad'] < 0]
-    elif direction=='out':
-        shell = shell[shell['vrad'] > 0]
-    else:
-        raise RuntimeError('unknown direction %s!' % direction)
-
-    flow = np.sum(shell['mass'] * shell['vrad'] / UnitArr(Rlim[1]-Rlim[0], Rlim.units))
-    flow.convert_to(units)
-    return flow
-
-def flow_rates(s, R, dt='3 Myr'):
-    #TODO: extend to discs!
-    '''
-    Estimate in- and outflow rates through a given radius.
-    
-    The estimation is done by propagating the positions with constant current
-    velocities, i.e. pos_new = pos_old + vel*dt. Then counting the mass that
-    passed the shell of radius R.
-
-    Args:
-        s (Snap):               The (sub-)snapshot to use.
-        R (UnitScalar):         The radius of the shell through which the flow is
-                                estimated.
-        dt (UnitScalar):        The time used for the linear extrapolation of the
-                                current positions (if it is a plain number without
-                                units, they are assumed to be 'Myr').
-
-    Returns:
-        ifr (UnitArr):          The estimated inflow rate.
-        ofr (UnitArr):          The estimated outflow rate.
-    '''
-    R = UnitScalar(R, units=s['pos'].units, subs=s)
-    dt = UnitScalar(dt, units='Myr', subs=s)
-
-    # predicted particle distances from center in dt
-    dt.convert_to(s['r'].units/s['vel'].units,subs=s)   # avoid conversions of
-                                                        # entire arrays
-    rpred = s['r'] + s['vrad']*dt
-    of_mass = s['mass'][(s['r'] < R) & (rpred >= R)]
-    if_mass = s['mass'][(s['r'] >= R) & (rpred < R)]
-
-    dt.convert_to('yr',subs=s)  # to more intuitive units again
-    ofr = np.sum(of_mass) / dt
-    ifr = np.sum(if_mass) / dt
-
-    return ifr, ofr
 
 def find_FoFs(s, l, min_parts=50, sort=True):
     '''
