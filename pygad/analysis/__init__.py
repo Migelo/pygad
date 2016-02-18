@@ -6,7 +6,7 @@ Also doctest other parts of this sub-module:
     >>> doctest.testmod(snap_props)
     TestResults(failed=0, attempted=29)
     >>> doctest.testmod(halo)
-    TestResults(failed=0, attempted=22)
+    TestResults(failed=0, attempted=28)
     >>> doctest.testmod(profiles)
     TestResults(failed=0, attempted=19)
 

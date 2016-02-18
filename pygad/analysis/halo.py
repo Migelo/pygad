@@ -64,16 +64,37 @@ Examples:
     ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'out')
     >>> ifr, ofr = flow_rates(s.gas, '50 kpc')
 
-    TODO: This inflow rate seems to be unstable between different machines...!
     >>> if abs(ifr - '11.0 Msol/yr') > '1.0 Msol/yr' or abs(ofr - '7.1 Msol/yr') > '0.1 Msol/yr':
     ...     print ifr, ofr
     >>> eta = ofr / s.gas['sfr'].sum()
     load block sfr... done.
     >>> if abs(eta - 1.546) > 0.01:
     ...     print 'mass loading:', eta
+
+    >>> FoF, N_FoF = find_FoFs(s.highres.dm, '2.5 kpc')
+    perfrom a FoF search (l = 2.5 [kpc], N >= 50)...
+    found 201 groups
+    the 3 most massive ones are:
+      group 0:   3.57e+11 [Msol]  @  [1.02, -1.02, 1.1] [kpc]
+      group 1:   8.05e+10 [Msol]  @  [491, 941, 428] [kpc]
+      group 2:   2.52e+10 [Msol]  @  [872, 1.36e+03, 729] [kpc]
+    >>> halo0 = s.highres.dm[FoF==0]
+    >>> if abs(halo0['mass'].sum() - '3.57e11 Msol') > '0.02e11 Msol':
+    ...     print halo0['mass'].sum()
+    >>> FoF, N_FoF = find_FoFs(s.baryons, '2.5 kpc')
+    perfrom a FoF search (l = 2.5 [kpc], N >= 50)...
+    found 15 groups
+    the 3 most massive ones are:
+      group 0:   3.93e+10 [Msol]  @  [-0.116, 0.55, 0.0737] [kpc]
+      group 1:   7.14e+09 [Msol]  @  [492, 940, 428] [kpc]
+      group 2:   4.83e+09 [Msol]  @  [871, 1.36e+03, 729] [kpc]
+    >>> gal0 = s.baryons[FoF==0]
+    >>> if abs(gal0['mass'].sum() - '3.93e10 Msol') > '0.02e10 Msol':
+    ...     print gal0['mass'].sum()
 '''
 __all__ = ['shrinking_sphere', 'virial_info', 'half_qty_radius',
-           'half_mass_radius', 'eff_radius', 'shell_flow_rates', 'flow_rates']
+           'half_mass_radius', 'eff_radius', 'shell_flow_rates', 'flow_rates',
+           'find_FoFs']
 
 import numpy as np
 from .. import utils
@@ -82,7 +103,6 @@ import sys
 from ..transformation import *
 from .. import gadget
 from snap_props import *
-from ..octree import *
 from ..snapshot import *
 from .. import environment
 from .. import C
@@ -125,7 +145,7 @@ def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
     pos  = s['pos'].astype(np.float64)
     mass = s['mass'].astype(np.float64)
     assert len(pos) == len(mass)
-    boxsize = s.boxsize.in_units_of(s['pos'].units)
+    boxsize = float( s.boxsize.in_units_of(s['pos'].units) )
 
     # needed since C does not know about stridings
     if pos.base is not None:
@@ -395,4 +415,71 @@ def flow_rates(s, R, dt='3 Myr'):
     ifr = np.sum(if_mass) / dt
 
     return ifr, ofr
+
+def find_FoFs(s, l, min_parts=50, sort=True):
+    '''
+    Perform a friends-of-friends search on a (sub-)snapshot.
+
+    Args:
+        s (Snap):           The (sub-)snapshot to perform the FoF finder on.
+        l (UnitScalar):     The linking length to use for the FoF finder.
+        min_parts (int):    The minimum number of particles in a FoF group to
+                            actually define it as such.
+        sort (bool):        Whether to sort the groups by mass. If True, the group
+                            with ID 0 will be the most massive one and the in
+                            descending order.
+
+    Returns:
+        FoF (np.ndarray):   A block of FoF group IDs for the particles of `s`.
+        N_FoF (int):        The number of FoF groups found.
+    '''
+    l = UnitScalar(l, s['pos'].units, subs=s)
+    sort = bool(sort)
+    min_parts = int(min_parts)
+
+    if environment.verbose:
+        print 'perfrom a FoF search (l = %.2g %s, N >= %d)...' % (
+                l, l.units, min_parts)
+        sys.stdout.flush()
+
+    pos = s['pos'].astype(np.float64)
+    mass = s['mass'].astype(np.float64)
+    if pos.base is not None:
+        pos = pos.copy()
+    if mass.base is not None:
+        mass = mass.copy()
+    FoF = np.empty(len(s), dtype=np.uintp)
+    boxsize = float(s.boxsize.in_units_of(s['pos'].units))
+
+    C.cpygad.find_fof_groups(C.c_size_t(len(s)),
+                             C.c_void_p(pos.ctypes.data),
+                             C.c_void_p(mass.ctypes.data),
+                             C.c_double(l),
+                             C.c_size_t(min_parts),
+                             C.c_int(int(sort)),
+                             C.c_void_p(FoF.ctypes.data),
+                             C.c_double(boxsize),
+                             None,  # build new tree
+    )
+
+    # do not count the particles with no halo!
+    N_FoF = len(set(FoF)) - 1
+
+    if environment.verbose:
+        print 'found %d groups' % N_FoF
+        N_list = min(N_FoF, 3)
+        if N_list:
+            if N_list==1:
+                print 'the most massive one is:'
+            else:
+                print 'the %d most massive ones are:' % N_list
+            for i in xrange(N_list):
+                FoF_group = s[FoF==i]
+                com = center_of_mass(FoF_group)
+                M = FoF_group['mass'].sum()
+                print '  group %d:   %8.3g %s  @  [%.3g, %.3g, %.3g] %s' % (
+                        i, M, M.units, com[0], com[1], com[2], com.units)
+        sys.stdout.flush()
+
+    return FoF, N_FoF
 
