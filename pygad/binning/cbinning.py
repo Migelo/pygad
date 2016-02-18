@@ -228,7 +228,8 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
         px_area (UnitArr):  The area of a pixel.
     '''
     # prepare arguments
-    if len(set([0,1,2]) - set([xaxis, yaxis])) != 1:
+    zaxis = (set([0,1,2]) - set([xaxis, yaxis])).pop()
+    if set([xaxis, yaxis, zaxis]) != set([0,1,2]):
         raise ValueError('Illdefined axes (x=%s, y=%s)!' % (xaxis, yaxis))
     extent, Npx, res = grid_props(extent=extent, Npx=Npx, dim=2)
     extent = UnitQty(extent, s['pos'].units, subs=s)
@@ -241,9 +242,6 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
         print >> sys.stderr, 'WARNING: 2D grid has very uneven ratio of ' + \
                              'smallest to largest resolution (ratio %.2g)' % (
                                      res.max()/res.min())
-
-    zaxis = (set([0,1,2]) - set([xaxis, yaxis])).pop()
-    assert set([xaxis, yaxis, zaxis]) == set([0,1,2])
 
     if environment.verbose:
         print 'create a %d x %d' % tuple(Npx),

@@ -85,6 +85,10 @@ def map_qty(s, extent, qty, av=None, Npx=256, xaxis=0, yaxis=1, softening=None,
                             of a pixel (column -- *not* column density).
         px_area (UnitArr):  The area of a pixel.
     '''
+    zaxis = (set([0,1,2]) - set([xaxis, yaxis])).pop()
+    if set([xaxis, yaxis, zaxis]) != set([0,1,2]):
+        raise ValueError('Illdefined axes (x=%s, y=%s)!' % (xaxis, yaxis))
+
     if kernel is None:
         kernel = general['kernel']
 
@@ -108,8 +112,6 @@ def map_qty(s, extent, qty, av=None, Npx=256, xaxis=0, yaxis=1, softening=None,
     extent, Npx, res = grid_props(extent=extent, Npx=Npx, dim=2)
     extent = extent.in_units_of(s['pos'].units, subs=s)
     res = res.in_units_of(s['pos'].units, subs=s)
-    if xaxis not in range(3) or yaxis not in range(3) or xaxis==yaxis:
-        raise ValueError('The x- and y-axis have to be 0, 1, or 2 and different!')
     if softening is not None:
         #softening = UnitArr([0.2, 0.45, 2.52, 20.0, 0.2, 0.2],'ckpc / h_0')
         softening = UnitQty(softening, s['pos'].units, subs=s)

@@ -116,6 +116,11 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         im (AxesImage):     The image instance created.
        [cbar (Colobar):     The colorbar, if showcbar is True.]
     '''
+    zaxis = (set([0,1,2]) - set([xaxis, yaxis])).pop()
+    if set([xaxis, yaxis, zaxis]) != set([0,1,2]):
+        raise ValueError('x- and y-axis must be different and in [0,1,2], ' + \
+                         'but it is xaxis=%s, yaxis=%s!' % (xaxis, yaxis))
+
     # setting default values for arguments
     if units is not None:
         units = Unit(units)
@@ -127,9 +132,6 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     extent, Npx, res = grid_props(extent=extent, Npx=Npx, dim=2)
     extent = extent.in_units_of(s['pos'].units, subs=s)
     res = res.in_units_of(s['pos'].units, subs=s)
-
-    zaxis = (set([0,1,2]) - set([xaxis, yaxis])).pop()
-    assert set([xaxis, yaxis, zaxis]) == set([0,1,2])
 
     # mask snapshot for faster plotting
     ext3D = UnitArr(np.empty((3,2)), extent.units)
