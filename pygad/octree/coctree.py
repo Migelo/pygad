@@ -78,6 +78,21 @@ Doctests:
     ...                          axis=1)
     >>> assert np.all(periodic_dists<h)
     >>> assert np.any(normal_dists>h)
+
+    More neighbour finding
+    >>> pos = np.array([[0.1,0.3,0.2], [0.9,0.3,0.2], [0.8,0.5,0.1],
+    ...                 [0.1,0.6,0.8], [0.2,0.2,0.3], [0.6,0.6,0.7]])
+    >>> tree = cOctree(pos)
+    >>> idx = np.arange(len(pos))
+    >>> tree.find_ngbs_within(pos[0], 0.2, pos, cond=idx!=0)
+    array([4], dtype=uint64)
+    >>> tree.find_ngbs_within(pos[0], 0.2, pos, cond=None)
+    array([0, 4], dtype=uint64)
+    >>> tree.find_next_ngb([0.5]*3, pos)
+    5
+    >>> tree.find_next_ngb([0.5]*3, pos, cond=idx%2==0)
+    4
+    >>> tree.find_next_ngb([0.5]*3, pos, cond=np.zeros(len(pos)))
 '''
 __all__ = ['cOctree']
 
@@ -117,11 +132,14 @@ cpygad.get_octree_octant.argtypes = [c_void_p, c_void_p]
 cpygad.get_octree_ngbs_within.argtypes = [c_void_p,
                                           c_void_p, c_double,
                                           c_size_t, c_void_p, POINTER(c_size_t),
-                                          c_void_p, c_double]
+                                          c_void_p, c_double,
+                                          c_void_p]
 cpygad.get_octree_ngbs_SPH.argtypes = [c_void_p,
                                        c_void_p, c_void_p,
                                        c_size_t, c_void_p, POINTER(c_size_t),
                                        c_void_p, c_double, c_double]
+cpygad.get_octree_next_ngb.argtypes = [c_void_p, c_void_p, c_void_p, c_double,
+                                       c_void_p]
 class _MAX_TREE_LEVEL_class(type):
     _MAX_TREE_LEVEL = int( c_int.in_dll(cpygad, 'MAX_TREE_LEVEL').value )
     def _get_MAX_TREE_LEVEL(self):
@@ -279,7 +297,7 @@ class cOctree(object):
                 H = H.copy()
             cpygad.update_octree_max_H(self.__node_ptr, H.ctypes.data)
 
-    def find_ngbs_within(self, r, H, pos, periodic=np.inf, max_ngbs=100):
+    def find_ngbs_within(self, r, H, pos, periodic=np.inf, cond=None, max_ngbs=100):
         '''
         Find all particles in tree within distance `H` from position `r`.
 
@@ -290,6 +308,10 @@ class cOctree(object):
                                 tree.
             periodic (float):   Assume the particles to sit in a periodic cube
                                 with this side length.
+            cond (array-like):  Boolean array of a condition to be fulfilled such
+                                that a particle is registered as a neighbour. In
+                                other words, each particle i for which cond[i] is
+                                False is excluded from the neighbours.
             max_ngbs (int):     Only return this number of neighbours at maximum.
                                 (Not necessarily the closest ones!)
 
@@ -309,11 +331,18 @@ class cOctree(object):
 
         ngbs = np.empty(max_ngbs, dtype=np.uintp)
         N_ngbs = c_size_t()
+        if cond is not None:
+            cond = np.asarray(cond, dtype=np.int32)
+            if cond.shape != (len(pos),):
+                raise ValueError('Unmatching shape of `cond`: %s!' % (cond.shape,))
+            if cond.base is not None:
+                cond = cond.copy()
+            cond = cond.ctypes.data
         cpygad.get_octree_ngbs_within(self.__node_ptr,
                                       r.ctypes.data, H,
                                       max_ngbs, ngbs.ctypes.data, byref(N_ngbs),
-                                      pos.ctypes.data,
-                                      periodic
+                                      pos.ctypes.data, periodic,
+                                      cond,
         )
         ngbs.resize(N_ngbs.value)
         return ngbs
@@ -362,4 +391,50 @@ class cOctree(object):
         )
         ngbs.resize(N_ngbs.value)
         return ngbs
+
+    def find_next_ngb(self, r, pos, periodic=np.inf, cond=None):
+        '''
+        Find all particles in tree within distance `H` from position `r`.
+
+        Args:
+            r (array-like):     Reference position.
+            pos (array-like):   The positions corresponding to the indices of the
+                                tree.
+            periodic (float):   Assume the particles to sit in a periodic cube
+                                with this side length.
+            cond (array-like):  Boolean array of a condition to be fulfilled such
+                                that a particle is registered as a neighbour. In
+                                other words, each particle i for which cond[i] is
+                                False is excluded from the neighbours.
+
+        Returns:
+            ngb (int):          Index of the next neighbour to position r that
+                                fulfills the condition. None if there is no such
+                                next neighbour.
+        '''
+        r = np.asarray(r, dtype=np.float64).copy()
+        pos = np.asarray(pos, dtype=np.float64)
+        if pos.shape[1:] != (3,):
+            raise ValueError('Positions have to have shape (N,3)!')
+        if pos.base is not None:
+            pos = pos.copy()
+        periodic = float(periodic)
+
+        if cond is not None:
+            cond = np.asarray(cond, dtype=np.int32)
+            if cond.shape != (len(pos),):
+                raise ValueError('Unmatching shape of `cond`: %s!' % (cond.shape,))
+            if cond.base is not None:
+                cond = cond.copy()
+            cond = cond.ctypes.data
+        ngb = cpygad.get_octree_next_ngb(self.__node_ptr,
+                                         r.ctypes.data,
+                                         pos.ctypes.data,
+                                         periodic,
+                                         cond,
+        )
+        if ngb == -1:
+            ngb = None
+
+        return ngb
 

@@ -106,9 +106,16 @@ extern "C" void get_octree_ngbs_within(void *const octree,
                                        const double r[3], double H,
                                        size_t max_ngbs, size_t *ngbs, size_t *N_ngbs,
                                        const double *const pos,
-                                       const double periodic) {
+                                       const double periodic,
+                                       const int32_t *cond) {
     const Tree<3> *tree = (const Tree<3> *)octree;
-    std::vector<size_t> v_ngbs = tree->ngbs_within(r, H, pos, periodic);
+    std::vector<size_t> v_ngbs;
+    if (cond) {
+        v_ngbs = tree->ngbs_within_if(r, H, pos, periodic,
+                                      [&cond](size_t i){return cond[i];});
+    } else {
+        v_ngbs = tree->ngbs_within(r, H, pos, periodic);
+    }
     *N_ngbs = std::min(v_ngbs.size(), max_ngbs);
     for (size_t i=0; i<*N_ngbs; i++) {
         ngbs[i] = v_ngbs[i];
@@ -127,5 +134,19 @@ extern "C" void get_octree_ngbs_SPH(void *const octree,
         ngbs[i] = v_ngbs[i];
     }
 }
-
+extern "C" size_t get_octree_next_ngb(void *const octree,
+                                      const double r[3],
+                                      const double *const pos,
+                                      const double periodic,
+                                      const int32_t *cond) {
+    const Tree<3> *tree = (const Tree<3> *)octree;
+    std::pair<size_t,double> ngb;
+    if (cond) {
+        ngb = tree->next_ngb_with(r, pos, periodic,
+                                  [&cond](size_t i){return cond[i];});
+    } else {
+        ngb = tree->next_ngb_with(r, pos, periodic, [](size_t i){return true;});
+    }
+    return ngb.first;
+}
 

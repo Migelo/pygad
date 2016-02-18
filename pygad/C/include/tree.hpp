@@ -47,13 +47,25 @@ class Tree {
         size_t count_particles() const;
         int get_max_depth() const;
 
+        template<typename F>
+        std::vector<size_t> ngbs_within_if(const double r[d], double H,
+                                           const double *pos,
+                                           const double periodic,
+                                           F cond) const;
         std::vector<size_t> ngbs_within(const double r[d], double H,
                                         const double *pos,
-                                        const double periodic) const;
+                                        const double periodic) const {
+            return ngbs_within_if(r, H, pos, periodic, [](size_t i){return true;});
+        }
         std::vector<size_t> ngbs_SPH(const double r[d], const double *H,
                                      const double *pos,
                                      const double periodic,
                                      const double tol) const;
+        template<typename F>
+        std::pair<size_t,double> next_ngb_with(const double r[d],
+                                               const double *pos,
+                                               const double periodic,
+                                               F cond) const;
 
     private:
         double _center[d];
@@ -90,13 +102,19 @@ extern "C" void get_octree_ngbs_within(void *const octree,
                                        const double r[3], double H,
                                        size_t max_ngbs, size_t *ngbs, size_t *N_ngbs,
                                        const double *const pos,
-                                       const double periodic);
+                                       const double periodic,
+                                       const int32_t *cond);
 extern "C" void get_octree_ngbs_SPH(void *const octree,
                                     const double r[3], const double *const H,
                                     size_t max_ngbs, size_t *ngbs, size_t *N_ngbs,
                                     const double *const pos,
                                     const double periodic,
                                     const double tol);
+extern "C" size_t get_octree_next_ngb(void *const octree,
+                                      const double r[3],
+                                      const double *const pos,
+                                      const double periodic,
+                                      const int32_t *cond);
 
 
 template<int d>
@@ -282,14 +300,16 @@ int Tree<d>::get_max_depth() const {
 }
 
 template<int d>
-std::vector<size_t> Tree<d>::ngbs_within(const double r[d], double H,
-                                         const double *pos,
-                                         const double periodic) const {
+template<typename F>
+std::vector<size_t> Tree<d>::ngbs_within_if(const double r[d], double H,
+                                            const double *pos,
+                                            const double periodic,
+                                            F cond) const {
     std::vector<size_t> ngb_idx;
     if (_leaf) {
         for (unsigned i=0; i<_num_child; i++) {
             size_t idx = _child.idx[i];
-            if (dist2_periodic<d>(r,&pos[d*idx],periodic) < H*H) {
+            if (dist2_periodic<d>(r,&pos[d*idx],periodic) < H*H and cond(idx)) {
                 ngb_idx.push_back(idx);
             }
         }
@@ -299,7 +319,7 @@ std::vector<size_t> Tree<d>::ngbs_within(const double r[d], double H,
             if (node) {
                 double max_d = dist_max_periodic<d>(r, node->_center, periodic);
                 if (TREE_NODE_OPEN_TOL*max_d < side_2_H) { // open node and add neighbors therein
-                    std::vector<size_t> node_ngbs = node->ngbs_within(r, H, pos, periodic);
+                    std::vector<size_t> node_ngbs = node->ngbs_within_if(r, H, pos, periodic, cond);
                     ngb_idx.insert(ngb_idx.end(), node_ngbs.begin(), node_ngbs.end());
                 }
             }
@@ -333,5 +353,39 @@ std::vector<size_t> Tree<d>::ngbs_SPH(const double r[d], const double *H,
         }
     }
     return ngb_idx;
+}
+
+template<int d>
+template<typename F>
+std::pair<size_t,double> Tree<d>::next_ngb_with(const double r[d],
+                                                const double *pos,
+                                                const double periodic,
+                                                F cond) const {
+    std::pair<size_t,double> ngb = {-1, periodic};
+    if (_leaf) {
+        ngb.second = std::pow(ngb.second,2);
+        for (unsigned i=0; i<_num_child; i++) {
+            size_t idx = _child.idx[i];
+            double d2 = dist2_periodic<d>(r,&pos[d*idx],periodic);
+            if (d2 < ngb.second and cond(idx)) {
+                ngb.first = idx;
+                ngb.second = d2;
+            }
+        }
+        ngb.second = std::sqrt(ngb.second);
+    } else {
+        for (const auto node : _child.node) {
+            if (node) {
+                double max_d = dist_max_periodic<d>(r, node->_center, periodic);
+                if (max_d - node->_side_2 < ngb.second) {
+                    std::pair<size_t,double> ngb_oct;
+                    ngb_oct = node->next_ngb_with(r, pos, periodic, cond);
+                    if (ngb_oct.second < ngb.second)
+                        ngb = ngb_oct;
+                }
+            }
+        }
+    }
+    return ngb;
 }
 

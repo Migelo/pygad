@@ -70,7 +70,7 @@ Example:
     >>> del_quantity(tree, 'com')
     >>> del_quantity(tree, 'mass')
 '''
-__all_ = ['OctNode', 'Octree', 'count_nodes', 'count_leaves', 'count_particles',
+__all__ = ['OctNode', 'Octree', 'count_nodes', 'count_leaves', 'count_particles',
           'max_depth', 'find_node', 'find_ngbs', 'all_indices', 'apply_on',
           'del_quantity', 'populate_center_of_mass',
           'delete_where_too_many_heavy_particles']
