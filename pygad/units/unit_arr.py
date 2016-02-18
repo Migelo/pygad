@@ -62,6 +62,8 @@ Examples:
     UnitArr([  5.76,   0.25,  16.  ], units="s**2")
     >>> np.sqrt(v)
     UnitArr([ 1.54919334,  0.70710678,  2.        ], units="s**1/2")
+    >>> np.round(v**Fraction(1,3), 3)   # no floats allowed, however, Fraction are!
+    array([ 1.339,  0.794,  1.587])
     >>> np.mean(v)
     UnitArr(2.3, units="s")
     >>> v.sum()
@@ -591,7 +593,9 @@ class UnitArr(np.ndarray):
 
     def __pow__(self, x):
         if isinstance(x,Fraction) and self.dtype.kind=='f':
-            res = np.ndarray.__pow__(self,float(x)) # way faster to use floats
+            # way faster to use floats:
+            res = np.ndarray.__pow__(self.view(np.ndarray),float(x))
+            res = UnitQty(res, units=self.units**x)
         else:
             res = np.ndarray.__pow__(self,x)
         return res
@@ -755,6 +759,7 @@ def _same_units_binary(a, b):
 @UnitArr.ufunc_rule(np.ceil)
 @UnitArr.ufunc_rule(np.transpose)
 @UnitArr.ufunc_rule(np.conjugate)
+@UnitArr.ufunc_rule(np.round)
 def _same_units_unary(a):
     return a.units
 
