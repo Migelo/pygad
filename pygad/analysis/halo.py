@@ -36,18 +36,20 @@ Examples:
     >>> if abs(halo0['mass'].sum() - '3.57e11 Msol') > '0.02e11 Msol':
     ...     print halo0['mass'].sum()
 
-    >>> galaxies = generate_FoF_catalogue(s.stars, l='3 kpc', min_N=3e2)    # doctest: +ELLIPSIS
+    # find galaxies (exclude those with almost only gas)
+    >>> galaxies = generate_FoF_catalogue(s.baryons, l='3 kpc', min_N=3e2,
+    ...             exclude=lambda g,s: g.Mgas/g.mass>0.9)  # doctest: +ELLIPSIS
     perfrom a FoF search (l = 3 [kpc], N >= 300)...
-    found 3 groups
+    found 6 groups
     the 3 most massive ones are:
-      group 0:   2.33e+10 [Msol]  @  [0..., 0..., -0...] [kpc]
-      group 1:   2.33e+09 [Msol]  @  [4..., 9..., 4...] [kpc]
-      group 2:   2.14e+09 [Msol]  @  [8..., 1...e+03, 7...] [kpc]
-    initialize halo classes from FoF group IDs...
+      group 0:   4.09e+10 [Msol]  @  [-0..., 1..., -0...] [kpc]
+      group 1:   7.17e+09 [Msol]  @  [4..., 9..., 4...] [kpc]
+      group 2:   5.29e+09 [Msol]  @  [8..., 1...e+03, 7...] [kpc]
+    initialize halos from FoF group IDs...
     load block ID... done.
-    done.
+    initialized 3 halos.
     >>> galaxies[0] # doctest: +ELLIPSIS
-    <Halo /w M = 2.3e+10 [Msol] @ com = [0..., 0..., -0...] [kpc]>
+    <Halo N = 71,... /w M = 4.1e+10 [Msol] @ com = [-0..., 1..., -0...] [kpc]>
     >>> gal = s[galaxies[0]]
     >>> assert len(gal) == len(galaxies[0])
     >>> assert set(gal['ID']) == set(galaxies[0].IDs)
@@ -60,7 +62,7 @@ Examples:
     ...     print galaxies[0].com
 '''
 __all__ = ['shrinking_sphere', 'virial_info', 'find_FoF_groups', 'Halo',
-           'generate_FoF_catalogue']
+           'generate_FoF_catalogue', 'find_most_massive_progenitor']
 
 import numpy as np
 from .. import utils
@@ -68,7 +70,6 @@ from ..units import *
 from ..utils import *
 import sys
 from ..transformation import *
-from .. import gadget
 from properties import *
 from ..snapshot import *
 from .. import environment
@@ -304,6 +305,8 @@ class Halo(object):
             'Rvir':     'Rvir (Mo+ 2002): (3*M / (4*pi * 18*pi**2 * rho_c))**(1/3.)',
             'R200':     'R200 (Mo+ 2002): (3*M / (4*pi * 200*rho_c))**(1/3.)',
             'R500':     'R500 (Mo+ 2002): (3*M / (4*pi * 500*rho_c))**(1/3.)',
+            'lowres_part':  'number of low-resolution particles',
+            'lowres_mass':  'mass of low-resolution particles',
     }
 
     @staticmethod
@@ -375,6 +378,15 @@ class Halo(object):
                                 subs=halo)
             r3 = 3.0 * self.mass / (4.0*np.pi * odens*rho_crit)
             val = r3 ** Fraction(1,3)
+        elif prop == 'lowres_part':
+            low = getattr(halo, 'lowres', None)
+            val = 0 if low is None else len(low)
+        elif prop == 'lowres_mass':
+            low = getattr(halo, 'lowres', None)
+            if low is None:
+                val = UnitScalar(0.0, halo['mass'].units)
+            else:
+                val = low['mass'].sum()
         else:
             raise ValueError('Unknown property "%s"!' % prop)
 
@@ -409,7 +421,7 @@ class Halo(object):
         raise AttributeError('%s has no attribute "%s"!' % (self, name))
 
     def __repr__(self):
-        r = '<Halo'
+        r = '<Halo N = %s' % nice_big_num_str(len(self))
         r += ' /w M = %.2g %s' % (self.mass, self.mass.units)
         r += ' @ com = [%.2g, %.2g, %.2g] %s' % (
                 tuple(self.com) + (self.com.units,))
@@ -419,7 +431,7 @@ class Halo(object):
     def __len__(self):
         return sum(self._props['parts'])
 
-def generate_FoF_catalogue(s, l=None, calc=None, FoF=None,
+def generate_FoF_catalogue(s, l=None, calc=None, FoF=None, exclude=None,
                            verbose=environment.verbose, **kwargs):
     '''
     Generate a list of Halos defined by FoF groups.
@@ -433,6 +445,9 @@ def generate_FoF_catalogue(s, l=None, calc=None, FoF=None,
         FoF (np.array):     An array with group IDs for each particle in the
                             snapshot `s`. If given, `l` is ignored and the FoF
                             groups are not calculated within this function.
+        exclude (function): Exclude all halos h for which `exclude(h,s)` returns
+                            a true value (note: s[h] gives the halo as a
+                            sub-snapshot).
         verbose (bool):     Verbosity.
         **kwargs:           passed to `find_FoF_groups`.
 
@@ -448,14 +463,78 @@ def generate_FoF_catalogue(s, l=None, calc=None, FoF=None,
         N_FoF = len(set(FoF)) - 1
 
     if verbose:
-        print 'initialize halo classes from FoF group IDs...'
+        print 'initialize halos from FoF group IDs...'
         sys.stdout.flush()
 
     halos = [ Halo(s[FoF==i],calc=calc) for i in xrange(N_FoF) ]
+    if exclude:
+        halos = [ h for h in halos if not exclude(h,s) ]
 
     if verbose:
-        print 'done.'
+        print 'initialized %d halos (excluded %d).' % (
+                len(halos), N_FoF-len(halos))
         sys.stdout.flush()
 
     return halos
+
+def _common_mass(h1, h2, s):
+    # access private attribute for speed
+    ID_both = set(h1._IDs) & set(h2._IDs)
+    return s[IDMask(ID_both)]['mass'].sum()
+def find_most_massive_progenitor(s, halos, h0):
+    '''
+    Find the halo with the most mass in common.
+
+    Args:
+        s (Snap):       The snapshot to which the halo catalogue `halos` belongs.
+        halos (list):   A list of halos in which the one with the most common mass
+                        with `h0` is searched for.
+        h0 (Halo):      The halo for which to find the most massive progenitor in
+                        `halos` (the one with the most mass in common).
+
+    Returns:
+        mmp (Halo):     The most massive progenitor (in `halos`) of `h0`.
+    '''
+    if len(halos) == 0:
+        return None
+
+    h0_mass = h0.mass.in_units_of(halos[0].mass.units, subs=s)
+
+    # propably one of the closest halos (with at least 10% of the mass), find them
+    closest = []
+    min_mass = 0.1 * h0_mass
+    min_mass.convert_to(halos[0].mass.units, subs=s)
+    h0_com = h0.com.in_units_of(halos[0].com.units, subs=s)
+    for i in xrange(3):
+        close = None
+        close_d = np.inf
+        for h in halos:
+            d = np.linalg.norm(h.com - h0_com)
+            if d < close_d and h.mass > min_mass:
+                for nh in closest:
+                    if h is nh:
+                        continue
+                close = h
+                close_d = d
+        closest.append( close )
+
+    # if any of them has more than 50% of the mass, we are done
+    com_mass = []
+    for h in closest:
+        com_mass.append( _common_mass(h, h0, s) )
+        if com_mass[-1] / h0_mass > 0.5:
+            return h
+
+    # if no other halo can have more mass than the most massive of the closest, it
+    # is this one
+    mm_closest, cm = max(zip(closest, com_mass), key=lambda p: p[1])
+    if h0_mass-sum(com_mass) < cm:
+        return mm_closest
+
+    # iterate and find the most massive progenitor
+    # not done in the beginning, since this requires the calculation of the common
+    # mass for *all* halos and, hence, is slow
+    mmp = max(halos,
+              key=lambda h: _common_mass(h, h0, s))
+    return mmp if _common_mass(mmp, h0, s)>0 else None
 
