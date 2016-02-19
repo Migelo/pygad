@@ -26,7 +26,8 @@ Examples:
     apply Translation to "pos" of "snap_M1196_4x_320"... done.
 
     >>> FoF, N_FoF = find_FoF_groups(s.highres.dm, '2.5 kpc')    # doctest: +ELLIPSIS
-    perfrom a FoF search (l = 2.5 [kpc], N >= 100)...
+    perform a FoF search on 1,001,472 particles:
+      l = 2.5 [kpc]  and  N >= 100
     found 106 groups
     the 3 most massive ones are:
       group 0:   3.57e+11 [Msol]  @  [1..., -1..., 1...] [kpc]
@@ -39,7 +40,8 @@ Examples:
     # find galaxies (exclude those with almost only gas)
     >>> galaxies = generate_FoF_catalogue(s.baryons, l='3 kpc', min_N=3e2,
     ...             exclude=lambda g,s: g.Mgas/g.mass>0.9)  # doctest: +ELLIPSIS
-    perfrom a FoF search (l = 3 [kpc], N >= 300)...
+    perform a FoF search on 1,001,472 particles:
+      l = 3 [kpc]  and  N >= 300
     found 6 groups
     the 3 most massive ones are:
       group 0:   4.09e+10 [Msol]  @  [-0..., 1..., -0...] [kpc]
@@ -47,7 +49,7 @@ Examples:
       group 2:   5.29e+09 [Msol]  @  [8..., 1...e+03, 7...] [kpc]
     initialize halos from FoF group IDs...
     load block ID... done.
-    initialized 3 halos.
+    initialized 3 halos (excluded 3).
     >>> galaxies[0] # doctest: +ELLIPSIS
     <Halo N = 71,... /w M = 4.1e+10 [Msol] @ com = [-0..., 1..., -0...] [kpc]>
     >>> gal = s[galaxies[0]]
@@ -228,8 +230,8 @@ def find_FoF_groups(s, l, min_N=100, sort=True, verbose=environment.verbose):
     min_N = int(min_N)
 
     if verbose:
-        print 'perfrom a FoF search (l = %.2g %s, N >= %g)...' % (
-                l, l.units, min_N)
+        print 'perform a FoF search on %s particles:' % nice_big_num_str(len(s))
+        print '  l = %.2g %s  and  N >= %g' % (l, l.units, min_N)
         sys.stdout.flush()
 
     pos = s['pos'].astype(np.float64)
