@@ -25,33 +25,35 @@ Examples:
     >>> Translation(-center).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_320"... done.
 
-    >>> FoF, N_FoF = find_FoF_groups(s.highres.dm, '2.5 kpc')    # doctest: +ELLIPSIS
+    >>> FoF, N_FoF = find_FoF_groups(s.highres.dm, '3.5 kpc')    # doctest: +ELLIPSIS
+    load block vel... done.
     perform a FoF search on 1,001,472 particles:
-      l = 2.5 [kpc]  and  N >= 100
-    found 106 groups
+      l      = 3.5 [kpc]
+      dv_max = 1e+02 [s**-1 km]
+      N     >= 100
+    found 123 groups
     the 3 most massive ones are:
-      group 0:   3.57e+11 [Msol]  @  [1..., -1..., 1...] [kpc]
-      group 1:   8.05e+10 [Msol]  @  [4..., 9..., 4...] [kpc]
-      group 2:   2.52e+10 [Msol]  @  [8..., 1...e+03, 7...] [kpc]
-    >>> halo0 = s.highres.dm[FoF==0]
-    >>> if abs(halo0['mass'].sum() - '3.57e11 Msol') > '0.02e11 Msol':
-    ...     print halo0['mass'].sum()
+      group 0:   1.59e+11 [Msol]  @  [-0..., 0..., -0...] [kpc]
+      group 1:   6.88e+10 [Msol]  @  [4..., 9..., 4...] [kpc]
+      group 2:   1.56e+10 [Msol]  @  [-1...+03, -1...e+03, -1...e+03] [kpc]
 
     # find galaxies (exclude those with almost only gas)
     >>> galaxies = generate_FoF_catalogue(s.baryons, l='3 kpc', min_N=3e2,
     ...             exclude=lambda g,s: g.Mgas/g.mass>0.9)  # doctest: +ELLIPSIS
     perform a FoF search on 1,001,472 particles:
-      l = 3 [kpc]  and  N >= 300
-    found 6 groups
+      l      = 3 [kpc]
+      dv_max = 1e+02 [s**-1 km]
+      N     >= 300
+    found 7 groups
     the 3 most massive ones are:
-      group 0:   4.09e+10 [Msol]  @  [-0..., 1..., -0...] [kpc]
-      group 1:   7.17e+09 [Msol]  @  [4..., 9..., 4...] [kpc]
-      group 2:   5.29e+09 [Msol]  @  [8..., 1...e+03, 7...] [kpc]
+      group 0:   3.76e+10 [Msol]  @  [-0..., 0..., 0...] [kpc]
+      group 1:    7.1e+09 [Msol]  @  [4..., 9..., 4...] [kpc]
+      group 2:   4.71e+09 [Msol]  @  [8..., 1...e+03, 7...] [kpc]
     initialize halos from FoF group IDs...
     load block ID... done.
-    initialized 3 halos (excluded 3).
+    initialized 3 halos (excluded 4).
     >>> galaxies[0] # doctest: +ELLIPSIS
-    <Halo N = 71,... /w M = 4.1e+10 [Msol] @ com = [-0..., 1..., -0...] [kpc]>
+    <Halo N = 66,... /w M = 3.8e+10 [Msol] @ com = [-0..., 0..., 0...] [kpc]>
     >>> gal = s[galaxies[0]]
     >>> assert len(gal) == len(galaxies[0])
     >>> assert set(gal['ID']) == set(galaxies[0].IDs)
@@ -207,13 +209,15 @@ def virial_info(s, center=None, odens=200.0, N_min=10):
     return UnitArr(info[0],s['pos'].units), \
            UnitArr(info[1],s['mass'].units)
 
-def find_FoF_groups(s, l, min_N=100, sort=True, verbose=environment.verbose):
+def find_FoF_groups(s, l, dvmax='100 km/s', min_N=100, sort=True,
+                    verbose=environment.verbose):
     '''
     Perform a friends-of-friends search on a (sub-)snapshot.
 
     Args:
         s (Snap):           The (sub-)snapshot to perform the FoF finder on.
         l (UnitScalar):     The linking length to use for the FoF finder.
+        dvmax (UnitScalar): The "linking velocity" to use for the FoF finder.
         min_N (int):        The minimum number of particles in a FoF group to
                             actually define it as such.
         sort (bool):        Whether to sort the groups by mass. If True, the group
@@ -225,19 +229,25 @@ def find_FoF_groups(s, l, min_N=100, sort=True, verbose=environment.verbose):
                             (IDs are ordered in mass, if `sort=True`).
         N_FoF (int):        The number of FoF groups found.
     '''
-    l = UnitScalar(l, s['pos'].units, subs=s)
+    l = UnitScalar(l, s['pos'].units, subs=s, dtype=float)
+    dvmax = UnitScalar(dvmax, s['vel'].units, subs=s, dtype=float)
     sort = bool(sort)
     min_N = int(min_N)
 
     if verbose:
         print 'perform a FoF search on %s particles:' % nice_big_num_str(len(s))
-        print '  l = %.2g %s  and  N >= %g' % (l, l.units, min_N)
+        print '  l      = %.2g %s' % (l, l.units)
+        print '  dv_max = %.2g %s' % (dvmax, dvmax.units)
+        print '  N     >= %g' % (min_N)
         sys.stdout.flush()
 
     pos = s['pos'].astype(np.float64)
+    vel = s['vel'].astype(np.float64)
     mass = s['mass'].astype(np.float64)
     if pos.base is not None:
         pos = pos.copy()
+    if vel.base is not None:
+        vel = vel.copy()
     if mass.base is not None:
         mass = mass.copy()
     FoF = np.empty(len(s), dtype=np.uintp)
@@ -245,8 +255,10 @@ def find_FoF_groups(s, l, min_N=100, sort=True, verbose=environment.verbose):
 
     C.cpygad.find_fof_groups(C.c_size_t(len(s)),
                              C.c_void_p(pos.ctypes.data),
+                             C.c_void_p(vel.ctypes.data),
                              C.c_void_p(mass.ctypes.data),
                              C.c_double(l),
+                             C.c_double(dvmax),
                              C.c_size_t(min_N),
                              C.c_int(int(sort)),
                              C.c_void_p(FoF.ctypes.data),
@@ -457,7 +469,8 @@ def generate_FoF_catalogue(s, l=None, calc=None, FoF=None, exclude=None,
                             a true value (note: s[h] gives the halo as a
                             sub-snapshot).
         verbose (bool):     Verbosity.
-        **kwargs:           passed to `find_FoF_groups`.
+        **kwargs:           Other keywords are passed to `find_FoF_groups` (e.g.
+                            `dvmax`).
 
     Returns:
         halos (list):       A list of all the groups as Halo instances. (Sorted in
@@ -466,7 +479,7 @@ def generate_FoF_catalogue(s, l=None, calc=None, FoF=None, exclude=None,
     calc = kwargs.pop('calc', None)
 
     if FoF is None:
-        FoF, N_FoF = find_FoF_groups(s, l=l, **kwargs)
+        FoF, N_FoF = find_FoF_groups(s, l=l, verbose=verbose, **kwargs)
     else:
         N_FoF = len(set(FoF)) - 1
 

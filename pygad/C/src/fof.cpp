@@ -9,8 +9,10 @@ enum FOF_STATE : size_t {
 extern "C"
 void find_fof_groups(size_t N,
                      double *pos,
+                     double *vel,
                      double *mass,
                      double l,
+                     double dvmax,
                      size_t min_parts,
                      int sort,
                      size_t *FoF,
@@ -18,6 +20,7 @@ void find_fof_groups(size_t N,
                      void *octree) {
     //printf("perform FoF finder (ll=%.3g, N>=%zu)...\n", l, min_parts);
     assert(N < PROCESSING);
+    double dvmax2 = std::pow(dvmax,2.0);
 
     Tree<3> *tree = NULL;
     if (octree == NULL) {
@@ -64,7 +67,9 @@ void find_fof_groups(size_t N,
 
             std::vector<size_t> new_friends
                 = tree->ngbs_within_if(pos+3*j, l, pos, periodic,
-                                       [&FoF](size_t idx){return FoF[idx]==NOT_PROCESSED;});
+                                       [&FoF,&vel,&j,&dvmax2](size_t idx){
+                    return FoF[idx]==NOT_PROCESSED && dist2<3>(vel+3*j, vel+3*idx)<dvmax2;
+            });
             // avoid finding particles twice -> pretag with PROCESSING
             for (const size_t k : new_friends) {
                 assert(FoF[k] == NOT_PROCESSED);    // check condition of search
