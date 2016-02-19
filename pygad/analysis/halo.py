@@ -328,7 +328,7 @@ class Halo(object):
                                  'and `snap` must be None to avoid confusion!')
 
         # the defining property:
-        self._IDs = halo['ID'].copy()
+        self._IDs = UnitArr(halo['ID'])
 
         # derive some properties
         self._props = {}
@@ -396,7 +396,13 @@ class Halo(object):
 
     @property
     def IDs(self):
-        return self._IDs.copy()
+        '''
+        The defining IDs.
+        
+        Note:
+            If changed, the halo properties do not getupdated!
+        '''
+        return self._IDs
 
     @property
     def mask(self):
