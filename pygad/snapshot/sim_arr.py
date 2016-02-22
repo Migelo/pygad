@@ -5,8 +5,8 @@ deleted from the snapshot, if the array changes.
 Examples:
     >>> from snapshot import Snap
     >>> from ..environment import module_dir
-    >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470')
-    >>> sa = SimArr([1,2,3], units='a kpc / h_0', dtype=float, snap=s)
+    >>> snap = Snap(module_dir+'../snaps/snap_M1196_4x_470')
+    >>> sa = SimArr([1,2,3], units='a kpc / h_0', dtype=float, snap=snap)
     >>> sa[:2]
     SimArr([ 1.,  2.], units="a kpc h_0**-1", snap="snap_M1196_4x_470")
     >>> sa.in_units_of('kpc')
@@ -15,10 +15,22 @@ Examples:
     >>> sa
     SimArr([ 1.38888889,  2.77777778,  4.16666667],
            units="kpc", snap="snap_M1196_4x_470")
-    >>> sa+sa
-    UnitArr([ 2.77777778,  5.55555556,  8.33333333], units="kpc")
+    >>> sa *= snap.cosmology.h_0 / snap.scale_factor
+    >>> assert sa.snap is snap
+
+    # Operations with SimArr's, yield simple UnitArr's
     >>> 2*sa
-    UnitArr([ 2.77777778,  5.55555556,  8.33333333], units="kpc")
+    UnitArr([ 2.,  4.,  6.], units="kpc")
+    >>> s = sa+sa
+    >>> s
+    UnitArr([ 2.,  4.,  6.], units="kpc")
+
+    # Results of operations with SimArr's must be UnitArr and must not have any
+    # (hidden) references to the snapshot anymore!
+    >>> while s is not None:
+    ...     assert not hasattr(s, '_snap')
+    ...     assert not hasattr(s, '_dependencies')
+    ...     s = s.base
 '''
 
 import numpy as np
@@ -47,38 +59,33 @@ class SimArr(UnitArr):
 
         return new
 
-    # operations of unit array should always return simple UnitArr
-    # otherwise one would have 'memeory leaks' where the hidden references to
-    # snapshots do not get deleted
-    def __array__(self, dtype=None):
-        ua = self.view(UnitArr)
-        del ua._snap
-        del ua._dependencies
-        return ua
-
     def __array_finalize__(self, obj):
         UnitArr.__array_finalize__(self, obj)
         self._snap = getattr(obj, '_snap', None)
         self._dependencies = getattr(obj, '_dependencies', set())
 
     def __array_wrap__(self, array, context=None):
-        return UnitArr.__array_wrap__(self, array, context)
+        ua = UnitArr.__array_wrap__(self, array, context)
+        # seems like if and only context is None, its not from a ufunc but just
+        # slicing/masking and/or setting inplace (i.e. from a __i*__ function like
+        # __iadd__)
+        if context is not None:
+            a  = ua
+            while a is not None:
+                if hasattr(a, '_snap'):         del a._snap
+                if hasattr(a, '_dependencies'): del a._dependencies
+                a = getattr(a, 'base', None)
+        return ua
 
     @property
     def snap(self):
         '''The associated snapshot.'''
-        if isinstance(self.base,SimArr):
-            return self.base.snap
-        else:
-            return self._snap
+        return self._snap
 
     @property
     def dependencies(self):
         '''A set of the names of the derived blocks that depend on this one.'''
-        if isinstance(self.base,SimArr):
-            return self.base.dependencies
-        else:
-            return self._dependencies
+        return self._dependencies
 
     def __repr__(self):
         r = super(SimArr, self).__repr__()
