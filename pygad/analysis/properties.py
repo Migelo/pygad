@@ -190,9 +190,10 @@ def orientate_at(s, mode, qty=None, total=False, remember=True):
         'tensor'/'red I':   Orientate at the eigenvectors of a tensor. The
                             eigenvector with the smallest eigenvalue is
                             orientated along the z-axis and the one with the
-                            largest eigenvalue along the x-axis. If no tensor is
-                            given and the mode is 'red I', the reduced inertia
-                            tensor is used.
+                            largest eigenvalue along the x-axis. (Hence, the
+                            orientation to 'red I' is similar to the orientation
+                            to 'L'). If no tensor is given and the mode is
+                            'red I', the reduced inertia tensor is used.
 
     Args:
         s (Snap):       The snapshot to orientate
@@ -220,7 +221,7 @@ def orientate_at(s, mode, qty=None, total=False, remember=True):
         if np.max(np.abs(qty.H-qty)) > 1e-6:
             raise ValueError('The matrix passed as qty has to be Hermitian!')
         vals, vecs = np.linalg.eigh(qty)
-        i = np.argsort(vals)
+        i = np.argsort(vals)[::-1]
         try:
             T = Rotation(vecs[:,i].T)
         except ValueError:
