@@ -63,6 +63,9 @@ For development:
     functions is allowed.
     Similar is required for the submodules.
 '''
+import gc
+# default seems to be (700, 10, 10)
+gc.set_threshold(20, 5, 5)
 
 # import all modules
 import utils
@@ -94,6 +97,7 @@ if environment.verbose:
     print 'imported pygad', version
 
 # make some chosen elements directly visible
+from environment import gc_full_collect
 from units import Unit, Units, UnitArr, UnitQty, UnitScalar, dist, Fraction
 from physics import cosmology
 from physics import G, m_p, solar

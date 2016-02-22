@@ -2,11 +2,13 @@
 Determine whether we are in interactive mode or not and provide function to
 securely import h5py.
 '''
-__all__ = ['interactive', 'module_dir', 'can_use_h5py', 'secure_get_h5py']
+__all__ = ['git_descr', 'interactive', 'module_dir', 'can_use_h5py',
+           'secure_get_h5py', 'gc_full_collect']
 
 import sys
 import os
 from utils import *
+import gc
 
 module_dir = os.path.dirname(__file__)+'/'
 
@@ -117,4 +119,15 @@ def secure_get_h5py():
                                  'Gadget files are, hence, not supported.'
             secure_get_h5py._called = True
         return _h5py_dummy
+
+def gc_full_collect():
+    '''
+    Collect as much garbage as possible.
+
+    Effectively calls the garbage collect (`gc.collect`) until no more objects are
+    freed.
+    '''
+    # sometimes a single call is not enough!
+    while gc.collect():
+        pass
 
