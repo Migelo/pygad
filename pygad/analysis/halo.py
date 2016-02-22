@@ -305,7 +305,10 @@ class Halo(object):
 
         calc (set, list, tuple):    A list of the properties to calculate at
                                     isinstantiation. 'mass', 'com', and 'parts'
-                                    are always calculated.
+                                    are always calculated (since they might be
+                                    needed by some of the other properties
+                                    anyway). If calc='all', all defined properties
+                                    are calculated (may take some while!).
     '''
     __long_name_prop__ = {
             'mass':     'total mass',
