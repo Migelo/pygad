@@ -540,7 +540,8 @@ def find_most_massive_progenitor(s, halos, h0):
                         continue
                 close = h
                 close_d = d
-        closest.append( close )
+        if close is not None:
+            closest.append( close )
 
     # if any of them has more than 50% of the mass, we are done
     com_mass = []
@@ -551,9 +552,10 @@ def find_most_massive_progenitor(s, halos, h0):
 
     # if no other halo can have more mass than the most massive of the closest, it
     # is this one
-    mm_closest, cm = max(zip(closest, com_mass), key=lambda p: p[1])
-    if h0_mass-sum(com_mass) < cm:
-        return mm_closest
+    if closest:
+        mm_closest, cm = max(zip(closest, com_mass), key=lambda p: p[1])
+        if h0_mass-sum(com_mass) < cm:
+            return mm_closest
 
     # iterate and find the most massive progenitor
     # not done in the beginning, since this requires the calculation of the common

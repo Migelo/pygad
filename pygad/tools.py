@@ -131,10 +131,13 @@ def prepare_zoom(s, info='deduce', shrink_on='stars', fullsph=False, gal_R200=0.
         center = shrinking_sphere(shrink_on,
                                   [float(s.boxsize)/2.]*3,
                                   np.sqrt(3)*s.boxsize)
-    print 'center at:', center
-    Translation(-center).apply(s)
-    # center the velocities
-    s['vel'] -= mass_weighted_mean(s[s['r']<'1 kpc'], 'vel')
+    if center is None:
+        print 'no center found -- do not center'
+    else:
+        print 'center at:', center
+        Translation(-center).apply(s)
+        # center the velocities
+        s['vel'] -= mass_weighted_mean(s[s['r']<'1 kpc'], 'vel')
 
     # cut the halo (<R200)
     if info:
@@ -146,13 +149,24 @@ def prepare_zoom(s, info='deduce', shrink_on='stars', fullsph=False, gal_R200=0.
     print 'M200:', M200
     halo = s[BallMask(R200, fullsph=fullsph)]
 
-    # orientate at the angular momentum of the baryons wihtin 10 kpc
+    # orientate at the reduced inertia tensor of the baryons wihtin 10 kpc
+    print 'orientate',
     if info:
-        L = info['L_baryons']
-        orientate_at(s, 'vec', L, total=True)
+        if 'I_red(gal)' in info:
+            redI = info['I_red(gal)']
+            if redI is not None:
+                redI = redI.reshape((3,3))
+            print 'at the galactic red. inertia tensor from info file:'
+            print redI
+            mode, qty = 'red I', redI
+        else:
+            print 'at angular momentum of the galaxtic baryons from info file:'
+            mode, qty = 'vec', info['L_baryons']
+        orientate_at(s, mode, qty=qty, total=True)
     else:
+        print 'at red. inertia tensor of the baryons within %.3f*R200' % gal_R200
         orientate_at(s[BallMask(gal_R200*R200, fullsph=False)].baryons,
-                     'L',
+                     'red I',
                      total=True
         )
 
@@ -160,6 +174,11 @@ def prepare_zoom(s, info='deduce', shrink_on='stars', fullsph=False, gal_R200=0.
     gal = s[BallMask(gal_R200*R200, fullsph=fullsph)]
     Ms = gal.stars['mass'].sum()
     print 'M*:  ', Ms
+
+    if len(gal)==0:
+        gal = None
+    if len(halo)==0:
+        halo = None
 
     return s, halo, gal
 
