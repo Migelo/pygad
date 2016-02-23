@@ -42,10 +42,9 @@ Example:
     apply Rotation to "pos" of "snap_M1196_4x_320"... done.
     >>> redI = reduced_inertia_tensor(sub.baryons)
     derive block r... done.
-    >>> redI[np.abs(redI)<10.0] = 0.0
-    >>> np.linalg.norm(redI - np.matrix([[ 2.05e+9,  0.00   , 0.00   ],
+    >>> np.linalg.norm(redI - np.matrix([[ 2.62e10,  0.00   , 0.00   ],
     ...                                  [ 0.00   ,  5.73e+9, 0.00   ],
-    ...                                  [ 0.00   ,  0.00   , 2.62e+10]])) < 1e10
+    ...                                  [ 0.00   ,  0.00   , 2.05e9]])) < 1e8
     True
     >>> if abs( los_velocity_dispersion(sub) - '170 km/s' ) > '5 k/s':
     ...     print los_velocity_dispersion(sub)
@@ -71,10 +70,10 @@ Example:
     interpolate in metallicity...
     done.
     derive block lum_v... done.
-    >>> if abs(eff_radius(sub, 'V', proj=2) - '2.0 kpc') > '0.2 kpc':
+    >>> if abs(eff_radius(sub, 'V', proj=2) - '10.7 kpc') > '0.2 kpc':
     ...     print eff_radius(sub, 'V', proj=2)
     derive block rcyl... done.
-    >>> if abs(half_qty_radius(sub.stars, qty='mass', proj=2) - '2.7 kpc') > '0.2 kpc':
+    >>> if abs(half_qty_radius(sub.stars, qty='mass', proj=2) - '10.8 kpc') > '0.2 kpc':
     ...     print half_qty_radius(sub.stars, qty='mass', proj=2)
     >>> ifr, ofr = flow_rates(s, '50 kpc')
     derive block vrad... done.

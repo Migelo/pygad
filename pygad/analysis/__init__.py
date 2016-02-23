@@ -6,7 +6,7 @@ Also doctest other parts of this sub-module:
     >>> doctest.testmod(sph_eval)
     TestResults(failed=0, attempted=15)
     >>> doctest.testmod(properties)
-    TestResults(failed=0, attempted=33)
+    TestResults(failed=0, attempted=32)
     >>> doctest.testmod(halo)
     TestResults(failed=0, attempted=19)
     >>> doctest.testmod(profiles)
