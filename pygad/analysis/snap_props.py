@@ -210,6 +210,7 @@ def orientate_at(s, mode, qty=None, total=False, remember=True):
     if mode in ['vec', 'L']:
         T = transformation.rot_to_z(qty)
     elif mode in ['tensor', 'red I']:
+        qty = np.matrix( qty )
         if np.max(np.abs(qty.H-qty)) > 1e-6:
             raise ValueError('The matrix passed as qty has to be Hermitian!')
         vals, vecs = np.linalg.eigh(qty)
