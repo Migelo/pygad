@@ -351,7 +351,7 @@ class DiscMask(SnapMask):
         return s + ')'
 
     def _get_mask_for(self, s):
-        mask = s['jzjc'] > self.jzjc_min
+        mask = s['jzjc'] > np.sign(np.mean(s['jzjc'])) * self.jzjc_min
         if self._rmax is not None:
             rmax = self._rmax.in_units_of(s['rcyl'].units,subs=s)
             mask &= s['rcyl'] < rmax

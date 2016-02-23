@@ -867,6 +867,10 @@ def _trig_units(*a):
 def _exp_log_units(*a):
     return None
 
+@UnitArr.ufunc_rule(np.sign)
+def _no_units(*a):
+    return None
+
 @UnitArr.ufunc_rule(np.isinf)
 @UnitArr.ufunc_rule(np.isneginf)
 @UnitArr.ufunc_rule(np.isposinf)
