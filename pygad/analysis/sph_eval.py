@@ -248,6 +248,7 @@ def SPH_qty_at(s, qty, r, units=None, kernel=None, dV='dV'):
                         C.create_string_buffer(kernel),
                         C.c_void_p(tree._cOctree__node_ptr),
                 )
+            del tree
             Q = Q.T
         else:
             raise ValueError('Cannot handle more than two dimension in qty!')
