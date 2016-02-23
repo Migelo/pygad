@@ -82,6 +82,7 @@ Doctests:
     More neighbour finding
     >>> pos = np.array([[0.1,0.3,0.2], [0.9,0.3,0.2], [0.8,0.5,0.1],
     ...                 [0.1,0.6,0.8], [0.2,0.2,0.3], [0.6,0.6,0.7]])
+    >>> del tree
     >>> tree = cOctree(pos)
     >>> idx = np.arange(len(pos))
     >>> tree.find_ngbs_within(pos[0], 0.2, pos, cond=idx!=0)
@@ -93,12 +94,14 @@ Doctests:
     >>> tree.find_next_ngb([0.5]*3, pos, cond=idx%2==0)
     4
     >>> tree.find_next_ngb([0.5]*3, pos, cond=np.zeros(len(pos)))
+    >>> del tree
 '''
 __all__ = ['cOctree']
 
 from ..C import *
 import sys
 import numpy as np
+import warnings
 
 cpygad.new_octree_from_pos.restype = c_void_p
 cpygad.new_octree_from_pos.argtypes = [c_size_t, c_void_p]
@@ -154,6 +157,12 @@ class cOctree(object):
     Actually this is a wrapper to the C++ template class Tree<3>. Internally only
     indices are stored so that any property of a particle can be referenced.
 
+    Note:
+        To avoid memory leaks, you should always explicitly delete cOctree objects
+        by calling their `__del__`-function, e.g. with `del tree`. A call of
+        `pygad.gc_full_collect`, however, will collect the otherwise uncollectable
+        trees as well and, hence, fic the memory leak.
+
     Args:
         center (array-like):    TODO
         side_2 (float):         TODO
@@ -181,6 +190,10 @@ class cOctree(object):
 
         if H is not None:
             self.update_max_H(H)
+
+        warnings.warn('You should explicitly call `__del__` for cOctree or ' +
+                      'call `pygad.gc_full_collect` from time to time to avoid ' +
+                      'memory leaks!')
     
     def __del__(self):
         if not self.__child_of_root and self.__node_ptr is not None:
