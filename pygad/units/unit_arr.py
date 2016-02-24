@@ -60,6 +60,12 @@ Examples:
     UnitArr([ 2.4,  0.5,  4. ], units="s")
     >>> v * v
     UnitArr([  5.76,   0.25,  16.  ], units="s**2")
+    >>> v
+    UnitArr([ 2.4,  0.5,  4. ], units="s")
+    >>> v * np.array([1,2,3])
+    UnitArr([  2.4,   1. ,  12. ], units="s")
+    >>> np.array([1,2,3]) * v
+    UnitArr([  2.4,   1. ,  12. ], units="s")
     >>> np.sqrt(v)
     UnitArr([ 1.54919334,  0.70710678,  2.        ], units="s**1/2")
     >>> np.round(v**Fraction(1,3), 3)   # no floats allowed, however, Fraction are!
@@ -72,8 +78,16 @@ Examples:
     UnitArr(4.8, units="s**3")
     >>> for prop in [np.sum, np.cumsum, np.mean, np.std, np.median, np.ptp,
     ...              np.transpose, np.min, np.max]:
-    ...     assert prop(v).units == v.units
-    ...     assert prop(v)._unit_carrier is not v._unit_carrier
+    ...     res = prop(v)
+    ...     assert res.units == v.units
+    ...     assert res._unit_carrier is not v._unit_carrier
+    ...     b = res.base
+    ...     while hasattr(b, '_unit_carrier'):
+    ...         assert b._unit_carrier is res._unit_carrier
+    ...         b = b.base
+    ...     while b is not None:
+    ...         assert not hasattr(b, '_unit_carrier')
+    ...         b = b.base
     >>> M_earth = UnitArr('5.972e24 kg')
     >>> R_earth = UnitArr('12740 km', dtype=float) / 2.0
     >>> v_earth = UnitArr('29.78 km/s')
@@ -225,8 +239,7 @@ def with_own_units(func):
     '''Decorate a function return value with the units of the first argument.'''
     def u_func(self, *args, **kwargs):
         a = UnitQty(func(self.view(np.ndarray), *args, **kwargs))
-        a._unit_carrier = a
-        a._units = self.units
+        a._set_units_and_carrier_on_base(self.units)
         return a
     u_func.__name__ = func.__name__
     u_func.__doc__ = func.__doc__
@@ -262,6 +275,8 @@ class UnitArr(np.ndarray):
                 data = data.in_units_of(units, subs=subs)
 
         # actually create the new object
+        if isinstance(data, UnitArr):   # avoid interference of different
+            kwargs['copy'] = True       # `_unit_carrier`s and units
         obj = np.array(data, **kwargs).view(subtype)
         # bool needed in some situations (such as np.median(UnitArr))
         if obj.dtype.kind not in 'uifb':
@@ -290,15 +305,14 @@ class UnitArr(np.ndarray):
             return array
 
         try:
-            ua = array.view(UnitArr)
-            ua._unit_carrier = ua
             ufunc = context[0]
             units = UnitArr._ufunc_registry[ufunc](*context[1])
             if units is not None:
                 units = units.gather()
                 units._composition.sort()
-            ua.units = units
-            return ua
+            array = array.view(UnitArr)
+            array._set_units_and_carrier_on_base(units)
+            return array
         except KeyError:
             warnings.warn('Operation \'%s\' on units is ' % ufunc.__name__ + \
                           '*not* defined! Return normal numpy array.')
@@ -316,6 +330,15 @@ class UnitArr(np.ndarray):
         if value is not None:
             value = Unit(value)
         self._unit_carrier._units = value
+
+    def _set_units_and_carrier_on_base(self, units=None):
+        uc = self
+        if isinstance(self.base, UnitArr):
+            uc = self.base._set_units_and_carrier_on_base(units)
+        else:
+            self._units = None if units is None else Unit(units)
+        self._unit_carrier = uc
+        return uc
 
     def __float__(self):
         try:
@@ -336,21 +359,12 @@ class UnitArr(np.ndarray):
             dupl = np.ndarray.copy(self, *a)
         else:
             dupl = np.ndarray.copy(self)
-        dupl = dupl.view(UnitArr)
-        dupl._unit_carrier = dupl
-        if self.units is None:
-            dupl._units = None
-        else:
-            dupl._units = self.units
+        dupl._set_units_and_carrier_on_base(self.units)
         return dupl
 
     def __deepcopy__(self, *a):
         dupl = np.ndarray.__deepcopy__(self).view(UnitArr)
-        dupl._unit_carrier = dupl
-        if self.units is None:
-            dupl._units = None
-        else:
-            dupl._units = self.units
+        dupl._set_units_and_carrier_on_base(self.units)
         return dupl
 
     def copy(self, order=None):
@@ -414,8 +428,8 @@ class UnitArr(np.ndarray):
         details.
         '''
         new = np.ndarray.astype(self, dtype, *args, **kwargs)
-        new._unit_carrier = new
-        new._units = self.units
+        if new is not self:
+            new._set_units_and_carrier_on_base(self.units)
         return new
 
     def convert_to(self, units, subs=None):

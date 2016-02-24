@@ -25,12 +25,21 @@ Examples:
     >>> s
     UnitArr([ 2.,  4.,  6.], units="kpc")
 
-    # Results of operations with SimArr's must be UnitArr and must not have any
-    # (hidden) references to the snapshot anymore!
-    >>> while s is not None:
-    ...     assert not hasattr(s, '_snap')
-    ...     assert not hasattr(s, '_dependencies')
-    ...     s = s.base
+    Results of operations with SimArr's must be UnitArr and must not have any
+    (hidden) references to the snapshot anymore!
+    And similar shall hold for the return value of `in_units_of` (if actually a
+    conversion happend and it is not just `self` returned).
+    Both is done with the `downgrade_to_UnitArr` method.
+    >>> sc = sa.in_units_of('AU', copy=True)
+    >>> assert sc is not sa
+    >>> sa.downgrade_to_UnitArr()
+    >>> assert not isinstance(sa, SimArr)
+    >>> for a in (s, sc, sa):
+    ...     while a is not None:
+    ...         assert not isinstance(a, SimArr)
+    ...         assert not hasattr(a, '_snap')
+    ...         assert not hasattr(a, '_dependencies')
+    ...         a = a.base
 '''
 
 import numpy as np
@@ -51,9 +60,6 @@ class SimArr(UnitArr):
         ua = UnitArr(data, units=units, subs=subs, **kwargs)
         
         new = ua.view(subtype)
-        copy = kwargs.get('copy',True)
-        new._unit_carrier = new if copy else getattr(ua, '_unit_carrier', new)
-        new._unit_carrier._units = getattr(ua, 'units', None)
         new._snap = snap if snap else getattr(data, 'snap', None)
         new._dependencies = getattr(data, '_dependencies', set())
 
@@ -64,17 +70,27 @@ class SimArr(UnitArr):
         self._snap = getattr(obj, '_snap', None)
         self._dependencies = getattr(obj, '_dependencies', set())
 
+    def downgrade_to_UnitArr(self):
+        '''
+        Change this instance (inplace) into a UnitArr and remove all (also hidden)
+        references to the snapshot.
+        '''
+        a  = self
+        while a is not None:
+            if isinstance(a, SimArr):   # this might be problematic
+                a.__class__ = UnitArr   # to port to Python 3.x ?!
+            if hasattr(a, '_snap'):         del a._snap
+            if hasattr(a, '_dependencies'): del a._dependencies
+            a = a.base
+
     def __array_wrap__(self, array, context=None):
         ua = UnitArr.__array_wrap__(self, array, context)
-        # seems like if and only context is None, its not from a ufunc but just
+        # seems like if and only if context is None, its not from a ufunc but just
         # slicing/masking and/or setting inplace (i.e. from a __i*__ function like
-        # __iadd__)
+        # __iadd__) -- in these cases, we don't want references to the snapshot
         if context is not None:
-            a  = ua
-            while a is not None:
-                if hasattr(a, '_snap'):         del a._snap
-                if hasattr(a, '_dependencies'): del a._dependencies
-                a = getattr(a, 'base', None)
+            # might even already be a UnitArr, but the reference can still exist!
+            ua.view(SimArr).downgrade_to_UnitArr()
         return ua
 
     @property
@@ -131,9 +147,10 @@ class SimArr(UnitArr):
             subs = self.snap
         conv = UnitArr.in_units_of(self, units, subs=subs, copy=copy)
         if conv is not self:
-            del conv._snap
-            del conv._dependencies
-        return conv.view(UnitArr)
+            # did an actual conversion with new array, that shall no longer be a
+            # SimArr and shall not reference back the snapshot:
+            conv.downgrade_to_UnitArr()
+        return conv
 
     def invalidate_dependencies(self):
         '''
