@@ -878,7 +878,10 @@ def _short_repr(obj):
         return '%s:%s' % (obj.f_code.co_filename, obj.f_lineno)
     if isinstance(obj, (tuple, list, dict, set)):
         return '%d items' % len(obj)
-    return repr(obj)[:40]
+    r = repr(obj)
+    if len(r) > 40:
+        r = r[:23]+'[...]'+r[-12:]
+    return r
 
 
 def _gradient(start_color, end_color, depth, max_depth):
