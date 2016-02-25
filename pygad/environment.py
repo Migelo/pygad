@@ -122,12 +122,6 @@ def secure_get_h5py():
 
 def gc_full_collect():
     '''Collect as much garbage as possible.'''
-    # delete unreferenced cOctrees to free the C memory (objects with a __del__
-    # method are never collected by the garbage collector!)
-    from octree import cOctree
-    for obj in gc.garbage:
-        if isinstance(obj, cOctree):
-            del obj
     # sometimes a single call is not enough!
     while gc.collect():
         pass
