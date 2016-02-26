@@ -6,6 +6,9 @@ You can find documentation online at http://mg.pov.lt/objgraph/
 Copyright (c) 2008-2015 Marius Gedminas <marius@pov.lt> and contributors
 
 Released under the MIT licence.
+
+Modified version for pygad:
+https://bitbucket.org/broett/pygad/issues?status=new&status=open
 """
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -37,6 +40,7 @@ import subprocess
 import tempfile
 import sys
 import itertools
+import resource
 
 try:
     from types import InstanceType
@@ -48,7 +52,7 @@ except ImportError:
 __author__ = "Marius Gedminas (marius@gedmin.as)"
 __copyright__ = "Copyright (c) 2008-2016 Marius Gedminas and contributors"
 __license__ = "MIT"
-__version__ = "2.1.0.dev0"
+__version__ = "2.1.0.dev0-pygadmod"
 __date__ = "2016-01-25"
 
 
@@ -63,6 +67,29 @@ try:
 except AttributeError:
     # Python 3.x compatibility
     iteritems = dict.items
+
+
+def get_peak_RAM_usage(who=resource.RUSAGE_SELF):
+    '''
+    Get the maximum amount of RAM (resident memory) used so far in GB.
+    
+    The function is using the `resource` module and the `ru_maxrss` of
+    `getrusage()`.
+    
+    Args:
+        who (int):      For the current process or for its children (you should
+                        use resource.RUSAGE_*).
+
+    Returns:
+        usage (float):  The maximum amount of RAM used so far in GB.
+    '''
+    usage = resource.getrusage(who).ru_maxrss
+    if sys.platform == 'darwin':
+        # seems OSX returns byte
+        return usage / 1024.**3
+    else:
+        # other platforms seem to return kilobyte
+        return usage / 1024.**2
 
 
 def count(typename, objects=None):
