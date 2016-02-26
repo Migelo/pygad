@@ -58,7 +58,8 @@ def read_info_file(filename):
                     raise
     return info
 
-def prepare_zoom(s, info='deduce', shrink_on='stars', fullsph=False, gal_R200=0.10):
+def prepare_zoom(s, info='deduce', shrink_on='stars', sph_overlap_mask=False,
+                 gal_R200=0.10):
     '''
     A convenience function to load a snapshot from a zoomed-in simulation that is
     not yet centered or orienated.
@@ -82,7 +83,8 @@ def prepare_zoom(s, info='deduce', shrink_on='stars', fullsph=False, gal_R200=0.
                             info==None. It can be 'all' (use the entire
                             (sub-)snapshot `s`), a family name, or a list of
                             particle types (e.g. [0,1,4]).
-        fullsph (bool):     Whether to mask all particles that overlap into the
+        sph_overlap_mask (bool):
+                            Whether to mask all particles that overlap into the
                             halo region (that is also include SPH particles that
                             are outside the virial radius, but their smoothing
                             length reaches into it).
@@ -144,20 +146,20 @@ def prepare_zoom(s, info='deduce', shrink_on='stars', fullsph=False, gal_R200=0.
         R200, M200 = virial_info(s)
     print 'R200:', R200
     print 'M200:', M200
-    halo = s[BallMask(R200, fullsph=fullsph)]
+    halo = s[BallMask(R200, sph_overlap=sph_overlap_mask)]
 
     # orientate at the angular momentum of the baryons wihtin 10 kpc
     if info:
         L = info['L_baryons']
         orientate_at(s, 'vec', L, total=True)
     else:
-        orientate_at(s[BallMask(gal_R200*R200, fullsph=False)].baryons,
+        orientate_at(s[BallMask(gal_R200*R200, sph_overlap=False)].baryons,
                      'L',
                      total=True
         )
 
     # cut the inner part as the galaxy
-    gal = s[BallMask(gal_R200*R200, fullsph=fullsph)]
+    gal = s[BallMask(gal_R200*R200, sph_overlap=sph_overlap_mask)]
     Ms = gal.stars['mass'].sum()
     print 'M*:  ', Ms
 
