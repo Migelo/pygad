@@ -58,7 +58,9 @@ def read_info_file(filename):
                     raise
     return info
 
-def prepare_zoom(s, info='deduce', shrink_on='stars', fullsph=False, gal_R200=0.10):
+def prepare_zoom(s, mode='auto', info='deduce', shrink_on='highres',
+                 linking_length=None, ret_FoF=False, fullsph=False, gal_R200=0.10,
+                 **kwargs):
     '''
     A convenience function to load a snapshot from a zoomed-in simulation that is
     not yet centered or orienated.
@@ -67,6 +69,35 @@ def prepare_zoom(s, info='deduce', shrink_on='stars', fullsph=False, gal_R200=0.
         s (str, Snap):      The snapshot of a zoomed-in simulation to prepare.
                             Either as an already loaded snapshot or a path to the
                             snapshot.
+        mode (str):         The mode in which to prepare the snapshot. You can
+                            choose from:
+                                * 'auto':   try 'info', if it does not work
+                                            fallback to 'ssc'
+                                * 'info':   read the info file (from `info`) and
+                                            take the center and the reduced
+                                            inertia tensor (for orientation) with
+                                            fallback to angular momentum from this
+                                            file
+                                * 'ssc':    center the snapshot using a
+                                            shrinking sphere method (shrinking on
+                                            the sub-snapshot specified by
+                                            `shrink_on`, see below)
+                                            ATTENTION: can easily center on a
+                                            non-resolved galaxy!
+                                * 'FoF':    Do a FoF search on all particles and
+                                            generate a halo catalogue for all
+                                            those halos that have at most 1% mass
+                                            from "lowres" particles. Then find the
+                                            most massive FoF group of particles
+                                            defined by `shrink_on` therein and
+                                            finally perform a shrinking sphere on
+                                            them to find the center. If
+                                            `shrink_on` is 'all' or 'highres',
+                                            skip the second FoF search and do the
+                                            "ssc" on the most massive FoF group of
+                                            the first step. The linking length for
+                                            (both) the FoF finder is given by
+                                            `linking_length`.
         info (str, dict):   Path to info file or the dictionary as returned from
                             `read_info_file`.
                             However, if set to 'deduce', it is tried to deduce the
@@ -82,6 +113,10 @@ def prepare_zoom(s, info='deduce', shrink_on='stars', fullsph=False, gal_R200=0.
                             info==None. It can be 'all' (use the entire
                             (sub-)snapshot `s`), a family name, or a list of
                             particle types (e.g. [0,1,4]).
+        linking_length (UnitScalar):
+                            TODO (no reasonable default, hence the default to
+                            None)
+        ret_FoF (bool):     TODO
         fullsph (bool):     Whether to mask all particles that overlap into the
                             halo region (that is also include SPH particles that
                             are outside the virial radius, but their smoothing
@@ -93,57 +128,129 @@ def prepare_zoom(s, info='deduce', shrink_on='stars', fullsph=False, gal_R200=0.
         s (Snap):           The prepared snapshot.
         halo (SubSnap):     The cut halo of the found structure.
     '''
+    def get_shrink_on_sub(snap):
+        if isinstance(shrink_on, str):
+            if shrink_on == 'all':
+                return snap
+            else:
+                return getattr(s, shrink_on)
+        elif isinstance(shrink_on, list):
+            return s[shrink_on]
+        else:
+            raise ValueError('`shrink_on` must be a family name or a list ' + \
+                             'of particle types, but was: %s' % (shrink_on,))
+    def FoF_exclude(h, s, threshold=1e-2):
+        M_lowres = h.lowres_mass
+        M = h.mass
+        return M_lowres/M > threshold
+            
+
     if isinstance(s,str):
         s = Snap(s)
     gal_R200 = float(gal_R200)
     print 'prepare zoomed-in', s
 
-    if info is 'deduce':
-        try:
-            snap = int(os.path.basename(s.filename).split('.')[0][-3:])
-            info = os.path.dirname(s.filename) + '/trace/info_%03d.txt' % snap
-        except:
-            info = None
-    if isinstance(info, str):
-        if not os.path.exists(info):
-            print >> sys.stderr, 'WARNING: There is not info file named ' + \
-                                 '"%s"' % info
-            info = None
+    # read info file (if required)
+    if mode in ['auto', 'info']:
+        if info is 'deduce':
+            try:
+                snap = int(os.path.basename(s.filename).split('.')[0][-3:])
+                info = os.path.dirname(s.filename) + '/trace/info_%03d.txt' % snap
+            except:
+                info = None
+        if isinstance(info, str):
+            if not os.path.exists(info):
+                print >> sys.stderr, 'WARNING: There is no info file named ' + \
+                                     '"%s"' % info
+                info = None
+            else:
+                print 'read info file from:', info
+                info = read_info_file(info)
+        if info is None:
+            if mode == 'auto':
+                mode = 'ssc'
+            else:
+                raise IOError('Could not read/find the info file!')
         else:
-            info = read_info_file(info)
+            if mode == 'auto':
+                mode = 'info'
 
     s.to_physical_units()
 
-    # center in space
-    if info:
+    # find center
+    if mode == 'info':
         center = info['center']
-    else:
-        if isinstance(shrink_on, str):
-            if shrink_on == 'all':
-                shrink_on = s
+    elif mode in ['ssc', 'FoF']:
+        if mode == 'FoF':
+            #raise NotImplementedError('Mode "FoF" is not yet implemented.')
+            if linking_length is None:
+                raise ValueError('You have to define `linking_length` in ' +
+                                 '"FoF" mode -- cannot be None!')
+            halos = generate_FoF_catalogue(
+                    s,
+                    l = linking_length,
+                    exclude = FoF_exclude,
+                    calc = ['mass', 'lowres_mass'],
+                    **kwargs
+            )
+            if shrink_on not in ['all', 'highres']:
+                galaxies = generate_FoF_catalogue(
+                        get_shrink_on_sub(s),
+                        l = linking_length,
+                        calc = ['mass', 'com'],
+                        **kwargs
+                )
+                # The most massive galaxy does not have to be in a halo with litle low
+                # resolution elements! Find the most massive galaxy living in a
+                # "resolved" halo:
+                galaxy = None
+                for gal in galaxies:
+                    # since the same linking lengths were used for the halos and the
+                    # galaxies (rethink that!), a galaxy in a halo is entirely in that
+                    # halo or not at all
+                    gal_ID_set = set(gal.IDs)
+                    for h in halos:
+                        if len(gal_ID_set - set(h.IDs)) == 0:
+                            galaxy = gal
+                            break
+                    del h, gal_ID_set
+                    if galaxy is not None:
+                        break
+                del galaxies
+                if galaxy is None:
+                    shrink_on = None
+                shrink_on = s[galaxy]
             else:
-                shrink_on = getattr(s, shrink_on)
-        elif isinstance(shrink_on, list):
-            shrink_on = s[shrink_on]
+                shrink_on = s[halos[0]]
+        elif mode == 'ssc':
+            shrink_on = get_shrink_on_sub(s)
+        if shrink_on is not None and len(shrink_on)>0:
+            com = center_of_mass(s)
+            from utils import periodic_distance_to
+            R = np.max(periodic_distance_to(s['pos'], com, s.boxsize))
+            center = shrinking_sphere(shrink_on, com, R)
         else:
-            raise ValueError('`shrink_on` must be a family name or a list ' + \
-                             'of particle types, but was: %s' % (shrink_on,))
-        center = shrinking_sphere(shrink_on,
-                                  [float(s.boxsize)/2.]*3,
-                                  np.sqrt(3)*s.boxsize)
+            center = None
+    else:
+        raise ValueError('Unkown mode "%s"!' % mode)
+
+    # center in space
     if center is None:
         print 'no center found -- do not center'
     else:
         print 'center at:', center
         Translation(-center).apply(s)
         # center the velocities
-        s['vel'] -= mass_weighted_mean(s[s['r']<'1 kpc'], 'vel')
+        vel_center = mass_weighted_mean(s[s['r']<'1 kpc'], 'vel')
+        print 'center velocities at:', vel_center
+        s['vel'] -= vel_center
 
     # cut the halo (<R200)
-    if info:
+    if mode == 'info':
         R200 = info['R200']
         M200 = info['M200']
     else:
+        print 'derive virial information'
         R200, M200 = virial_info(s)
     print 'R200:', R200
     print 'M200:', M200
@@ -151,7 +258,7 @@ def prepare_zoom(s, info='deduce', shrink_on='stars', fullsph=False, gal_R200=0.
 
     # orientate at the reduced inertia tensor of the baryons wihtin 10 kpc
     print 'orientate',
-    if info:
+    if mode == 'info':
         if 'I_red(gal)' in info:
             redI = info['I_red(gal)']
             if redI is not None:
@@ -180,32 +287,46 @@ def prepare_zoom(s, info='deduce', shrink_on='stars', fullsph=False, gal_R200=0.
     if len(halo)==0:
         halo = None
 
-    return s, halo, gal
+    if mode=='FoF' and ret_FoF:
+        return s, halo, gal, halos
+    else:
+        return s, halo, gal
 
-def fill_star_from_info(snap, SFI):
+def fill_star_from_info(snap, filename):
     '''
     Read the formation radius rform and rform/R200(aform) from the star_form.ascii
-    file and create the blocks rform and rR200form.
+    file and create the new blocks "rform" and "rR200form".
+
+    Note:
+        The set of the star particle IDs in the star formation information file
+        must exactly be the set of star particle IDs in the (root) snapshot.
 
     Args:
         snap (Snap):    The snapshot to fill with the data (has to be the one at
                         z=0 of the simulation used to create the star_form.ascii).
-        SFI (str):      The path to the star_form.ascii file.
+        filename (str): The path to the star_form.ascii file.
     '''
     stars = snap.root.stars
-    SFI = np.loadtxt(SFI, skiprows=1)
-    if set(stars.ID) != set(SFI[:,0]):
-        raise RuntimeError('Stellar IDs are not the exactly those from ' + \
-                           '"%s"!' % SFI)
+    if environment.verbose:
+        print 'reading the star formation information from %s...' % filename
+    SFI = np.loadtxt(filename, skiprows=1)
+    if environment.verbose:
+        print 'testing if the IDs math the (root) snapshot...'
+    SFI_IDs = SFI[:,0].astype(int)
+    if set(stars['ID']) != set(SFI_IDs) or len(SFI_IDs) != len(stars):
+        raise RuntimeError('Stellar IDs do not exactly match those from ' + \
+                           '"%s"!' % filename)
 
-    sfiididx = np.argsort( SFI[:,0] )
+    if environment.verbose:
+        print 'adding the new blocks "rform" and "rR200form"...'
+    sfiididx = np.argsort( SFI_IDs )
     sididx = np.argsort( stars['ID'] )
 
     stars['rform'] = UnitArr( np.empty(len(stars),dtype=float), units='kpc' )
-    stars.rform[sididx] = SFI[:,2][sfiididx]
+    stars['rform'][sididx] = SFI[:,2][sfiididx]
 
     stars['rR200form'] = np.empty(len(stars),dtype=float)
-    stars.rR200form[sididx] = SFI[:,3][sfiididx]
+    stars['rR200form'][sididx] = SFI[:,3][sfiididx]
 
 def read_traced_gas(filename, types=None):
     '''

@@ -25,7 +25,8 @@ Examples:
     >>> Translation(-center).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_320"... done.
 
-    >>> FoF, N_FoF = find_FoF_groups(s.highres.dm, '3.5 kpc')    # doctest: +ELLIPSIS
+    >>> FoF, N_FoF = find_FoF_groups(s.highres.dm, '3.5 kpc',
+    ...                              dvmax='100 km/s') # doctest: +ELLIPSIS
     load block vel... done.
     perform a FoF search on 1,001,472 particles:
       l      = 3.5 [kpc]
@@ -39,6 +40,7 @@ Examples:
 
     # find galaxies (exclude those with almost only gas)
     >>> galaxies = generate_FoF_catalogue(s.baryons, l='3 kpc', min_N=3e2,
+    ...             dvmax='100 km/s',
     ...             exclude=lambda g,s: g.Mgas/g.mass>0.9)  # doctest: +ELLIPSIS
     perform a FoF search on 1,001,472 particles:
       l      = 3 [kpc]
@@ -209,7 +211,7 @@ def virial_info(s, center=None, odens=200.0, N_min=10):
     return UnitArr(info[0],s['pos'].units), \
            UnitArr(info[1],s['mass'].units)
 
-def find_FoF_groups(s, l, dvmax='100 km/s', min_N=100, sort=True,
+def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True,
                     verbose=environment.verbose):
     '''
     Perform a friends-of-friends search on a (sub-)snapshot.
@@ -237,7 +239,8 @@ def find_FoF_groups(s, l, dvmax='100 km/s', min_N=100, sort=True,
     if verbose:
         print 'perform a FoF search on %s particles:' % nice_big_num_str(len(s))
         print '  l      = %.2g %s' % (l, l.units)
-        print '  dv_max = %.2g %s' % (dvmax, dvmax.units)
+        if dvmax != np.inf:
+            print '  dv_max = %.2g %s' % (dvmax, dvmax.units)
         print '  N     >= %g' % (min_N)
         sys.stdout.flush()
 
