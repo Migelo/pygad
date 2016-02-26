@@ -63,10 +63,6 @@ For development:
     functions is allowed.
     Similar is required for the submodules.
 '''
-import gc
-# default seems to be (700, 10, 10)
-gc.set_threshold(20, 5, 5)
-
 # import all modules
 import utils
 import environment
@@ -106,4 +102,11 @@ from snapshot import Snap, BallMask, BoxMask, DiscMask, IDMask
 from binning import gridbin2d, gridbin, smooth
 from plotting import show_image
 from tools import prepare_zoom, read_info_file
+
+import gc
+# default seems to be (700, 10, 10)
+# pygad should more often collect garbage, since it has huge objects (SimArr and
+# _Snaps), in critical cases, call `gc_full_collect`.
+gc.set_threshold(50, 3, 3)
+gc_full_collect()
 
