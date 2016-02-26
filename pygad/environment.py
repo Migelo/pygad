@@ -121,10 +121,14 @@ def secure_get_h5py():
         return _h5py_dummy
 
 def gc_full_collect():
-    '''Collect as much garbage as possible.'''
+    '''Collect all collectable garbage.'''
+    # just to be sure:
+    old_thresholds = gc.get_threshold()
+    gc.set_threshold(1, 1, 1)
     # sometimes a single call is not enough!
     while gc.collect():
         pass
+    gc.set_threshold(*old_thresholds)
     if len(gc.garbage) > 0:
         print >> sys.stderr, 'WARNING: there is uncollectable garbage after a ' + \
                              'call of `gc_full_collect`!'
