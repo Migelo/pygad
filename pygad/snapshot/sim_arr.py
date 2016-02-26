@@ -25,7 +25,7 @@ Examples:
     >>> s
     UnitArr([ 2.,  4.,  6.], units="kpc")
 
-    Results of operations with SimArr's must be UnitArr and must not have any
+    Results of operations with SimArr's shall be UnitArr and must not have any
     (hidden) references to the snapshot anymore!
     And similar shall hold for the return value of `in_units_of` (if actually a
     conversion happend and it is not just `self` returned).
@@ -34,7 +34,7 @@ Examples:
     >>> assert sc is not sa
     >>> sa.downgrade_to_UnitArr()
     >>> assert not isinstance(sa, SimArr)
-    >>> for a in (s, sc, sa):
+    >>> for a in (sa, s, sc):
     ...     while a is not None:
     ...         assert not isinstance(a, SimArr)
     ...         assert not hasattr(a, '_snap')
@@ -46,6 +46,7 @@ import numpy as np
 from ..units import *
 from snapshot import _Snap
 import functools
+import weakref
 
 class SimArr(UnitArr):
     '''
@@ -60,20 +61,23 @@ class SimArr(UnitArr):
         ua = UnitArr(data, units=units, subs=subs, **kwargs)
         
         new = ua.view(subtype)
-        new._snap = snap if snap else getattr(data, 'snap', None)
+        if snap:
+            new._snap = weakref.ref(snap)
+        else:
+            new._snap = getattr(data,'_snap',lambda: None)
         new._dependencies = getattr(data, '_dependencies', set())
 
         return new
 
     def __array_finalize__(self, obj):
         UnitArr.__array_finalize__(self, obj)
-        self._snap = getattr(obj, '_snap', None)
+        self._snap = getattr(obj, '_snap', lambda: None)
         self._dependencies = getattr(obj, '_dependencies', set())
 
     def downgrade_to_UnitArr(self):
         '''
         Change this instance (inplace) into a UnitArr and remove all (also hidden)
-        references to the snapshot.
+        references to the snapshot (even though they are weakref's).
         '''
         a  = self
         while a is not None:
@@ -95,8 +99,8 @@ class SimArr(UnitArr):
 
     @property
     def snap(self):
-        '''The associated snapshot.'''
-        return self._snap
+        '''The associated snapshot, if any, otherwise None.'''
+        return self._snap()
 
     @property
     def dependencies(self):
@@ -124,14 +128,14 @@ class SimArr(UnitArr):
             duplicate = UnitArr.__copy__(self, *a).view(SimArr)
         else:
             duplicate = UnitArr.__copy__(self).view(SimArr)
-        duplicate._snap = self.snap
-        duplicate._dependencies = self.dependencies.copy()
+        duplicate._snap = self._snap
+        duplicate._dependencies = self._dependencies.copy()
         return duplicate
 
     def __deepcopy__(self, *a):
         duplicate = UnitArr.__deepcopy__(self).view(SimArr)
-        duplicate._snap = self.snap
-        duplicate._dependencies = self.dependencies.copy()
+        duplicate._snap = self._snap
+        duplicate._dependencies = self._dependencies.copy()
         return duplicate
 
     def convert_to(self, units, subs=None):
@@ -160,7 +164,7 @@ class SimArr(UnitArr):
         There is no need to call this function directly. It gets called once the
         array changes.
         '''
-        for dep in self.dependencies:
+        for dep in self._dependencies:
             host = self.snap.get_host_subsnap(dep)
             if dep in host._blocks:
                 del host[dep]
@@ -191,33 +195,4 @@ def _set_wrapper(f):
     return set__
 for fn in ('__setitem__', '__setslice__'):
     setattr(SimArr, fn, _set_wrapper(getattr(UnitArr,fn)))
-
-"""
-# arithmetic functions that yield new arrays shall return UnitArr's
-def _arith_wrapper(f):
-    def arith__(self, other):
-        res = f(self, other)
-        if res is not NotImplemented:
-            res = res.view(UnitArr)
-        return res
-    arith__.__name__ = f.__name__
-    return arith__
-for fn in ('__add__', '__radd__', '__sub__', '__rsub__', '__mul__', '__rmul__',
-           '__div__', '__rdiv__', '__truediv__', '__floordiv__', '__mod__',
-           '__pow__', '__eq__', '__gt__', '__lt__', '__ge__', '__le__',
-           '__rshift__', '__lshift__'):
-    setattr(SimArr, fn, _arith_wrapper(getattr(UnitArr,fn)))
-
-# "properties" should be UnitArr's
-def _prop_wrapper(f):
-    def prop__(self, *a, **kw):
-        res = f(self, *a, **kw)
-        if res is not NotImplemented:
-            res = res.view(UnitArr)
-        return res
-    prop__.__name__ = f.__name__
-    return prop__
-for fn in ('cumsum', 'prod', 'sum', 'max', 'min', 'ptp', 'mean', 'std', 'var'):
-    setattr(SimArr, fn, _prop_wrapper(getattr(UnitArr,fn)))
-"""
 

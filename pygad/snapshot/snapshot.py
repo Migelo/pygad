@@ -288,6 +288,7 @@ from .. import environment
 import numpy as np
 import warnings
 import ast
+import weakref
 
 def Snap(filename, physical=False, cosmological=None, gad_units=None):
     '''
@@ -851,7 +852,7 @@ class _Snap(object):
             block = np.concatenate(blocks, axis=0).view(UnitArr)
             block.units = units
         block = block.view(SimArr)
-        block._snap = self
+        block._snap = weakref.ref(self)
         if environment.verbose: print 'done.'
         sys.stdout.flush()
 
@@ -1162,7 +1163,7 @@ class _Snap(object):
                                          "block: '%s'" % expr)
         res = e.eval(expr, namespace)
         res = res.view(SimArr)
-        res._snap = self
+        res._snap = weakref.ref(self)
         if units is not None:
             res.convert_to(units)
 

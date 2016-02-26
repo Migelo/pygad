@@ -34,7 +34,12 @@ Doctests:
     >>> for o in xrange(8):
     ...     child = tree.get_child(o)
     ...     assert tree.get_octant(child.center) == o
+    ...     assert child.parent is tree
     ...     assert child.root is tree
+    ...     for o in xrange(8):
+    ...         grandchild = child.get_child(o)
+    ...         assert grandchild.parent is child
+    ...         assert grandchild.root is tree
     ...     assert tree.is_in_node(child.center)
     ...     particles += child.tot_num_part
     ...     nodes += child.count_nodes()
@@ -82,7 +87,6 @@ Doctests:
     More neighbour finding
     >>> pos = np.array([[0.1,0.3,0.2], [0.9,0.3,0.2], [0.8,0.5,0.1],
     ...                 [0.1,0.6,0.8], [0.2,0.2,0.3], [0.6,0.6,0.7]])
-    >>> del tree
     >>> tree = cOctree(pos)
     >>> idx = np.arange(len(pos))
     >>> tree.find_ngbs_within(pos[0], 0.2, pos, cond=idx!=0)
@@ -94,7 +98,6 @@ Doctests:
     >>> tree.find_next_ngb([0.5]*3, pos, cond=idx%2==0)
     4
     >>> tree.find_next_ngb([0.5]*3, pos, cond=np.zeros(len(pos)))
-    >>> del tree
 '''
 __all__ = ['cOctree']
 
@@ -102,6 +105,7 @@ from ..C import *
 import sys
 import numpy as np
 import warnings
+import weakref
 
 cpygad.new_octree_from_pos.restype = c_void_p
 cpygad.new_octree_from_pos.argtypes = [c_size_t, c_void_p]
@@ -157,12 +161,6 @@ class cOctree(object):
     Actually this is a wrapper to the C++ template class Tree<3>. Internally only
     indices are stored so that any property of a particle can be referenced.
 
-    Note:
-        To avoid memory leaks, you should always explicitly delete cOctree objects
-        by calling their `__del__`-function, e.g. with `del tree`. A call of
-        `pygad.gc_full_collect`, however, will collect the otherwise uncollectable
-        trees as well and, hence, fic the memory leak.
-
     Args:
         center (array-like):    TODO
         side_2 (float):         TODO
@@ -172,12 +170,6 @@ class cOctree(object):
     def MAX_TREE_LEVEL(self):
         return cOctree.MAX_TREE_LEVEL
 
-    def __new__(cls, *args, **kwargs):
-        inst = object.__new__(cls)
-        inst.__child_of_root = None
-        inst.__node_ptr = None
-        return inst
-
     def __init__(self, pos, H=None):
         pos = np.asarray(pos, dtype=np.float64)
         if pos.shape[1:] != (3,):
@@ -185,20 +177,37 @@ class cOctree(object):
         if pos.base is not None:
             pos = pos.copy()
 
+        self.__parent = None
         self.__node_ptr = cpygad.new_octree_from_pos(len(pos), pos.ctypes.data)
-        self.__child_of_root = None
+        # If this object does not have any references anymore, and hence will get
+        # garbage collected, the weakref will not reference any object anymore
+        # and, hence, call its callback function, which in turn has the
+        # responsibility to free the underlying C memory. We need to make sure the
+        # closure does not hold references to `self`. Otherwise the weakref would
+        # always point to a living object, and thus would never call its callback
+        # function.
+        # Note: child node cOctrees do not get instantiated with a call of
+        # `__init__`.
+        self.__weakref_for_freeing_C_memory = weakref.ref(
+                self,
+                lambda wr, ptr=self.__node_ptr: cpygad.free_octree(ptr),
+        )
 
         if H is not None:
             self.update_max_H(H)
 
-        warnings.warn('You should explicitly call `__del__` for cOctree or ' +
-                      'call `pygad.gc_full_collect` from time to time to avoid ' +
-                      'memory leaks!')
-    
-    def __del__(self):
-        if not self.__child_of_root and self.__node_ptr is not None:
-            # only root node shall delete the memory!
-            cpygad.free_octree(self.__node_ptr)
+    @property
+    def parent(self):
+        '''The parent node of this node (None for root).'''
+        return self.__parent
+
+    @property
+    def root(self):
+        '''The root of this octree node (self for root node).'''
+        root = self
+        while root.__parent:
+            root = root.__parent
+        return root
 
     @property
     def center(self):
@@ -241,19 +250,13 @@ class cOctree(object):
         '''The maximum depth of this particular tree. (Only node would be 0.)'''
         return int( cpygad.get_octree_max_depth(self.__node_ptr) )
 
-    @property
-    def root(self):
-        '''The root of this octree node.'''
-        if self.__child_of_root:
-            return self.__child_of_root
-        else:
-            return self
-
     def get_child(self, o):
         '''Return the child of octant o.'''
         if 0 <= o < self.num_children:
-            child = cOctree.__new__(cOctree)    # not calling __init__!
-            child.__child_of_root = self
+            # Do not call __init__ and hence do not set the weakref, which would
+            # free the memory of this child, which is part of the parent's tree!
+            child = cOctree.__new__(cOctree)
+            child.__parent = self
             child.__node_ptr = cpygad.get_octree_child(self.__node_ptr, o)
             return child
         else:

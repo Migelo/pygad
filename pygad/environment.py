@@ -121,16 +121,14 @@ def secure_get_h5py():
         return _h5py_dummy
 
 def gc_full_collect():
-    '''Collect as much garbage as possible.'''
-    # delete unreferenced cOctrees to free the C memory (objects with a __del__
-    # method are never collected by the garbage collector!)
-    from octree import cOctree
-    for obj in gc.garbage:
-        if isinstance(obj, cOctree):
-            del obj
+    '''Collect all collectable garbage.'''
+    # just to be sure:
+    old_thresholds = gc.get_threshold()
+    gc.set_threshold(1, 1, 1)
     # sometimes a single call is not enough!
     while gc.collect():
         pass
+    gc.set_threshold(*old_thresholds)
     if len(gc.garbage) > 0:
         print >> sys.stderr, 'WARNING: there is uncollectable garbage after a ' + \
                              'call of `gc_full_collect`!'
