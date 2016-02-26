@@ -17,7 +17,7 @@ import warnings
 def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
           extent=None, Npx=256, xaxis=0, yaxis=1, vlim=None, cmap=None,
           normcmaplum=True, desat=0.1, colors=None, colors_av=None,
-          clogscale=False, clim=None, ax=None, showcbar=True, cbartitle=None,
+          clogscale=None, clim=None, ax=None, showcbar=True, cbartitle=None,
           scaleind='line', scaleunits=None, fontcolor='white',
           interpolation='nearest', **kwargs):
     '''
@@ -41,8 +41,8 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
             colors='age.in_units_of("Gyr")', colors_av='lum_v', cmap='Age',
             clim=[0,13], cbartitle = '(V-band weighted) age $[\mathrm{Gyr}]$'
         for gas only:
-            colors='log10(temp.in_units_of("K"))', colors_av='mass', cmap='Bright',
-            clim=[3.0,6.0], cbartitle=r'$\log_{10}(T\,[\mathrm{K}])$'
+            colors='temp.in_units_of("K")', colors_av='rho', cmap='Bright',
+            clogscale=True, cbartitle=r'$\log_{10}(T\,[\mathrm{K}])$'
         for otherwise:
             cmap=('BlackGreen' if len(s.baryons)==0 else 'BlackPurple'),
             cbartitle=(r'$\log_{10}(\Sigma\,[%s])$' % units.latex())
@@ -174,9 +174,9 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                                                     '$[\mathrm{Gyr}]$'
             elif (len(s)!=0 and len(s.gas)==len(s)) \
                     or (s.descriptor.endswith('gas') and len(s)==0):
-                colors, colors_av = 'log10(temp.in_units_of("K"))', 'mass'
+                colors, colors_av = 'temp.in_units_of("K")', 'rho'
+                if clogscale is None:   clogscale = True
                 if cmap is None:        cmap = 'Bright'
-                if clim is None:        clim = [3.0,6.0]
                 if cbartitle is None:   cbartitle = r'$\log_{10}(T\,[\mathrm{K}])$'
             else:
                 if cmap is None:        cmap = 'BlackGreen' if len(s.baryons)==0 \
@@ -232,7 +232,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         if clogscale:
             im_col = np.log10(im_col)
         if clim is None:
-            clim = np.percentile(im_col[np.isfinite(im_col)], [0.1,99.9])
+            clim = np.percentile(im_col[np.isfinite(im_col)], [0.1,99.99])
         if normcmaplum:
             cmap = isolum_cmap(cmap, desat=desat)
         im = color_code(im_lum, im_col, cmap=cmap, vlim=vlim, clim=clim)
