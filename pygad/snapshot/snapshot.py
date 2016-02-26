@@ -1025,6 +1025,8 @@ class _Snap(object):
             sys.stdout.flush()
             return
         """
+        if block.units is None:
+            return
 
         phys_units = block.units.free_of_factors(['a','h_0'])
 
@@ -1170,8 +1172,7 @@ class _Snap(object):
 
     def IDs_unique(self):
         '''Check whether the IDs (of this (sub-)snapshot) are unique.'''
-        num_unique_IDs = len(set( self.ID ))
-        return num_unique_IDs == len(self.ID)
+        return len(set( self['ID'] )) == len(self['ID'])
 
 class _SubSnap(_Snap):
     '''
