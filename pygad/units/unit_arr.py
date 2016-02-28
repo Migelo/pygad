@@ -314,8 +314,9 @@ class UnitArr(np.ndarray):
             array._set_units_and_carrier_on_base(units)
             return array
         except KeyError:
-            warnings.warn('Operation \'%s\' on units is ' % ufunc.__name__ + \
-                          '*not* defined! Return normal numpy array.')
+            if not ufunc.__name__.endswith('(vectorized)'):
+                warnings.warn('Operation \'%s\' on units is ' % ufunc.__name__ + \
+                              '*not* defined! Return normal numpy array.')
             return np.asarray(array)
         except:
             raise
