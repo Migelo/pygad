@@ -32,7 +32,8 @@ Examples:
     ...               units='Myr')
     UnitArr([ 4697.05769369,  2100.        ,   801.47115316], units="Myr")
 '''
-__all__ = ['ptypes_and_deps', 'read_derived_rules', 'calc_temps', 'age_from_form']
+__all__ = ['ptypes_and_deps', 'read_derived_rules', 'calc_temps', 'age_from_form',
+           'general']
 
 from ConfigParser import SafeConfigParser
 import warnings
@@ -46,6 +47,10 @@ from ..units import UnitArr, UnitScalar
 from multiprocessing import Pool, cpu_count
 
 _rules = {}
+general = {
+        'cache_derived': True,
+        'always_cache': set(),
+}
 
 def ptypes_and_deps(defi, snap):
     '''
@@ -93,11 +98,19 @@ def read_derived_rules(config, store_as_default=True, delete_old=False):
         delete_old (bool):          If store_as_default==True, delete old
                                     definition before
     '''
-    global _rules
+    global _rules, general
     if store_as_default:
         rules = _rules
     else:
         rules = {}
+
+    def test_section(cfg, section, entries):
+        if not cfg.has_section(section):
+            raise KeyError('Section "%s" is required in config ' % section +
+                           'file for derived blocks.')
+        if set(cfg.options(section)) < set(entries):
+            raise ValueError('Section "%s" must have the ' % section +
+                             'following entries: ' + str(entries))
 
     from os.path import exists
     for filename in config:
@@ -113,8 +126,13 @@ def read_derived_rules(config, store_as_default=True, delete_old=False):
     cfg.optionxform = str
     cfg.read(filename)
 
-    if not cfg.has_section('rules'):
-        raise KeyError('Section "rules" is required in derived config file.')
+    test_section(cfg, 'general', ['cache_derived'])
+    test_section(cfg, 'rules', [])
+
+    general['cache_derived'] = cfg.getboolean('general', 'cache_derived')
+    if cfg.has_option('general', 'always_cache'):
+        general['always_cache'] = set(block.strip() for block
+                in cfg.get('general','always_cache').split(','))
 
     if delete_old:
         _rules.clear()

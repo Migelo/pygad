@@ -81,13 +81,28 @@ Example:
     SimArr([  9.41927424,   9.69844804,   9.6864571 , ...,  25.08852488,
              23.95322772,  24.6890346 ],
            units="ckpc h_0**-1", snap="snap_M1196_4x_470")
+    >>> s.cache_derived = False
+    >>> s.delete_blocks(derived=True)
+    >>> s['r'].units
+    derive block r... done.
+    Unit("ckpc h_0**-1")
+    >>> s['r'].units    # now gets re-derived
+    derive block r... done.
+    Unit("ckpc h_0**-1")
+    >>> s.stars['age'].units    # this block is always cached! (see `derived.cfg`)
+    load block form_time... done.
+    derive block age... done.
+    Unit("Gyr")
+    >>> s.stars['age'].units
+    Unit("Gyr")
+    >>> s.cache_derived = True
 
     >>> s.to_physical_units()
     convert block pos to physical units... done.
     convert block rho to physical units... done.
-    convert block r to physical units... done.
     convert boxsize to physical units... done.
     >>> sub = s[s['r'] < UnitScalar('30 kpc')]
+    derive block r... done.
     >>> sub
     <Snap "snap_M1196_4x_470":masked; N=121,013; z=0.000>
     >>> sub.gas
@@ -101,8 +116,8 @@ Example:
     >>> assert np.max(np.abs( (s.get('dist(pos)') - s['r']) / s['r'] )) < 1e-6
     >>> del s['pos']
     >>> s['r']
-    SimArr([ 13.08232533,  13.47006673,  13.45341264, ...,  34.84517345,
-             33.26837183,  34.29032583], units="kpc", snap="snap_M1196_4x_470")
+    SimArr([ 13.08232505,  13.47006664,  13.45341258, ...,  34.84517185,
+             33.268371  ,  34.2903246 ], units="kpc", snap="snap_M1196_4x_470")
     >>> s['pos']
     load block pos... done.
     convert block pos to physical units... done.
@@ -289,6 +304,7 @@ import numpy as np
 import warnings
 import ast
 import weakref
+import derived
 
 def Snap(filename, physical=False, cosmological=None, gad_units=None):
     '''
@@ -398,7 +414,6 @@ def Snap(filename, physical=False, cosmological=None, gad_units=None):
     s._block_avail['mass'] = [n>0 for n in s._N_part]
 
     # calculate the dependencies and particle types of the derived blocks
-    import derived
     changed = True
     rules = derived._rules.copy()
     if 'dV' not in rules:
@@ -432,6 +447,9 @@ def Snap(filename, physical=False, cosmological=None, gad_units=None):
         for name in not_available:
             s._block_avail.pop(name,None)
             s._derive_rule_deps.pop(name,None)
+
+    s._always_cache = set(s._derive_rule_deps.iterkeys()) \
+                        & derived.general['always_cache']
 
     s._descriptor = '"' + s._descriptor + '"'
 
@@ -476,6 +494,10 @@ class _Snap(object):
         self._trans_at_load         = []
         self._root                  = self
         self._base                  = None
+        self._cache_derived         = derived.general['cache_derived']
+        self._always_cache          = set() # _derive_rule_deps is empty; gets
+                                            # filled in Snap() with
+                                            # derived.general['always_cache']
 
     @property
     def filename(self):
@@ -540,6 +562,20 @@ class _Snap(object):
     def properties(self):
         '''A copy of some more properties from the header(s).'''
         return self._root._properties.copy()
+
+    @property
+    def cache_derived(self):
+        '''Whether to cache derived blocks (or to calculate them every time).'''
+        return self._root._cache_derived
+
+    @cache_derived.setter
+    def cache_derived(self, sd):
+        self._root._cache_derived = bool(sd)
+
+    @property
+    def always_cached_derived(self):
+        '''List of blocks that are always changed.'''
+        return list(self._root._always_cache)
 
     @property
     def load_double_prec(self):
@@ -702,18 +738,18 @@ class _Snap(object):
                 elif name:
                     yield block_name
 
-    def _set_block(self, name):
+    def _get_block(self, name):
         '''
         This gets called, if a block is not yet set in self._blocks.
 
         Overwritten for _SubSnap, where care is taken for sub-snapshots that are
         not directly sliced/mased from the block's host. Here, for the root, it
-        simply calls self._get_block (and asserts that the block is available).
+        simply calls self._host_get_block (and asserts that the block is
+        available).
         '''
         assert name in self.available_blocks()
         assert name not in self._blocks
-        block = self._get_block(name)
-        self._blocks[name] = block
+        block = self._host_get_block(name)
         return block
 
     def __getattr__(self, name):
@@ -735,7 +771,8 @@ class _Snap(object):
             if block is not None:
                 return block
             if key in self.available_blocks():
-                return self._set_block(key)
+                # TODO: don't need to pass it though all the functions...
+                return self._get_block(key)
             elif key in self._root._block_avail:
                 raise KeyError('Block "%s" is not available for all ' % key +
                                'particle types of this (sub-)snapshot.')
@@ -795,12 +832,12 @@ class _Snap(object):
     def __contains__(self, el):
         return el in self.available_blocks() or el in self.families()
 
-    def _load_block(self, name):
+    def _host_load_block(self, name):
         '''
         Load a block and add it to its host.
 
         Note:
-            For getting blocks -- also derived ones -- call _get_block!
+            For getting blocks -- also derived ones -- call _host_get_block!
 
         Args:
             name (str): The stripped name of the block (as it is in
@@ -889,41 +926,59 @@ class _Snap(object):
 
         return block
 
-    def _derive_block(self, name):
+    def _host_derive_block(self, name):
         '''
-        Derive a block from the stored rules and add it to its host.
+        Derive a block from the stored rules (and add it to its host).
 
         Note:
-            For getting blocks call _get_block!
+            For getting blocks call _host_get_block!
 
         Args:
-            name (str): The name of the derived block (as it is in
-                        self._root._derive_rule_deps).
+            name (str):             The name of the derived block (as it is in
+                                    self._root._derive_rule_deps).
 
         Returns:
             block (SimArr):     The (entire) block.
         '''
         root = self._root
         if not name in root._derive_rule_deps:
-            raise ValueError("These is no block '%s' to derive!" % name)
+            raise ValueError("There is no block '%s' to derive!" % name)
 
         host = self.get_host_subsnap(name)
         rule, deps = root._derive_rule_deps[name]
 
+        orig_caching_state = self._root._cache_derived
+        if name in self._root._always_cache:
+            # in order to ensure that the automatic updating works (the dependencies
+            # connect from the loading blocks to the always cached derived block),
+            # temporarily turn on _cache_derived globally!
+            self._root._cache_derived = True
+
         # pre-load all needed (and not yet loaded) blocks in order not to mess up
-        # the output
+        # the output (too much)
+        dep_blocks = {}
         for dep in deps:
-            host[dep]
+            if self._root._cache_derived:
+                host[dep]
+            else:
+                # re-use stored blocks
+                dep_blocks[dep] = host.get(dep, None)
+                if dep_blocks[dep] is None:
+                    # ... only calculate others, but do not store them
+                    dep_blocks[dep] = host._host_derive_block(dep, False)
 
         if environment.verbose: print 'derive block %s...' % name,
         sys.stdout.flush()
-        block = host.get(rule)
-        for dep in deps:
-            host[dep].dependencies.add(name)
+        block = host.get(rule, namespace=None if self._root._cache_derived else dep_blocks)
+        if self._root._cache_derived:
+            for dep in deps:
+                host[dep].dependencies.add(name)
+            host._blocks[name] = block
         if environment.verbose: print 'done.'
         sys.stdout.flush()
 
-        host._blocks[name] = block
+        self._root._cache_derived = orig_caching_state
+
         return block
 
     def _add_custom_block(self, data, name):
@@ -964,22 +1019,22 @@ class _Snap(object):
         from sim_arr import SimArr
         host._blocks[name] = SimArr(data,snap=host)
 
-    def _get_block(self, name):
+    def _host_get_block(self, name):
         '''
         Load or derive a block of the given name and set it as attribute of its
         host.
 
         Args:
-            name (str): The stripped name of the block (as it is in
-                        self._root._block_avail).
+            name (str):         The stripped name of the block (as it is in
+                                self._root._block_avail).
 
         Returns:
             block (SimArr):     The (entire) block.
         '''
         if name in self._root._load_name:
-            return self._load_block(name)
+            return self._host_load_block(name)
         elif name in self._root._derive_rule_deps:
-            return self._derive_block(name)
+            return self._host_derive_block(name)
         else:
             raise ValueError("These is no block '%s' than can be " % name +
                              "loaded or derived!")
@@ -1107,7 +1162,7 @@ class _Snap(object):
                 if name in host._blocks:
                     del host[name]
 
-    def get(self, expr, units=None):
+    def get(self, expr, units=None, namespace=None):
         '''
         Evaluate the expression for a new block (e.g.: 'log10(Fe/mass)').
 
@@ -1120,6 +1175,8 @@ class _Snap(object):
                                 in this snapshot.
             units (str, Unit):  If set, convert the array to this units before
                                 returning.
+            namespace (dict):   Additional namespace to use for calculating the
+                                defined block.
 
         Returns:
             res (SimArr):       The result.
@@ -1129,17 +1186,19 @@ class _Snap(object):
 
         # prepare evaluator
         from numpy.core.umath_tests import inner1d
-        import derived
         from .. import analysis
-        namespace = {'dist':dist, 'Unit':Unit, 'Units':Units, 'UnitArr':UnitArr,
-                     'UnitQty':UnitQty, 'UnitScalar':UnitScalar,
-                     'inner1d':inner1d, 'inter_bc_qty':inter_bc_qty,
-                     'perm_inv':utils.perm_inv, 'solar':physics.solar,
-                     'WMAP7':physics.WMAP7, 'Planck2013':physics.Planck2013,
-                     'FLRWCosmo':physics.FLRWCosmo, 'a2z':physics.a2z,
-                     'z2a':physics.z2a,
-                     'kernel_weighted':analysis.kernel_weighted,
-                     'len':len}
+        namespace = {} if namespace is None else namespace.copy()
+        namespace.update( {'dist':dist, 'Unit':Unit, 'Units':Units,
+                           'UnitArr':UnitArr, 'UnitQty':UnitQty,
+                           'UnitScalar':UnitScalar, 'inner1d':inner1d,
+                           'inter_bc_qty':inter_bc_qty, 'perm_inv':utils.perm_inv,
+                           'solar':physics.solar, 'WMAP7':physics.WMAP7,
+                           'Planck2013':physics.Planck2013,
+                           'FLRWCosmo':physics.FLRWCosmo, 'a2z':physics.a2z,
+                           'z2a':physics.z2a,
+                           'kernel_weighted':analysis.kernel_weighted,
+                           'len':len}
+        )
         for n,obj in [(n,getattr(derived,n)) for n in dir(derived)]:
             if hasattr(obj, '__call__') and n!='ptypes_and_deps' \
                     and n!='read_derived_rules':
@@ -1378,7 +1437,7 @@ class _SubSnap(_Snap):
                 mask = np.concatenate(pmasks)
                 return mask
 
-    def _set_block(self, name):
+    def _get_block(self, name):
         '''
         This gets called, if a block is not yet set in self._blocks.
 
@@ -1395,8 +1454,9 @@ class _SubSnap(_Snap):
             assert name not in self._blocks
             host = self.get_host_subsnap(name)
             if host is self:
-                block = self._get_block(name)  # no slicing/masking needed!
-                self._blocks[name] = block
+                # no slicing/masking needed!
+                # (caching of blocks is done within this function)
+                block = host._host_get_block(name)
                 return block
             else:
                 # delegate the loading to the host
