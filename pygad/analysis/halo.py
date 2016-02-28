@@ -40,7 +40,7 @@ Examples:
 
     # find galaxies (exclude those with almost only gas)
     >>> galaxies = generate_FoF_catalogue(s.baryons, l='3 kpc', min_N=3e2,
-    ...             dvmax='100 km/s',
+    ...             dvmax='100 km/s', #max_halos=5,
     ...             exclude=lambda g,s: g.Mgas/g.mass>0.9)  # doctest: +ELLIPSIS
     perform a FoF search on 1,001,472 particles:
       l      = 3 [kpc]
@@ -458,7 +458,7 @@ class Halo(object):
         return sum(self._props['parts'])
 
 def generate_FoF_catalogue(s, l=None, calc=None, FoF=None, exclude=None,
-                           verbose=environment.verbose, **kwargs):
+                           max_halos=None, verbose=environment.verbose, **kwargs):
     '''
     Generate a list of Halos defined by FoF groups.
 
@@ -474,6 +474,8 @@ def generate_FoF_catalogue(s, l=None, calc=None, FoF=None, exclude=None,
         exclude (function): Exclude all halos h for which `exclude(h,s)` returns
                             a true value (note: s[h] gives the halo as a
                             sub-snapshot).
+        max_halos (int):    Limit the number of returned halos to the `max_halos`
+                            most massive halos. If None, all halos are returned.
         verbose (bool):     Verbosity.
         **kwargs:           Other keywords are passed to `find_FoF_groups` (e.g.
                             `dvmax`).
@@ -493,9 +495,13 @@ def generate_FoF_catalogue(s, l=None, calc=None, FoF=None, exclude=None,
         print 'initialize halos from FoF group IDs...'
         sys.stdout.flush()
 
-    halos = [ Halo(s[FoF==i],calc=calc) for i in xrange(N_FoF) ]
-    if exclude:
-        halos = [ h for h in halos if not exclude(h,s) ]
+    halos = []
+    for i in xrange(N_FoF):
+        h = Halo(s[FoF==i],calc=calc)
+        if exclude is None or not exclude(h,s):
+            halos.append( h )
+        if len(halos)==max_halos:
+            break
 
     if verbose:
         print 'initialized %d halos (excluded %d).' % (
