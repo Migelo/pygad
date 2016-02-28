@@ -53,7 +53,7 @@ Examples:
       group 2:   4.71e+09 [Msol]  @  [8..., 1...e+03, 7...] [kpc]
     initialize halos from FoF group IDs...
     load block ID... done.
-    initialized 3 halos (excluded 4).
+    initialized 3 halos.
     >>> galaxies[0] # doctest: +ELLIPSIS
     <Halo N = 66,... /w M = 3.8e+10 [Msol] @ com = [-0..., 0..., 0...] [kpc]>
     >>> gal = s[galaxies[0]]
@@ -76,8 +76,9 @@ Examples:
     >>> assert set(gal_2.props.keys()) == set(gal.props.keys())
     >>> assert np.all(gal_2.com == gal.com)
 '''
-__all__ = ['shrinking_sphere', 'virial_info', 'find_FoF_groups', 'Halo',
-           'generate_FoF_catalogue', 'find_most_massive_progenitor']
+__all__ = ['shrinking_sphere', 'virial_info', 'find_FoF_groups',
+           'NO_FOF_GROUP_ID', 'Halo', 'generate_FoF_catalogue',
+           'find_most_massive_progenitor']
 
 import numpy as np
 from .. import utils
@@ -220,6 +221,7 @@ def virial_info(s, center=None, odens=200.0, N_min=10):
     return UnitArr(info[0],s['pos'].units), \
            UnitArr(info[1],s['mass'].units)
 
+NO_FOF_GROUP_ID = int( np.array(-1, np.uintp) )
 def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True,
                     verbose=environment.verbose):
     '''
@@ -237,7 +239,9 @@ def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True,
 
     Returns:
         FoF (np.ndarray):   A block of FoF group IDs for the particles of `s`.
-                            (IDs are ordered in mass, if `sort=True`).
+                            (IDs are ordered in mass, if `sort=True`). Particles
+                            that are in no FoF group have ID = NO_FOF_GROUP_ID =
+                            np.array(-1,np.uintp).
         N_FoF (int):        The number of FoF groups found.
     '''
     l = UnitScalar(l, s['pos'].units, subs=s, dtype=float)
@@ -476,7 +480,8 @@ class Halo(object):
         return sum(self._props['parts'])
 
 def generate_FoF_catalogue(s, l=None, calc=None, FoF=None, exclude=None,
-                           max_halos=None, verbose=environment.verbose, **kwargs):
+                           max_halos=None, ret_FoFs=False,
+                           verbose=environment.verbose, **kwargs):
     '''
     Generate a list of Halos defined by FoF groups.
 
@@ -494,6 +499,8 @@ def generate_FoF_catalogue(s, l=None, calc=None, FoF=None, exclude=None,
                             sub-snapshot).
         max_halos (int):    Limit the number of returned halos to the `max_halos`
                             most massive halos. If None, all halos are returned.
+        ret_FoFs (bool):    Also return the array with the FoF group indices
+                            (sorted by mass).
         verbose (bool):     Verbosity.
         **kwargs:           Other keywords are passed to `find_FoF_groups` (e.g.
                             `dvmax`).
@@ -501,6 +508,12 @@ def generate_FoF_catalogue(s, l=None, calc=None, FoF=None, exclude=None,
     Returns:
         halos (list):       A list of all the groups as Halo instances. (Sorted in
                             mass, it not `sort=False` in the `kwargs`.)
+        
+        if ret_FoFs==True:
+        FoF (np.array):     The FoF group IDs for each particle; particles with no
+                            group have ID = NO_FOF_GROUP_ID (cf. `FoF` argument
+                            and/or function `find_FoF_groups`).
+        N_FoF (int):        The number of FoF groups in `FoF`.
     '''
     calc = kwargs.pop('calc', None)
 
@@ -522,11 +535,14 @@ def generate_FoF_catalogue(s, l=None, calc=None, FoF=None, exclude=None,
             break
 
     if verbose:
-        print 'initialized %d halos (excluded %d).' % (
-                len(halos), N_FoF-len(halos))
+        print 'initialized %d halos.' % (len(halos))
         sys.stdout.flush()
 
-    return halos
+    if ret_FoFs:
+        return halos, FoF, N_FoF
+    else:
+        del FoF
+        return halos
 
 def _common_mass(h1, h2, s):
     # access private attribute for speed
