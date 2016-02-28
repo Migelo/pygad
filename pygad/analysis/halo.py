@@ -66,6 +66,15 @@ Examples:
     >>> if np.linalg.norm(galaxies[0].ssc - galaxies[0].com) > '1.0 kpc':
     ...     print galaxies[0].ssc
     ...     print galaxies[0].com
+
+    Test pickling:
+    >>> import cPickle as pickle
+    >>> gal = galaxies[0]
+    >>> pkld_gal = pickle.dumps(gal)
+    >>> gal_2 = pickle.loads(pkld_gal)
+    >>> assert np.all(gal_2.IDs == gal.IDs)
+    >>> assert set(gal_2.props.keys()) == set(gal.props.keys())
+    >>> assert np.all(gal_2.com == gal.com)
 '''
 __all__ = ['shrinking_sphere', 'virial_info', 'find_FoF_groups', 'Halo',
            'generate_FoF_catalogue', 'find_most_massive_progenitor']
@@ -330,7 +339,9 @@ class Halo(object):
     }
 
     @staticmethod
-    def all_prop_list():
+    def calculable_props():
+        '''A list of the properties that can be calculated (c.f. `calc` of
+        `__init__`).'''
         return Halo.__long_name_prop__.keys()
 
     def __init__(self, halo=None, IDs=None, snap=None, calc=None):
@@ -346,15 +357,15 @@ class Halo(object):
                                  'and `snap` must be None to avoid confusion!')
 
         # the defining property:
-        self._IDs = UnitArr(halo['ID'])
+        self._IDs = np.array(halo['ID'])
 
         # derive some properties
         self._props = {}
         if calc is None:
             # remove time consuming calculations
-            calc = set(Halo.all_prop_list()) - set(['ssc'])
+            calc = set(Halo.calculable_props()) - set(['ssc'])
         if calc == 'all':
-            calc = Halo.all_prop_list()
+            calc = Halo.calculable_props()
         calc = set(calc) - set(['mass', 'com', 'parts'])
         self._calc_prop('mass', halo=halo)
         self._calc_prop('com', halo=halo)
@@ -440,7 +451,14 @@ class Halo(object):
         '''Long description of a property.'''
         return Halo.__long_name_prop__.get(name, 'unknown')
 
+    def __dir__(self):
+        return self.__dict__.keys() + self._props.keys() + \
+                [k for k in self.__class__.__dict__.keys()
+                        if not k.startswith('_')]
+
     def __getattr__(self, name):
+        if name.startswith('__'):
+            return super(Halo, self).__getattr__(name)
         attr = self._props.get(name, None)
         if attr is not None:
             return attr
