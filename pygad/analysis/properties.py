@@ -115,6 +115,7 @@ import numpy as np
 from ..units import *
 from ..transformation import *
 from pygad import physics
+import sys
 
 def mass_weighted_mean(s, qty):
     '''
