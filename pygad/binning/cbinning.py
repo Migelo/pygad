@@ -8,7 +8,7 @@ Testing:
     >>> from ..transformation import Translation
     >>> Translation(-UnitArr([34.7828, 35.5898, 33.6147], 'cMpc/h_0')).apply(s)
     >>> extent = UnitArr([[-0.5,0.7],[-1.0,2.0],[-2.0,2.0]], 'Mpc')
-    >>> sub = s[BoxMask(extent)]
+    >>> sub = s[BoxMask(extent, sph_overlap=True)]
     load block pos... done.
     convert block pos to physical units... done.
     apply stored Translation to block pos... done.
@@ -136,7 +136,7 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml'):
 
     if len(s.gas) not in [0,len(s)]:
         raise NotImplementedError()
-    sub = s[BoxMask(extent)]
+    sub = s[BoxMask(extent, sph_overlap=True)]
 
     pos = sub['pos'].view(np.ndarray).astype(np.float64)
     if isinstance(hsml, str):
@@ -263,7 +263,7 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
     ext3D[xaxis] = extent[0]
     ext3D[yaxis] = extent[1]
     ext3D[zaxis] = [-np.inf, +np.inf]
-    sub = s[BoxMask(ext3D)]
+    sub = s[BoxMask(ext3D, sph_overlap=True)]
 
     # TODO: why always need a copy? C vs Fortran alignment...!?
     pos = sub['pos'].view(np.ndarray)[:,(xaxis,yaxis)].astype(np.float64).copy()

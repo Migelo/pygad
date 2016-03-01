@@ -19,8 +19,7 @@ Example:
     derive block angmom... done.
     apply Rotation to "vel" of "snap_M1196_4x_470"... done.
     apply Rotation to "pos" of "snap_M1196_4x_470"... done.
-    >>> sub = s[BallMask('60 kpc')]
-    derive block r... done.
+    >>> sub = s[BoxMask('120 kpc', sph_overlap=True)]
     load block hsml... done.
     convert block hsml to physical units... done.
     >>> m_b, px2 = map_qty(sub.baryons, '120 kpc', 'mass', Npx=256)
@@ -37,7 +36,8 @@ Example:
     create a 256 x 256 SPH-grid (120 x 120 [kpc])...
     done with SPH grid
     >>> rel_err = np.abs(m_b - (m_s+m_g)) / m_b
-    >>> assert rel_err.max() < 1e-10
+    >>> if rel_err.max() > 1e-10:
+    ...     print np.percentile(rel_err, [50,90,95,100])
 '''
 __all__ = ['map_qty']
 

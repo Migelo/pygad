@@ -26,7 +26,7 @@ Examples:
     derive block angmom... done.
     apply Rotation to "vel" of "snap_M1196_4x_470"... done.
     apply Rotation to "pos" of "snap_M1196_4x_470"... done.
-    >>> sub = s[BallMask('60 kpc')]  # 60 kpc ~ 30% R200 (R200 ~ 211 kpc)
+    >>> sub = s[BallMask('60 kpc',sph_overlap=True)]    # 60 kpc ~ 30% R200 (R200 ~ 211 kpc)
     derive block r... done.
     load block hsml... done.
     >>> sub
@@ -42,7 +42,7 @@ Examples:
     convert block mass to physical units... done.
     convert block r to physical units... done.
     convert boxsize to physical units... done.
-    >>> sub = s[BoxMask('120 kpc',fullsph=False)]
+    >>> sub = s[BoxMask('120 kpc',sph_overlap=False)]
     >>> sub # doctest:+ELLIPSIS
     <Snap "snap_M1196_4x_470":box([[-60,60],[-60,60],[-60,60]] [kpc],strict); N=218,98...; z=0.000>
     >>> if np.linalg.norm( np.abs(sub['pos']).max(axis=0) - [120/2]*3 ) > 0.1:
@@ -131,18 +131,18 @@ class BallMask(SnapMask):
     Args:
         R (UnitScalar):     The maximum radius.
         center (UnitQty):   The center of the ball. Default: origin.
-        fullsph (bool):     If True, also include gas particles, that actually lie
-                            outside of the ball of radius R, but their are
+        sph_overlap (bool): If True, also include gas particles, that actually lie
+                            outside of the ball of radius R, but they are
                             smoothed into it.
     '''
-    def __init__(self, R, center=None, fullsph=True):
+    def __init__(self, R, center=None, sph_overlap=False):
         super(BallMask,self).__init__()
         self.R = R
         self.center = center
-        self.fullsph = fullsph
+        self.sph_overlap = sph_overlap
 
     def inverted(self):
-        inv = BallMask(self._R, self._center, fullsph=self.fullsph)
+        inv = BallMask(self._R, self._center, sph_overlap=self.sph_overlap)
         inv._inverse = not self._inverse
         return inv
 
@@ -171,7 +171,7 @@ class BallMask(SnapMask):
         if not np.all(self._center==0):
             s += 'center=%s,' % self._center
         s += 'r=%s' % self._R
-        if not self.fullsph:
+        if not self.sph_overlap:
             s += ',strict'
         return s + ')'
 
@@ -182,7 +182,7 @@ class BallMask(SnapMask):
         r = dist(s['pos'],center) if not np.all(center==0) else s['r']
         mask = r < R
 
-        if self.fullsph and 'gas' in s:
+        if self.sph_overlap and 'gas' in s:
             for pt in gadget.families['gas']:
                 sub = SubSnap(s, [pt])
                 r = dist(sub['pos'],center) if not np.all(center==0) \
@@ -198,30 +198,25 @@ class BoxMask(SnapMask):
 
     The box is always a cube and aligned with the axes.
 
-    Note:
-        For performance reasons, this mask actually also includes some more SPH
-        particles at the edges and corners of the box than specified, if 'fullsph'
-        is set.
-
     Args:
         extent (Unit, UnitArr): The size of the box. Can either be a .
         center (UnitQty):       The center of the box, if extent is just a scalar.
                                 Otherwise it will be ignored. Default: origin.
-        fullsph (bool):         If True, also include gas particles, that actually
-                                lie outside of the box, but their are smoothed
+        sph_overlap (bool):     If True, also include gas particles, that actually
+                                lie outside of the box, but they are smoothed
                                 into it.
     '''
-    def __init__(self, extent, center=None, fullsph=True):
+    def __init__(self, extent, center=None, sph_overlap=False):
         super(BoxMask,self).__init__()
         # might be needed for calculation of self.center in setting self.extent:
         self._extent = UnitArr([[-1,1]]*3)
         self.extent = extent
         if center is not None:
             self.center += center
-        self.fullsph = fullsph
+        self.sph_overlap = sph_overlap
 
     def inverted(self):
-        inv = BoxMask(self._extent, fullsph=self.fullsph)
+        inv = BoxMask(self._extent, sph_overlap=self.sph_overlap)
         inv._inverse = not self._inverse
         return inv
 
@@ -263,7 +258,7 @@ class BoxMask(SnapMask):
             s += '[%.4g,%.4g]%s' % (tuple(self._extent[i]) +
                                         ('' if i==2 else ',',))
         s += '] %s' % self._extent.units
-        if not self.fullsph:
+        if not self.sph_overlap:
             s += ',strict'
         return s + ')'
 
@@ -274,7 +269,7 @@ class BoxMask(SnapMask):
                (ext[1,0]<=s['pos'][:,1]) & (s['pos'][:,1]<=ext[1,1]) & \
                (ext[2,0]<=s['pos'][:,2]) & (s['pos'][:,2]<=ext[2,1])
 
-        if self.fullsph and 'gas' in s:
+        if self.sph_overlap and 'gas' in s:
             for pt in gadget.families['gas']:
                 sub = SubSnap(s, [pt])
                 mask[sum(s.parts[:pt]):sum(s.parts[:pt+1])] |= \
