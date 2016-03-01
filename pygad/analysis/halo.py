@@ -62,14 +62,17 @@ Examples:
     >>> assert np.all(gal.parts == np.array(galaxies[0].parts))
     >>> assert gal['mass'].sum() == galaxies[0].props['mass']
     >>> assert gal.stars['mass'].sum() == galaxies[0].Mstars
-    >>> galaxies[0]._calc_prop('ssc', s)
-    >>> if np.linalg.norm(galaxies[0].ssc - galaxies[0].com) > '1.0 kpc':
-    ...     print galaxies[0].ssc
-    ...     print galaxies[0].com
+    >>> gal = galaxies[0]
+    >>> gal._calc_prop('ssc', s)
+    >>> if np.linalg.norm(gal.ssc - gal.com) > '1.0 kpc':
+    ...     print gal.ssc
+    ...     print gal.com
+    >>> assert 'Rmax' in Halo.calculable_props()
+    >>> Halo.prop_descr('M200_com')
+    'spherical M200 with `virial_info` with com as center'
 
     Test pickling:
     >>> import cPickle as pickle
-    >>> gal = galaxies[0]
     >>> pkld_gal = pickle.dumps(gal)
     >>> gal_2 = pickle.loads(pkld_gal)
     >>> assert np.all(gal_2.IDs == gal.IDs)
@@ -320,11 +323,15 @@ class Halo(object):
                                     halo defining IDs.
 
         calc (set, list, tuple):    A list of the properties to calculate at
-                                    isinstantiation. 'mass', 'com', and 'parts'
-                                    are always calculated (since they might be
-                                    needed by some of the other properties
-                                    anyway). If calc='all', all defined properties
-                                    are calculated (may take some while!).
+                                    isinstantiation.
+                                    'mass', 'com', and 'parts' are always
+                                    calculated (since they might be needed by some
+                                    of the other properties anyway).
+                                    If calc='all' -- the default --, all defined
+                                    properties are calculated.
+                                    For an overview of the available properties
+                                    see `Halo.calculable_props()` and
+                                    `Halo.prop_descr(pro_name)`.
     '''
     __long_name_prop__ = {
             'mass':     'total mass',
@@ -335,12 +342,25 @@ class Halo(object):
             'com':      'center of mass',
             'ssc':      'shrinking sphere center',
             'Rmax':     'maximum distance of a particle from com',
-            'Rvir':     'Rvir (Mo+ 2002): (3*M / (4*pi * 18*pi**2 * rho_c))**(1/3.)',
-            'R200':     'R200 (Mo+ 2002): (3*M / (4*pi * 200*rho_c))**(1/3.)',
-            'R500':     'R500 (Mo+ 2002): (3*M / (4*pi * 500*rho_c))**(1/3.)',
             'lowres_part':  'number of low-resolution particles',
             'lowres_mass':  'mass of low-resolution particles',
     }
+
+    for odens in ['vir', '200', '500']:
+        prop = 'R'+odens
+        __long_name_prop__[prop+'_FoF'] = \
+                '%s (Mo+ 2002): (3*M / (4*pi * %s * rho_c))**(1/3.)' % (
+                        prop, '18*pi**2' if odens=='vir' else odens)
+        if odens == 'vir':
+            continue
+        for qty in ['R', 'M']:
+            prop = qty+odens
+            __long_name_prop__[prop+'_ssc'] = \
+                    'spherical %s with `virial_info` with ssc as center' % prop
+            __long_name_prop__[prop+'_com'] = \
+                    'spherical %s with `virial_info` with com as center' % prop
+        del prop, qty
+    del odens
 
     @staticmethod
     def calculable_props():
@@ -348,36 +368,46 @@ class Halo(object):
         `__init__`).'''
         return Halo.__long_name_prop__.keys()
 
-    def __init__(self, halo=None, IDs=None, snap=None, calc=None):
+    @staticmethod
+    def prop_descr(name):
+        '''Long description of a property.'''
+        return Halo.__long_name_prop__.get(name, 'unknown')
+
+
+    def __init__(self, halo=None, IDs=None, snap=None, calc='all'):
         if halo is None:
             halo = snap[IDMask(IDs)]
             if len(halo) != len(IDs):
-                raise ValueError('The given snapshot does not contain all ' + \
-                                 'specified IDs!')
-        else:
-            if IDs is not None or snap is not None:
-                raise ValueError('If the sub-snapshot`halo` is given, the ' + \
-                                 'Halo will be defined by this and `IDs` ' + \
-                                 'and `snap` must be None to avoid confusion!')
+                print >> sys.stderr, 'WARNING: The given snapshot does not ' + \
+                                     'contain all specified IDs!'
+        elif IDs is not None:
+            raise ValueError('If the sub-snapshot `halo` is given, the Halo ' + \
+                             'will be defined by this and `IDs` must be None ' + \
+                             'to avoid confusion!')
+        elif snap is not None:
+            if halo.root is not snap.root:
+                raise ValueError('If the sub-snapshot `halo` and `snap` are ' + \
+                                 'given, they must have the same root ' + \
+                                 'snapshot to avoid confusion!')
 
         # the defining property:
         self._IDs = np.array(halo['ID'])
 
         # derive some properties
         self._props = {}
-        if calc is None:
-            # remove time consuming calculations
-            calc = set(Halo.calculable_props()) - set(['ssc'])
         if calc == 'all':
             calc = Halo.calculable_props()
         calc = set(calc) - set(['mass', 'com', 'parts'])
-        self._calc_prop('mass', halo=halo)
-        self._calc_prop('com', halo=halo)
-        self._calc_prop('parts', halo=halo)
+        self._calc_prop('mass', halo=halo, snap=snap, recompute=False)
+        self._calc_prop('com', halo=halo, snap=snap, recompute=False)
+        self._calc_prop('parts', halo=halo, snap=snap, recompute=False)
         for prop in calc:
-            self._calc_prop(prop, halo=halo)
+            self._calc_prop(prop, halo=halo, snap=snap, recompute=False)
 
-    def _calc_prop(self, prop, snap=None, halo=None):
+    def _calc_prop(self, prop, snap=None, halo=None, recompute=True):
+        if not recompute and prop in self._props:
+            return
+
         if halo is None:
             halo = snap[self.mask]
 
@@ -397,22 +427,45 @@ class Halo(object):
             R_max = np.percentile(periodic_distance_to(halo['pos'],
                                                        self.com,
                                                        halo.boxsize),
-                                  70)
+                                  90)
             val = shrinking_sphere(halo, center=self.com,
                                    R=R_max, verbose=False)
         elif prop == 'Rmax':
             val = periodic_distance_to(halo['pos'], self.com,
                                        halo.boxsize).max()
-        elif prop in ['Rvir', 'R200', 'R500']:
-            if prop == 'Rvir':
-                odens = 18. * np.pi**2
+        elif prop[0] in ['R','M'] and (prop[1:4]=='vir' or prop[1:4].isdigit()) \
+                and prop[4]=='_':
+            qty = prop[0]
+            odens_n = prop[1:4]
+            scheme = prop[5:]
+            odens = 18.*np.pi**2 if odens_n=='vir' else float(odens_n)
+            if scheme == 'FoF':
+                rho_crit = halo.cosmology.rho_crit( z=halo.redshift )
+                rho_crit.convert_to(halo['mass'].units/halo['pos'].units**3,
+                                    subs=halo)
+                r3 = 3.0 * self.mass / (4.0*np.pi * odens*rho_crit)
+                val = r3 ** Fraction(1,3)
             else:
-                odens = int(prop[1:])
-            rho_crit = halo.cosmology.rho_crit( z=halo.redshift )
-            rho_crit.convert_to(halo['mass'].units/halo['pos'].units**3,
-                                subs=halo)
-            r3 = 3.0 * self.mass / (4.0*np.pi * odens*rho_crit)
-            val = r3 ** Fraction(1,3)
+                if snap is None:
+                    raise ValueError('Requested %s, but `snap` is None!' % prop)
+                if scheme == 'com':
+                    center = self.com
+                elif scheme == 'ssc':
+                    if 'ssc' not in self._props:
+                        self._calc_prop('ssc', snap=snap, halo=halo,
+                                        recompute=False)    # TODO: correct?!
+                    center = self.ssc
+                else:
+                    raise ValueError('Unknown scheme for property "%s"!' % prop)
+                Rodens, Modens = virial_info(snap, center=center, odens=odens)
+                val = Rodens if qty=='R' else Modens
+                # don't waste the additional information!
+                for qty in ['R', 'M']:
+                    name = qty+odens_n+'_'+scheme
+                    # if we recompute some property, it might be requested to keep
+                    # old values...
+                    if not recompute and name not in self._props:
+                        self._props[name] = Rodens if qty=='R' else Modens
         elif prop == 'lowres_part':
             low = getattr(halo, 'lowres', None)
             val = 0 if low is None else len(low)
@@ -451,10 +504,6 @@ class Halo(object):
         '''All properties.'''
         return self._props.copy()
 
-    def prop_descr(self, name):
-        '''Long description of a property.'''
-        return Halo.__long_name_prop__.get(name, 'unknown')
-
     def __dir__(self):
         return self.__dict__.keys() + self._props.keys() + \
                 [k for k in self.__class__.__dict__.keys()
@@ -479,7 +528,7 @@ class Halo(object):
     def __len__(self):
         return sum(self._props['parts'])
 
-def generate_FoF_catalogue(s, l=None, calc=None, FoF=None, exclude=None,
+def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
                            max_halos=None, ret_FoFs=False,
                            verbose=environment.verbose, **kwargs):
     '''
@@ -515,8 +564,6 @@ def generate_FoF_catalogue(s, l=None, calc=None, FoF=None, exclude=None,
                             and/or function `find_FoF_groups`).
         N_FoF (int):        The number of FoF groups in `FoF`.
     '''
-    calc = kwargs.pop('calc', None)
-
     if FoF is None:
         FoF, N_FoF = find_FoF_groups(s, l=l, verbose=verbose, **kwargs)
     else:
@@ -528,7 +575,7 @@ def generate_FoF_catalogue(s, l=None, calc=None, FoF=None, exclude=None,
 
     halos = []
     for i in xrange(N_FoF):
-        h = Halo(s[FoF==i],calc=calc)
+        h = Halo(s[FoF==i], snap=s, calc=calc)
         if exclude is None or not exclude(h,s):
             halos.append( h )
         if len(halos)==max_halos:
