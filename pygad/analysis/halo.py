@@ -18,77 +18,84 @@ Examples:
     done.
     >>> if np.linalg.norm( center - UnitArr([33816.9, 34601.1, 32681.0], 'kpc') ) > 1.0:
     ...     print center
+
     >>> R200, M200 = virial_info(s, center)
     >>> if abs(R200 - '177 kpc') > 3 or abs(M200 - '1e12 Msol') / '1e12 Msol' > 0.1:
     ...     print R200, M200
     >>> Translation(-center).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_320"... done.
-    >>> sub = s[s['r'] < 0.10*R200]
-    derive block r... done.
-    >>> if abs(half_mass_radius(sub.stars) - '4.3 kpc') > '0.1 kpc':
-    ...     print half_mass_radius(sub.stars)
-    >>> if abs(eff_radius(sub, 'V', proj=None) - '3.3 kpc') > '0.3 kpc':
-    ...     print eff_radius(sub, 'V', proj=None)
-    load block form_time... done.
-    derive block age... done.
-    load block elements... done.
-    convert block elements to physical units... done.
-    derive block H... done.
-    derive block He... done.
-    derive block metals... done.
-    derive block Z... done.
-    derive block mag_v... interpolate SSP tables for qty "Vmag"...
-    read tables...
-    table limits:
-      age [yr]:    1.00e+05 - 2.00e+10
-      metallicity: 1.00e-04 - 5.00e-02
-    interpolate in age...
-    interpolate in metallicity...
-    done.
-    derive block lum_v... done.
-    >>> if abs(eff_radius(sub, 'V', proj=2) - '2.9 kpc') > '0.2 kpc':
-    ...     print eff_radius(sub, 'V', proj=2)
-    derive block rcyl... done.
-    >>> if abs(half_qty_radius(sub.stars, qty='mass', proj=2) - '3.77 kpc') > '0.1 kpc':
-    ...     print half_qty_radius(sub.stars, qty='mass', proj=2)
-    >>> ifr, ofr = flow_rates(s, '50 kpc')
-    load block vel... done.
-    derive block vrad... done.
-    >>> if abs(ifr - '421 Msol/yr') > '5 Msol/yr' or abs(ofr - '370 Msol/yr') > '5 Msol/yr':
-    ...     print ifr, ofr
-    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc')) - '-7.1 Msol/yr') > '0.1 Msol/yr':
-    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'))
-    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'in') - '-14.7 Msol/yr') > '0.2 Msol/yr':
-    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'in')
-    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'out') - '7.5 Msol/yr') > '0.1 Msol/yr':
-    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'out')
-    >>> ifr, ofr = flow_rates(s.gas, '50 kpc')
 
-    TODO: This inflow rate seems to be unstable between different machines...!
-    >>> if abs(ifr - '11.0 Msol/yr') > '1.0 Msol/yr' or abs(ofr - '7.1 Msol/yr') > '0.1 Msol/yr':
-    ...     print ifr, ofr
-    >>> eta = ofr / s.gas['sfr'].sum()
-    load block sfr... done.
-    >>> if abs(eta - 1.546) > 0.01:
-    ...     print 'mass loading:', eta
+    >>> FoF, N_FoF = find_FoF_groups(s.highres.dm, '3.5 kpc',
+    ...                              dvmax='100 km/s') # doctest: +ELLIPSIS
+    load block vel... done.
+    perform a FoF search on 1,001,472 particles:
+      l      = 3.5 [kpc]
+      dv_max = 1e+02 [s**-1 km]
+      N     >= 100
+    found 123 groups
+    the 3 most massive ones are:
+      group 0:   1.59e+11 [Msol]  @  [-0..., 0..., -0...] [kpc]
+      group 1:   6.88e+10 [Msol]  @  [4..., 9..., 4...] [kpc]
+      group 2:   1.56e+10 [Msol]  @  [-1...+03, -1...e+03, -1...e+03] [kpc]
+
+    # find galaxies (exclude those with almost only gas)
+    >>> galaxies = generate_FoF_catalogue(s.baryons, l='3 kpc', min_N=3e2,
+    ...             dvmax='100 km/s', #max_halos=5,
+    ...             exclude=lambda g,s: g.Mgas/g.mass>0.9)  # doctest: +ELLIPSIS
+    perform a FoF search on 1,001,472 particles:
+      l      = 3 [kpc]
+      dv_max = 1e+02 [s**-1 km]
+      N     >= 300
+    found 7 groups
+    the 3 most massive ones are:
+      group 0:   3.76e+10 [Msol]  @  [-0..., 0..., 0...] [kpc]
+      group 1:    7.1e+09 [Msol]  @  [4..., 9..., 4...] [kpc]
+      group 2:   4.71e+09 [Msol]  @  [8..., 1...e+03, 7...] [kpc]
+    initialize halos from FoF group IDs...
+    load block ID... done.
+    initialized 3 halos.
+    >>> galaxies[0] # doctest: +ELLIPSIS
+    <Halo N = 66,... /w M = 3.8e+10 [Msol] @ com = [-0..., 0..., 0...] [kpc]>
+    >>> gal = s[galaxies[0]]
+    >>> assert len(gal) == len(galaxies[0])
+    >>> assert set(gal['ID']) == set(galaxies[0].IDs)
+    >>> assert np.all(gal.parts == np.array(galaxies[0].parts))
+    >>> assert gal['mass'].sum() == galaxies[0].props['mass']
+    >>> assert gal.stars['mass'].sum() == galaxies[0].Mstars
+    >>> gal = galaxies[0]
+    >>> gal._calc_prop('ssc', s)
+    >>> if np.linalg.norm(gal.ssc - gal.com) > '1.0 kpc':
+    ...     print gal.ssc
+    ...     print gal.com
+    >>> assert 'Rmax' in Halo.calculable_props()
+    >>> Halo.prop_descr('M200_com')
+    'spherical M200 with `virial_info` with com as center'
+
+    Test pickling:
+    >>> import cPickle as pickle
+    >>> pkld_gal = pickle.dumps(gal)
+    >>> gal_2 = pickle.loads(pkld_gal)
+    >>> assert np.all(gal_2.IDs == gal.IDs)
+    >>> assert set(gal_2.props.keys()) == set(gal.props.keys())
+    >>> assert np.all(gal_2.com == gal.com)
 '''
-__all__ = ['shrinking_sphere', 'virial_info', 'half_qty_radius',
-           'half_mass_radius', 'eff_radius', 'shell_flow_rates', 'flow_rates']
+__all__ = ['shrinking_sphere', 'virial_info', 'find_FoF_groups',
+           'NO_FOF_GROUP_ID', 'Halo', 'generate_FoF_catalogue',
+           'find_most_massive_progenitor']
 
 import numpy as np
 from .. import utils
 from ..units import *
+from ..utils import *
 import sys
 from ..transformation import *
-from .. import gadget
-from snap_props import *
-from ..octree import *
+from properties import *
 from ..snapshot import *
 from .. import environment
 from .. import C
 
 def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
-                     stop_N=10):
+                     stop_N=10, verbose=environment.verbose):
     '''
     Find the densest point by shrinking sphere technique.
 
@@ -110,7 +117,7 @@ def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
     center0 = UnitQty(center,s['pos'].units,subs=s,dtype=np.float64)
     R = UnitScalar(R,s['pos'].units,subs=s)
 
-    if environment.verbose:
+    if verbose:
         print 'do a shrinking sphere...'
         print '  starting values:'
         print '    center = %s' % center0
@@ -125,7 +132,7 @@ def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
     pos  = s['pos'].astype(np.float64)
     mass = s['mass'].astype(np.float64)
     assert len(pos) == len(mass)
-    boxsize = s.boxsize.in_units_of(s['pos'].units)
+    boxsize = float( s.boxsize.in_units_of(s['pos'].units) )
 
     # needed since C does not know about stridings
     if pos.base is not None:
@@ -153,7 +160,7 @@ def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
     center = center.view(UnitArr)
     center.units = s['pos'].units
 
-    if environment.verbose:
+    if verbose:
         print 'done.'
         sys.stdout.flush()
 
@@ -217,182 +224,433 @@ def virial_info(s, center=None, odens=200.0, N_min=10):
     return UnitArr(info[0],s['pos'].units), \
            UnitArr(info[1],s['mass'].units)
 
-def half_qty_radius(s, qty, Qtot=None, center=None, proj=None):
+NO_FOF_GROUP_ID = int( np.array(-1, np.uintp) )
+def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True,
+                    verbose=environment.verbose):
     '''
-    Calculate the radius at which half of a quantity is confined in.
+    Perform a friends-of-friends search on a (sub-)snapshot.
 
     Args:
-        s (Snap):               The (sub-)snapshot to use.
-        qty (str, UnitQty):     The quantity to calculate the half-X-radius for.
-        Qtot (float, UnitArr):  The total amount of the quantity. If not given,
-                                the total quantity of the (sub-)snapshot is used.
-        center (array-like):    The center of the structure to calculate the
-                                properties for. (default: [0,0,0])
-        proj (int):             If set, do the calculation for the projection
-                                along the specified axis (0=x, 1=y, 2=z).
+        s (Snap):           The (sub-)snapshot to perform the FoF finder on.
+        l (UnitScalar):     The linking length to use for the FoF finder.
+        dvmax (UnitScalar): The "linking velocity" to use for the FoF finder.
+        min_N (int):        The minimum number of particles in a FoF group to
+                            actually define it as such.
+        sort (bool):        Whether to sort the groups by mass. If True, the group
+                            with ID 0 will be the most massive one and the in
+                            descending order.
 
     Returns:
-        r12 (UnitArr):          The half-X-radius.
+        FoF (np.ndarray):   A block of FoF group IDs for the particles of `s`.
+                            (IDs are ordered in mass, if `sort=True`). Particles
+                            that are in no FoF group have ID = NO_FOF_GROUP_ID =
+                            np.array(-1,np.uintp).
+        N_FoF (int):        The number of FoF groups found.
     '''
-    if len(s) == 0:
-        # leads to exceptions otherwise
-        return UnitArr(0.0, s['pos'].units)
+    l = UnitScalar(l, s['pos'].units, subs=s, dtype=float)
+    dvmax = UnitScalar(dvmax, s['vel'].units, subs=s, dtype=float)
+    sort = bool(sort)
+    min_N = int(min_N)
 
-    if center is None:
-        center = UnitQty([0]*3)
-    else:
-        center = UnitQty(center)
-    center = center.in_units_of(s['pos'].units,subs=s)
+    if verbose:
+        print 'perform a FoF search on %s particles:' % nice_big_num_str(len(s))
+        print '  l      = %.2g %s' % (l, l.units)
+        if dvmax != np.inf:
+            print '  dv_max = %.2g %s' % (dvmax, dvmax.units)
+        print '  N     >= %g' % (min_N)
+        sys.stdout.flush()
 
-    if isinstance(proj,int):
-        proj_mask = tuple([i for i in xrange(3) if i!=proj])
-        if len(center)==3:
-            center = center[(proj_mask,)]
+    pos = s['pos'].astype(np.float64)
+    vel = s['vel'].astype(np.float64)
+    mass = s['mass'].astype(np.float64)
+    if pos.base is not None:
+        pos = pos.copy()
+    if vel.base is not None:
+        vel = vel.copy()
+    if mass.base is not None:
+        mass = mass.copy()
+    FoF = np.empty(len(s), dtype=np.uintp)
+    boxsize = float(s.boxsize.in_units_of(s['pos'].units))
 
-    if np.all(center==0):
-        if isinstance(proj,int):
-            r = s['rcyl'] if proj==2 else dist(s['pos'][:,proj_mask])
+    C.cpygad.find_fof_groups(C.c_size_t(len(s)),
+                             C.c_void_p(pos.ctypes.data),
+                             C.c_void_p(vel.ctypes.data),
+                             C.c_void_p(mass.ctypes.data),
+                             C.c_double(l),
+                             C.c_double(dvmax),
+                             C.c_size_t(min_N),
+                             C.c_int(int(sort)),
+                             C.c_void_p(FoF.ctypes.data),
+                             C.c_double(boxsize),
+                             None,  # build new tree
+    )
+
+    # do not count the particles with no halo!
+    N_FoF = len(set(FoF)) - 1
+
+    if verbose:
+        print 'found %d groups' % N_FoF
+        N_list = min(N_FoF, 3)
+        if N_list:
+            if N_list==1:
+                print 'the most massive one is:'
+            else:
+                print 'the %d most massive ones are:' % N_list
+            for i in xrange(N_list):
+                FoF_group = s[FoF==i]
+                com = center_of_mass(FoF_group)
+                M = FoF_group['mass'].sum()
+                print '  group %d:   %8.3g %s  @  [%.3g, %.3g, %.3g] %s' % (
+                        i, M, M.units, com[0], com[1], com[2], com.units)
+        sys.stdout.flush()
+
+    return FoF, N_FoF
+
+class Halo(object):
+    '''
+    A class representing an halo or some group of an snapshot represented by IDs.
+
+    Internally the defining IDs are stored and on creation some properties (such
+    as total mass and R200) are calculated.
+
+    Args:
+        halo (Snap):                The sub-snapshot that defines the halo.
+
+        alternatively:
+
+        IDs (set, array-like):      The IDs that define the halo.
+        snap (Snap):                Some (sub-)snapshot that entirely contains the
+                                    halo defining IDs.
+
+        calc (set, list, tuple):    A list of the properties to calculate at
+                                    isinstantiation.
+                                    'mass', 'com', and 'parts' are always
+                                    calculated (since they might be needed by some
+                                    of the other properties anyway).
+                                    If calc='all' -- the default --, all defined
+                                    properties are calculated.
+                                    For an overview of the available properties
+                                    see `Halo.calculable_props()` and
+                                    `Halo.prop_descr(pro_name)`.
+    '''
+    __long_name_prop__ = {
+            'mass':     'total mass',
+            'Mstars':   'total stellar mass',
+            'Mgas':     'total gas mass',
+            'Mdm':      'total dark matter mass',
+            'parts':    'number of particles per species',
+            'com':      'center of mass',
+            'ssc':      'shrinking sphere center',
+            'Rmax':     'maximum distance of a particle from com',
+            'lowres_part':  'number of low-resolution particles',
+            'lowres_mass':  'mass of low-resolution particles',
+    }
+
+    for odens in ['vir', '200', '500']:
+        prop = 'R'+odens
+        __long_name_prop__[prop+'_FoF'] = \
+                '%s (Mo+ 2002): (3*M / (4*pi * %s * rho_c))**(1/3.)' % (
+                        prop, '18*pi**2' if odens=='vir' else odens)
+        if odens == 'vir':
+            continue
+        for qty in ['R', 'M']:
+            prop = qty+odens
+            __long_name_prop__[prop+'_ssc'] = \
+                    'spherical %s with `virial_info` with ssc as center' % prop
+            __long_name_prop__[prop+'_com'] = \
+                    'spherical %s with `virial_info` with com as center' % prop
+        del prop, qty
+    del odens
+
+    @staticmethod
+    def calculable_props():
+        '''A list of the properties that can be calculated (c.f. `calc` of
+        `__init__`).'''
+        return Halo.__long_name_prop__.keys()
+
+    @staticmethod
+    def prop_descr(name):
+        '''Long description of a property.'''
+        return Halo.__long_name_prop__.get(name, 'unknown')
+
+
+    def __init__(self, halo=None, IDs=None, snap=None, calc='all'):
+        if halo is None:
+            halo = snap[IDMask(IDs)]
+            if len(halo) != len(IDs):
+                print >> sys.stderr, 'WARNING: The given snapshot does not ' + \
+                                     'contain all specified IDs!'
+        elif IDs is not None:
+            raise ValueError('If the sub-snapshot `halo` is given, the Halo ' + \
+                             'will be defined by this and `IDs` must be None ' + \
+                             'to avoid confusion!')
+        elif snap is not None:
+            if halo.root is not snap.root:
+                raise ValueError('If the sub-snapshot `halo` and `snap` are ' + \
+                                 'given, they must have the same root ' + \
+                                 'snapshot to avoid confusion!')
+
+        # the defining property:
+        self._IDs = np.array(halo['ID'])
+
+        # derive some properties
+        self._props = {}
+        if calc == 'all':
+            calc = Halo.calculable_props()
+        calc = set(calc) - set(['mass', 'com', 'parts'])
+        self._calc_prop('mass', halo=halo, snap=snap, recompute=False)
+        self._calc_prop('com', halo=halo, snap=snap, recompute=False)
+        self._calc_prop('parts', halo=halo, snap=snap, recompute=False)
+        for prop in calc:
+            self._calc_prop(prop, halo=halo, snap=snap, recompute=False)
+
+    def _calc_prop(self, prop, snap=None, halo=None, recompute=True):
+        if not recompute and prop in self._props:
+            return
+
+        if halo is None:
+            halo = snap[self.mask]
+
+        if prop == 'mass':
+            val = halo['mass'].sum()
+        elif prop == 'com':
+            val = center_of_mass(halo)
+        elif prop == 'parts':
+            val = tuple(halo.parts)   # shall not change!
+        elif prop in ['Mstars', 'Mgas', 'Mdm']:
+            sub = getattr(halo, prop[1:], None)
+            if sub is None:
+                val = UnitScalar(0.0, halo['mass'].units)
+            else:
+                val = sub['mass'].sum()
+        elif prop == 'ssc':
+            R_max = np.percentile(periodic_distance_to(halo['pos'],
+                                                       self.com,
+                                                       halo.boxsize),
+                                  90)
+            val = shrinking_sphere(halo, center=self.com,
+                                   R=R_max, verbose=False)
+        elif prop == 'Rmax':
+            val = periodic_distance_to(halo['pos'], self.com,
+                                       halo.boxsize).max()
+        elif prop[0] in ['R','M'] and (prop[1:4]=='vir' or prop[1:4].isdigit()) \
+                and prop[4]=='_':
+            qty = prop[0]
+            odens_n = prop[1:4]
+            scheme = prop[5:]
+            odens = 18.*np.pi**2 if odens_n=='vir' else float(odens_n)
+            if scheme == 'FoF':
+                rho_crit = halo.cosmology.rho_crit( z=halo.redshift )
+                rho_crit.convert_to(halo['mass'].units/halo['pos'].units**3,
+                                    subs=halo)
+                r3 = 3.0 * self.mass / (4.0*np.pi * odens*rho_crit)
+                val = r3 ** Fraction(1,3)
+            else:
+                if snap is None:
+                    raise ValueError('Requested %s, but `snap` is None!' % prop)
+                if scheme == 'com':
+                    center = self.com
+                elif scheme == 'ssc':
+                    if 'ssc' not in self._props:
+                        self._calc_prop('ssc', snap=snap, halo=halo,
+                                        recompute=False)    # TODO: correct?!
+                    center = self.ssc
+                else:
+                    raise ValueError('Unknown scheme for property "%s"!' % prop)
+                Rodens, Modens = virial_info(snap, center=center, odens=odens)
+                val = Rodens if qty=='R' else Modens
+                # don't waste the additional information!
+                for qty in ['R', 'M']:
+                    name = qty+odens_n+'_'+scheme
+                    # if we recompute some property, it might be requested to keep
+                    # old values...
+                    if not recompute and name not in self._props:
+                        self._props[name] = Rodens if qty=='R' else Modens
+        elif prop == 'lowres_part':
+            low = getattr(halo, 'lowres', None)
+            val = 0 if low is None else len(low)
+        elif prop == 'lowres_mass':
+            low = getattr(halo, 'lowres', None)
+            if low is None:
+                val = UnitScalar(0.0, halo['mass'].units)
+            else:
+                val = low['mass'].sum()
         else:
-            r = s['r']
-    else:
-        r = dist(s['pos'][:,proj_mask],center) if isinstance(proj,int) \
-                else dist(s['pos'],center)
-    r_ind = r.argsort()
+            raise ValueError('Unknown property "%s"!' % prop)
 
-    if isinstance(qty,str):
-        qty = s.get(qty)
-    else:
-        qty = UnitQty(qty)
+        self._props[prop] = val
 
-    Q = np.cumsum(qty[r_ind])
-    if Qtot is None:
-        Qtot = Q[-1]
-    else:
-        Qtot = UnitScalar(Qtot,qty.units,subs=s,dtype=float)
+    @property
+    def IDs(self):
+        '''
+        The defining IDs.
+        
+        Note:
+            If changed, the halo properties do not getupdated!
+        '''
+        return self._IDs
 
-    Q_half_ind = np.abs(Q - Qtot/2.).argmin()
-    if Q_half_ind == len(Q)-1:
-        print >> sys.stderr, 'WARNING: The half-qty radius is larger than ' + \
-                             'the (sub-)snapshot passed!'
-    elif Q_half_ind < 10:
-        print >> sys.stderr, 'WARNING: The half-qty radius is not resolved ' + \
-                             'for %s!' % s
-    return UnitArr(r[r_ind][Q_half_ind], s['pos'].units)
+    @property
+    def mask(self):
+        '''The ID mask of the halo to mask a snapshot.'''
+        # avoid copying the IDs
+        mask = IDMask.__new__(IDMask)
+        SnapMask.__init__(mask)
+        mask._IDs = self._IDs
+        return mask
 
-def half_mass_radius(s, M=None, center=None, proj=None):
+    @property
+    def props(self):
+        '''All properties.'''
+        return self._props.copy()
+
+    def __dir__(self):
+        return self.__dict__.keys() + self._props.keys() + \
+                [k for k in self.__class__.__dict__.keys()
+                        if not k.startswith('_')]
+
+    def __getattr__(self, name):
+        if name.startswith('__'):
+            return super(Halo, self).__getattr__(name)
+        attr = self._props.get(name, None)
+        if attr is not None:
+            return attr
+        raise AttributeError('%s has no attribute "%s"!' % (self, name))
+
+    def __repr__(self):
+        r = '<Halo N = %s' % nice_big_num_str(len(self))
+        r += ' /w M = %.2g %s' % (self.mass, self.mass.units)
+        r += ' @ com = [%.2g, %.2g, %.2g] %s' % (
+                tuple(self.com) + (self.com.units,))
+        r += '>'
+        return r
+
+    def __len__(self):
+        return sum(self._props['parts'])
+
+def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
+                           max_halos=None, ret_FoFs=False,
+                           verbose=environment.verbose, **kwargs):
     '''
-    Calculate the (by default 3D) half-mass-radius of the structure at the center.
-
-    For more details see analysis.half_qty_radius.
+    Generate a list of Halos defined by FoF groups.
 
     Args:
-        s (Snap):               The (sub-)snapshot to use.
-        M (float, UnitArr):     The total mass.
-        center (array-like):    The center of the structure. (default: [0,0,0])
-        proj (int):             If set, do the calculation for the projection
-                                along the specified axis (0=x, 1=y, 2=z).
+        s (Snap):           The snapshot to generate the FoF groups for.
+        l (UnitScalar):     The linking length for the FoF groups.
+        calc (set, list, tuple):
+                            A list of the properties to calculate at instantiation
+                            of the Halo instances.
+        FoF (np.array):     An array with group IDs for each particle in the
+                            snapshot `s`. If given, `l` is ignored and the FoF
+                            groups are not calculated within this function.
+        exclude (function): Exclude all halos h for which `exclude(h,s)` returns
+                            a true value (note: s[h] gives the halo as a
+                            sub-snapshot).
+        max_halos (int):    Limit the number of returned halos to the `max_halos`
+                            most massive halos. If None, all halos are returned.
+        ret_FoFs (bool):    Also return the array with the FoF group indices
+                            (sorted by mass).
+        verbose (bool):     Verbosity.
+        **kwargs:           Other keywords are passed to `find_FoF_groups` (e.g.
+                            `dvmax`).
 
     Returns:
-        r12 (UnitArr):          The half-mass-radius.
+        halos (list):       A list of all the groups as Halo instances. (Sorted in
+                            mass, it not `sort=False` in the `kwargs`.)
+        
+        if ret_FoFs==True:
+        FoF (np.array):     The FoF group IDs for each particle; particles with no
+                            group have ID = NO_FOF_GROUP_ID (cf. `FoF` argument
+                            and/or function `find_FoF_groups`).
+        N_FoF (int):        The number of FoF groups in `FoF`.
     '''
-    return half_qty_radius(s, qty='mass', Qtot=M, center=center)
-
-def eff_radius(s, band=None, L=None, center=None, proj=2):
-    '''
-    Calculate the (by default 2D) half-light-radius of the structure at the
-    center.
-
-    For more details see analysis.half_qty_radius.
-
-    Args:
-        s (Snap):               The (sub-)snapshot to use.
-        band (str):             The band in which the effective radius is
-                                calculated. If it is None or 'bol', the bolometric
-                                luminosity is taken.
-        L (float, UnitArr):     The total luminosity.
-        center (array-like):    The center of the structure. (default: [0,0,0])
-        proj (int):             The axis to project along.
-
-    Returns:
-        r12 (UnitArr):          The half-light-radius.
-    '''
-    qty = 'lum'
-    if band is not None and band != 'bol':
-        qty += '_' + band.lower()
-    return half_qty_radius(s.stars, qty=qty, Qtot=L, center=center, proj=proj)
-
-def shell_flow_rates(s, Rlim, direction='both', units='Msol/yr'):
-    '''
-    Estimate flow rate in spherical shell.
-    
-    The estimation is done by caluculating m*v/d on a particle base, where d is
-    the thickness of the shell.
-
-    Args:
-        s (Snap):               The (sub-)snapshot to use.
-        Rlim (UnitQty):         The inner and outer radius of the shell.
-        direction ('in', 'out', 'both'):
-                                The direction to take into account. If 'in', only
-                                take onflowing gas particles into the calculation;
-                                analog for 'out'; and do not restrict to particles
-                                with 'both'.
-        units (Unit, str):      The units in which to return the flow rate.
-
-    Returns:
-        flow (UnitArr):         The estimated flow rate.
-    '''
-    Rlim = UnitQty(Rlim, s['r'].units)
-    if not Rlim.shape == (2,):
-        raise ValueError('Rlim must have shape (2,)!')
-    shell = s[(Rlim[0]<s['r']) & (s['r']<Rlim[1])]
-
-    if direction=='both':
-        pass
-    elif direction=='in':
-        shell = shell[shell['vrad'] < 0]
-    elif direction=='out':
-        shell = shell[shell['vrad'] > 0]
+    if FoF is None:
+        FoF, N_FoF = find_FoF_groups(s, l=l, verbose=verbose, **kwargs)
     else:
-        raise RuntimeError('unknown direction %s!' % direction)
+        N_FoF = len(set(FoF)) - 1
 
-    flow = np.sum(shell['mass'] * shell['vrad'] / UnitArr(Rlim[1]-Rlim[0], Rlim.units))
-    flow.convert_to(units)
-    return flow
+    if verbose:
+        print 'initialize halos from FoF group IDs...'
+        sys.stdout.flush()
 
-def flow_rates(s, R, dt='3 Myr'):
-    #TODO: extend to discs!
+    halos = []
+    for i in xrange(N_FoF):
+        h = Halo(s[FoF==i], snap=s, calc=calc)
+        if exclude is None or not exclude(h,s):
+            halos.append( h )
+        if len(halos)==max_halos:
+            break
+
+    if verbose:
+        print 'initialized %d halos.' % (len(halos))
+        sys.stdout.flush()
+
+    if ret_FoFs:
+        return halos, FoF, N_FoF
+    else:
+        del FoF
+        return halos
+
+def _common_mass(h1, h2, s):
+    # access private attribute for speed
+    ID_both = set(h1._IDs) & set(h2._IDs)
+    return s[IDMask(ID_both)]['mass'].sum()
+def find_most_massive_progenitor(s, halos, h0):
     '''
-    Estimate in- and outflow rates through a given radius.
-    
-    The estimation is done by propagating the positions with constant current
-    velocities, i.e. pos_new = pos_old + vel*dt. Then counting the mass that
-    passed the shell of radius R.
+    Find the halo with the most mass in common.
 
     Args:
-        s (Snap):               The (sub-)snapshot to use.
-        R (UnitScalar):         The radius of the shell through which the flow is
-                                estimated.
-        dt (UnitScalar):        The time used for the linear extrapolation of the
-                                current positions (if it is a plain number without
-                                units, they are assumed to be 'Myr').
+        s (Snap):       The snapshot to which the halo catalogue `halos` belongs.
+        halos (list):   A list of halos in which the one with the most common mass
+                        with `h0` is searched for.
+        h0 (Halo):      The halo for which to find the most massive progenitor in
+                        `halos` (the one with the most mass in common).
 
     Returns:
-        ifr (UnitArr):          The estimated inflow rate.
-        ofr (UnitArr):          The estimated outflow rate.
+        mmp (Halo):     The most massive progenitor (in `halos`) of `h0`.
     '''
-    R = UnitScalar(R, units=s['pos'].units, subs=s)
-    dt = UnitScalar(dt, units='Myr', subs=s)
+    if len(halos) == 0:
+        return None
 
-    # predicted particle distances from center in dt
-    dt.convert_to(s['r'].units/s['vel'].units,subs=s)   # avoid conversions of
-                                                        # entire arrays
-    rpred = s['r'] + s['vrad']*dt
-    of_mass = s['mass'][(s['r'] < R) & (rpred >= R)]
-    if_mass = s['mass'][(s['r'] >= R) & (rpred < R)]
+    h0_mass = h0.mass.in_units_of(halos[0].mass.units, subs=s)
 
-    dt.convert_to('yr',subs=s)  # to more intuitive units again
-    ofr = np.sum(of_mass) / dt
-    ifr = np.sum(if_mass) / dt
+    # propably one of the closest halos (with at least 10% of the mass), find them
+    closest = []
+    min_mass = 0.1 * h0_mass
+    min_mass.convert_to(halos[0].mass.units, subs=s)
+    h0_com = h0.com.in_units_of(halos[0].com.units, subs=s)
+    for i in xrange(3):
+        close = None
+        close_d = np.inf
+        for h in halos:
+            d = np.linalg.norm(h.com - h0_com)
+            if d < close_d and h.mass > min_mass:
+                for nh in closest:
+                    if h is nh:
+                        continue
+                close = h
+                close_d = d
+        if close is not None:
+            closest.append( close )
 
-    return ifr, ofr
+    # if any of them has more than 50% of the mass, we are done
+    com_mass = []
+    for h in closest:
+        com_mass.append( _common_mass(h, h0, s) )
+        if com_mass[-1] / h0_mass > 0.5:
+            return h
+
+    # if no other halo can have more mass than the most massive of the closest, it
+    # is this one
+    if closest:
+        mm_closest, cm = max(zip(closest, com_mass), key=lambda p: p[1])
+        if h0_mass-sum(com_mass) < cm:
+            return mm_closest
+
+    # iterate and find the most massive progenitor
+    # not done in the beginning, since this requires the calculation of the common
+    # mass for *all* halos and, hence, is slow
+    mmp = max(halos,
+              key=lambda h: _common_mass(h, h0, s))
+    return mmp if _common_mass(mmp, h0, s)>0 else None
 

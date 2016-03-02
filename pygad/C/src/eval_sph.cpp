@@ -18,16 +18,15 @@ void eval_sph_at(size_t M,
     //printf("initialze kernel...\n");
     Kernel<3> kernel(kernel_);
 
-    bool delete_octree = false;
-    if (not octree) {
+    Tree<3> *tree = NULL;
+    if (octree == NULL) {
         //printf("initizalize tree...\n");
-        delete_octree = true;
-        Tree<3> *tree = (Tree<3> *)new_octree_from_pos(N, pos);
+        tree = (Tree<3> *)new_octree_from_pos(N, pos);
         assert(tree);
         tree->fill_max_H(hsml);
-        octree = (void *)tree;
+    } else {
+        tree = (Tree<3> *)octree;
     }
-    Tree<3> *tree = (Tree<3> *)octree;
 
     //printf("calculate SPH property from %zu particles at %zu positions...\n", N, M);
 #pragma omp parallel for shared(r, vals, pos, hsml, dV, qty, tree)
@@ -46,7 +45,7 @@ void eval_sph_at(size_t M,
         }
     }
 
-    if (delete_octree) {
+    if (octree == NULL) {
         //printf("delete tree...\n");
         delete tree;
     }

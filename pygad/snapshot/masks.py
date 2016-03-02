@@ -373,7 +373,7 @@ class IDMask(SnapMask):
         if isinstance(IDs, set):
             self._IDs = np.array(list(IDs))
         else:
-            self._IDs = np.asarray(IDs)
+            self._IDs = np.array(IDs, copy=True)
         
     def inverted(self):
         inv = IDMask(self._IDs)

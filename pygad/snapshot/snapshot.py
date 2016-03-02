@@ -781,7 +781,8 @@ class _Snap(object):
                                     self, key))
         # postprone the import to here to speed up the access to blocks
         from masks import SnapMask
-        if isinstance(key, (slice,np.ndarray,list,SnapMask,tuple)):
+        from ..analysis.halo import Halo
+        if isinstance(key, (slice,np.ndarray,list,SnapMask,Halo,tuple)):
             # Handling of the index is fully done by the factory function.
             return SubSnap(self, key)
         else:
@@ -1517,6 +1518,10 @@ def SubSnap(base, mask):
                         * mask class (SnapMask):
                             Create a sub-snapshot according to the mask.
 
+                        * mask class (Halo):
+                            Create a sub-snapshot according to the mask of the
+                            halo (an IDMask).
+
                         * index list (np.ndarray[int]):
                             This can in fact also be a tuple with one element,
                             which is such a index list, as returned by np.where.
@@ -1541,6 +1546,7 @@ def SubSnap(base, mask):
         KeyError:           If the mask was not understood.
     '''
     from masks import SnapMask
+    from ..analysis.halo import Halo
 
     if isinstance(mask,slice) \
             or (isinstance(mask,np.ndarray) and mask.dtype==bool):
@@ -1563,7 +1569,9 @@ def SubSnap(base, mask):
         sub._descriptor = base._descriptor + ':pts=' + str(ptypes).replace(' ','')
         return sub
 
-    elif isinstance(mask,SnapMask):
+    elif isinstance(mask,SnapMask) or isinstance(mask,Halo):
+        if isinstance(mask,Halo):
+            mask = mask.mask
         sub = SubSnap(base, mask.get_mask_for(base))
         sub._descriptor = base._descriptor + ':' + str(mask)
         return sub

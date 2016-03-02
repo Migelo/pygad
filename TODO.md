@@ -6,6 +6,7 @@
 
 - fix issue #11 (utilise `__numpy_ufunc__` rather than `__array_wrap__` for
   adding units in ufunc operations)
+- check if `periodic\_distance\_to` is used (rather than `dist`) where sensible!
 - get a constant luminous colormap!
 - binning radially with SPH smoothing (from 3D and 2D maps)
 - implement different methods to collapse 3D grids (integration, mean, median,
