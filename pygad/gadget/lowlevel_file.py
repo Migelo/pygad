@@ -261,6 +261,14 @@ class BlockInfo(object):
         self.size      = size
 
     @property
+    def is_filled(self):
+        for prop in (self.name, self.dtype, self.dimension, self.ptypes,
+                self.start_pos, self.size):
+            if prop is None:
+                return False
+        return True
+
+    @property
     def dtype(self):
         return self._dtype
 
@@ -278,6 +286,9 @@ class BlockInfo(object):
 
     @dtype.setter
     def dtype(self, dt):
+        if dt is None:
+            self._dtype = None
+            return
         if isinstance(dt, str):
             dt = BlockInfo._np_type_name.get(dt.rstrip('N'), dt)
         dt = np.dtype(dt)
@@ -369,91 +380,163 @@ def write_info(gfile, info, gformat, endianness):
     assert gfile.tell() - start_pos == size
     gfile.write(struct.pack(endianness + 'i', size))
 
-def _block_inferring(block, header, block_num):
+def _fill_block_with_known(block, header):
     '''
-    Infere as much information for a block as possible.
+    Fill block with the known properties of the block from the config file.
+    Also fill the pytes for the MASS block, if not given in the config file.
 
-    By the help of standard defintions in Gadget and combinatorics, as much
-    information as possible is inferred for the passed block.
+    Args:
+        block (BlockInfo):  The block info class to be filled (if possible).
+        header (dict):      The header of the corresponding Gadget file for
+                            knowing the number of particle per type.
+
+    Returns:
+        type_hint (str):    A hint for the type (e.g. 'float': floating point
+                            variable, but unknown whether it is single or double
+                            precision).
+
+    Raises:
+        RuntimeError:       If the given dtype of the given family is unknown.
+    '''
+    # read information from config file
+    if block.name in config.block_infos:
+        info = config.block_infos[block.name]
+        block.dimension = info[0]
+        if info[1] not in ['int', 'uint', 'unsigned']:
+            type_hint = info[1]
+        else:
+            try:
+                block.dtype = info[1]
+            except TypeError:
+                raise RuntimeError('unknown type "%s" for block ' % info[1] +
+                                   '"%s"!' % block.name)
+            type_hint = None
+        if info[2] is None:
+            block.dtype = None
+        else:
+            try:
+                fam = range(6) if info[2]=='all' else config.families[info[2]]
+                block.ptypes = [(i in fam and header['N_part'][i]>0)
+                                    for i in xrange(6)]
+            except KeyError:
+                raise RuntimeError('unknown family "%s" for block ' % info[2] +
+                                   '"%s"!' % block.name)
+    else:
+        type_hint = None
+
+    # special treatment of the mass block's ptypes if not given in the config
+    # file:
+    if block.name == 'MASS' and block.ptypes is None:
+        block.ptypes = [(n>0 and m==0) for n,m in
+                        zip(header['N_part'],header['mass'])]
+        type_hint = 'float'
+
+    return type_hint
+
+def _block_inferring(block, header):
+    '''
+    Infere those of `dtype`, `dimension`, and `ptypes` that are None for the block
+    using its filled properties and combinatorics.
 
     Args:
         block (BlockInfo):  The block info class to be filled (if possible).
         header (dict):      The header of the corresponding Gadget file to
                             provide hints for deductions.
-        block_num (int):    The ordinal number of the block (can sometimes be
-                            used to infer names).
 
-    Returns:
-        Nothing
+    Raises:
+        RuntimeError:       If the information could not be infered or if the
+                            given dtype of the given family is unknown.
     '''
-    # some hard-coded block information
-    if block.name == 'POS ' or block.name == 'VEL ':
-        block.dimension = 3
-        block.ptypes = [n>0 for n in header['N_part']]
-        N = sum(header['N_part'])
-        block.dtype = 'float32' if 3*4*N==block.size else 'float64'
-        return
-    elif block.name == 'ID  ':
-        block.dimension = 1
-        block.ptypes = [n>0 for n in header['N_part']]
-        N = sum(header['N_part'])
-        block.dtype = 'uint32' if 4*N==block.size else 'uint64'
-        return
-    elif block.name == 'MASS':
-        block.dimension = 1
-        block.ptypes = [(n>0 and m==0) for n,m in
-                        zip(header['N_part'],header['mass'])]
-        N = sum(header['N_part'][i] for i in xrange(6) if block.ptypes[i])
-        block.dtype = 'float32' if 4*N==block.size else 'float64'
-        return
-    elif block.name == 'U   ' or block.name == 'RHO ' or block.name == 'CSTE' \
-            or block.name == 'NE  ' or block.name == 'NH  ' \
-            or block.name == 'HSML':
-        block.dimension = 1
-        N_gas = header['N_part'][0]
-        block.ptypes = [N_gas>0] + [False] * 5
-        block.dtype = 'float32' if 4*N_gas==block.size else 'float64'
-        return
+    type_hint = _fill_block_with_known(block, header)
 
-    '''
-    Otherwise, just do combinatorics:
-    Atomic data sizes are mutliples of 4. With the additional freedom to choose
-    the dimension, we only know that the total element size per particle is a
-    multiple of 4. However, the additional reasonable assumption that is made
-    here is that the element size does not exceed 20*8=40*4=160. Now try all
-    combinations of particle types and see for which [multiple of 4 < 160] *
-    [particle number] = block.size. If there is only one such combination, we
-    have learned something ;)
-    We still do not know the combination of data type and dimension. I, however,
-    assume data types to be floating point variables (in the ID block, we never
-    get here!) and not of mixed type. If header['flg_doubleprecision'] is set, I
-    also assume doubles and floats otherwise. If the element size is divideable
-    by the corresponding size, I set the members of the BlockInfo appropiately.
-    '''
-    possible_ptype_combi = []
-    for num_ptypes in xrange(1,7):
-        for combi in combinations(range(6), num_ptypes):
-            if any(header['N_part'][i] == 0 for i in combi):
-                # avoid N == 0 and multiple combinations with and without
-                # particle types that are not present in this file
-                continue
-            N = sum(header['N_part'][i] for i in combi)
-            element_size = block.size / N
-            if element_size * N == block.size and element_size % 4 == 0 \
-                    and element_size < 160:
-                possible_ptype_combi.append(combi)
-    # if the combinatorics yield a definit combination, store it
-    if len(possible_ptype_combi) == 1:
-        block.ptypes = [(i in possible_ptype_combi[0]) for i in xrange(6)]
-        N = sum(header['N_part'][i] for i in xrange(6) if block.ptypes[i])
-        element_size = block.size / N
-        # all uncertain, but floating point variables
-        # (and use header['flg_doubleprecision'] as hint)
-        float_size = 8 if header['flg_doubleprecision'] else 4
-        if element_size % float_size == 0:
-            block.dimension = element_size / float_size
-            block.dtype = 'float64' if header['flg_doubleprecision'] \
-                          else 'float32'
+    if block.ptypes is None:
+        """
+        Just do combinatorics: Try all possible combinations of ptypes and collect
+        those for which the given block with its size (and its dimension and/or
+        dtype, if known) could exist.
+        If the dtype is not known, assume its size to be mutliples of 4 (as int32,
+        int64, float32, and float64). Furthermore assume that the dimension is not
+        larger than 20.
+        If there is just one single such combination, we are done, otherwise raise
+        a RuntimeError.
+        """
+        if block.dimension is not None and block.dtype is not None:
+            el_size == block.dimension * block.dtype.itemsize
+        else:
+            el_size = None
+            if block.dimension is not None:
+                divisor = 4 * block.dimension
+                max_el_size = block.dimension * 8
+            elif block.dtype is not None:
+                divisor = block.dtype.itemsize
+                max_el_size = 20 * block.dtype.itemsize
+            else:
+                divisor, max_el_size = 4, 20*8
+        possible_ptype_combi = []
+        for num_ptypes in xrange(1,7):
+            for combi in combinations(range(6), num_ptypes):
+                if any(header['N_part'][i] == 0 for i in combi):
+                    # avoid N == 0 and multiple combinations with and without
+                    # particle types that are not present in this file
+                    continue
+                N = sum(header['N_part'][i] for i in combi)
+                if el_size is not None:
+                    if el_size * N == block.size:
+                        possible_ptype_combi.append(combi)
+                else:
+                    element_size = block.size / N
+                    if element_size * N == block.size \
+                            and element_size % divisor == 0 \
+                            and element_size < max_el_size:
+                        possible_ptype_combi.append(combi)
+        # if the combinatorics yield a definit combination, store it
+        if len(possible_ptype_combi) == 1:
+            block.ptypes = [(i in possible_ptype_combi[0]) for i in xrange(6)]
+        else:
+            raise RuntimeError('Could not infere information for block ' +
+                               '"%s"!' % block.name)
+    # now block.ptypes are known
+
+    if block.dimension is not None and block.dtype is not None:
+        return  # all known
+
+    N = sum(header['N_part'][i] for i in xrange(6) if block.ptypes[i])
+    element_size = block.size / N
+    if block.dtype is not None:
+        block.dimension = element_size / block.dtype.itemsize
+        return  # all known
+
+    # dtype is unknown (and dimension might be as well)...
+    if block.dimension is not None:
+        itemsize = element_size / block.dimension
+        if type_hint == 'int':
+            block.dtype = 'i' + str(itemsize)
+        elif type_hint in ['uint', 'unsigned']:
+            block.dtype = 'u' + str(itemsize)
+        assert type_hint == 'float'
+        # assume float
+        block.dtype = 'f' + str(itemsize)
+        return  # all known
+
+    # both, dtype and dimension, are unknown...
+    if type_hint in ['int', 'uint', 'unsigned']:
+        block.dtype = 'int32' if type_hint=='int' else 'uint32'
+        block.dimension = element_size / block.dtype.itemsize
+        assert element_size == block.dimension * block.dtype.itemsize
+        return  # all known
+    assert type_hint == 'float'
+    # assume float
+    block.dtype = 'float64' if header['flg_doubleprecision'] else 'float32'
+    block.dimension = element_size / block.dtype.itemsize
+    if element_size != block.dimension * block.dtype.itemsize:
+        block.dtype = 'float32'
+        block.dimension = element_size / block.dtype.itemsize
+        if element_size != block.dimension * block.dtype.itemsize:
+            block.dtype = None
+            block.dimension = None
+            raise RuntimeError('Could not infere information for block ' +
+                               '"%s"!' % block.name)
+    return  # all known
 
 def _infer_info(gfile, header, gformat, endianness, start_pos, block_sizes):
     '''
@@ -477,6 +560,10 @@ def _infer_info(gfile, header, gformat, endianness, start_pos, block_sizes):
     Returns:
         info (dict):        A dictionary with BlockInfo classes as values,
                             containing all inferred information if the blocks.
+
+    Raises:
+        RuntimeError:       If the information could not be infered or if the
+                            given dtype of the given family is unknown.
     '''
     if gformat not in [1,2,3]:
         raise ValueError('Only formats 1, 2, and 3 (HDF5) are known!')
@@ -491,16 +578,18 @@ def _infer_info(gfile, header, gformat, endianness, start_pos, block_sizes):
         elif block_sizes[i] == (len(block_sizes)-2)*40:
             continue    # INFO
         else:           # actual data block
-            name = config.block_order[i-1] if \
+            if gformat == 1:
+                name = config.block_order[i-1] if \
                     i <= len(config.block_order) else '?%03d' % i
-            block = BlockInfo(name=name, dtype=None, dimension=None,
-                              ptypes=[False]*6, start_pos=start_pos[i],
-                              size=block_sizes[i])
-            if gformat == 2:    # can at least read name
+            elif gformat == 2:  # can read name
                 gfile.seek(start_pos[i]-4-4-8)
-                block.name, = struct.unpack(endianness + '4s', gfile.read(4))
+                name, = struct.unpack(endianness + '4s', gfile.read(4))
+            block = BlockInfo(name=name, dtype=None, dimension=None,
+                              ptypes=None, start_pos=start_pos[i],
+                              size=block_sizes[i])
             # try to infer type, dimension, and particle types
-            _block_inferring(block, header, i)
+            _block_inferring(block, header)
+            assert block.is_filled
             info[block.name] = block
     return info
 
@@ -528,6 +617,10 @@ def get_block_info(gfile, gformat, endianness, header):
     Returns:
         info (dict):        A dictionary with BlockInfo classes as values,
                             containing all inferred information if the blocks.
+
+    Raises:
+        RuntimeError:       If the information could not be infered or if the
+                            given dtype of the given family is unknown.
     '''
     if gformat not in [1,2,3]:
         raise ValueError('Only formats 1, 2, and 3 (HDF5) are known!')

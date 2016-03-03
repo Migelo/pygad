@@ -22,6 +22,10 @@ class FileReader(object):
 
     Args:
         filename (str):     The path to the Gadget file.
+
+    Raises:
+        RuntimeError:       If the information could not be infered or if the
+                            given dtype of the given family is unknown.
     '''
     def __init__(self, filename):
         if not os.path.exists(filename):
