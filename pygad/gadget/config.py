@@ -14,6 +14,8 @@ Example:
     [1, 2, 3]
     >>> general
     {'kernel': 'cubic', 'vol_def_x': 'ones(len(gas))', 'SSP_dir': 'pygad//../bc03', 'IMF': 'Kroupa'}
+    >>> block_infos['MASS'], block_infos['HSML']
+    ((1, 'float', None), (1, 'float', 'gas'))
     >>> get_block_units('RHO ')
     Unit("1e+10 Msol ckpc**-3 h_0**2")
     >>> HDF5_to_std_name['Coordinates'], HDF5_to_std_name['ParticleIDs']
@@ -25,7 +27,7 @@ Example:
 '''
 __all__ = ['families', 'elements', 'default_gadget_units', 'block_units',
            'std_name_to_HDF5', 'HDF5_to_std_name', 'read_config',
-           'get_block_units', 'general']
+           'get_block_units', 'general', 'block_infos']
 
 from ConfigParser import SafeConfigParser
 from ..units import *
@@ -43,6 +45,7 @@ general = {
     'IMF': '<undefined>',
     'SSP_dir': '<undefined>',
     }
+block_infos = {}
 # def. units have to be strings - they are used as replacements
 default_gadget_units = {
     'LENGTH':   'ckpc/h_0',
@@ -74,7 +77,7 @@ def read_config(config):
         config (list):  list of possible filenames for the config file.
     '''
     global families, block_order, elements, default_gadget_units, block_units, \
-           std_nameto_HDF5, HDF5_to_std_name, general
+           std_nameto_HDF5, HDF5_to_std_name, general, block_infos
 
     def test_section(cfg, section, entries):
         if not cfg.has_section(section):
@@ -133,6 +136,12 @@ def read_config(config):
 
     default_gadget_units.clear()
     default_gadget_units.update( cfg.items('base units') )
+
+    block_infos.clear()
+    if cfg.has_section('block info'):
+        from ast import literal_eval
+        block_infos.update( { '%-4s'%n:literal_eval(u)
+                                for n,u in cfg.items('block info') } )
 
     block_units.clear()
     if cfg.has_section('block units'):

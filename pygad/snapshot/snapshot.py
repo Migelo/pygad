@@ -324,6 +324,11 @@ def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
         gad_units (dict):   Alternative base units (LENGTH, VELOCITY, MASS) for
                             this snapshot. The default base units units are
                             updated, meaning one can also just change one them.
+
+    Raises:
+        IOError:            If the snapshot does not exist.
+        RuntimeError:       If the information could not be infered or if the
+                            given dtype of the given family is unknown.
     '''
     from sim_arr import SimArr
     filename = os.path.expandvars(filename)
