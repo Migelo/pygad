@@ -12,7 +12,8 @@ from ..units import *
 from ..analysis import *
 
 def profile(s, Rmax, qty, av=None, units=None, dens=True, proj=None,
-            N=50, logbin=False, minlog=None, ylabel=None, ax=None, **kwargs):
+            N=50, logbin=False, minlog=None, ylabel=None, labelsize=14, ax=None,
+            **kwargs):
     '''
     Plot a profile.
 
@@ -36,6 +37,8 @@ def profile(s, Rmax, qty, av=None, units=None, dens=True, proj=None,
                             is one between 0 and this value, though).
                             Default: Rmax/100.
         ylabel (str):       A custom y-axis label.
+        labelsize (int):    The font size of the labels. The tick size will get
+                            adjusted accordingly.
         ax (AxesSubplot):   The axis object to plot on. If None, a new one is
                             created by plt.subplots().
         **kwargs:           Further keyword arguments are passed to ax.plot (e.g.
@@ -79,7 +82,8 @@ def profile(s, Rmax, qty, av=None, units=None, dens=True, proj=None,
     ax.set_yscale('log')
 
     ax.set_xlabel(r'$%s$ [$%s$]' % ('r' if proj is None else 'R',
-                                    s['pos'].units.latex()))
+                                    s['pos'].units.latex()),
+                  fontsize=labelsize)
     if ylabel is None:
         name = ''
         if isinstance(av,str):
@@ -92,7 +96,12 @@ def profile(s, Rmax, qty, av=None, units=None, dens=True, proj=None,
         else:
             name += qty if isinstance(qty,str) else ''
         ylabel = r'%s [$%s$]' % (name, prof.units.latex())
-    ax.set_ylabel(ylabel)
+    ax.set_ylabel(ylabel, fontsize=labelsize)
+
+    for tl in ax.get_xticklabels():
+        tl.set_fontsize(0.8*labelsize)
+    for tl in ax.get_yticklabels():
+        tl.set_fontsize(0.8*labelsize)
 
     return fig, ax
 

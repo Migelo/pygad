@@ -306,7 +306,8 @@ import ast
 import weakref
 import derived
 
-def Snap(filename, physical=False, cosmological=None, gad_units=None):
+def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
+         gad_units=None):
     '''
     Create a snapshot from file (without loading the blocks, yet).
 
@@ -315,6 +316,9 @@ def Snap(filename, physical=False, cosmological=None, gad_units=None):
                             several files, you shall omit the trailing (of
                             inbetween in case of an HDF5 file) '.0'.
         physical (bool):    Whether to convert to physical units on loading.
+        load_double_prec (bool):
+                            Force to load all blocks in double precision.
+                            Equivalent with setting the snapshots attribute.
         cosmological (bool):Explicitly tell if the simulation is a cosmological
                             one.
         gad_units (dict):   Alternative base units (LENGTH, VELOCITY, MASS) for
@@ -359,6 +363,7 @@ def Snap(filename, physical=False, cosmological=None, gad_units=None):
                          'unused'] }
     if s._cosmological is None:
         s._cosmological = abs(s.scale_factor-s.time) < 1e-6
+    s._load_double_prec = bool(load_double_prec)
 
     if physical:
         s._boxsize.convert_to(s._boxsize.units.free_of_factors(['a','h_0']),
@@ -659,7 +664,8 @@ class _Snap(object):
         # Add the families available such that they occure in tab completion in
         # iPython, for instance.
         # The other list added here seems to include excatly the properties.
-        return self.__dict__.keys() + \
+        return [k for k in self.__dict__.keys()
+                        if not k.startswith('_')] + \
                 [k for k in self.root.__class__.__dict__.keys()
                         if not k.startswith('_')] + \
                 self.families()
@@ -1042,45 +1048,9 @@ class _Snap(object):
 
     def _convert_block_to_physical_units(self, block, name):
         '''
-        Helper function to convert a block into its physical units.
-
-        Attention:
-            For the block pot it actualy subtracts the cosmological part
-            (-1/2 Omega_0 H_0 x**2). Here it requires that all stored
-            transformions are already performed on the block pos.
-
-            pot(from file) = -G sum_k m_k g |x_i-x_k| - 1/2 Omega_0 H_0^2 x_i^2
-                             \__________  __________/
-                                        \/
-                                the Newtonian part
+        Helper function to convert a block into its physical units, i.e. removing
+        'a' and 'h_0' from the units.
         '''
-        """
-        This is only for non-periodic cosmological simulations...
-        if self.cosmological and name == 'pot':
-            # block pos might have already different units, but all the stored
-            # transformations should be applied to it
-            root = self.root    # 'pos' and 'pot' should be available for all
-                                # particles
-            pos = root.pos
-            # need original, comoving block
-            from ..transformation import Translation
-            for trans in root._trans_at_load:
-                Tinv = trans.inverse()
-                if isinstance(Tinv,Translation):
-                    Tinv._trans.convert_to(pos.units, subs=root)
-                pos = Tinv.apply_to_block(pos)
-            print 'convert block pot to physical...',
-            sys.stdout.flush()
-            O_0 = root.cosmology.Omega_tot
-            H_0 = root.cosmology.H(0)
-            # brackets might avoid mutliple multilplications with the entire array
-            hubble_pot = (0.5 * O_0 * H_0**2) * np.sum(pos**2,axis=1)
-            hubble_pot.convert_to(block.units, subs=root)
-            block -= hubble_pot
-            print 'done.'
-            sys.stdout.flush()
-            return
-        """
         if block.units is None:
             return
 

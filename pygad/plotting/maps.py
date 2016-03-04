@@ -18,7 +18,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
           extent=None, Npx=256, xaxis=0, yaxis=1, vlim=None, cmap=None,
           normcmaplum=True, desat=0.1, colors=None, colors_av=None,
           clogscale=None, clim=None, ax=None, showcbar=True, cbartitle=None,
-          scaleind='line', scaleunits=None, fontcolor='white',
+          scaleind='line', scaleunits=None, fontcolor='white', fontsize=14,
           interpolation='nearest', **kwargs):
     '''
     Show an image of the snapshot.
@@ -90,15 +90,18 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                             within the axis).
         cbartitle (str):    The title for the colorbar. In certain cases it can be
                             created automatically.
-        scaleind (str):     Either 'labels' or 'line' (if not None). If it is
-                            'labels', ticks and labels are drawn on the axes; if
-                            'line' a bar is drawn in the lower left corner
-                            indicating some scale.
+        scaleind (str):     Can be:
+                                'labels':   ticks and labels are drawn on the axee
+                                'line':     a bar is drawn in the lower left
+                                            corner indicating the scale
+                                'none':     neither nor is done
         scaleunits (str, Unit):
                             If scaleind=='line', these units are used for
                             indication.
         fontcolor (str):    The color to use for the colorbar ticks and labels as
                             well as for the scale bar.
+        fontsize (int):     The size of the labels and other font sizes are scaled
+                            accordingly.
         interpolation (str):The interpolation to use between pixels. See imshow
                             for more details.
         softening (UnitQty):A list of te softening lengthes that are taken for
@@ -187,6 +190,12 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     if surface_dens is None: surface_dens = True
     if cmap is None: cmap = 'cubehelix' if colors is None else 'Bright'
 
+    if scaleunits is None:
+        scaleunits = s['pos'].units
+    else:
+        scaleunits = Unit(scaleunits)
+        extent.convert_to(scaleunits, subs=s)
+
     # create luminance map
     if len(s) == 0:
         if isinstance(qty,str) and units is None:
@@ -237,8 +246,6 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
             cmap = isolum_cmap(cmap, desat=desat)
         im = color_code(im_lum, im_col, cmap=cmap, vlim=vlim, clim=clim)
 
-    if scaleunits is not None:
-        extent.convert_to(scaleunits, subs=s)
     fig, ax, im = show_image(im, extent=extent, ax=ax, cmap=cmap, vlim=vlim,
                              interpolation=interpolation)
 
@@ -251,6 +258,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         cbar.ax.tick_params(labelsize=8) 
         for tl in cbar.ax.get_xticklabels():
             tl.set_color(fontcolor)
+            tl.set_fontsize(0.65*fontsize)
         if cbartitle is None:
             cqty = colors if colors is not None else qty
             if isinstance(cqty,str):
@@ -274,15 +282,20 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
             if (logscale and colors is None) or \
                     (clogscale and colors is not None):
                 cbartitle = r'$\log_{10}$(' + cbartitle + ')'
-        cbar.set_label(cbartitle, color=fontcolor, fontsize=12, labelpad=12)
+        cbar.set_label(cbartitle, color=fontcolor, fontsize=fontsize, labelpad=12)
 
-    if scaleind is None:
-        pass
-    if scaleind == 'labels':
-        x_label = r'$%s$ [$%s$]' % ({0:'x',1:'y',2:'z'}[xaxis], s['pos'].units.latex())
-        ax.set_xlabel(x_label)
-        y_label = r'$%s$ [$%s$]' % ({0:'x',1:'y',2:'z'}[yaxis], s['pos'].units.latex())
-        ax.set_ylabel(y_label)
+    if scaleind in [None, 'none']:
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+    elif scaleind == 'labels':
+        x_label = r'$%s$ [$%s$]' % ({0:'x',1:'y',2:'z'}[xaxis], scaleunits.latex())
+        ax.set_xlabel(x_label, fontsize=fontsize)
+        y_label = r'$%s$ [$%s$]' % ({0:'x',1:'y',2:'z'}[yaxis], scaleunits.latex())
+        ax.set_ylabel(y_label, fontsize=fontsize)
+        for tl in ax.get_xticklabels():
+            tl.set_fontsize(0.8*fontsize)
+        for tl in ax.get_yticklabels():
+            tl.set_fontsize(0.8*fontsize)
     elif scaleind == 'line':
         width = extent[:,1] - extent[:,0]
         scale = width.min() / 4.0
@@ -291,10 +304,12 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         elif scale/order<5.0:   scale = 2.0*order
         else:                   scale = 5.0*order
         from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
+        from matplotlib.font_manager import FontProperties
+        fp = FontProperties(size=0.9*fontsize)
         asb =  AnchoredSizeBar(ax.transData, scale,
                                r'%g $%s$' % (scale, width.units.latex()),
                                loc=3, pad=0.1, borderpad=0.7, sep=12,
-                               frameon=False, color=fontcolor)
+                               frameon=False, color=fontcolor, fontproperties=fp)
         ax.add_artist(asb)
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)

@@ -73,8 +73,8 @@ Example:
     >>> if abs(eff_radius(sub, 'V', proj=2) - '10.7 kpc') > '0.2 kpc':
     ...     print eff_radius(sub, 'V', proj=2)
     derive block rcyl... done.
-    >>> if abs(half_qty_radius(sub.stars, qty='mass', proj=2) - '10.8 kpc') > '0.2 kpc':
-    ...     print half_qty_radius(sub.stars, qty='mass', proj=2)
+    >>> if abs(half_mass_radius(sub.stars, proj=2) - '10.8 kpc') > '0.2 kpc':
+    ...     print half_mass_radius(sub.stars)
     >>> ifr, ofr = flow_rates(s, '50 kpc')
     derive block vrad... done.
     >>> if abs(ifr - '428 Msol/yr') > '10 Msol/yr' or abs(ofr - '388 Msol/yr') > '10 Msol/yr':
@@ -314,7 +314,7 @@ def half_mass_radius(s, M=None, center=None, proj=None):
     Returns:
         r12 (UnitArr):          The half-mass-radius.
     '''
-    return half_qty_radius(s, qty='mass', Qtot=M, center=center)
+    return half_qty_radius(s, qty='mass', Qtot=M, center=center, proj=proj)
 
 def eff_radius(s, band=None, L=None, center=None, proj=2):
     '''

@@ -628,6 +628,7 @@ def Unit(x, allow_undefined=False):
         raise TypeError(x.__class__.__name__ + ' cannot be converted into ' +
                         'a unit.')
     # x is a string...!
+    x = x.strip()
 
     if x in _unit_definitions:
         return _UnitClass(1., [[x,1]])

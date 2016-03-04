@@ -295,8 +295,8 @@ def show_image(im, extent=None, cmap='Bright', vlim=None, aspect=None,
 
 def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
                 vlim=None, cmap=None, colors=None, colors_av=None, clim=None,
-                clogscale=False, cbartxtcol=None, cbartitle=None, showcbar=True,
-                aspect='auto', ax=None, **kwargs):
+                clogscale=False, fontcolor=None, fontsize=14, cbartitle=None,
+                showcbar=True, aspect='auto', ax=None, **kwargs):
     '''
     Do a binned scatter plot.
 
@@ -327,7 +327,10 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
                                 these weights.
         clim (sequence):        The limits for the color-coding.
         clogscale (bool):       Whether to do the color-coding logaritmically.
-        cbartxtcol (str):       The color of the threshold lines.
+        fontcolor (str):        The color to use for the colorbar ticks and
+                                labels.
+        fontsize (int):         The size of the axis ticks and the cbar title.
+                                Other font sizes are scaled accordingly.
         cbartitle (str):        A specific colorbar title. If not given, a
                                 automatic one is chosen.
         showcbar (bool):        Whether to show a colorbar for the color-coding.
@@ -356,12 +359,9 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
         qtyname = qty
         qty = s.get(qty)
     if cmap is None:
-        if colors is None:
-            cmap = 'Blues'
-        else:
-            cmap = 'cubehelix' if colors is None else 'Bright'
-            if cbartxtcol is None:
-                cbartxtcol = 'w'
+        cmap = 'cubehelix' if colors is None else 'Bright'
+        if fontcolor is None:
+            fontcolor = 'w'
     if isinstance(cmap,str):
         cmap = mpl.cm.get_cmap(cmap)
     if isinstance(colors,str):
@@ -369,8 +369,8 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
         colors = s.get(colors)
     if isinstance(colors_av,str):
         colors_av = s.get(colors_av)
-    if cbartxtcol is None:
-        cbartxtcol = 'k'
+    if fontcolor is None:
+        fontcolor = 'k'
 
     if extent is None:
         extent = np.asarray( [[np.min(x), np.max(x)], [np.min(y), np.max(y)]] )
@@ -428,7 +428,8 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
                                          orientation='horizontal')
         cbar.ax.tick_params(labelsize=8)
         for tl in cbar.ax.get_xticklabels():
-            tl.set_color(cbartxtcol)
+            tl.set_color(fontcolor)
+            tl.set_fontsize(0.65*fontsize)
         if cbartitle is None:
             name = cname if colors is not None else qtyname
             count_units = r'$\mathrm{count}$'
@@ -446,12 +447,16 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
             if (logscale and colors is None) or \
                     (clogscale and colors is not None):
                 cbartitle = r'$\log_{10}$(' + cbartitle + ')'
-        cbar.set_label(cbartitle, color=cbartxtcol, fontsize=12, labelpad=12)
+        cbar.set_label(cbartitle, color=fontcolor, fontsize=fontsize, labelpad=12)
 
     xunits = r'[$%s$]' % x.units.latex() if getattr(x,'units',None) else ''
     yunits = r'[$%s$]' % y.units.latex() if getattr(y,'units',None) else ''
-    ax.set_xlabel( '%s%s' % (xname, xunits), fontsize=16 )
-    ax.set_ylabel( '%s%s' % (yname, yunits), fontsize=16 )
+    ax.set_xlabel( '%s%s' % (xname, xunits), fontsize=fontsize )
+    ax.set_ylabel( '%s%s' % (yname, yunits), fontsize=fontsize )
+    for tl in ax.get_xticklabels():
+        tl.set_fontsize(0.8*fontsize)
+    for tl in ax.get_yticklabels():
+        tl.set_fontsize(0.8*fontsize)
 
     if showcbar:
         return fig, ax, im, cbar
