@@ -16,7 +16,7 @@ import warnings
 
 def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
           extent=None, Npx=256, xaxis=0, yaxis=1, vlim=None, cmap=None,
-          normcmaplum=True, desat=0.1, colors=None, colors_av=None,
+          normcmaplum=True, desat=0.1, colors=None, colors_av=None, cunits=None,
           clogscale=None, csurf_dens=None, clim=None, ax=None, showcbar=True, 
           cbartitle=None, scaleind='line', scaleunits=None, fontcolor='white', 
           fontsize=14, interpolation='nearest', **kwargs):
@@ -82,6 +82,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                             unless this is None). Otherwise same as qty.
         colors_av (UnitQty, str):
                             Same as av, but for colors.
+        cunits (str, Unit): Same as units, but for colors.
         clogscale (bool):   Whether color-code in log-scale.
         csurf_dens (bool):  Same as surface_dens, but for colors.
         clim (sequence):    Same as vlim, but for colors.
@@ -128,6 +129,9 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     # setting default values for arguments
     if units is not None:
         units = Unit(units)
+    
+    if cunits is not None:
+        cunits = Unit(units)
 
     if extent is None:
         extent = UnitArr([np.percentile(s['pos'][:,xaxis], [1,99]),
@@ -243,6 +247,8 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                               xaxis=xaxis, yaxis=yaxis, **kwargs)
         if csurf_dens:
             im_col /= px2
+        if cunits is not None:
+            im_col.convert_to(cunits, subs=s)
         if clogscale:
             im_col = np.log10(im_col)
         if clim is None:
@@ -270,15 +276,19 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                 cname = cqty
                 if colors is not None:
                     if csurf_dens:
-                        cunits = None if len(s)==0 else s.get(cqty).units/px2.units
+                        if cunits is None and len(s)>0:
+                            cunits = s.get(cqty).units/px2.units
                         cname = 'surface-density of ' + cname
                     else:
-                        cunits = None if len(s)==0 else s.get(cqty).units
+                        if cunits is None and len(s)>0:
+                            cunits = s.get(cqty).units
                 else:
-                    cunits = units if units is not None else None if len(s)==0 else s.get(cqty).units
+                    if cunits is None:
+                        cunits = units if units is not None else None if len(s)==0 else s.get(cqty).units
             else:
                 cname = ''
-                cunits = units if units is not None else getattr(cqty,'units',None)
+                if cunits is None:
+                    cunits = units if units is not None else getattr(cqty,'units',None)
             if surface_dens and colors is None:
                 if units is None and cunits is not None:
                     cunits = cunits/s['pos'].units**2
