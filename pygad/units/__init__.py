@@ -6,7 +6,7 @@ Also doctest other parts of this sub-module:
     >>> doctest.testmod(units)
     TestResults(failed=0, attempted=36)
     >>> doctest.testmod(unit_arr)
-    TestResults(failed=0, attempted=82)
+    TestResults(failed=0, attempted=84)
 '''
 from units import *
 from unit_arr import *

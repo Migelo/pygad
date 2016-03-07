@@ -188,6 +188,10 @@ def UnitQty(obj, units=None, subs=None, dtype=None, copy=False):
         UnitArr([ 2.5, -0.3])
         >>> UnitQty(2.5, 'AU')
         UnitArr(2.5, units="AU")
+        >>> UnitQty('2.5')
+        UnitArr(2.5)
+        >>> UnitQty('2.5', 'min')
+        UnitArr(2.5, units="min")
         >>> UnitQty({}) # doctest:+ELLIPSIS
         Traceback (most recent call last):
         ...
@@ -272,7 +276,10 @@ class UnitArr(np.ndarray):
             if units is None:
                 data, units = data.scale, data.free_of_factors()
             else:
-                data = data.in_units_of(units, subs=subs)
+                if len(data._composition) == 0:
+                    data = float(data)
+                else:
+                    data = data.in_units_of(units, subs=subs)
 
         # actually create the new object
         if isinstance(data, UnitArr):   # avoid interference of different
