@@ -27,7 +27,7 @@ Example:
     >>> s.loadable_blocks()
     ['vel', 'mass', 'ID', 'pos']
     >>> ' '.join(s.deriveable_blocks())
-    'Epot jzjc rcyl angmom momentum E vrad Ekin vcirc r jcirc dV'
+    'Epot vx jzjc vy vz rcyl angmom momentum E dV vrad Ekin vcirc r jcirc y x z'
     >>> assert set(s.all_blocks()) == set(s.loadable_blocks() + s.deriveable_blocks())
     >>> mwgt_pos = np.tensordot(s['mass'], s['pos'], axes=1).view(UnitArr)
     load block mass... done.
@@ -139,7 +139,7 @@ Example:
     >>> 'r' in s
     True
     >>> for a in s.available_blocks(): print a,
-    Epot pot pos jzjc rcyl mass vel angmom momentum E vrad ID Ekin vcirc r jcirc
+    Epot pot pos jzjc vx vy vz rcyl mass vel angmom momentum E vrad ID Ekin vcirc r jcirc y x z
     >>> s.delete_blocks(derived=True)
     >>> 'r' in s
     True
