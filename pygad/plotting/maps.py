@@ -141,7 +141,9 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     ext3D[xaxis] = extent[0]
     ext3D[yaxis] = extent[1]
     ext3D[zaxis] = [-np.inf, +np.inf]
-    s = s[BoxMask(ext3D, sph_overlap=True)]
+    bmask = BoxMask(ext3D, sph_overlap=True)
+    mask = bmask._get_mask_for(s)
+    s = s[bmask]
 
     if isinstance(qty, (list,tuple)):   # enable masking for non-standard
         qty = np.ndarray(qty)           # containers
