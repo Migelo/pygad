@@ -275,7 +275,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
             if surface_dens and colors is None:
                 if units is None and cunits is not None:
                     cunits = cunits/s['pos'].units**2
-                cname = 'surface-density of ' + cname
+                cname = r'$\Sigma$ of ' + cname
             if cunits is None or cunits == 1:
                 cunits = ''
             else:
