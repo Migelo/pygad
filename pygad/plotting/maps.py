@@ -16,10 +16,10 @@ import warnings
 
 def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
           extent=None, Npx=256, xaxis=0, yaxis=1, vlim=None, cmap=None,
-          normcmaplum=True, desat=0.1, colors=None, colors_av=None,
-          clogscale=None, clim=None, ax=None, showcbar=True, cbartitle=None,
-          scaleind='line', scaleunits=None, fontcolor='white', fontsize=14,
-          interpolation='nearest', **kwargs):
+          normcmaplum=True, desat=0.1, colors=None, colors_av=None, cunits=None,
+          clogscale=None, csurf_dens=None, clim=None, ax=None, showcbar=True, 
+          cbartitle=None, scaleind='line', scaleunits=None, fontcolor='white', 
+          fontsize=14, interpolation='nearest', **kwargs):
     '''
     Show an image of the snapshot.
 
@@ -82,7 +82,9 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                             unless this is None). Otherwise same as qty.
         colors_av (UnitQty, str):
                             Same as av, but for colors.
+        cunits (str, Unit): Same as units, but for colors.
         clogscale (bool):   Whether color-code in log-scale.
+        csurf_dens (bool):  Same as surface_dens, but for colors.
         clim (sequence):    Same as vlim, but for colors.
         ax (AxesSubplot):   The axis object to plot on. If None, a new one is
                             created by plt.subplots().
@@ -127,6 +129,9 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     # setting default values for arguments
     if units is not None:
         units = Unit(units)
+    
+    if cunits is not None:
+        cunits = Unit(cunits)
 
     if extent is None:
         extent = UnitArr([np.percentile(s['pos'][:,xaxis], [1,99]),
@@ -189,6 +194,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     if logscale is None: logscale = True
     if surface_dens is None: surface_dens = True
     if cmap is None: cmap = 'cubehelix' if colors is None else 'Bright'
+    if csurf_dens is None: csurf_dens = False
 
     if scaleunits is None:
         scaleunits = s['pos'].units
@@ -230,6 +236,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         vlim = np.percentile(tmp, [10,99.9])
         del tmp
 
+    # create color map
     if colors is None:
         im = im_lum
         clim = vlim
@@ -238,6 +245,10 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     else:
         im_col, px2 = map_qty(s, extent=extent, qty=colors, av=colors_av, Npx=Npx,
                               xaxis=xaxis, yaxis=yaxis, **kwargs)
+        if csurf_dens:
+            im_col /= px2
+        if cunits is not None:
+            im_col.convert_to(cunits, subs=s)
         if clogscale:
             im_col = np.log10(im_col)
         if clim is None:
@@ -264,12 +275,20 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
             if isinstance(cqty,str):
                 cname = cqty
                 if colors is not None:
-                    cunits = None if len(s)==0 else s.get(cqty).units
+                    if csurf_dens:
+                        if cunits is None and len(s)>0:
+                            cunits = s.get(cqty).units/px2.units
+                        cname = 'surface-density of ' + cname
+                    else:
+                        if cunits is None and len(s)>0:
+                            cunits = s.get(cqty).units
                 else:
-                    cunits = units if units is not None else None if len(s)==0 else s.get(cqty).units
+                    if cunits is None:
+                        cunits = units if units is not None else None if len(s)==0 else s.get(cqty).units
             else:
                 cname = ''
-                cunits = units if units is not None else getattr(cqty,'units',None)
+                if cunits is None:
+                    cunits = units if units is not None else getattr(cqty,'units',None)
             if surface_dens and colors is None:
                 if units is None and cunits is not None:
                     cunits = cunits/s['pos'].units**2
