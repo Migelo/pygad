@@ -35,10 +35,10 @@ def calc_temps(gas, gamma=5./3.):
     Returns:
         T (UnitArr):    The temperatures for the particles of `gas` (in K).
     '''
-    if s.properties['flg_entropy_instead_u']:
-        raise NotImplementedError('Temperatures cannot be calculated from ' +
-                                  'entropy, yet. However, '
-                                  'flg_entropy_instead_u is True.')
+    if gas.properties['flg_entropy_instead_u']:
+        raise NotImplementedError('Calculating temperatures from entropy is ' +
+                                  'not implemented, yet, but ' +
+                                  '"flg_entropy_instead_u" is set.')
 
     # roughly the average weight for primordial gas
     av_particle_weight = (0.76*1. + 0.24*4.) * physics.m_u
