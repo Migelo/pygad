@@ -426,10 +426,16 @@ def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
     # calculate the dependencies and particle types of the derived blocks
     changed = True
     rules = derived._rules.copy()
+    # define 'dV' by 'vol_def_x' if not explicitly given
     if 'dV' not in rules:
         x = gadget.config.general['vol_def_x']
         if x != '<undefined>':
             rules['dV'] = '%s / kernel_weighted(gas,%s)' % (x,x)
+    # remove derived blocks that can be loaded
+    for name in rules.keys():
+        if name in s._load_name:
+            del rules[name]
+    # calculate the dependencies
     while changed:
         changed = False
         for name, rule in rules.iteritems():
@@ -449,10 +455,8 @@ def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
     removed = -1
     while removed != len(not_available):
         removed = len(not_available)
-        for name, rd in s._derive_rule_deps.iteritems():
-            if not (any(s._block_avail[name]) and (rd[1]-not_available)):
-                if name=='dV' and len(rd[1])==0:
-                    continue
+        for name, (rule, deps) in s._derive_rule_deps.iteritems():
+            if not (any(s._block_avail[name]) and (deps-not_available)):
                 not_available.add(name)
         for name in not_available:
             s._block_avail.pop(name,None)
@@ -1175,9 +1179,9 @@ class _Snap(object):
                            'kernel_weighted':analysis.kernel_weighted,
                            'len':len}
         )
-        for n,obj in [(n,getattr(derived,n)) for n in dir(derived)]:
-            if hasattr(obj, '__call__') and n!='ptypes_and_deps' \
-                    and n!='read_derived_rules':
+        import derive_rules
+        for n,obj in [(n,getattr(derive_rules,n)) for n in dir(derive_rules)]:
+            if hasattr(obj, '__call__'):
                 namespace[n] = obj
         for n,obj in [(n,getattr(physics,n)) for n in dir(physics)]:
             if isinstance(obj, UnitArr):
