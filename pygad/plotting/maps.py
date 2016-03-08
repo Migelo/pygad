@@ -131,7 +131,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         units = Unit(units)
     
     if cunits is not None:
-        cunits = Unit(units)
+        cunits = Unit(cunits)
 
     if extent is None:
         extent = UnitArr([np.percentile(s['pos'][:,xaxis], [1,99]),
