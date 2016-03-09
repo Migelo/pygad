@@ -233,7 +233,10 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         tmp = im_lum[np.isfinite(im_lum)]
         if len(tmp)==0:
             raise RuntimeError('The luminance array has no finite values!')
-        vlim = np.percentile(tmp, [10,99.9])
+        if colors is None:
+            vlim = np.percentile(tmp, [0.1, 99.9])
+        else:
+            vlim = np.percentile(tmp, [1, 98.5])
         del tmp
 
     # create color map
