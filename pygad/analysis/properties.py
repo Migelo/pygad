@@ -98,12 +98,14 @@ Example:
     load block ne... done.
     load block rho... done.
     convert block rho to physical units... done.
-    load block temp... done.
+    load block u... done.
+    convert block u to physical units... done.
+    derive block temp... done.
     >>> s.gas['lx'].units
     Unit("erg s**-1")
-    >>> if abs(np.mean(s.gas['lx']) - '1.74e35 erg/s') > '0.1e35 erg/s':
+    >>> if abs(np.mean(s.gas['lx']) - '1.6e35 erg/s') > '0.15e35 erg/s':
     ...     print np.mean(s.gas['lx'])
-    >>> if abs(s.gas['lx'].sum() - '1.63e41 erg/s') > '0.05e41 erg/s':
+    >>> if abs(s.gas['lx'].sum() - '1.5e41 erg/s') > '0.15e41 erg/s':
     ...     print s.gas['lx'].sum()
 '''
 __all__ = ['mass_weighted_mean', 'center_of_mass', 'reduced_inertia_tensor',

@@ -203,9 +203,9 @@ Example:
     >>> s2.load_all_blocks()    # doctest:+ELLIPSIS
     load block nh... done.
     load block elements... done.
-    load block temp... done.
     load block sfr... done.
     load block pot... done.
+    load block inim... done.
     ...
     >>> for name in s.loadable_blocks():
     ...     b  = s.get_host_subsnap(name)[name]
@@ -246,11 +246,11 @@ Example:
     ...     b  = s.get_host_subsnap(name)[name]
     ...     b2 = s2.get_host_subsnap(name)[name]
     ...     assert np.all( b == b2 )
+    load block pos... done.
     load block nh... done.
     load block elements... done.
     load block hsml... done.
     load block pot... done.
-    load block inim... done.
     ...
     >>> assert s.redshift == s2.redshift
     >>> for name, prop in s.properties.iteritems():
@@ -411,8 +411,6 @@ def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
             new_name = new_name.upper()
         elif new_name == 'z':
             new_name = 'elements'
-        elif new_name == 'cste':
-            new_name = 'temp'
         elif new_name == 'age':
             new_name = 'form_time'
 

@@ -31,26 +31,27 @@ def calc_temps(gas, gamma=5./3.):
 
     Args:
         gas (Snap):     The (sub-)snapshot to calculate the temperature for.
+        gamma (float):  The isentropic exponent for the e.o.s. Only used if
+                        "flg_entropy_instead_u" is set (block "u" then is
+                        understood as the specific entropy).
 
     Returns:
         T (UnitArr):    The temperatures for the particles of `gas` (in K).
     '''
     if gas.properties['flg_entropy_instead_u']:
-        raise NotImplementedError('Calculating temperatures from entropy is ' +
-                                  'not implemented, yet, but ' +
-                                  '"flg_entropy_instead_u" is set.')
+        u = gas['u'] * gas['rho'] ** (gamma-1.0) / (gamma-1.0)
+    else:
+        u = gas['u']
 
     # roughly the average weight for primordial gas
     av_particle_weight = (0.76*1. + 0.24*4.) * physics.m_u
     # roughly the average degrees of freedom for primordial gas (no molecules)
     f = 3
-
-    # the internal energy in Gadget actually is the specific internal energy
-    # TODO: check!
-    T = gas['u'] * gas['mass'] / (f/2. * (gas['mass']/av_particle_weight) * physics.kB)
+    T = u * gas['mass'] / (f/2. * (gas['mass']/av_particle_weight) * physics.kB)
     T.convert_to('K', subs=gas)
     return T
-calc_temps._deps = set(['u', 'mass'])
+# 'rho' only if "flg_entropy_instead_u" is set...
+calc_temps._deps = set(['u', 'mass', 'rho'])
 
 def _z2Gyr_vec(arr, cosmo):
     '''Needed to pickle cosmo.lookback_time_in_Gyr for Pool().apply_async.'''
