@@ -305,6 +305,7 @@ import warnings
 import ast
 import weakref
 import derived
+import fnmatch
 
 def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
          gad_units=None):
@@ -962,11 +963,13 @@ class _Snap(object):
         rule, deps = root._derive_rule_deps[name]
 
         orig_caching_state = self._root._cache_derived
-        if name in self._root._always_cache:
+        for cache_name in self._root._always_cache:
             # in order to ensure that the automatic updating works (the dependencies
             # connect from the loading blocks to the always cached derived block),
             # temporarily turn on _cache_derived globally!
-            self._root._cache_derived = True
+            if fnmatch.fnmatch(name, cache_name):
+                self._root._cache_derived = True
+                break
 
         # pre-load all needed (and not yet loaded) blocks in order not to mess up
         # the output (too much)
