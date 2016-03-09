@@ -9,49 +9,70 @@ one from.
 __all__ = ['calc_temps', 'age_from_form']
 
 from .. import environment
-from ..units import UnitArr, UnitScalar
+from ..units import UnitArr, UnitScalar, UnitError
 import numpy as np
 from .. import physics
 from .. import gadget
 from multiprocessing import Pool, cpu_count
 import warnings
+import gc
 
-def calc_temps(gas, gamma=5./3.):
+def calc_temps(u, XH=0.76, ne=0.0, XZ=None, f=3, subs=None):
     '''
     Calculate the block of temperatures form internal energy.
 
     This function calculates the temperatures from the internal energy using the
-    ideal gas law:
-
+    ideal gas law,
         U = f/2 N k_b T
-
-    TODO:
-        What to do about ionisation states? What about the different elements? How
-        do they affect the degrees of freedom f?
+    and calculating an average particle mass from XH, ne, and XZ.
 
     Args:
-        gas (Snap):     The (sub-)snapshot to calculate the temperature for.
-        gamma (float):  The isentropic exponent for the e.o.s. Only used if
-                        "flg_entropy_instead_u" is set (block "u" then is
-                        understood as the specific entropy).
+        u (UnitQty):            The (mass-)specific internal energies.
+        XH (float, array-like): The Hydrogen *mass* fraction(s). It can be either
+                                a constant value or one for each particle
+                                (H/mass).
+        ne (float, array-like): The number of electrons per atom(!).
+        XZ (iterable):          The metal mass fraction(s) and their atomic weight
+                                in atomic units. Each element of this iterable
+                                shall be a tuple of mass fraction (which can be an
+                                array with fractions for each particle) at first
+                                position and atomic weight (a single float) at
+                                second postion.
+                                The Helium mass fractions is always the remaining
+                                mass:  1.0 - XH - sum(XZ[:,0]).
+        f (float):              The (effective) degrees of freedom.
+        subs (dict, Snap):      Substitutions used for conversion into Kelvin.
+                                (c.f. `UnitArr.convert_to`)
 
     Returns:
-        T (UnitArr):    The temperatures for the particles of `gas` (in K).
+        T (UnitArr):            The temperatures for the particles (in K if
+                                possible).
     '''
-    if gas.properties['flg_entropy_instead_u']:
-        u = gas['u'] * gas['rho'] ** (gamma-1.0) / (gamma-1.0)
-    else:
-        u = gas['u']
+    tmp = XH/1.008
+    XHe = 1.0 - XH
+    if XZ is not None:
+        for X, m in XZ:
+            tmp += X/float(m)
+            XHe -= X
+    tmp += XHe/4.003
 
-    # roughly the average weight for primordial gas
-    av_particle_weight = (0.76*1. + 0.24*4.) * physics.m_u
-    # roughly the average degrees of freedom for primordial gas (no molecules)
-    f = 3
-    T = u * gas['mass'] / (f/2. * (gas['mass']/av_particle_weight) * physics.kB)
-    T.convert_to('K', subs=gas)
+    # assuming `ne` is the mean number of electrons per atom:
+    #av_m = physics.m_u / (tmp * (1.0 + ne))
+    # as in Gadget (where XZ=None, though): `ne` are the electrons per Hydrogen
+    # atom:
+    av_m = physics.m_u / (tmp + ne*XH)
+
+    # solving:  U = f/2 N k_b T
+    # which is:  u = f/2 N/M k_b T
+    T = u / (f/2.) * av_m / physics.kB
+    try:
+        T.convert_to('K', subs=subs)
+    except UnitError as ue:
+        import sys
+        print >> sys.stderr, 'WARNING: in "calc_temps":\n%s' % ue
+    gc.collect()
     return T
-# 'rho' only if "flg_entropy_instead_u" is set...
-calc_temps._deps = set(['u', 'mass', 'rho'])
+calc_temps._deps = set()
 
 def _z2Gyr_vec(arr, cosmo):
     '''Needed to pickle cosmo.lookback_time_in_Gyr for Pool().apply_async.'''

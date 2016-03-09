@@ -103,9 +103,9 @@ Example:
     derive block temp... done.
     >>> s.gas['lx'].units
     Unit("erg s**-1")
-    >>> if abs(np.mean(s.gas['lx']) - '1.6e35 erg/s') > '0.15e35 erg/s':
+    >>> if abs(np.mean(s.gas['lx']) - '1.85e35 erg/s') > '0.15e35 erg/s':
     ...     print np.mean(s.gas['lx'])
-    >>> if abs(s.gas['lx'].sum() - '1.5e41 erg/s') > '0.15e41 erg/s':
+    >>> if abs(s.gas['lx'].sum() - '1.7e41 erg/s') > '0.15e41 erg/s':
     ...     print s.gas['lx'].sum()
 '''
 __all__ = ['mass_weighted_mean', 'center_of_mass', 'reduced_inertia_tensor',

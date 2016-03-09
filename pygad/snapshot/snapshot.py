@@ -27,7 +27,7 @@ Example:
     >>> s.loadable_blocks()
     ['vel', 'mass', 'ID', 'pos']
     >>> ' '.join(s.deriveable_blocks())
-    'Epot vx jzjc vy vz rcyl angmom momentum E dV vrad Ekin vcirc r jcirc y x z'
+    'Epot vx jzjc vy vz rcyl angmom momentum E dV vrad Ekin temp vcirc r jcirc y x z'
     >>> assert set(s.all_blocks()) == set(s.loadable_blocks() + s.deriveable_blocks())
     >>> mwgt_pos = np.tensordot(s['mass'], s['pos'], axes=1).view(UnitArr)
     load block mass... done.
