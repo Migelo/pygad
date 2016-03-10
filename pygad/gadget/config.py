@@ -138,10 +138,10 @@ def read_config(config):
     default_gadget_units.update( cfg.items('base units') )
 
     block_infos.clear()
-    if cfg.has_section('block info'):
+    if cfg.has_section('block infos'):
         from ast import literal_eval
         block_infos.update( { '%-4s'%n:literal_eval(u)
-                                for n,u in cfg.items('block info') } )
+                                for n,u in cfg.items('block infos') } )
 
     block_units.clear()
     if cfg.has_section('block units'):

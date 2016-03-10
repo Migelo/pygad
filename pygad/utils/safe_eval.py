@@ -47,6 +47,7 @@ import operator as op
 import ast
 import re
 import numbers
+from fractions import Fraction
 
 def iter_idents_in_expr(expr, retel=False):
     '''
@@ -129,7 +130,8 @@ class Evaluator(object):
                 ast.Not: op.not_,
                 }
 
-        self.namespace = {'None':None, 'True':True, 'False':False}
+        self.namespace = {'None':None, 'True':True, 'False':False,
+                'Fraction':Fraction}
         for ns in [my_math.__dict__, namespace if namespace is not None else {}]:
             self.namespace.update( { name:val for name,val in ns.iteritems()
                     if hasattr(val,'__call__') or isinstance(val,numbers.Number)
@@ -236,7 +238,7 @@ class Evaluator(object):
             raise
 
 def eval(expr, namespace=None, my_math=None, truediv=True,
-             allow_underscore=False, **kwargs):
+         allow_underscore=False, **kwargs):
     '''
     Evaluate an expression.
 

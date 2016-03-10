@@ -814,6 +814,13 @@ def _div_units(a, b):
     else:
         return 1/b_units
 
+@UnitArr.ufunc_rule(np.reciprocal)
+def _inv_units(a):
+    if a.units is not None:
+        return a.units**-1
+    else:
+        return None
+
 @UnitArr.ufunc_rule(np.remainder)
 def _remainder_units(a, b):
     a_units = getattr(a, 'units', None)
