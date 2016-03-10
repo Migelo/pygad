@@ -402,7 +402,8 @@ def _fill_block_with_known(block, header):
     if block.name in config.block_infos:
         info = config.block_infos[block.name]
         block.dimension = info[0]
-        if info[1] not in ['int', 'uint', 'unsigned']:
+        if info[1] in ['int', 'uint', 'unsigned', 'float']:
+            # type without explicit size -- it's just a hint
             type_hint = info[1]
         else:
             try:
@@ -506,6 +507,7 @@ def _block_inferring(block, header):
         block.dimension = element_size / block.dtype.itemsize
         return  # all known
 
+    assert block.dtype is None
     # dtype is unknown (and dimension might be as well)...
     if block.dimension is not None:
         itemsize = element_size / block.dimension
@@ -513,18 +515,27 @@ def _block_inferring(block, header):
             block.dtype = 'i' + str(itemsize)
         elif type_hint in ['uint', 'unsigned']:
             block.dtype = 'u' + str(itemsize)
-        assert type_hint == 'float'
-        # assume float
-        block.dtype = 'f' + str(itemsize)
+        else:
+            assert type_hint is None or type_hint == 'float'
+            # assume float
+            block.dtype = 'f' + str(itemsize)
         return  # all known
 
     # both, dtype and dimension, are unknown...
     if type_hint in ['int', 'uint', 'unsigned']:
-        block.dtype = 'int32' if type_hint=='int' else 'uint32'
-        block.dimension = element_size / block.dtype.itemsize
+        if element_size*8 in [8,16,32,64]:
+            block.dtype = type_hint[0] + element_size*8
+            block.dimension = 1
+        elif element_size % np.dtype(int).itemsize == 0:
+            # could be multi-dimensional native
+            block.dtype = np.dtype(int)
+            block.dimension = element_size / block.dtype.itemsize
+        else:
+            raise RuntimeError('Could not infere information for block ' +
+                               '"%s"!' % block.name)
         assert element_size == block.dimension * block.dtype.itemsize
         return  # all known
-    assert type_hint == 'float'
+    assert type_hint is None or type_hint == 'float'
     # assume float
     block.dtype = 'float64' if header['flg_doubleprecision'] else 'float32'
     block.dimension = element_size / block.dtype.itemsize
