@@ -1,8 +1,8 @@
 # pygad README
 
-This module is a light-weight Python module for analysis of Gadget snapshots.
-It supports all Gadget formats (in our experience better than [pynbody]).
-[pygad][] is inspired and influenced by [pynbody].
+This module is a light-weighted (though already ~15.000 lines of code) but comprehensive Python module that serves as a framework and basis for analysis of Gadget snapshots.
+
+It supports all Gadget formats and is inspired and influenced by [pynbody].
 
 ---
 
@@ -19,7 +19,7 @@ Written entirely in `Python 2.7` and `C++` (the latter only for speed relevant p
 
 as well as the free library
 
-* `GSL`
+* [`GSL`][GSL]
 
 and the `g++` compiler that needs to support the C++11 standard.
 
@@ -39,14 +39,12 @@ $ sudo python setup.py install
 
 The third step of downloading the [Bruzual & Charlot (2003) SSP models][BC03] is optional but recommended (since required for standard star plotting routines).
 
-If you have problems or want a more detailed explanation, see the [wiki][WikiInstallation].
+If you have problems or want a more detailed explanation, see the [wiki][WikiInstallation]. In particular, we want to point to the [FAQ section][FAQ] there.
 
 ### Configure
 
-In order to use the single stellar population models
-
-You probably need to customise [pygad]'s config files for your specific type of snapshots (even HDF5 block names can differ).
-This goes a little beyond the scope of a README.
+You probably need to customise [pygad]'s config files for your specific type of snapshots (even HDF5 block names can differ!).
+This goes a beyond the scope of a README.
 Be referred to the [wiki][WikiConfig].
 
 ### Use pygad
@@ -68,6 +66,12 @@ plt.draw()
 There is a iPython Notebook called `QuickStart.ipynb` in the [bitbucket downloads][Downloads] that shows some more of the features.
 Please, also read the [wiki][WikiHome].
 
+iPython Notebooks can be started with
+
+```
+ipython notenook path/to/notebook.ipnb
+```
+
 ---
 
 ## Support, Contact
@@ -83,3 +87,5 @@ contact me:
 [WikiHome]: https://bitbucket.org/broett/pygad/wiki/Home
 [WikiInstallation]: https://bitbucket.org/broett/pygad/wiki/Installation
 [WikiConfig]: https://bitbucket.org/broett/pygad/wiki/Configuration
+[FAQ]: https://bitbucket.org/broett/pygad/wiki/FAQ
+[GSL]: http://www.gnu.org/software/gsl/
