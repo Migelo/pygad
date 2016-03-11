@@ -8,14 +8,17 @@ Also doctest other parts of this sub-module:
     >>> import doctest
     >>> doctest.testmod(snapshot)
     TestResults(failed=0, attempted=120)
+    >>> doctest.testmod(derive_rules)
+    TestResults(failed=0, attempted=4)
     >>> doctest.testmod(derived)
-    TestResults(failed=0, attempted=12)
+    TestResults(failed=0, attempted=8)
     >>> doctest.testmod(sim_arr)
     TestResults(failed=0, attempted=18)
     >>> doctest.testmod(masks)
     TestResults(failed=0, attempted=33)
 '''
 from snapshot import *
+from derive_rules import *
 from derived import *
 from sim_arr import *
 from masks import *

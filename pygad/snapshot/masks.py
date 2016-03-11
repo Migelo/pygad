@@ -129,17 +129,20 @@ class BallMask(SnapMask):
     A mask for all particles within a given radius.
 
     Args:
-        R (UnitScalar):     The maximum radius.
-        center (UnitQty):   The center of the ball. Default: origin.
-        sph_overlap (bool): If True, also include gas particles, that actually lie
-                            outside of the ball of radius R, but they are
-                            smoothed into it.
+        R (UnitScalar):         The maximum radius.
+        center (UnitQty):       The center of the ball. Default: origin.
+        sph_overlap (bool):     If True, also include gas particles, that actually
+                                lie outside of the ball of radius R, but they are
+                                smoothed into it.
+        periodic_snap (bool):   Whether to consider the snapshot to be masked
+                                periodic with its boxside or not.
     '''
-    def __init__(self, R, center=None, sph_overlap=False):
+    def __init__(self, R, center=None, sph_overlap=False, periodic_snap=True):
         super(BallMask,self).__init__()
         self.R = R
         self.center = center
         self.sph_overlap = sph_overlap
+        self.periodic_snap = periodic_snap
 
     def inverted(self):
         inv = BallMask(self._R, self._center, sph_overlap=self.sph_overlap)
@@ -176,17 +179,24 @@ class BallMask(SnapMask):
         return s + ')'
 
     def _get_mask_for(self, s):
+        from ..utils import periodic_distance_to
         R = self._R.in_units_of(s['r'].units,subs=s)
         center = self._center.in_units_of(s['r'].units,subs=s)
 
-        r = dist(s['pos'],center) if not np.all(center==0) else s['r']
+        if self.periodic_snap:
+            r = periodic_distance_to(s['pos'],center,s.boxsize)
+        else:
+            r = dist(s['pos'],center) if not np.all(center==0) else s['r']
         mask = r < R
 
         if self.sph_overlap and 'gas' in s:
             for pt in gadget.families['gas']:
                 sub = SubSnap(s, [pt])
-                r = dist(sub['pos'],center) if not np.all(center==0) \
-                        else sub['r']
+                if self.periodic_snap:
+                    r = periodic_distance_to(sub['pos'],center,s.boxsize)
+                else:
+                    r = dist(sub['pos'],center) if not np.all(center==0) \
+                            else sub['r']
                 mask[sum(s.parts[:pt]):sum(s.parts[:pt+1])] |= \
                         r-sub['hsml'] < R
 
@@ -263,7 +273,7 @@ class BoxMask(SnapMask):
         return s + ')'
 
     def _get_mask_for(self, s):
-        ext= self._extent.in_units_of(s['pos'].units,subs=s)
+        ext = self._extent.in_units_of(s['pos'].units,subs=s)
 
         mask = (ext[0,0]<=s['pos'][:,0]) & (s['pos'][:,0]<=ext[0,1]) & \
                (ext[1,0]<=s['pos'][:,1]) & (s['pos'][:,1]<=ext[1,1]) & \
@@ -273,12 +283,12 @@ class BoxMask(SnapMask):
             for pt in gadget.families['gas']:
                 sub = SubSnap(s, [pt])
                 mask[sum(s.parts[:pt]):sum(s.parts[:pt+1])] |= \
-                        (ext[0,0]<=sub['pos'][:,0]+sub['hsml']) & \
-                            (sub['pos'][:,0]<=ext[0,1]-sub['hsml']) & \
-                        (ext[1,0]<=sub['pos'][:,1]+sub['hsml']) & \
-                            (sub['pos'][:,1]<=ext[1,1]-sub['hsml']) & \
-                        (ext[2,0]<=sub['pos'][:,2]+sub['hsml']) & \
-                            (sub['pos'][:,2]<=ext[2,1]-sub['hsml'])
+                        (ext[0,0] <= sub['pos'][:,0]+sub['hsml']) & \
+                            (sub['pos'][:,0]-sub['hsml'] <= ext[0,1]) & \
+                        (ext[1,0] <= sub['pos'][:,1]+sub['hsml']) & \
+                            (sub['pos'][:,1]-sub['hsml'] <= ext[1,1]) & \
+                        (ext[2,0] <= sub['pos'][:,2]+sub['hsml']) & \
+                            (sub['pos'][:,2]-sub['hsml'] <= ext[2,1])
 
         return mask.view(np.ndarray)
 
