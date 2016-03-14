@@ -198,6 +198,7 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
                     l = linking_length,
                     exclude = FoF_exclude,
                     calc = ['mass', 'lowres_mass'],
+                    max_halos = 10,
                     **kwargs
             )
             if shrink_on not in ['all', 'highres']:
@@ -206,6 +207,7 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
                         l = linking_length,
                         dvmax = linking_vel,
                         calc = ['mass', 'com'],
+                        max_halos = 10,
                         **kwargs
                 )
                 # The most massive galaxy does not have to be in a halo with litle low

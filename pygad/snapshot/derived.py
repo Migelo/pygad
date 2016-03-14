@@ -24,6 +24,7 @@ from .. import utils
 from .. import gadget
 from .. import environment
 import re
+import warnings
 import derive_rules
 
 _rules = {}
@@ -65,10 +66,11 @@ def ptypes_and_deps(defi, snap):
         elif hasattr(derive_rules, name):
             func = getattr(derive_rules, name)
             if not hasattr(func,'_deps'):
-                raise RuntimeError('The derived block defining function ' +
-                                   '"%s" has not attribute `_deps` ' % name +
-                                   'defining its dependencies!')
-            for dep in func._deps:
+                warnings.warn('The derived block defining function ' +
+                              '"%s" has not attribute `_deps` ' % name +
+                              'defining its dependencies! -- Assume no ' +
+                              'dependencies.')
+            for dep in getattr(func,'_deps',set()):
                 if dep in root._block_avail:
                     ptypes = [(pt and avail) for pt,avail
                                 in zip(ptypes,root._block_avail[dep])]

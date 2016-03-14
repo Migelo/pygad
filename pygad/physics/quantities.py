@@ -20,8 +20,8 @@ Examples:
 
     TODO: Why is this actually not closer to one?!
 '''
-__all__ = ['alpha_elements', 'G', 'c', 'kB', 'N_A', 'R', 'e', 'm_p', 'm_n', 'm_u',
-           'm_e', 'solar', 'SMH_Moster_2013', 'SMH_Behroozi_2013',
+__all__ = ['alpha_elements', 'G', 'c', 'h', 'kB', 'N_A', 'R', 'e', 'm_p', 'm_n',
+           'm_u', 'm_e', 'solar', 'SMH_Moster_2013', 'SMH_Behroozi_2013',
            'SMH_Kravtsov_2014', 'Reff_van_der_Wel_2014', 'SFR_Elbaz_2007',
            'Jeans_length', 'Jeans_mass']
 
@@ -41,6 +41,8 @@ G = UnitArr(scipy.constants.value('Newtonian constant of gravitation'),
                                 .replace('^','**'))
 c = UnitArr(scipy.constants.value('speed of light in vacuum'),
             scipy.constants.unit('speed of light in vacuum').replace('^','**'))
+h = UnitArr(scipy.constants.value('Planck constant'),
+            scipy.constants.unit('Planck constant').replace('^','**'))
 kB = UnitArr(scipy.constants.value('Boltzmann constant'),
              scipy.constants.unit('Boltzmann constant').replace('^','**'))
 N_A = UnitArr(scipy.constants.value('Avogadro constant'),

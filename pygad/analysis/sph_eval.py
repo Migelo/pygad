@@ -63,10 +63,10 @@ def kernel_weighted(s, qty, units=None, kernel=None, parallel=None):
     '''
     Calculate a kernel weighted SPH quantity for all the gas particles:
              N
-            ___         /  \
+            ___         /  \ 
       y  =  \    x  W  | h  |
        i    /__   j  ij \ i/
-            j+1
+            j=1
 
     Args:
         s (Snap):               The (sub-)snapshot to take the gas (quantity)

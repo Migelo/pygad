@@ -360,7 +360,9 @@ def phase_diagram(s, rho_units='Msol/pc**3', T_units='K',
                                 If not None, a line at this temperature and/or
                                 density is drawn.
         threshold_col (str):    The color of the threshold lines.
-        **kwargs:               Further arguments are passed to scatter_map.
+        **kwargs:               Further arguments are passed to `scatter_map`.
+                                Note the option to color by some other quantity
+                                using `colors` (and `colors_av`)!
 
     Returns:
         fig (Figure):       The figure of the axis plotted on.

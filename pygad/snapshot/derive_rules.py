@@ -13,6 +13,7 @@ from ..units import UnitArr, UnitScalar, UnitError
 import numpy as np
 from .. import physics
 from .. import gadget
+from fractions import Fraction
 from multiprocessing import Pool, cpu_count
 import warnings
 import gc
