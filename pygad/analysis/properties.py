@@ -170,6 +170,15 @@ def reduced_inertia_tensor(s):
     r2 = (s['r']**2).view(np.ndarray)
     m = s['mass'].view(np.ndarray)
     pos = s['pos'].view(np.ndarray)
+
+    # do not divide by zero
+    rzero = (r2 == 0)
+    if np.any(rzero):
+        rzero = ~rzero
+        r2 = r2[rzero]
+        m = m[rzero]
+        pos = pos[rzero]
+
     I_xx = np.sum(m * pos[:,0]**2 / r2)
     I_yy = np.sum(m * pos[:,1]**2 / r2)
     I_zz = np.sum(m * pos[:,2]**2 / r2)
