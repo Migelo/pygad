@@ -94,18 +94,28 @@ Example:
     >>> if abs(eta - 2.4) > 0.2:
     ...     print 'mass loading:', eta
 
+    >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470', load_double_prec=True)
     >>> s.gas['lx'] = x_ray_luminosity(s, lumtable=module_dir+'../snaps/em.dat')
+    load block elements... done.
+    convert to double precision... done.
+    derive block H... done.
+    derive block He... done.
+    derive block metals... done.
+    derive block Z... done.
     load block ne... done.
+    convert to double precision... done.
     load block rho... done.
-    convert block rho to physical units... done.
+    convert to double precision... done.
+    load block mass... done.
+    convert to double precision... done.
     load block u... done.
-    convert block u to physical units... done.
+    convert to double precision... done.
     derive block temp... done.
     >>> s.gas['lx'].units
     Unit("erg s**-1")
-    >>> if abs(np.mean(s.gas['lx']) - '1.85e35 erg/s') > '0.15e35 erg/s':
+    >>> if abs(np.mean(s.gas['lx']) - '1.68e33 erg/s') > '0.05e33 erg/s':
     ...     print np.mean(s.gas['lx'])
-    >>> if abs(s.gas['lx'].sum() - '1.7e41 erg/s') > '0.15e41 erg/s':
+    >>> if abs(s.gas['lx'].sum() - '1.55e39 erg/s') > '0.05e39 erg/s':
     ...     print s.gas['lx'].sum()
 '''
 __all__ = ['mass_weighted_mean', 'center_of_mass', 'reduced_inertia_tensor',
@@ -432,7 +442,8 @@ def los_velocity_dispersion(s, proj=2):
 
     return sigma_v
 
-def x_ray_luminosity(s, lumtable='em.dat', tempbin=None, lx0bin=None, dlxbin=None):
+def x_ray_luminosity(s, lumtable='em.dat', tempbin=None, lx0bin=None, dlxbin=None,
+                     Zref=0.4, z_table=0.001):
     '''
     Calculate X-ray luminosity of gas particles using a prepared emission table
     from XSPEC.
@@ -445,20 +456,23 @@ def x_ray_luminosity(s, lumtable='em.dat', tempbin=None, lx0bin=None, dlxbin=Non
                                 Temperature, Lx0 and dLx bins: Can be passed
                                 instead of lumtable file (e.g. to avoid reading
                                 in the same file multiple times in a loop)
+        Zref (float):           The reference metallicity used for the XSPEC
+                                table.
+        z_table (float):        The redshift assumed for the XSPEC table.
                                 
     Returns:
-        lx (float array)        X-ray luminosities of the gas particles
+        lx (UnitArr):           X-ray luminosities of the gas particles
     '''
-    Zref = 0.4          # metallicity (in solar units) used for XSPEC calculations
-    red = 0.001         # redshift assumed for XSPEC luminosity table
-    Da = UnitArr(4.3*1e3, units='kpc').in_units_of('cm')   #angular diameter
-                        # distance corresponding to redshift 0.001 in cm (would be
-                        # better if directly calculated from redshift)
+    if abs(s.redshift - z_table) > 1e-2:
+        raise RuntimeError('Snapshot\'s redshift (%.3g) does not ' % s.redshift +
+                           'match the table\'s redshift (%.3g)!' % z_table)
 
     # Read in temperature bins and corresponding Lx0(T,Z=Zref) and (dLx/dZ)(T)
     # (both in 1e44 erg/s (per Zsol))
     if tempbin == None:
         tempbin, lx0bin, dlxbin = np.loadtxt(lumtable, usecols=(0,3,5), unpack=True)
+    else:
+        tempbin = np.asarray(tempbin)
 
     tlow = tempbin[0] - 0.5*(tempbin[1]-tempbin[0]) # lower temperature bin limit
     Z = s.gas['Z'] / physics.solar.Z()              # metallicity in solar units
@@ -468,9 +482,11 @@ def x_ray_luminosity(s, lumtable='em.dat', tempbin=None, lx0bin=None, dlxbin=Non
          np.float64(s.gas['rho']).in_units_of('g/cm**3') / \
          (np.float64(s.gas['mass']).in_units_of('g')*mp**2)
     # rescaling factor for precomputed luminosities
-    norm = UnitArr(1e-14,units='cm**5') * em / (4 * np.pi * (Da*(1+red))**2)
+    Da = s.cosmology.angular_diameter_distance(z_table, 'cm')
+    norm = UnitArr(1e-14,units='cm**5') * em / (4 * np.pi * (Da*(1+z_table))**2)
+    norm = norm.view(np.ndarray)
     lx = np.zeros(s.gas['rho'].shape[0])         # array for X-ray luminosity
-    temp = s.gas['temp']*1.3806e-16/1.6022e-9    # gas temperatures in keV
+    kB_T = (s.gas['temp'] * physics.kB).in_units_of('keV').view(np.ndarray)
     indices = np.zeros(s.gas['rho'].shape[0])    # array for fitting tempbin
                                                  # indices for gas particles
     dtemp = np.zeros(s.gas['rho'].shape[0])+1e30 # minimal differences of gas
@@ -479,16 +495,14 @@ def x_ray_luminosity(s, lumtable='em.dat', tempbin=None, lx0bin=None, dlxbin=Non
     # loop over tempbin array to find nearest tempbin for all gas particle
     # temperatures
     for i in xrange(0,tempbin.shape[0]):
-        dtemp[np.where(np.abs(temp-tempbin[i]) < dtemp)] = \
-                np.abs(temp[np.where(np.abs(temp-tempbin[i])<dtemp)] - tempbin[i])
-        indices[np.where(np.abs(temp-tempbin[i]) == dtemp)] = i
+        dtemp[np.where(np.abs(kB_T-tempbin[i]) < dtemp)] = \
+                np.abs(kB_T[np.where(np.abs(kB_T-tempbin[i])<dtemp)] - tempbin[i])
+        indices[np.where(np.abs(kB_T-tempbin[i]) == dtemp)] = i
 
     # calculate X-ray luminosities for all gas particles
     for i in xrange(0,tempbin.shape[0]):
         lx[np.where(indices == i)] = lx0bin[i] + \
                 (Z[np.where(indices==i)] - Zref) * dlxbin[i]
-    lx = lx * norm * 1e44           # luminosities of all gas particles [erg/s]
-    lx[np.where(temp < tlow)] = 0   # particles below threshold temperature do not
+    lx[np.where(kB_T < tlow)] = 0   # particles below threshold temperature do not
                                     # contribute to Lx
-    lx.units = 'erg/s'
-    return lx
+    return UnitArr(lx * norm * 1e44, 'erg/s') # luminosities of all gas particles [erg/s]

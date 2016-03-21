@@ -11,7 +11,6 @@ Example:
     sub-snapshots are created and the concept of derived arrays is briefly
     demonstrated.
 
-    >>> from ..environment import module_dir
     >>> snap_tmp_file = 'test.gdt'
     >>> s = Snap(module_dir+'../snaps/AqA_ICs_C02_200_nm.gdt', physical=False,
     ...          gad_units={'LENGTH':'cMpc/h_0'})
@@ -26,8 +25,8 @@ Example:
     current age of the universe: 12.8697344013 [Myr]
     >>> s.loadable_blocks()
     ['vel', 'mass', 'ID', 'pos']
-    >>> ' '.join(s.deriveable_blocks())
-    'Epot vx jzjc vy vz rcyl angmom momentum E dV vrad Ekin temp vcirc r jcirc y x z'
+    >>> if set(s.deriveable_blocks()) != set('Epot vx jzjc vy vz rcyl momentum angmom E dV vrad Ekin temp vcirc r jcirc y x z'.split()):
+    ...     print ' '.join(s.deriveable_blocks())
     >>> assert set(s.all_blocks()) == set(s.loadable_blocks() + s.deriveable_blocks())
     >>> mwgt_pos = np.tensordot(s['mass'], s['pos'], axes=1).view(UnitArr)
     load block mass... done.
@@ -138,8 +137,8 @@ Example:
     One can test for available blocks and families by the 'in' opertator:
     >>> 'r' in s
     True
-    >>> for a in s.available_blocks(): print a,
-    Epot pot pos jzjc vx vy vz rcyl mass vel angmom momentum E vrad ID Ekin vcirc r jcirc y x z
+    >>> if set(s.available_blocks()) != set('Epot pot pos jzjc vx vy vz rcyl momentum mass vel angmom jcirc E vrad ID Ekin vcirc r y x z'.split()):
+    ...     print ' '.join(s.available_blocks())
     >>> s.delete_blocks(derived=True)
     >>> 'r' in s
     True
@@ -300,6 +299,7 @@ from .. import physics
 from ..units import *
 from .. import utils
 from .. import environment
+from ..environment import module_dir
 import numpy as np
 import warnings
 import ast
@@ -1178,7 +1178,7 @@ class _Snap(object):
                            'FLRWCosmo':physics.FLRWCosmo, 'a2z':physics.a2z,
                            'z2a':physics.z2a,
                            'kernel_weighted':analysis.kernel_weighted,
-                           'len':len}
+                           'len':len, 'module_dir':module_dir}
         )
         import derive_rules
         for n,obj in [(n,getattr(derive_rules,n)) for n in dir(derive_rules)]:
@@ -1238,7 +1238,6 @@ class _SubSnap(_Snap):
                         ATTENTION: you are responsible for this being correct!
 
     Doctests:
-        >>> from ..environment import module_dir
         >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470', physical=False)
         >>> if any(s.gas.parts[1:]): print s.gas.parts
         >>> if any(s.stars.parts[:4]) or any(s.stars.parts[5:]): print s.gas.parts

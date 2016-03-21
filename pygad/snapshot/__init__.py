@@ -7,7 +7,7 @@ gadget module.
 Also doctest other parts of this sub-module:
     >>> import doctest
     >>> doctest.testmod(snapshot)
-    TestResults(failed=0, attempted=120)
+    TestResults(failed=0, attempted=118)
     >>> doctest.testmod(derive_rules)
     TestResults(failed=0, attempted=4)
     >>> doctest.testmod(derived)
