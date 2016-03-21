@@ -510,6 +510,7 @@ class UnitArr(np.ndarray):
                             type(units).__name__)
         units = Unit(units)
         if not copy and units == self.units:
+            self.units = units
             return self
         c = self.copy()
         c.convert_to(units=units, subs=subs)
