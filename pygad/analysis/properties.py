@@ -445,6 +445,9 @@ def x_ray_luminosity(s, lumtable='em.dat', tempbin=None, lx0bin=None, dlxbin=Non
                                 Temperature, Lx0 and dLx bins: Can be passed
                                 instead of lumtable file (e.g. to avoid reading
                                 in the same file multiple times in a loop)
+                                
+    Returns:
+        lx (float array)        X-ray luminosities of the gas particles
     '''
     Zref = 0.4          # metallicity (in solar units) used for XSPEC calculations
     red = 0.001         # redshift assumed for XSPEC luminosity table

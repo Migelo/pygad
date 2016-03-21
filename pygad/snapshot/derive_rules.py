@@ -6,7 +6,7 @@ A function for a derived block shall return the derived block with units as a
 direct dependencies, i.e. the blocks it needs directly to calculate the derived
 one from.
 '''
-__all__ = ['calc_temps', 'age_from_form']
+__all__ = ['calc_temps', 'age_from_form', 'x_ray_lum_as_quantity']
 
 from .. import environment
 from ..units import UnitArr, UnitScalar, UnitError
@@ -179,3 +179,23 @@ def age_from_form(form, subs, cosmic_time=None, cosmo=None, units='Gyr', paralle
     return form
 age_from_form._deps = set(['form_time'])
 
+def x_ray_lum_as_quantity(gas, lumtable='em.dat'):
+    '''
+    Calculate X-ray luminosity of gas particles using a prepared emission table
+    from XSPEC and turn it into a quantity of the snapshot. Needs a lumtable 
+    file with the prepared emission table to work.
+    
+    Args:
+        s (Snap):               The snapshot to use.
+        lumtable (str):         The filename of the XSPEC emission table to use
+                                (default: 'em.dat' in current directory)
+                                
+    Returns:
+        lx (UnitArr)        X-ray luminosities of the gas particles
+    '''
+    from .. import analysis
+    lx = analysis.x_ray_luminosity(gas, lumtable=lumtable)
+    
+    return lx
+x_ray_lum_as_quantity._deps = set(['Z', 'ne', 'H', 'rho', 'mass', 'temp'])
+    
