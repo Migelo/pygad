@@ -7,14 +7,11 @@ Example:
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=True)
     >>> center = UnitArr([33816.9, 34601.1, 32681.0], s['pos'].units)
     load block pos... done.
-    convert block pos to physical units... done.
     >>> radially_binned(s.stars, 'Fe/mass', av='mass', center=center,
     ...                 r_edges=np.linspace(0,15,30))
     load block elements... done.
-    convert block elements to physical units... done.
     derive block Fe... done.
     load block mass... done.
-    convert block mass to physical units... done.
     UnitArr([ 0.00080558,  0.00065764,  0.00053465,  0.00049411,  0.00046332,
               0.00043347,  0.00043268,  0.00042417,  0.00040976,  0.00039034,
               0.00039317,  0.00037786,  0.00036477,  0.00035503,  0.00035541,

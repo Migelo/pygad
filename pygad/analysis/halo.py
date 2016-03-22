@@ -8,13 +8,11 @@ Examples:
     >>> center = shrinking_sphere(s.stars, center=[s.boxsize/2]*3,
     ...                           R=s.boxsize*np.sqrt(3)) # doctest: +ELLIPSIS
     load block pos... done.
-    convert block pos to physical units... done.
     do a shrinking sphere...
       starting values:
         center = ...
         R      = ...
     load block mass... done.
-    convert block mass to physical units... done.
     done.
     >>> if np.linalg.norm( center - UnitArr([33816.9, 34601.1, 32681.0], 'kpc') ) > 1.0:
     ...     print center
@@ -117,7 +115,7 @@ def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
     center0 = UnitQty(center,s['pos'].units,subs=s,dtype=np.float64)
     R = UnitScalar(R,s['pos'].units,subs=s)
 
-    if verbose:
+    if verbose >= environment.VERBOSE_NORMAL:
         print 'do a shrinking sphere...'
         print '  starting values:'
         print '    center = %s' % center0
@@ -160,7 +158,7 @@ def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
     center = center.view(UnitArr)
     center.units = s['pos'].units
 
-    if verbose:
+    if verbose >= environment.VERBOSE_NORMAL:
         print 'done.'
         sys.stdout.flush()
 
@@ -252,7 +250,7 @@ def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True,
     sort = bool(sort)
     min_N = int(min_N)
 
-    if verbose:
+    if verbose >= environment.VERBOSE_NORMAL:
         print 'perform a FoF search on %s particles:' % nice_big_num_str(len(s))
         print '  l      = %.2g %s' % (l, l.units)
         if dvmax != np.inf:
@@ -288,7 +286,7 @@ def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True,
     # do not count the particles with no halo!
     N_FoF = len(set(FoF)) - 1
 
-    if verbose:
+    if verbose >= environment.VERBOSE_NORMAL:
         print 'found %d groups' % N_FoF
         N_list = min(N_FoF, 3)
         if N_list:
@@ -569,7 +567,7 @@ def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
     else:
         N_FoF = len(set(FoF)) - 1
 
-    if verbose:
+    if verbose >= environment.VERBOSE_NORMAL:
         print 'initialize halos from FoF group IDs...'
         sys.stdout.flush()
 
@@ -581,7 +579,7 @@ def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
         if len(halos)==max_halos:
             break
 
-    if verbose:
+    if verbose >= environment.VERBOSE_NORMAL:
         print 'initialized %d halos.' % (len(halos))
         sys.stdout.flush()
 

@@ -78,6 +78,8 @@ __all__ = ['OctNode', 'Octree', 'count_nodes', 'count_leaves', 'count_particles'
 import numpy as np
 from scipy.spatial.distance import cdist
 from ..units import *
+from .. import environment
+import sys
 
 def find_octant(pos, ref):
     '''Index corresponding to an octant of 'pos' with respect to 'ref'.'''
@@ -230,6 +232,11 @@ def Octree(pos_data, idx=None, center=None, world_size=None):
         bz = float( s.boxsize.in_units_of(s['pos'].units, copy=False) )
         return Octree(s['pos'], center=[bz/2.]*3, world_size=bz)
 
+    if environment.verbose >= environment.VERBOSE_TALKY:
+        print 'build a Octree with %s positions' % (
+                utils.nice_big_num_str(len(s)))
+        sys.stdout.flush()
+
     if center is None:
         upper = np.max(pos_data, axis=0)
         lower = np.min(pos_data, axis=0)
@@ -256,6 +263,10 @@ def Octree(pos_data, idx=None, center=None, world_size=None):
         idx = xrange(len(pos_data))
     for i in idx:
         root.insert(i, pos_data)
+
+    if environment.verbose >= environment.VERBOSE_TALKY:
+        print 'done.'
+        sys.stdout.flush()
 
     return root
 

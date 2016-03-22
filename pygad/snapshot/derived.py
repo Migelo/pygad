@@ -115,7 +115,7 @@ def read_derived_rules(config, store_as_default=True, delete_old=False):
     else:
         raise IOError('Config file "%s" does not exist!' % config)
 
-    if environment.verbose:
+    if environment.verbose >= environment.VERBOSE_NORMAL:
         print 'reading config file "%s"' % filename
 
     cfg = SafeConfigParser(allow_no_value=True)

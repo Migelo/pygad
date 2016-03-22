@@ -77,7 +77,11 @@ if hasattr(main, '__file__'):
 else:
     interactive = True
 
-verbose = interactive
+VERBOSE_QUIET       = 0
+VERBOSE_TACITURN    = 1
+VERBOSE_NORMAL      = 2
+VERBOSE_TALKY       = 3
+verbose = VERBOSE_NORMAL if interactive else VERBOSE_QUIET
 allow_parallel_conversion = interactive
 
 class _h5py_dummy(object):

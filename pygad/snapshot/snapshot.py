@@ -97,9 +97,6 @@ Example:
     >>> s.cache_derived = True
 
     >>> s.to_physical_units()
-    convert block pos to physical units... done.
-    convert block rho to physical units... done.
-    convert boxsize to physical units... done.
     >>> sub = s[s['r'] < UnitScalar('30 kpc')]
     derive block r... done.
     >>> sub
@@ -119,7 +116,6 @@ Example:
              33.268371  ,  34.2903246 ], units="kpc", snap="snap_M1196_4x_470")
     >>> s['pos']
     load block pos... done.
-    convert block pos to physical units... done.
     SimArr([[ 48074.32421875,  49335.85546875,  46081.39453125],
             [ 48074.0234375 ,  49335.78515625,  46080.9921875 ],
             [ 48073.97265625,  49335.9453125 ,  46081.22265625],
@@ -148,7 +144,6 @@ Example:
     New custom blocks can be set easily (though have to fit the (sub-)snapshot):
     >>> sub = s.baryons[s.baryons['Z']>1e-3].stars
     load block elements... done.
-    convert block elements to physical units... done.
     derive block H... done.
     derive block He... done.
     derive block metals... done.
@@ -163,7 +158,6 @@ Example:
     load block vel... done.
     load block ID... done.
     load block mass... done.
-    convert block mass to physical units... done.
     derive block r... done.
     writing block POS  (dtype=float32, units=[ckpc h_0**-1])... done.
     writing block VEL  (dtype=float32, units=[s**-1 km])... done.
@@ -178,7 +172,6 @@ Example:
     >>> assert sub.parts == sub_copy.parts
     >>> assert np.max(np.abs((sub['pos'] - sub_copy['pos']) / sub['pos'])) < 1e-6
     load block pos... done.
-    convert block pos to physical units... done.
     >>> assert np.max(np.abs((sub['r'] - sub_copy['r']) / sub['r'])) < 1e-6
     >>> assert np.abs((sub.boxsize - sub_copy.boxsize) / sub.boxsize) < 1e-6
     >>> import os
@@ -418,6 +411,9 @@ def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
         s._load_name[new_name] = name
         s._block_avail[new_name] = s._block_avail[name]
         if name != new_name:
+            if environment.verbose >= environment.VERBOSE_TALKY \
+                    and new_name.lower() != name.strip().lower():
+                print 'renamed block "%s" to %s' % (name, new_name)
             del s._block_avail[name]    # blocks should not appear twice
     # now the mass block is named 'mass' for all cases (HDF5 or other)
     s._block_avail['mass'] = [n>0 for n in s._N_part]
@@ -869,8 +865,11 @@ class _Snap(object):
         if not name in root._load_name:
             raise ValueError("There is no block '%s' to load!" % name)
 
-        if environment.verbose: print 'load block %s...' % name,
-        sys.stdout.flush()
+        if environment.verbose >= environment.VERBOSE_NORMAL:
+            print 'load block %s%s...' % ('"%s" as '%root._load_name[name]
+                    if environment.verbose >= environment.VERBOSE_TALKY else '',
+                    name),
+            sys.stdout.flush()
 
         block_name = root._load_name[name]
         if len(root._file_handlers) == 1:
@@ -904,16 +903,19 @@ class _Snap(object):
             block.units = units
         block = block.view(SimArr)
         block._snap = weakref.ref(self)
-        if environment.verbose: print 'done.'
-        sys.stdout.flush()
+        if environment.verbose >= environment.VERBOSE_NORMAL:
+            print 'done.'
+            sys.stdout.flush()
 
         if self.load_double_prec and block.dtype.kind == 'f' \
                 and block.dtype != 'float64':
-            if environment.verbose: print 'convert to double precision...',
-            sys.stdout.flush()
+            if environment.verbose >= environment.VERBOSE_TALKY:
+                print 'convert to double precision...',
+                sys.stdout.flush()
             block = block.astype(np.float64)
-            if environment.verbose: print 'done.'
-            sys.stdout.flush()
+            if environment.verbose >= environment.VERBOSE_TALKY:
+                print 'done.'
+                sys.stdout.flush()
 
         if root._phys_units_requested:
             self._convert_block_to_physical_units(block, name)
@@ -923,12 +925,14 @@ class _Snap(object):
 
         for trans in root._trans_at_load:
             if name in trans._change:
-                if environment.verbose: print 'apply stored %s to block %s...' % (
+                if environment.verbose >= environment.VERBOSE_NORMAL:
+                    print 'apply stored %s to block %s...' % (
                         trans.__class__.__name__, name),
-                sys.stdout.flush()
+                    sys.stdout.flush()
                 trans.apply_to_block(name,host)
-                if environment.verbose: print 'done.'
-                sys.stdout.flush()
+                if environment.verbose >= environment.VERBOSE_NORMAL:
+                    print 'done.'
+                    sys.stdout.flush()
 
         # if there are still dependent blocks, add them as dependencies and
         # invalidate them
@@ -984,15 +988,18 @@ class _Snap(object):
                     # ... only calculate others, but do not store them
                     dep_blocks[dep] = host._host_derive_block(dep, False)
 
-        if environment.verbose: print 'derive block %s...' % name,
-        sys.stdout.flush()
+        if environment.verbose >= environment.VERBOSE_NORMAL:
+            print 'derive block %s%s...' % (name, ' := "%s"'%rule \
+                    if environment.verbose >= environment.VERBOSE_TALKY else ''),
+            sys.stdout.flush()
         block = host.get(rule, namespace=None if self._root._cache_derived else dep_blocks)
         if self._root._cache_derived:
             for dep in deps:
                 host[dep].dependencies.add(name)
             host._blocks[name] = block
-        if environment.verbose: print 'done.'
-        sys.stdout.flush()
+        if environment.verbose >= environment.VERBOSE_NORMAL:
+            print 'done.'
+            sys.stdout.flush()
 
         self._root._cache_derived = orig_caching_state
 
@@ -1067,12 +1074,15 @@ class _Snap(object):
         phys_units = block.units.free_of_factors(['a','h_0'])
 
         if phys_units != block.units:
-            if environment.verbose:
+            if environment.verbose >= environment.VERBOSE_TALKY or (
+                    environment.verbose >= environment.VERBOSE_NORMAL
+                    and name=='age'):
                 print 'convert block %s to physical units...' % name,
-            sys.stdout.flush()
+                sys.stdout.flush()
             block.convert_to(phys_units, subs=self)
-            if environment.verbose: print 'done.'
-            sys.stdout.flush()
+            if environment.verbose >= environment.VERBOSE_TALKY:
+                print 'done.'
+                sys.stdout.flush()
 
     def to_physical_units(self, on_load=True):
         '''
@@ -1105,12 +1115,14 @@ class _Snap(object):
             self._convert_block_to_physical_units(block, name)
 
         # convert the boxsize
-        if environment.verbose: print 'convert boxsize to physical units...',
-        sys.stdout.flush()
+        if environment.verbose >= environment.VERBOSE_TALKY:
+            print 'convert boxsize to physical units...',
+            sys.stdout.flush()
         root._boxsize.convert_to(
                 root._boxsize.units.free_of_factors(['a','h_0']), subs=root)
-        if environment.verbose: print 'done.'
-        sys.stdout.flush()
+        if environment.verbose >= environment.VERBOSE_TALKY:
+            print 'done.'
+            sys.stdout.flush()
 
     def load_all_blocks(self):
         '''Load all blocks from file. (No block deriving, though.)'''

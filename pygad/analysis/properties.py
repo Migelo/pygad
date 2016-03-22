@@ -15,9 +15,6 @@ Example:
     >>> Translation([-34792.2, -35584.8, -33617.9]).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_320"... done.
     >>> s.to_physical_units()
-    convert block pos to physical units... done.
-    convert block mass to physical units... done.
-    convert boxsize to physical units... done.
     >>> sub = s[s['r'] < '20 kpc']
     derive block r... done.
     >>> orientate_at(sub, 'L', total=True)
@@ -56,19 +53,11 @@ Example:
     load block form_time... done.
     derive block age... done.
     load block elements... done.
-    convert block elements to physical units... done.
     derive block H... done.
     derive block He... done.
     derive block metals... done.
     derive block Z... done.
-    derive block mag_v... interpolate SSP tables for qty "Vmag"...
-    read tables...
-    table limits:
-      age [yr]:    1.00e+05 - 2.00e+10
-      metallicity: 1.00e-04 - 5.00e-02
-    interpolate in age...
-    interpolate in metallicity...
-    done.
+    derive block mag_v... done.
     derive block lum_v... done.
     >>> if abs(eff_radius(sub, 'V', proj=2) - '10.7 kpc') > '0.2 kpc':
     ...     print eff_radius(sub, 'V', proj=2)
@@ -97,19 +86,14 @@ Example:
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470', load_double_prec=True)
     >>> s.gas['lx'] = x_ray_luminosity(s, lumtable=module_dir+'../snaps/em.dat')
     load block elements... done.
-    convert to double precision... done.
     derive block H... done.
     derive block He... done.
     derive block metals... done.
     derive block Z... done.
     load block ne... done.
-    convert to double precision... done.
     load block rho... done.
-    convert to double precision... done.
     load block mass... done.
-    convert to double precision... done.
     load block u... done.
-    convert to double precision... done.
     derive block temp... done.
     >>> s.gas['lx'].units
     Unit("erg s**-1")

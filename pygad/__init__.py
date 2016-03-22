@@ -89,7 +89,7 @@ if environment.interactive:
 #       a string holding the value of above's function call at the moment of
 #       installation via setup.py
 version = environment.git_descr( environment.module_dir, PEP440=True )
-if environment.verbose:
+if environment.verbose >= environment.VERBOSE_TACITURN:
     print 'imported pygad', version
 
 # make some chosen elements directly visible

@@ -10,22 +10,18 @@ Example:
     load block vel... done.
     >>> orientate_at(s[s['r'] < '10 kpc'].baryons, 'L', total=True)
     load block pos... done.
-    convert block pos to physical units... done.
     apply stored Translation to block pos... done.
     derive block r... done.
     load block mass... done.
-    convert block mass to physical units... done.
     derive block momentum... done.
     derive block angmom... done.
     apply Rotation to "vel" of "snap_M1196_4x_470"... done.
     apply Rotation to "pos" of "snap_M1196_4x_470"... done.
     >>> sub = s[BoxMask('120 kpc', sph_overlap=True)]
     load block hsml... done.
-    convert block hsml to physical units... done.
     >>> m_b, px2 = map_qty(sub.baryons, '120 kpc', 'mass', Npx=256)
     create a 256 x 256 map (120 x 120 [kpc])...
     load block rho... done.
-    convert block rho to physical units... done.
     derive block dV... done.
     create a 256 x 256 SPH-grid (120 x 120 [kpc])...
     done with SPH grid
@@ -116,7 +112,7 @@ def map_qty(s, extent, qty, av=None, Npx=256, xaxis=0, yaxis=1, softening=None,
         #softening = UnitArr([0.2, 0.45, 2.52, 20.0, 0.2, 0.2],'ckpc / h_0')
         softening = UnitQty(softening, s['pos'].units, subs=s)
 
-    if environment.verbose:
+    if environment.verbose >= environment.VERBOSE_NORMAL:
         print 'create a %d x %d map (%.4g x %.4g %s)...' % (tuple(Npx) + \
                 (extent[0,1]-extent[0,0],
                  extent[1,1]-extent[1,0], extent.units))

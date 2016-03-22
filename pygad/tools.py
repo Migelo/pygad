@@ -317,17 +317,17 @@ def fill_star_from_info(snap, filename):
         filename (str): The path to the star_form.ascii file.
     '''
     stars = snap.root.stars
-    if environment.verbose:
+    if environment.verbose >= environment.VERBOSE_TACITURN:
         print 'reading the star formation information from %s...' % filename
     SFI = np.loadtxt(filename, skiprows=1)
-    if environment.verbose:
-        print 'testing if the IDs math the (root) snapshot...'
+    if environment.verbose >= environment.VERBOSE_TALKY:
+        print 'testing if the IDs match the (root) snapshot...'
     SFI_IDs = SFI[:,0].astype(int)
     if set(stars['ID']) != set(SFI_IDs) or len(SFI_IDs) != len(stars):
         raise RuntimeError('Stellar IDs do not exactly match those from ' + \
                            '"%s"!' % filename)
 
-    if environment.verbose:
+    if environment.verbose >= environment.VERBOSE_TALKY:
         print 'adding the new blocks "rform" and "rR200form"...'
     sfiididx = np.argsort( SFI_IDs )
     sididx = np.argsort( stars['ID'] )
@@ -369,8 +369,8 @@ def read_traced_gas(filename, types=None):
                                 ]
                             where n is the number of full recylces.
     '''
-    if environment.verbose:
-        print 'read file...'
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'read gas trace file "%s"...' % filename
         sys.stdout.flush()
     import cPickle as pickle
     with file(filename, 'rb') as f:
@@ -383,7 +383,7 @@ def read_traced_gas(filename, types=None):
         if isinstance(types,int):
             types = [types]
         types = set(types)
-    if environment.verbose:
+    if environment.verbose >= environment.VERBOSE_TALKY:
         print 'restructure by type...'
         sys.stdout.flush()
     # structure the data into sub-lists
