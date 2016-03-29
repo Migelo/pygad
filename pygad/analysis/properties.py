@@ -399,10 +399,11 @@ def shell_flow_rates(s, Rlim, direction='both', units='Msol/yr'):
     flow.convert_to(units)
     return flow
 
-def flow_rates(s, R, dt='3 Myr'):
+def flow_rates(s, R, qty='mass', dt='3 Myr'):
     #TODO: extend to discs!
     '''
-    Estimate in- and outflow rates through a given radius.
+    Estimate in- and outflow rates of a given quantity (default: mass) 
+    through a given radius.
     
     The estimation is done by propagating the positions with constant current
     velocities, i.e. pos_new = pos_old + vel*dt. Then counting the mass that
@@ -410,6 +411,8 @@ def flow_rates(s, R, dt='3 Myr'):
 
     Args:
         s (Snap):               The (sub-)snapshot to use.
+        qty (str):              The quantity to calculate the flow-rates of 
+                                (default: 'mass')
         R (UnitScalar):         The radius of the shell through which the flow is
                                 estimated.
         dt (UnitScalar):        The time used for the linear extrapolation of the
@@ -427,8 +430,8 @@ def flow_rates(s, R, dt='3 Myr'):
     dt.convert_to(s['r'].units/s['vel'].units,subs=s)   # avoid conversions of
                                                         # entire arrays
     rpred = s['r'] + s['vrad']*dt
-    of_mass = s['mass'][(s['r'] < R) & (rpred >= R)]
-    if_mass = s['mass'][(s['r'] >= R) & (rpred < R)]
+    of_mass = s[qty][(s['r'] < R) & (rpred >= R)]
+    if_mass = s[qty][(s['r'] >= R) & (rpred < R)]
 
     dt.convert_to('yr',subs=s)  # to more intuitive units again
     ofr = np.sum(of_mass) / dt
