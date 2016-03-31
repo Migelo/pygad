@@ -530,7 +530,7 @@ def define_from_cfg(config, allow_redef=False, warn=True, undefine_old=True):
     else:
         raise IOError('Config file "%s" does not exist!' % config)
 
-    if environment.verbose:
+    if environment.verbose >= environment.VERBOSE_NORMAL:
         print 'reading units definitions from "%s"' % filename
 
     cfg = SafeConfigParser(allow_no_value=True)

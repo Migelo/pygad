@@ -10,17 +10,13 @@ Testing:
     >>> extent = UnitArr([[-0.5,0.7],[-1.0,2.0],[-2.0,2.0]], 'Mpc')
     >>> sub = s[BoxMask(extent, sph_overlap=True)]
     load block pos... done.
-    convert block pos to physical units... done.
     apply stored Translation to block pos... done.
     load block hsml... done.
-    convert block hsml to physical units... done.
     >>> Npx = np.array([ 30,  75, 100])
     >>> map2D, res = SPH_to_2Dgrid(sub.gas, extent=extent[:2], qty='rho', Npx=Npx[:2])
     create a 30 x 75 SPH-grid (1200 x 3000 [kpc])...
     load block rho... done.
-    convert block rho to physical units... done.
     load block mass... done.
-    convert block mass to physical units... done.
     derive block dV... done.
     done with SPH grid
 
@@ -120,7 +116,7 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml'):
                              'smallest to largest resolution (ratio %.2g)!' % (
                                      res.max()/res.min())
 
-    if environment.verbose:
+    if environment.verbose >= environment.VERBOSE_NORMAL:
         print 'create a %d x %d x %d' % tuple(Npx),
         print 'SPH-grid (%.4g x %.4g x %.4g' % tuple(extent[:,1]-extent[:,0]),
         print '%s)...' % extent.units
@@ -185,7 +181,7 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml'):
     )
     grid = UnitArr(grid.reshape(tuple(Npx)), qty_units)
 
-    if environment.verbose:
+    if environment.verbose >= environment.VERBOSE_NORMAL:
         print 'done with SPH grid'
 
     return grid, res
@@ -243,7 +239,7 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
                              'smallest to largest resolution (ratio %.2g)' % (
                                      res.max()/res.min())
 
-    if environment.verbose:
+    if environment.verbose >= environment.VERBOSE_NORMAL:
         print 'create a %d x %d' % tuple(Npx),
         print 'SPH-grid (%.4g x %.4g' % tuple(extent[:,1]-extent[:,0]),
         print '%s)...' % extent.units
@@ -305,7 +301,7 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
     )
     grid = UnitArr(grid.reshape(tuple(Npx)), qty_units)
 
-    if environment.verbose:
+    if environment.verbose >= environment.VERBOSE_NORMAL:
         print 'done with SPH grid'
 
     return grid, res

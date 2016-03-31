@@ -10,10 +10,10 @@ Examples:
             0.1679,  0.227 ,  0.2277,  0.2713,  0.2879,  0.2926,  0.2845,
             0.275 ])
     >>> for Z in [0.001, 0.01, 0.03]:
-    ...     print inter_bc_qty('1.23 Myr', Z, qty='Mbol', verbose=False),
-    ...     print inter_bc_qty('15.2 Myr', Z, qty='Mbol', verbose=False),
-    ...     print inter_bc_qty('0.8 Gyr', Z, qty='Mbol', verbose=False),
-    ...     print inter_bc_qty('2.5 Gyr', Z, qty='Mbol', verbose=False)
+    ...     print inter_bc_qty('1.23 Myr', Z, qty='Mbol'),
+    ...     print inter_bc_qty('15.2 Myr', Z, qty='Mbol'),
+    ...     print inter_bc_qty('0.8 Gyr', Z, qty='Mbol'),
+    ...     print inter_bc_qty('2.5 Gyr', Z, qty='Mbol')
     -2.620117e+00 -5.622717e-01 3.82323198781 4.69156838617
     -2.669872e+00 -4.638262e-01 3.93319109813 4.86059389313
     -2.725156e+00 -3.544422e-01 4.05536788737 5.04840001196
@@ -25,26 +25,16 @@ Examples:
     load block form_time... done.
     derive block age... done.
     load block elements... done.
-    convert block elements to physical units... done.
     derive block H... done.
     derive block He... done.
     derive block metals... done.
     derive block Z... done.
-    interpolate SSP tables for qty "log Nly"...
-    read tables...
-    table limits:
-      age [yr]:    1.00e+05 - 2.00e+10
-      metallicity: 1.00e-04 - 5.00e-02
-    interpolate in age...
-    interpolate in metallicity...
     UnitArr([ 40.88760733,  40.87670045,  41.10933622, ...,  41.1284523 ,
               41.21504043,  41.10660553])
-    >>> inter_bc_qty(s.stars['age'], s.stars['Z'], qty='Vmag', IMF='Chabrier',
-    ...              verbose=False)
+    >>> inter_bc_qty(s.stars['age'], s.stars['Z'], qty='Vmag', IMF='Chabrier')
     UnitArr([ 5.38572149,  5.38222705,  5.95851407, ...,  6.24853992,
               5.89012057,  6.2964592 ])
-    >>> inter_bc_qty(s.stars['age'], s.stars['Z'], qty='Vmag', IMF='Salpeter',
-    ...              verbose=False)
+    >>> inter_bc_qty(s.stars['age'], s.stars['Z'], qty='Vmag', IMF='Salpeter')
     UnitArr([ 5.73452262,  5.72079989,  6.27333274, ...,  6.56081867,
               6.19076843,  6.60469198])
 '''
@@ -53,6 +43,8 @@ __all__ = ['load_table', 'inter_bc_qty']
 import numpy as np
 from .. import gadget
 from ..units import UnitQty, UnitScalar
+from .. import environment
+import sys
 
 metallicity_name = {
         1e-4: 'm22',
@@ -196,7 +188,7 @@ def load_table(qty, metal_code, folder=None, base=None, ending=None, IMF=None):
 
     return tbl[:,0], tbl[:,columns.index(qty)]
 
-def inter_bc_qty(age, Z, qty, units=None, IMF=None, verbose=None):
+def inter_bc_qty(age, Z, qty, units=None, IMF=None):
     '''
     Interpolate a quantity for given age and metallicity from the SSP model
     tables.
@@ -210,8 +202,6 @@ def inter_bc_qty(age, Z, qty, units=None, IMF=None, verbose=None):
                         given (undefined behaviour otherwise). By default the one
                         given in `gadget.cfg` is used. Values that are not in
                         `table_base_name.keys()` are invalid.
-        verbose (bool): Whether to run in verbose mode. By default use the value
-                        of `environment.verbose`.
 
     Returns:
         Q (UnitArr):    The interpolated quantity.
@@ -222,9 +212,7 @@ def inter_bc_qty(age, Z, qty, units=None, IMF=None, verbose=None):
         ValueError:         If the length of the ages and the metallicity Z do not
                             fit eachother.
     '''
-    if verbose is None:
-        from .. import environment
-        verbose = environment.verbose
+    if environment.verbose >= environment.VERBOSE_TALKY:
         print 'interpolate SSP tables for qty "%s"...' % qty
 
     age = np.log10(UnitQty(age, 'yr')).view(np.ndarray)
@@ -242,23 +230,22 @@ def inter_bc_qty(age, Z, qty, units=None, IMF=None, verbose=None):
         raise ValueError('The array of ages and metallicities need to have ' + \
                          'the length!')
 
-    if verbose:
-        import sys
-        print 'read tables...'
+    if environment.verbose >= environment.VERBOSE_TALKY:
+        print 'read SSP tables...'
         sys.stdout.flush()
     # load all tables (just a few MB)
     tbls = {}
     for mtl in metallicity_name.keys():
         age_bins, tbls[mtl] = load_table(qty, metallicity_name[mtl], IMF=IMF)
 
-    if verbose:
+    if environment.verbose >= environment.VERBOSE_TALKY:
         print 'table limits:'
         print '  age [yr]:    %.2e - %.2e' % (10**age_bins.min(),
                                               10**age_bins.max())
         print '  metallicity: %.2e - %.2e' % (min(metallicity_name.keys()),
                                               max(metallicity_name.keys()))
 
-    if verbose:
+    if environment.verbose >= environment.VERBOSE_TALKY:
         print 'interpolate in age...'
         sys.stdout.flush()
     # interpolate in age in all metallicities simultaneously (creating blocks for
@@ -283,8 +270,7 @@ def inter_bc_qty(age, Z, qty, units=None, IMF=None, verbose=None):
             tbl = tbls[mtl]
             Q_mtl[mtl][age_mask] = a_age*tbl[n[1]] + (1.0-a_age)*tbl[n[0]]
 
-    if verbose:
-        import sys
+    if environment.verbose >= environment.VERBOSE_TALKY:
         print 'interpolate in metallicity...'
         sys.stdout.flush()
     # now interpolate in metallicity:

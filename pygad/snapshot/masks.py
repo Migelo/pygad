@@ -37,11 +37,6 @@ Examples:
     >>> if abs( no_gas_max_r.in_units_of('kpc',subs=s)  -  60.0 ) > 0.01:
     ...     print no_gas_max_r
     >>> s.to_physical_units()
-    convert block hsml to physical units... done.
-    convert block pos to physical units... done.
-    convert block mass to physical units... done.
-    convert block r to physical units... done.
-    convert boxsize to physical units... done.
     >>> sub = s[BoxMask('120 kpc',sph_overlap=False)]
     >>> sub # doctest:+ELLIPSIS
     <Snap "snap_M1196_4x_470":box([[-60,60],[-60,60],[-60,60]] [kpc],strict); N=218,98...; z=0.000>

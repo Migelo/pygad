@@ -8,20 +8,15 @@ Examples:
     >>> from ..transformation import Translation
     >>> Translation([-34792.2, -35584.8, -33617.9]).apply(s)
     >>> s.to_physical_units()
-    convert boxsize to physical units... done.
 
     >>> if (abs(SPH_qty_at(s.gas, 'rho', [0,0,0]) - '1.74e5 Msol/kpc**3')
     ...             > '2e3 Msol/kpc**3'):
     ...     print SPH_qty_at(s.gas, 'rho', [0,0,0])
     load block pos... done.
-    convert block pos to physical units... done.
     apply stored Translation to block pos... done.
     load block rho... done.
-    convert block rho to physical units... done.
     load block hsml... done.
-    convert block hsml to physical units... done.
     load block mass... done.
-    convert block mass to physical units... done.
     derive block dV... done.
     >>> if (abs(SPH_qty_at(s.gas, 'rho', s.gas['pos'][331798]) -
     ...         '5.33e4 Msol/kpc**3') > '2e2 Msol/kpc**3'):
@@ -38,7 +33,6 @@ Examples:
 
     >>> v1 = SPH_qty_at(s, 'elements', s.gas['pos'][:200:10])
     load block elements... done.
-    convert block elements to physical units... done.
     >>> v2 = SPH_qty_at(s, 'elements', s.gas['pos'][:200])[::10]
     >>> if np.max(np.abs(v1-v2)/v1) > 1e-6:
     ...     print v1

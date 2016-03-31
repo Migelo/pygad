@@ -106,6 +106,8 @@ import sys
 import numpy as np
 import warnings
 import weakref
+from .. import environment
+from .. import utils
 
 cpygad.new_octree_from_pos.restype = c_void_p
 cpygad.new_octree_from_pos.argtypes = [c_size_t, c_void_p]
@@ -171,6 +173,10 @@ class cOctree(object):
         return cOctree.MAX_TREE_LEVEL
 
     def __init__(self, pos, H=None):
+        if environment.verbose >= environment.VERBOSE_TALKY:
+            print 'build a cOctree with %s positions' % (
+                    utils.nice_big_num_str(len(s)))
+            sys.stdout.flush()
         pos = np.asarray(pos, dtype=np.float64)
         if pos.shape[1:] != (3,):
             raise ValueError('Positions have to have shape (N,3)!')
@@ -195,6 +201,10 @@ class cOctree(object):
 
         if H is not None:
             self.update_max_H(H)
+
+        if environment.verbose >= environment.VERBOSE_TALKY:
+            print 'done.'
+            sys.stdout.flush()
 
     @property
     def parent(self):

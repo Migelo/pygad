@@ -206,12 +206,12 @@ class Transformation(object):
                 # might not yet be sliced, but loaded into its host
                 if name not in snap.get_host_subsnap(name)._blocks:
                     continue
-            if environment.verbose:
+            if environment.verbose >= environment.VERBOSE_NORMAL:
                 print 'apply %s to "%s" of %s...' % (self.__class__.__name__,
                                                      name, snap.descriptor),
                 sys.stdout.flush()
             self._change[name](name,snap)
-            if environment.verbose:
+            if environment.verbose >= environment.VERBOSE_NORMAL:
                 print 'done.'
                 sys.stdout.flush()
             done.add(name)

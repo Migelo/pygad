@@ -337,9 +337,10 @@ def write(snap, filename, blocks=None, gformat=2, endianness='native',
                 if hdf5name in config.std_name_to_HDF5:
                     hdf5name = config.std_name_to_HDF5[hdf5name]
 
-                if environment.verbose: print 'writing block', hdf5name,
-                if environment.verbose: print '(dtype=%s, units=%s)...' % (
-                        info[name].dtype, units),
+                if environment.verbose >= environment.VERBOSE_NORMAL:
+                    print 'writing block', hdf5name,
+                    print '(dtype=%s, units=%s)...' % (info[name].dtype, units),
+                    sys.stdout.flush()
                 for pt in xrange(6):
                     if not snap._root._block_avail[name][pt]:
                         continue
@@ -349,7 +350,9 @@ def write(snap, filename, blocks=None, gformat=2, endianness='native',
                             d[pt].shape,
                             d[pt].dtype)
                     gf_block[...] = d[pt]
-                if environment.verbose: print 'done.'
+                if environment.verbose >= environment.VERBOSE_NORMAL:
+                    print 'done.'
+                    sys.stdout.flush()
     else:
         with open(filename, 'wb') as gfile:
             write_header(gfile, header, gformat, endianness)
@@ -358,12 +361,15 @@ def write(snap, filename, blocks=None, gformat=2, endianness='native',
                 info[name].start_pos = gfile.tell()+4
                 if gformat == 2:
                     info[name].start_pos += 4+8+4
-                if environment.verbose: print 'writing block', block_name,
-                if environment.verbose: print '(dtype=%s, units=%s)...' % (
-                        info[name].dtype, data[name].units),
+                if environment.verbose >= environment.VERBOSE_NORMAL:
+                    print 'writing block', block_name,
+                    print '(dtype=%s, units=%s)...' % (info[name].dtype,
+                            data[name].units),
+                    sys.stdout.flush()
                 sys.stdout.flush()
                 write_block(gfile, block_name, data[name], gformat, endianness)
-                if environment.verbose: print 'done.'
-                sys.stdout.flush()
+                if environment.verbose >= environment.VERBOSE_NORMAL:
+                    print 'done.'
+                    sys.stdout.flush()
             info = sorted(info.values(), key=lambda x: x.start_pos)
             write_info(gfile, info, gformat, endianness)
