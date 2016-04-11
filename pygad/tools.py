@@ -302,7 +302,7 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
     else:
         return s, halo, gal
 
-def fill_star_from_info(snap, filename):
+def fill_star_from_info(snap, data):
     '''
     Read the formation radius rform and rform/R200(aform) from the star_form.ascii
     file and create the new blocks "rform" and "rR200form".
@@ -314,18 +314,29 @@ def fill_star_from_info(snap, filename):
     Args:
         snap (Snap):    The snapshot to fill with the data (has to be the one at
                         z=0 of the simulation used to create the star_form.ascii).
-        filename (str): The path to the star_form.ascii file.
+        data (str, np.ndarray): 
+                        The path to the star_form.ascii file or the already
+                        read-in data.
     '''
     stars = snap.root.stars
-    if environment.verbose >= environment.VERBOSE_TACITURN:
-        print 'reading the star formation information from %s...' % filename
-    SFI = np.loadtxt(filename, skiprows=1)
+
+    if isinstance(data, str):
+        filename = data
+        if environment.verbose >= environment.VERBOSE_TACITURN:
+            print 'reading the star formation information from %s...' % filename
+        SFI = np.loadtxt(filename, skiprows=1)
+    else:
+        filename = '<data given>'
+        SFI = data
+
     if environment.verbose >= environment.VERBOSE_TALKY:
         print 'testing if the IDs match the (root) snapshot...'
     SFI_IDs = SFI[:,0].astype(int)
     if set(stars['ID']) != set(SFI_IDs) or len(SFI_IDs) != len(stars):
         raise RuntimeError('Stellar IDs do not exactly match those from ' + \
-                           '"%s"!' % filename)
+                           '"%s" (mismatch: %d/%d)!' % (filename,
+                               len(set(stars['ID'])-set(SFI_IDs)),
+                               len(set(SFI_IDs)-set(stars['ID']))))
 
     if environment.verbose >= environment.VERBOSE_TALKY:
         print 'adding the new blocks "rform" and "rR200form"...'
@@ -343,11 +354,20 @@ def read_traced_gas(filename, types=None):
     Read the gas tracing statistics from a gtracegas output.
 
     The data also gets tagged by type:
-        1:  gas in disc
-        2:  gas out of disc
-        3:  stars that formed in disc
-        4:  traced gas, that formed stars outside disc
-    and the number of full cycles (leaving disc + re-entering).
+        1:  gas in region
+        2:  gas out of region
+        3:  stars that formed in region
+        4:  traced gas, that formed stars outside region
+    and the number of full cycles (leaving region + re-entering).
+
+    The following is tracked at the different events:
+        (re-)entering the region:       [a, Z, metals, j_z, T]
+        the leave the region:           [a, Z, metals, j_z, T, vel]
+        turning into a star:            [a, Z, metals, j_z]
+        being out of the region, the following is updated:
+                                        [(a, r_max), (a, z_max)]
+    where a is the scale factor of when the particle reached the maximum radius or
+    height, respectively.
 
     Args:
         filename (str):     The filename to read from.
@@ -392,9 +412,9 @@ def read_traced_gas(filename, types=None):
     # star form:    4 elements
     # being out:    4 elements
     # -> full recycle:  6+4+5 = 15
-    # -> in disc:       5 + n*15                =  5 + n*15
+    # -> in region:     5 + n*15                =  5 + n*15
     #    out:           5 + n*15 + 6 + 4        = 15 + n*15
-    #    SF in disc:    5 + n*15 + 4            =  9 + n*15
+    #    SF in region:  5 + n*15 + 4            =  9 + n*15
     #    SF outside:    5 + n*15 + 6 + 4 + 4    = 19 + n*15
     t_to_type = {5:1, 15:2, 9:3, 19:4}
     for ID in tr.keys():
@@ -412,13 +432,13 @@ def read_traced_gas(filename, types=None):
             new += [re[:6]]
             new += [re[6:10]]
             new += [re[10:]]
-        if t == 5:      # gas in disc (with possible recycles)
+        if t == 5:      # gas in region (with possible recycles)
             pass
-        elif t == 9:    # turned in the disc into a star
+        elif t == 9:    # turned in the region into a star
             new += [e[-4:]]
-        elif t == 15:   # left disc, but is still a gas particle
+        elif t == 15:   # left region, but is still a gas particle
             new += [e[-10:-4],e[-4:]]
-        elif t == 19:   # left disc and turned into a star
+        elif t == 19:   # left region and turned into a star
             new += [e[-14:-8],e[-8:-4],e[-4]]
         else:
             raise RuntimeError('Structure in "%s" ' % filename + \
