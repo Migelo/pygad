@@ -108,9 +108,9 @@ def read_derived_rules(config, store_as_default=True, delete_old=False):
             raise ValueError('Section "%s" must have the ' % section +
                              'following entries: ' + str(entries))
 
-    from os.path import exists
+    from os.path import exists, expanduser
     for filename in config:
-        if exists(filename):
+        if exists(expanduser(filename)):
             break
     else:
         raise IOError('Config file "%s" does not exist!' % config)

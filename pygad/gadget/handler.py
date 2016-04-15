@@ -28,7 +28,7 @@ class FileReader(object):
                             given dtype of the given family is unknown.
     '''
     def __init__(self, filename):
-        if not os.path.exists(filename):
+        if not os.path.exists(os.path.expanduser(filename)):
             raise IOError('"%s" does not exist!' % filename)
         self._filename = filename
         if h5py.is_hdf5(self._filename):
@@ -39,7 +39,7 @@ class FileReader(object):
                 self._info = get_block_info(gfile, self._format,
                                             self._endianness, self._header)
         else:
-            with open(self._filename, 'rb') as gfile:
+            with open(os.path.expanduser(self._filename), 'rb') as gfile:
                 self._format, self._endianness = \
                             get_format_and_endianness(gfile)
                 self._header = read_header(gfile, self._format,
@@ -112,7 +112,8 @@ class FileReader(object):
                         data[off:off+ds.shape[0]] = ds[:]   # actually load data
                         off += len(ds)
         else:
-            with open(self._filename, 'r') as gfile:
+            filename = os.path.expanduser(self._filename)
+            with open(filename, 'r') as gfile:
                 gfile.seek(block.start_pos)
                 data = np.fromfile(gfile,
                                    dtype=self._endianness+block.type_descr,
@@ -236,7 +237,7 @@ def write(snap, filename, blocks=None, gformat=2, endianness='native',
                             stored in the snapshot.
         overwrite (bool):   Allow to overwrite, if the file already exists.
     '''
-    if os.path.exists(filename) and not overwrite:
+    if os.path.exists(os.path.expanduser(filename)) and not overwrite:
         raise IOError('The file "%s" already exists. ' % filename +
                       'Consider "overwrite=True"!')
     if blocks is None:
@@ -354,7 +355,7 @@ def write(snap, filename, blocks=None, gformat=2, endianness='native',
                     print 'done.'
                     sys.stdout.flush()
     else:
-        with open(filename, 'wb') as gfile:
+        with open(os.path.expanduser(filename), 'wb') as gfile:
             write_header(gfile, header, gformat, endianness)
             for name in blocks:
                 block_name = info[name].name

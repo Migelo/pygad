@@ -525,7 +525,7 @@ def define_from_cfg(config, allow_redef=False, warn=True, undefine_old=True):
                            warn=warn)
 
     for filename in config:
-        if path.exists(filename):
+        if path.exists(path.expanduser(filename)):
             break
     else:
         raise IOError('Config file "%s" does not exist!' % config)

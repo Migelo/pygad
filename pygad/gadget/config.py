@@ -31,7 +31,7 @@ __all__ = ['families', 'elements', 'default_gadget_units', 'block_units',
 
 from ConfigParser import SafeConfigParser
 from ..units import *
-from os.path import exists
+from os.path import exists, expanduser
 from .. import environment
 from .. import kernels
 
@@ -88,7 +88,7 @@ def read_config(config):
                              'following entries: ' + str(entries))
 
     for filename in config:
-        if exists(filename):
+        if exists(expanduser(filename)):
             break
     else:
         raise IOError('Config file "%s" does not exist!' % config)

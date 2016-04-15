@@ -34,7 +34,7 @@ def read_info_file(filename):
         info (dict):        A dictionary containing all the entries from the file.
     '''
     info = {}
-    with open(filename, 'r') as finfo:
+    with open(os.path.expanduser(filename), 'r') as finfo:
         for line in finfo:
             try:
                 name, value = line.split(':', 1)
@@ -168,6 +168,7 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
             except:
                 info = None
         if isinstance(info, str):
+            info = os.path.expanduser(info)
             if not os.path.exists(info):
                 print >> sys.stderr, 'WARNING: There is no info file named ' + \
                                      '"%s"' % info
@@ -393,6 +394,7 @@ def read_traced_gas(filename, types=None):
                                 ]
                             where n is the number of full recylces.
     '''
+    filename = os.path.expanduser(filename)
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print 'read gas trace file "%s"...' % filename
         sys.stdout.flush()
