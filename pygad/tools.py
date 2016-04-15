@@ -579,7 +579,7 @@ def fill_gas_from_traced(snap, data, units=dict(MASS='Msol')):
     del metals_enter
     gas['metals_first_enter'].convert_to(gas['metals'].units)
 
-    T_enter = np.array( [i[1][3] for i in data.itervalues()] )
+    T_enter = np.array( [i[1][4] for i in data.itervalues()] )
     gas['T_first_enter'] = UnitArr( np.empty(len(gas), dtype=T_enter.dtype),
                                     units='K' )
     gas['T_first_enter'][~trmask] = -1
@@ -623,12 +623,14 @@ def fill_gas_from_traced(snap, data, units=dict(MASS='Msol')):
     del metals_enter
     gas['metals_last_enter'].convert_to(gas['metals'].units)
 
-    T_enter = np.array( [i[-1][3] for i in data.itervalues()] )
+    T_enter = np.array( [(i[-1][4] if len(i[-1])>4 else np.nan)
+                         for i in data.itervalues()] )
+    #assert np.sum( np.isnan(T_enter[trididx_in]) ) == 0
     gas['T_last_enter'] = UnitArr( np.empty(len(gas), dtype=T_enter.dtype),
                                    units='K' )
     gas['T_last_enter'][~trmask] = -1
     gas['T_last_enter'][gididx_in] = T_enter[trididx_in]
-    T_enter = np.array( [(i[-3][3] if len(i)>2 else np.nan)
+    T_enter = np.array( [(i[-3][4] if len(i)>2 else np.nan)
                          for i in data.itervalues()] )
     gas['T_last_enter'][gididx_out] = T_enter[trididx_out]
     del T_enter
