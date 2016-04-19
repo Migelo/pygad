@@ -21,7 +21,8 @@ as well as the free library
 
 * [`GSL`][GSL]
 
-and the `g++` compiler that needs to support the C++11 standard.
+and the `g++` compiler that needs to support the C++11 standard (for GCC, this is
+for version >=4.7).
 
 
 
@@ -38,6 +39,7 @@ $ sudo python setup.py install
 ```
 
 The third step of downloading the [Bruzual & Charlot (2003) SSP models][BC03] is optional but recommended (since required for standard star plotting routines).
+You probably need to adjust the path to it in the `gadget.cfg`.
 
 If you have problems or want a more detailed explanation, see the [wiki][WikiInstallation]. In particular, we want to point to the [FAQ section][FAQ] there.
 
