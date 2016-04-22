@@ -213,14 +213,14 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
                         max_halos = 10,
                         **kwargs
                 )
-                # The most massive galaxy does not have to be in a halo with litle low
-                # resolution elements! Find the most massive galaxy living in a
+                # The most massive galaxy does not have to be in a halo with litle
+                # low resolution elements! Find the most massive galaxy living in a
                 # "resolved" halo:
                 galaxy = None
                 for gal in galaxies:
-                    # since the same linking lengths were used for the halos and the
-                    # galaxies (rethink that!), a galaxy in a halo is entirely in that
-                    # halo or not at all
+                    # since the same linking lengths were used for the halos and
+                    # the galaxies (rethink that!), a galaxy in a halo is entirely
+                    # in that halo or not at all
                     gal_ID_set = set(gal.IDs)
                     for h in halos:
                         if len(gal_ID_set - set(h.IDs)) == 0:
@@ -538,7 +538,6 @@ def fill_gas_from_traced(snap, data, units=dict(MASS='Msol')):
     gididx_out = gididx[outmask[gididx]]
     #assert np.all( gas['trace_type'][inmask] == 1 )
     #assert np.all( gas['trace_type'][outmask] == 2 )
-    del inmask, outmask
     #assert np.all( gas['trace_type'][gididx_in] == 1 )
     #assert np.all( gas['trace_type'][gididx_out] == 2 )
     trididx_in = trididx[(trtype==1)[trididx]]
@@ -559,7 +558,7 @@ def fill_gas_from_traced(snap, data, units=dict(MASS='Msol')):
     # first is [type,N_cycles]).
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print '  "first_enter", "Z_first_enter", "metals_first_enter", ' + \
-              '"T_first_enter"'
+              '"jz_first_enter", "T_first_enter"'
 
     came_in = np.array( [i[1][0] for i in data.itervalues()] )
     gas['first_enter'] = UnitArr( np.empty(len(gas), dtype=came_in.dtype), units='a_form' )
@@ -581,6 +580,13 @@ def fill_gas_from_traced(snap, data, units=dict(MASS='Msol')):
     del metals_enter
     gas['metals_first_enter'].convert_to(gas['metals'].units)
 
+    jz_enter = np.array( [i[1][3] for i in data.itervalues()] )
+    gas['jz_first_enter'] = UnitArr( np.empty(len(gas), dtype=jz_enter.dtype),
+                                     units=None )    # TODO
+    gas['jz_first_enter'][~trmask] = -1
+    gas['jz_first_enter'][gididx] = jz_enter[trididx]
+    del jz_enter
+
     T_enter = np.array( [i[1][4] for i in data.itervalues()] )
     gas['T_first_enter'] = UnitArr( np.empty(len(gas), dtype=T_enter.dtype),
                                     units='K' )
@@ -588,13 +594,67 @@ def fill_gas_from_traced(snap, data, units=dict(MASS='Msol')):
     gas['T_first_enter'][gididx_traced] = T_enter[trididx]
     del T_enter
 
+    # The event of the first ejection exists for all (traced) particles that are
+    # either now outside the reagion or have been re-cycled at least once.
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print '  "first_eject", "Z_first_eject", "metals_first_eject", ' + \
+              '"jz_first_eject", "T_first_eject"'
+
+    recmask = (gas['num_recycled'] > 0)
+    ejectmask = recmask | outmask
+    gididx_eject = gididx[ejectmask[gididx]]
+    ejected = (n_cyc>0) | (trtype==2)
+    trididx_eject = trididx[ejected[trididx]]
+    assert np.all( np.array(data.keys())[trididx_eject] == gas['ID'][gididx_eject] )
+
+    ejected = np.array( [(i[2][0] if len(i)>2 else np.nan)
+                         for i in data.itervalues()] )
+    gas['first_eject'] = UnitArr( np.empty(len(gas), dtype=ejected.dtype),
+                                  units='a_form' )
+    gas['first_eject'][~ejectmask] = -1
+    gas['first_eject'][gididx_eject] = ejected[trididx_eject]
+    del ejected
+
+    Z_eject = np.array( [(i[2][1] if len(i)>2 else np.nan)
+                         for i in data.itervalues()] )
+    gas['Z_first_eject'] = UnitArr( np.empty(len(gas), dtype=Z_eject.dtype), )
+    gas['Z_first_eject'][~ejectmask] = -1
+    gas['Z_first_eject'][gididx_eject] = Z_eject[trididx_eject]
+    del Z_eject
+
+    metals_eject = np.array( [(i[2][2] if len(i)>2 else np.nan)
+                              for i in data.itervalues()] )
+    gas['metals_first_eject'] = UnitArr( np.empty(len(gas), dtype=metals_eject.dtype),
+                                         units=units['MASS'] )
+    gas['metals_first_eject'][~ejectmask] = -1
+    gas['metals_first_eject'][gididx_eject] = metals_eject[trididx_eject]
+    del metals_eject
+    gas['metals_first_eject'].convert_to(gas['metals'].units)
+
+    jz_eject = np.array( [(i[2][3] if len(i)>2 else np.nan)
+                          for i in data.itervalues()] )
+    gas['jz_first_eject'] = UnitArr( np.empty(len(gas), dtype=jz_eject.dtype),
+                                     units=None )    # TODO
+    gas['jz_first_eject'][~ejectmask] = -1
+    gas['jz_first_eject'][gididx_eject] = jz_eject[trididx_eject]
+    del jz_eject
+
+    T_eject = np.array( [(i[2][4] if len(i)>2 else np.nan)
+                         for i in data.itervalues()] )
+    gas['T_first_eject'] = UnitArr( np.empty(len(gas), dtype=T_eject.dtype),
+                                    units='K' )
+    gas['T_first_eject'][~ejectmask] = -1
+    gas['T_first_eject'][gididx_eject] = T_eject[trididx_eject]
+    del T_eject
+
     # The event of the last entering of the region exists for all traced
     # particles, it might be the same as first entering, though.
     # However, here we have to distinguish between the particles still within the
     # region and those outside, since the latter has a additional last event,
     # namely the leaving of the region.
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print '  "last_enter", "Z_last_enter", "metals_last_enter", "T_last_enter"'
+        print '  "last_enter", "Z_last_enter", "metals_last_enter",',
+        print '"jz_last_enter", "T_last_enter"'
 
     came_in = np.array( [i[-1][0] for i in data.itervalues()] )
     gas['last_enter'] = UnitArr( np.empty(len(gas), dtype=came_in.dtype), units='a_form' )
@@ -624,6 +684,16 @@ def fill_gas_from_traced(snap, data, units=dict(MASS='Msol')):
     gas['metals_last_enter'][gididx_out] = metals_enter[trididx_out]
     del metals_enter
     gas['metals_last_enter'].convert_to(gas['metals'].units)
+
+    jz_enter = np.array( [i[-1][3] for i in data.itervalues()] )
+    gas['jz_last_enter'] = UnitArr( np.empty(len(gas), dtype=jz_enter.dtype),
+                                    units=None )    # TODO
+    gas['jz_last_enter'][~trmask] = -1
+    gas['jz_last_enter'][gididx_in] = jz_enter[trididx_in]
+    jz_enter = np.array( [(i[-3][3] if len(i)>2 else np.nan)
+                          for i in data.itervalues()] )
+    gas['jz_last_enter'][gididx_out] = jz_enter[trididx_out]
+    del jz_enter
 
     T_enter = np.array( [(i[-1][4] if len(i[-1])>4 else np.nan)
                          for i in data.itervalues()] )

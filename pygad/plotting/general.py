@@ -360,6 +360,8 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
         qty = s.get(qty)
     if cmap is None:
         cmap = 'cubehelix' if colors is None else 'Bright'
+        cmap = mpl.cm.get_cmap(cmap)
+        cmap.set_bad('k')
         if fontcolor is None:
             fontcolor = 'w'
     if isinstance(cmap,str):
