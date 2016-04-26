@@ -62,7 +62,8 @@ def read_info_file(filename):
 
 def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
                  linking_length=None, linking_vel='200 km/s', ret_FoF=False,
-                 sph_overlap_mask=False, gal_R200=0.10, **kwargs):
+                 sph_overlap_mask=False, gal_R200=0.10, star_form='deduce',
+                 gas_trace='deduce', **kwargs):
     '''
     A convenience function to load a snapshot from a zoomed-in simulation that is
     not yet centered or orienated.
@@ -157,7 +158,8 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
     if isinstance(s,str):
         s = Snap(s)
     gal_R200 = float(gal_R200)
-    print 'prepare zoomed-in', s
+    if environment.verbose >= environment.VERBOSE_TACITURN:
+        print 'prepare zoomed-in', s
 
     # read info file (if required)
     if mode in ['auto', 'info']:
@@ -166,6 +168,8 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
                 snap = int(os.path.basename(s.filename).split('.')[0][-3:])
                 info = os.path.dirname(s.filename) + '/trace/info_%03d.txt' % snap
             except:
+                print >> sys.stderr, 'WARNING: could not deduce the path to ' + \
+                                     'the trace file!'
                 info = None
         if isinstance(info, str):
             info = os.path.expanduser(info)
@@ -174,7 +178,8 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
                                      '"%s"' % info
                 info = None
             else:
-                print 'read info file from:', info
+                if environment.verbose >= environment.VERBOSE_TACITURN:
+                    print 'read info file from:', info
                 info = read_info_file(info)
         if info is None:
             if mode == 'auto':
@@ -248,13 +253,16 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
 
     # center in space
     if center is None:
-        print 'no center found -- do not center'
+        if environment.verbose >= environment.VERBOSE_TACITURN:
+            print 'no center found -- do not center'
     else:
-        print 'center at:', center
+        if environment.verbose >= environment.VERBOSE_NORMAL:
+            print 'center at:', center
         Translation(-center).apply(s)
         # center the velocities
         vel_center = mass_weighted_mean(s[s['r']<'1 kpc'], 'vel')
-        print 'center velocities at:', vel_center
+        if environment.verbose >= environment.VERBOSE_NORMAL:
+            print 'center velocities at:', vel_center
         s['vel'] -= vel_center
 
     # cut the halo (<R200)
@@ -262,28 +270,35 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
         R200 = info['R200']
         M200 = info['M200']
     else:
-        print 'derive virial information'
+        if environment.verbose >= environment.VERBOSE_NORMAL:
+            print 'derive virial information'
         R200, M200 = virial_info(s)
-    print 'R200:', R200
-    print 'M200:', M200
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'R200:', R200
+        print 'M200:', M200
     halo = s[BallMask(R200, sph_overlap=sph_overlap_mask)]
 
     # orientate at the reduced inertia tensor of the baryons wihtin 10 kpc
-    print 'orientate',
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'orientate',
     if mode == 'info':
         if 'I_red(gal)' in info:
             redI = info['I_red(gal)']
             if redI is not None:
                 redI = redI.reshape((3,3))
-            print 'at the galactic red. inertia tensor from info file:'
-            print redI
+            if environment.verbose >= environment.VERBOSE_NORMAL:
+                print 'at the galactic red. inertia tensor from info file'
+            if environment.verbose >= environment.VERBOSE_TALKY:
+                print redI
             mode, qty = 'red I', redI
         else:
-            print 'at angular momentum of the galaxtic baryons from info file:'
+            if environment.verbose >= environment.VERBOSE_NORMAL:
+                print 'at angular momentum of the galaxtic baryons from info file:'
             mode, qty = 'vec', info['L_baryons']
         orientate_at(s, mode, qty=qty, total=True)
     else:
-        print 'at red. inertia tensor of the baryons within %.3f*R200' % gal_R200
+        if environment.verbose >= environment.VERBOSE_NORMAL:
+            print 'at red. inertia tensor of the baryons within %.3f*R200' % gal_R200
         orientate_at(s[BallMask(gal_R200*R200, sph_overlap=False)].baryons,
                      'red I',
                      total=True
@@ -292,12 +307,57 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
     # cut the inner part as the galaxy
     gal = s[BallMask(gal_R200*R200, sph_overlap=sph_overlap_mask)]
     Ms = gal.stars['mass'].sum()
-    print 'M*:  ', Ms
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'M*:  ', Ms
 
     if len(gal)==0:
         gal = None
     if len(halo)==0:
         halo = None
+
+    if star_form == 'deduce':
+        try:
+            star_form = os.path.dirname(s.filename) + '/trace/star_form.ascii'
+        except:
+            print >> sys.stderr, 'WARNING: could not deduce the path to the ' + \
+                                 'star formation file!'
+            star_form = None
+    if isinstance(star_form, str):
+        star_form = os.path.expanduser(star_form)
+        if not os.path.exists(star_form):
+            print >> sys.stderr, 'WARNING: There is no star formation file ' + \
+                                 'named "%s"' % star_form
+            star_form = None
+        else:
+            if environment.verbose >= environment.VERBOSE_NORMAL:
+                print 'read star formation file from:', star_form
+            fill_star_from_info(s, star_form)
+
+    if gas_trace == 'deduce':
+        try:
+            directory = os.path.dirname(s.filename) + '/../'
+            candidates = []
+            for fname in os.listdir(directory):
+                if fname.startswith('gastrace'):
+                    candidates.append(fname)
+            if len(candidates) == 1:
+                gas_trace = directory + candidates[0]
+            else:
+                raise RuntimeError
+        except:
+            print >> sys.stderr, 'WARNING: could not deduce the path to the ' + \
+                                 'gas tracing file!'
+            gas_trace = None
+    if isinstance(gas_trace, str):
+        gas_trace = os.path.expanduser(gas_trace)
+        if not os.path.exists(gas_trace):
+            print >> sys.stderr, 'WARNING: There is no gas trace file named ' + \
+                                 '"%s"' % gas_trace
+            gas_trace = None
+        else:
+            if environment.verbose >= environment.VERBOSE_NORMAL:
+                print 'read gas trace file from:', gas_trace
+            fill_gas_from_traced(s, gas_trace)
 
     if mode=='FoF' and ret_FoF:
         return s, halo, gal, halos
