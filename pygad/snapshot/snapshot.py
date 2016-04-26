@@ -301,23 +301,30 @@ import derived
 import fnmatch
 
 def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
-         gad_units=None):
+         gad_units=None, unclear_blocks=None):
     '''
     Create a snapshot from file (without loading the blocks, yet).
 
     Args:
-        filename (str):     The path to the snapshot. If it is distributed over
-                            several files, you shall omit the trailing (of
-                            inbetween in case of an HDF5 file) '.0'.
-        physical (bool):    Whether to convert to physical units on loading.
-        load_double_prec (bool):
-                            Force to load all blocks in double precision.
-                            Equivalent with setting the snapshots attribute.
-        cosmological (bool):Explicitly tell if the simulation is a cosmological
-                            one.
-        gad_units (dict):   Alternative base units (LENGTH, VELOCITY, MASS) for
-                            this snapshot. The default base units units are
-                            updated, meaning one can also just change one them.
+        filename (str):         The path to the snapshot. If it is distributed
+                                over several files, you shall omit the trailing
+                                (of inbetween in case of an HDF5 file) '.0'.
+        physical (bool):        Whether to convert to physical units on loading.
+        load_double_prec (bool):Force to load all blocks in double precision.
+                                Equivalent with setting the snapshots attribute.
+        cosmological (bool):    Explicitly tell if the simulation is a
+                                cosmological one.
+        gad_units (dict):       Alternative base units (LENGTH, VELOCITY, MASS)
+                                for this snapshot. The default base units units
+                                are updated, meaning one can also just change one
+                                them.
+        unclear_blocks (str):   What to do the blocks for which the block info is
+                                unclear (cannot be infered). Possible modes are:
+                                * exception:    raise an IOError
+                                * warning:      print a warning to the stderr
+                                * ignore:       guess what
+                                If it is None, the value from the `gadget.cfg` is
+                                taken.
 
     Raises:
         IOError:            If the snapshot does not exist.
@@ -341,10 +348,13 @@ def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
     s._filename   = os.path.abspath(base+suffix)
     s._descriptor = os.path.basename(base)+suffix
     # need first (maybe only) file for basic information
-    greader = gadget.FileReader(filename)
+    greader = gadget.FileReader(filename, unclear_blocks=unclear_blocks)
     s._file_handlers = [greader]
 
-    s._block_avail = { block.name:block.ptypes for block in greader.infos() }
+    s._block_avail = {
+            block.name:block.ptypes
+            for block in greader.infos()
+            if block.dtype is not None }
 
     s._N_part   = map(int, greader.header['N_part_all'])
     s._time     = greader.header['time']
@@ -375,7 +385,7 @@ def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
         N_part = map( int, greader.header['N_part'] )
         for n in xrange(1, greader.header['N_files']): # first already done
             filename = base + '.' + str(n) + suffix
-            greader = gadget.FileReader(filename)
+            greader = gadget.FileReader(filename, unclear_blocks=unclear_blocks)
             s._file_handlers.append( greader )
             # enshure Python int's to avoid overflows
             for i in xrange(6): N_part[i] += int(greader.header['N_part'][i])

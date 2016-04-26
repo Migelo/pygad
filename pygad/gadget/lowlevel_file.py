@@ -14,7 +14,7 @@ Example:
     >>> with open(orig_file, 'rb') as gfile:
     ...     gformat, endianness = get_format_and_endianness(gfile)
     ...     header = read_header(gfile, gformat, endianness)
-    ...     info = get_block_info(gfile, gformat, endianness, header)
+    ...     info = get_block_info(gfile, gformat, endianness, header, 'exception')
     ...     for block in info.itervalues():
     ...         N = sum(header['N_part'][i] for i in xrange(6) if block.ptypes[i])
     ...         gfile.seek(block.start_pos)
@@ -260,13 +260,11 @@ class BlockInfo(object):
         self.start_pos = start_pos
         self.size      = size
 
-    @property
-    def is_filled(self):
-        for prop in (self.name, self.dtype, self.dimension, self.ptypes,
-                self.start_pos, self.size):
-            if prop is None:
-                return False
-        return True
+    def is_filled(self, check_type):
+        non_none = (self.name, self.start_pos, self.size)
+        if check_type:
+            non_none += (self.dtype, self.dimension, self.ptypes)
+        return not any((prop is None) for prop in non_none)
 
     @property
     def dtype(self):
@@ -447,6 +445,10 @@ def _block_inferring(block, header):
     Raises:
         RuntimeError:       If the information could not be infered or if the
                             given dtype of the given family is unknown.
+                            If, however, there are mutliple combinations ptypes
+                            that allow the data type size to be a mutliple of 4
+                            bit, do not raise the exception and return the
+                            possible combinations.
     '''
     type_hint = _fill_block_with_known(block, header)
 
@@ -458,8 +460,8 @@ def _block_inferring(block, header):
         If the dtype is not known, assume its size to be mutliples of 4 (as int32,
         int64, float32, and float64). Furthermore assume that the dimension is not
         larger than 20.
-        If there is just one single such combination, we are done, otherwise raise
-        a RuntimeError.
+        If there is just one single such combination, we are done. If there is
+        more than one, return the combinations, otherwise raise a RuntimeError.
         """
         if block.dimension is not None and block.dtype is not None:
             el_size == block.dimension * block.dtype.itemsize
@@ -493,6 +495,8 @@ def _block_inferring(block, header):
         # if the combinatorics yield a definit combination, store it
         if len(possible_ptype_combi) == 1:
             block.ptypes = [(i in possible_ptype_combi[0]) for i in xrange(6)]
+        elif len(possible_ptype_combi) > 1:
+            return possible_ptype_combi
         else:
             raise RuntimeError('Could not infere information for block ' +
                                '"%s"!' % block.name)
@@ -549,7 +553,8 @@ def _block_inferring(block, header):
                                '"%s"!' % block.name)
     return  # all known
 
-def _infer_info(gfile, header, gformat, endianness, start_pos, block_sizes):
+def _infer_info(gfile, header, gformat, endianness, start_pos, block_sizes,
+                unclear_blocks):
     '''
     Try to infere block info, if no INFO block is present.
 
@@ -557,16 +562,22 @@ def _infer_info(gfile, header, gformat, endianness, start_pos, block_sizes):
     from a file.
 
     Args:
-        gfile (file):       The already in binary read mode opened Gadget file.
-        header (dict):      The file's header. Used to infer information of the
-                            blocks.
-        gformat (int):      Gadget file format (either 1 or 2 -- for format 3
-                            (HDF5) this function is never needed).
-        endianness (str):   The endianness of the file (either native '=' or
-                            non-native '<' (little) or '>' (big)).
-        start_pos (list):   The start positions of all blocks.
-        block_sizes (list): The block sizes of all blocks (pure, the number
-                            before the actual block in the file).
+        gfile (file):           The already in binary read mode opened Gadget
+                                file.
+        header (dict):          The file's header. Used to infer information of
+                                the blocks.
+        gformat (int):          Gadget file format (either 1 or 2 -- for format 3
+                                (HDF5) this function is never needed).
+        endianness (str):       The endianness of the file (either native '=' or
+                                non-native '<' (little) or '>' (big)).
+        start_pos (list):       The start positions of all blocks.
+        block_sizes (list):     The block sizes of all blocks (pure, the number
+                                before the actual block in the file).
+        unclear_blocks (str):   What to do the blocks for which the block info is
+                                unclear (cannot be infered). Possible modes are:
+                                * exception:    raise an IOError
+                                * warning:      print a warning to the stderr
+                                * ignore:       guess what
 
     Returns:
         info (dict):        A dictionary with BlockInfo classes as values,
@@ -599,12 +610,29 @@ def _infer_info(gfile, header, gformat, endianness, start_pos, block_sizes):
                               ptypes=None, start_pos=start_pos[i],
                               size=block_sizes[i])
             # try to infer type, dimension, and particle types
-            _block_inferring(block, header)
-            assert block.is_filled
+            combis = _block_inferring(block, header)
+            if not block.is_filled(check_type=False):
+                assert False    # should never happen
+            if not block.is_filled(check_type=True):
+                if unclear_blocks == 'exception':
+                    raise IOError('Cannot infere info for block "%s"!' %
+                            block.name)
+                elif unclear_blocks == 'warning':
+                    print >> sys.stderr, 'WARNING: cannot infere info for ' + \
+                                         'block "%s"!\n' % block.name + \
+                                         '  possible combinations for the ' + \
+                                         'particles types are: ' + \
+                                         ', '.join(str(combi) for combi in combis)
+                elif unclear_blocks == 'ignore':
+                    pass
+                else:
+                    raise RuntimeError('Unkown block mode ' +
+                                       '"%s" is not ' % unclear_blocks +
+                                       'understood!')
             info[block.name] = block
     return info
 
-def get_block_info(gfile, gformat, endianness, header):
+def get_block_info(gfile, gformat, endianness, header, unclear_blocks):
     '''
     Get info (like position in file, if not HDF5) about all blocks in a single
     Gadget file.
@@ -618,12 +646,18 @@ def get_block_info(gfile, gformat, endianness, header):
     For HDF5 files, it reads all information available.
 
     Args:
-        gfile (file):       The already in binary read mode opened Gadget file.
-        gformat (int):      Gadget file format (either 1, 2, or 3 (HDF5)).
-        endianness (str):   The endianness of the file (either native '=' or
-                            non-native '<' (little) or '>' (big)).
-        header (dict):      The file's header. Used if there is no INFO block and
-                            information of the blocks has to inferred.
+        gfile (file):           The already in binary read mode opened Gadget
+                                file.
+        gformat (int):          Gadget file format (either 1, 2, or 3 (HDF5)).
+        endianness (str):       The endianness of the file (either native '=' or
+                                non-native '<' (little) or '>' (big)).
+        header (dict):          The file's header. Used if there is no INFO block
+                                and information of the blocks has to inferred.
+        unclear_blocks (str):   What to do the blocks for which the block info is
+                                unclear (cannot be infered). Possible modes are:
+                                * exception:    raise an IOError
+                                * warning:      print a warning to the stderr
+                                * ignore:       guess what
 
     Returns:
         info (dict):        A dictionary with BlockInfo classes as values,
@@ -703,7 +737,7 @@ def get_block_info(gfile, gformat, endianness, header):
             # no info block -> infer as much as possible (using block names in
             # format 2 files)
             info = _infer_info(gfile, header, gformat, endianness, start_pos,
-                               block_sizes)
+                               block_sizes, unclear_blocks=unclear_blocks)
 
         if 'MASS' not in info:
             # just put it after ID block as usual

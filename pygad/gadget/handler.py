@@ -21,23 +21,33 @@ class FileReader(object):
     A handler for reading Gadget files of all formats.
 
     Args:
-        filename (str):     The path to the Gadget file.
+        filename (str):         The path to the Gadget file.
+        unclear_blocks (str):   What to do the blocks for which the block info is
+                                unclear (cannot be infered). Possible modes are:
+                                * exception:    raise an IOError
+                                * warning:      print a warning to the stderr
+                                * ignore:       guess what
+                                If it is None, the value from the `gadget.cfg` is
+                                taken.
 
     Raises:
         RuntimeError:       If the information could not be infered or if the
                             given dtype of the given family is unknown.
     '''
-    def __init__(self, filename):
+    def __init__(self, filename, unclear_blocks=None):
         if not os.path.exists(os.path.expanduser(filename)):
             raise IOError('"%s" does not exist!' % filename)
         self._filename = filename
+        if unclear_blocks is None:
+            unclear_blocks = config.general['unclear_blocks']
         if h5py.is_hdf5(self._filename):
             self._format, self._endianness = 3, None
             with h5py.File(self._filename, 'r') as gfile:
                 self._header = read_header(gfile, self._format,
                                            self._endianness)
                 self._info = get_block_info(gfile, self._format,
-                                            self._endianness, self._header)
+                                            self._endianness, self._header,
+                                            unclear_blocks)
         else:
             with open(os.path.expanduser(self._filename), 'rb') as gfile:
                 self._format, self._endianness = \
@@ -45,7 +55,8 @@ class FileReader(object):
                 self._header = read_header(gfile, self._format,
                                            self._endianness)
                 self._info = get_block_info(gfile, self._format,
-                                            self._endianness, self._header)
+                                            self._endianness, self._header,
+                                            unclear_blocks)
 
     @property
     def filename(self):

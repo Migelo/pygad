@@ -13,7 +13,7 @@ Example:
     >>> families['dm']
     [1, 2, 3]
     >>> general
-    {'kernel': 'cubic', 'vol_def_x': 'ones(len(gas))', 'SSP_dir': 'pygad//../bc03', 'IMF': 'Kroupa'}
+    {'unclear_blocks': 'warning', 'kernel': 'cubic', 'vol_def_x': 'ones(len(gas))', 'SSP_dir': 'pygad//../bc03', 'IMF': 'Kroupa'}
     >>> block_infos['MASS'], block_infos['HSML']
     ((1, 'float', None), (1, 'float', 'gas'))
     >>> get_block_units('RHO ')
@@ -44,6 +44,7 @@ general = {
     'vol_def_x': '<undefined>',
     'IMF': '<undefined>',
     'SSP_dir': '<undefined>',
+    'unclear_blocks': 'warning',
     }
 block_infos = {}
 # def. units have to be strings - they are used as replacements
@@ -133,6 +134,10 @@ def read_config(config):
     if cfg.has_option('general', 'SSP_dir'):
         general['SSP_dir'] = cfg.get('general', 'SSP_dir',
                                      vars={'PYGAD_DIR':environment.module_dir})
+    unclear_blocks = cfg.get('general', 'unclear_blocks')
+    if unclear_blocks not in ['exception', 'warning', 'ignore']:
+        raise ValueError('Unclear block mode "%s" is unknown!' % unclear_blocks)
+    general['unclear_blocks'] = unclear_blocks
 
     default_gadget_units.clear()
     default_gadget_units.update( cfg.items('base units') )
