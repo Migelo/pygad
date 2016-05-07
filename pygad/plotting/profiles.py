@@ -3,14 +3,17 @@ Module for convenience routines for plotting profiles.
 
 Doctests impossible, since they would require visual inspection...
 '''
-__all__ = ['profile', 'history', 'SFR_history']
+__all__ = ['profile', 'history', 'SFR_history', 'flow_history']
 
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from ..units import *
 from ..analysis import *
+from .. import environment
 from .. import utils
+from .. import physics
+import sys
 
 def profile(s, Rmax, qty, av=None, units=None, dens=True, proj=None,
             N=50, logbin=False, minlog=None, ylabel=None, labelsize=14, ax=None,
@@ -107,8 +110,8 @@ def profile(s, Rmax, qty, av=None, units=None, dens=True, proj=None,
     return fig, ax
 
 def history(s, qty, time=None, av=None, units=None, diff=False, N=50,
-            t_edges=None, tlim=None, log=True, ylabel=None, labelsize=14,
-            linewidth=2, ax=None, **kwargs):
+            t_edges=None, tlim=None, log=False, ylabel=None, labelsize=14,
+            linewidth=2, add_z_ax=True, ax=None, **kwargs):
     '''
     Plot the archiological history of some stellar quantity.
 
@@ -130,10 +133,13 @@ def history(s, qty, time=None, av=None, units=None, diff=False, N=50,
         t_edges (UnitQty):      The time edges for the bins explicitly.
         tlim (list):            The limits in time in the plot. (Independent of
                                 the bins used.)
+        log (bool):             Plot in log-scale on the y-axis.
         ylabel (str):           A custom y-axis label.
         labelsize (int):        The font size of the labels. The tick size will
                                 get adjusted accordingly.
         linewidth (int,float):  The linewidth.
+        add_z_ax (boolean):     Whether the additional scale for redshifts is
+                                added on top.
         ax (AxesSubplot):       The axis object to plot on. If None, a new one is
                                 created by plt.subplots().
         **kwargs:               Further keyword arguments are passed to ax.plot
@@ -179,8 +185,8 @@ def history(s, qty, time=None, av=None, units=None, diff=False, N=50,
         time[mask] = new
 
     if t_edges is None:
-        t_edges = UnitArr(np.linspace(0,float(now),N), time.units)
-        t_edges = UnitArr(np.linspace(0,float(now),N), time.units)
+        t_edges = UnitArr(np.linspace(0,float(now),N+1), time.units)
+        t_edges = UnitArr(np.linspace(0,float(now),N+1), time.units)
     else:
         t_edges = UnitQty(t_edges, time.units)
 
@@ -201,10 +207,8 @@ def history(s, qty, time=None, av=None, units=None, diff=False, N=50,
 
     if ax is None:
         fig, ax = plt.subplots()
-        new_ax = True
     else:
         fig = ax.get_figure()
-        new_ax = False
 
     t = (t_edges[:-1] + t_edges[1:]) / 2.0
     ax.plot(t, Q_hist, linewidth=linewidth, **kwargs)
@@ -214,10 +218,10 @@ def history(s, qty, time=None, av=None, units=None, diff=False, N=50,
         tlim = UnitQty(tlim, units=t_edges.units)
     ax.set_xlim(tlim)
 
-    if new_ax:
+    if add_z_ax:
         universe_age = s.cosmology.universe_age()
         z_minor = np.array([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
-                            1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+                            1, 1.5, 2, 3, 4, 5, 6, 7, 8, 9, 10])
         z_major = np.array([0, 0.5, 1, 2, 3, 4, 10])
         t_major = map(lambda z: universe_age-s.cosmology.lookback_time(z), z_major)
         t_major = UnitArr(t_major, t_major[0].units).in_units_of(t.units)
@@ -260,7 +264,7 @@ def history(s, qty, time=None, av=None, units=None, diff=False, N=50,
 
     return fig, ax
 
-def SFR_history(s, units='Msol/yr', log=True, **kwargs):
+def SFR_history(s, units='Msol/yr', **kwargs):
     """
     Plot the archeological star formation history of the stars of a snapshot.
 
@@ -269,9 +273,6 @@ def SFR_history(s, units='Msol/yr', log=True, **kwargs):
     Args:
         s (Snap):               The (sub-)snapshot to plot the SFR history of.
         units (str, Unit):      The units in which the profile shall be plotted.
-        N (int):                The number of bins. It is ignored, if the edges
-                                are given explicitly by `t_edges`.
-        ylabel (str):           A custom y-axis label.
         **kwargs:               Further keyword arguments are passed to `history`.
                                 Se its help for more.
 
@@ -284,7 +285,141 @@ def SFR_history(s, units='Msol/yr', log=True, **kwargs):
     kwargs['diff'] = kwargs.get('diff', True)
     kwargs['ylabel'] = kwargs.get('ylabel', r'$\dot M_*$ [$%s$]'%units.latex())
     fig, ax = history(s, 'inim',
-                      units=units, log=log, **kwargs)
-    ax.set_ylim( UnitArr([1e-1,1e2],'Msol/yr').in_units_of(units,subs=s) )
+                      units=units, **kwargs)
+    return fig, ax
+
+def flow_history(s, qty='mass', inout='infall', recycles='first/re',
+                 z_max_min='3 kpc', t_out_min='100 Myr', max_cycle=np.inf,
+                 units='Msol/yr', **kwargs):
+    """
+    Plot the in-/outflow rates as from the gas trace files.
+
+    This function uses `history` in the background.
+
+    Args:
+        s (Snap):               The (sub-)snapshot to plot the SFR history of.
+        qty ('mass'/'metals'):  Mass or metal flow rates.
+        inout ('infall'/'ejection'):
+                                Inflow rates ('infall') or outflow rates
+                                ('ejection').
+        recycles (str,int):     The options are:
+                                * 'first/re':   plot the first in-/outflow and the
+                                                re-accretion seperately together
+                                                with the total in-/outflow rate
+                                * 'all':        Plot the in-/outflow rates for
+                                                each number of recycling.
+                                * <int>:        Only plot the given number of
+                                                first in-/outflows / recycles.
+        z_max_min (UnitScalar): Only include in-/outflow if the cycle got higher
+                                in z-direction than this limit.
+        t_out_min (UnitScalar): Limit the included cycles by a minimum time
+                                outside of the region of interest.
+        max_cycle (int):        Limit the number of cycles considered.
+        units (str, Unit):      The units in which the profile shall be plotted.
+        ylabel (str):           A custom y-axis label.
+        **kwargs:               Further keyword arguments are passed to `history`.
+                                Se its help for more.
+
+    Returns:
+        fig (Figure):           The figure of the axis plotted on.
+        ax (AxesSubplot):       The axis plotted on.
+    """
+    g = s.gas
+    units = Unit(units)
+    z_max_min = UnitScalar(z_max_min, 'kpc', subs=s)
+    t_out_min = UnitScalar(t_out_min, 'Gyr', subs=s)
+    kwargs['diff'] = kwargs.get('diff', True)
+    kwargs['N'] = kwargs.get('N', 50)
+    kwargs['ylabel'] = kwargs.get('ylabel', r'$\dot M$ [$%s$]'%units.latex())
+    kwargs['linewidth'] = kwargs.get('linewidth', 2)
+
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'calculate the total %s rates...' % ('inflow' if inout=='infall'
+                                                   else 'outflow')
+        sys.stdout.flush()
+    max_N_cycle = min( np.max(g['num_recycled']), max_cycle )
+    t_edges = np.linspace(0, g.cosmology.universe_age(), kwargs['N']+1)
+    t_edges = UnitArr(t_edges, g.cosmology.universe_age().units)
+    """
+    mass = np.zeros(len(t_edges)-1, dtype=float)
+    for i,t0,t1 in zip(np.arange(len(mass)),t_edges[:-1],t_edges[1:]):
+        for n in xrange(max_N_cycle+1):
+            tbin = (t0<=g[inout+'_time'][:,n]) & (g[inout+'_time'][:,n]<t1)
+            mass[i] += g[qty+'_at_'+inout][tbin,n].sum()
+    mass = UnitArr(mass, g[qty+'_at_'+inout].units)
+    """
+
+    t_lims = UnitArr([0,g.cosmology.universe_age()],
+                     g.cosmology.universe_age().units)
+    mass = UnitArr(np.zeros(kwargs['N'], dtype=float), g[qty+'_at_'+inout].units)
+    from ..binning import gridbin
+    for n in xrange(max_N_cycle+1):
+        if n>1:
+            sub = g[ (g['cycle_z_max'][:,n] > z_max_min) &
+                     (g['out_time'][:,n-1] > t_out_min) ]
+        else:
+            sub = g[ (g['cycle_z_max'][:,n] > z_max_min) ]
+        binned = gridbin(sub[inout+'_time'][:,n].reshape((len(sub),1)),
+                         vals=sub[qty+'_at_'+inout][:,n],
+                         bins=kwargs['N'],
+                         extent=t_lims.reshape((1,2)))
+        binned = binned.reshape((kwargs['N'],))
+        if n==0:
+            first_mass = binned
+        mass += binned
+
+    t = (t_edges[:-1]+t_edges[1:]) / 2.
+    dt = t_edges[1:]-t_edges[:-1] 
+
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'calculate the individual %s rates and plot...' % ('inflow'
+                if inout=='infall' else 'outflow')
+        sys.stdout.flush()
+    if 'ax' in kwargs:
+        ax = kwargs['ax']
+        fig = ax.get_figure()
+    else:
+        fig, ax = plt.subplots()
+        kwargs['ax'] = ax
+
+    pltargs = kwargs.copy()
+    pltargs['linewidth'] = 1.4*kwargs['linewidth']
+    for no in ['N', 'diff', 'ylabel', 'ax', 'add_z_ax', 'av']:
+        if no in pltargs:
+            del pltargs[no]
+    ax.plot(t, (mass/dt).in_units_of(units,subs=s),
+            label='total '+inout, **pltargs)
+
+    if recycles is 'all':
+        recycles = max_N_cycle
+    if isinstance(recycles,int):
+        for n in xrange(max_N_cycle+1):
+            if n>1:
+                sub = g[ (g['cycle_z_max'][:,n] > z_max_min) &
+                         (g['out_time'][:,n-1] > t_out_min) ]
+            else:
+                sub = g[ (g['cycle_z_max'][:,n] > z_max_min) ]
+            history(sub,
+                    qty='%s_at_%s[:,%d]'%(qty,inout,n),
+                    time='%s_time[:,%d]'%(inout,n),
+                    units=units,
+                    add_z_ax=(n==0),
+                    label='%d. %s'%(n+1,inout), **kwargs)
+    elif recycles == 'first/re':
+        sub = g[ (g['cycle_z_max'][:,0] > z_max_min) ]
+        history(sub,
+                qty='%s_at_%s[:,0]'%(qty,inout),
+                time='%s_time[:,0]'%(inout),
+                units=units,
+                add_z_ax=True,
+                label='first %s'%inout, **kwargs)
+        pltargs['linewidth'] = kwargs['linewidth']
+        ax.plot(t, ((mass-first_mass)/dt).in_units_of(units,subs=s),
+                label='re- '+inout, **pltargs)
+    else:
+        raise ValueError('`recycles` is %s -- not understood!' % recycles)
+
+    ax.legend(loc='upper left')
+
     return fig, ax
 
