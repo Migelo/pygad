@@ -831,11 +831,12 @@ class _Snap(object):
     def __delitem__(self, name):
         if name in self.available_blocks():
             try:
-                del self._blocks[name]
+                host = self.get_host_subsnap(name)
+                del host._blocks[name]
                 if name not in self.root._load_name \
                         and name not in self.root._derive_rule_deps:
                     # delete custom blocks entirely
-                    del self._block_avail[name]
+                    del self.root._block_avail[name]
             except KeyError:
                 pass
         else:
