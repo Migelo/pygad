@@ -717,6 +717,7 @@ def fill_gas_from_traced(snap, data, add_derived=True,
         gas[name][gididx_traced] = pos[trididx]
         del pos
 
+    environment.gc_full_collect()
     if add_derived:
         fill_derived_gas_trace_qty(snap, units=units, invalid=invalid)
 
@@ -765,10 +766,13 @@ def fill_derived_gas_trace_qty(snap,
         infall = gas['infall_time'][:,1:]
         gas['out_time'] = infall - ejected
         mask = (ejected==invalid) | ~np.isfinite(ejected)
+        del ejected
+        environment.gc_full_collect()
         gas['out_time'][mask] = invalid
         mask = (infall==invalid) | ~np.isfinite(infall)
+        del infall
+        environment.gc_full_collect()
         gas['out_time'][mask] = invalid
-        del ejected
 
 
     # The events of the last infall and the last ejection are a bit messy to
