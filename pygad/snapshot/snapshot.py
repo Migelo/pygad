@@ -680,7 +680,7 @@ class _Snap(object):
         # The other list added here seems to include excatly the properties.
         return [k for k in self.__dict__.keys()
                         if not k.startswith('_')] + \
-                [k for k in self.root.__class__.__dict__.keys()
+                [k for k in self._root.__class__.__dict__.keys()
                         if not k.startswith('_')] + \
                 self.families()
 
@@ -743,7 +743,7 @@ class _Snap(object):
         if forthis:
             names = self._block.iterkeys() if present else self.available_blocks()
         else:
-            names = self.root._block_avail.iterkeys()
+            names = self._root._block_avail.iterkeys()
         for block_name in names:
             if block_name in done:
                 continue
@@ -833,10 +833,10 @@ class _Snap(object):
             try:
                 host = self.get_host_subsnap(name)
                 del host._blocks[name]
-                if name not in self.root._load_name \
-                        and name not in self.root._derive_rule_deps:
+                if name not in self._root._load_name \
+                        and name not in self._root._derive_rule_deps:
                     # delete custom blocks entirely
-                    del self.root._block_avail[name]
+                    del self._root._block_avail[name]
             except KeyError:
                 pass
         else:
@@ -1039,15 +1039,15 @@ class _Snap(object):
         else:
             raise RuntimeError('Data length does not fit the (sub-)snapshot!')
 
-        if name in self.root._block_avail:
+        if name in self._root._block_avail:
             raise NotImplementedError('Block name "%s" already exists ' % name +
                                       'for other parts of the snapshot!\n' +
                                       'Combining is not implemented.')
 
-        self.root._block_avail[name] = list(ptypes)
+        self._root._block_avail[name] = list(ptypes)
         host = self.get_host_subsnap(name)
         if host is not self:
-            del self.root._block_avail[name]
+            del self._root._block_avail[name]
             raise RuntimeError('Can only set new blocks for entire family '
                                'sub-snapshots or the root.')
 
