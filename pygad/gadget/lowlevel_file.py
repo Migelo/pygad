@@ -739,19 +739,22 @@ def get_block_info(gfile, gformat, endianness, header, unclear_blocks):
             info = _infer_info(gfile, header, gformat, endianness, start_pos,
                                block_sizes, unclear_blocks=unclear_blocks)
 
-        if 'MASS' not in info:
-            # just put it after ID block as usual
+    if 'MASS' not in info:
+        # just put it after ID block as usual
+        if gformat==3:
+            pos = None
+        else:
             pos = info['ID  '].start_pos + info['ID  '].size + \
                     (info['ID  '].start_pos - 
                             info['VEL '].start_pos + info['VEL '].size)
-            info['MASS'] = BlockInfo(
-                    name='MASS',
-                    dtype='float64' if header['flg_doubleprecision']
-                                else 'float32',
-                    dimension=1,
-                    ptypes=[False]*6,
-                    start_pos=pos,
-                    size=0)
+        info['MASS'] = BlockInfo(
+                name='MASS',
+                dtype='float64' if header['flg_doubleprecision']
+                            else 'float32',
+                dimension=1,
+                ptypes=[False]*6,
+                start_pos=pos,
+                size=0)
 
     return info
 
