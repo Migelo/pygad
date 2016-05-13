@@ -506,6 +506,9 @@ def _block_inferring(block, header):
         return  # all known
 
     N = sum(header['N_part'][i] for i in xrange(6) if block.ptypes[i])
+    if N == 0:
+        # most likely a empty mass block (with masses in header)
+        return 'delete'
     element_size = block.size / N
     if block.dtype is not None:
         block.dimension = element_size / block.dtype.itemsize
@@ -611,6 +614,8 @@ def _infer_info(gfile, header, gformat, endianness, start_pos, block_sizes,
                               size=block_sizes[i])
             # try to infer type, dimension, and particle types
             combis = _block_inferring(block, header)
+            if combis == 'delete':
+                continue
             if not block.is_filled(check_type=False):
                 assert False    # should never happen
             if not block.is_filled(check_type=True):
@@ -739,19 +744,22 @@ def get_block_info(gfile, gformat, endianness, header, unclear_blocks):
             info = _infer_info(gfile, header, gformat, endianness, start_pos,
                                block_sizes, unclear_blocks=unclear_blocks)
 
-        if 'MASS' not in info:
-            # just put it after ID block as usual
+    if 'MASS' not in info:
+        # just put it after ID block as usual
+        if gformat==3:
+            pos = None
+        else:
             pos = info['ID  '].start_pos + info['ID  '].size + \
                     (info['ID  '].start_pos - 
                             info['VEL '].start_pos + info['VEL '].size)
-            info['MASS'] = BlockInfo(
-                    name='MASS',
-                    dtype='float64' if header['flg_doubleprecision']
-                                else 'float32',
-                    dimension=1,
-                    ptypes=[False]*6,
-                    start_pos=pos,
-                    size=0)
+        info['MASS'] = BlockInfo(
+                name='MASS',
+                dtype='float64' if header['flg_doubleprecision']
+                            else 'float32',
+                dimension=1,
+                ptypes=[False]*6,
+                start_pos=pos,
+                size=0)
 
     return info
 
