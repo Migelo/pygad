@@ -427,6 +427,9 @@ def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
             del s._block_avail[name]    # blocks should not appear twice
     # now the mass block is named 'mass' for all cases (HDF5 or other)
     s._block_avail['mass'] = [n>0 for n in s._N_part]
+    # ... and is always present, even if only as part of the header
+    if 'mass' not in s._load_name:
+        s._load_name['mass'] = 'mass'
 
     # calculate the dependencies and particle types of the derived blocks
     changed = True
