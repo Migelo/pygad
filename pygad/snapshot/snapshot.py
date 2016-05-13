@@ -636,10 +636,18 @@ class _Snap(object):
         '''
         return physics.z2a(self.redshift)
 
-    def headers(self):
-        '''A list of the header(s) as dict's. For common features see
-        `properties`.'''
-        return [reader.header.copy() for reader in self._root._file_handlers]
+    def headers(self, idx=None):
+        '''
+        A list of the header(s) as dict's. For common features see `properties`.
+
+        Args:
+            idx (int):      If not None, do not return the entire list, but just
+                            the header of the file of given number.
+        '''
+        if idx is None:
+            return [reader.header.copy() for reader in self._root._file_handlers]
+        else:
+            return self._root._file_handlers[idx].header.copy()
 
     def families(self):
         '''Return the names of the particle families (at least partly) present in
