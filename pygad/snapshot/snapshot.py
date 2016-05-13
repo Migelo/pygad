@@ -636,6 +636,11 @@ class _Snap(object):
         '''
         return physics.z2a(self.redshift)
 
+    def headers(self):
+        '''A list of the header(s) as dict's. For common features see
+        `properties`.'''
+        return [reader.header.copy() for reader in self._root._file_handlers]
+
     def families(self):
         '''Return the names of the particle families (at least partly) present in
         this snapshot.'''
