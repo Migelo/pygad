@@ -506,6 +506,9 @@ def _block_inferring(block, header):
         return  # all known
 
     N = sum(header['N_part'][i] for i in xrange(6) if block.ptypes[i])
+    if N == 0:
+        # most likely a empty mass block (with masses in header)
+        return 'delete'
     element_size = block.size / N
     if block.dtype is not None:
         block.dimension = element_size / block.dtype.itemsize
@@ -611,6 +614,8 @@ def _infer_info(gfile, header, gformat, endianness, start_pos, block_sizes,
                               size=block_sizes[i])
             # try to infer type, dimension, and particle types
             combis = _block_inferring(block, header)
+            if combis == 'delete':
+                continue
             if not block.is_filled(check_type=False):
                 assert False    # should never happen
             if not block.is_filled(check_type=True):
