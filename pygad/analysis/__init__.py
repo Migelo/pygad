@@ -8,7 +8,7 @@ Also doctest other parts of this sub-module:
     >>> doctest.testmod(properties)
     TestResults(failed=0, attempted=33)
     >>> doctest.testmod(halo)
-    TestResults(failed=0, attempted=28)
+    TestResults(failed=0, attempted=29)
     >>> doctest.testmod(profiles)
     TestResults(failed=0, attempted=19)
 
