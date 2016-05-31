@@ -77,7 +77,10 @@ def show_FoF_groups(s, groups, colors='rand', plot_center=True, plot_parts=False
             ax.scatter(pos2D[:,0], pos2D[:,1], s=pointsize,
                        edgecolor='none', facecolor=color, alpha=alpha)
         if plot_center:
-            center = getattr(group, plot_center, group.com)
+            try:
+                center = getattr(group, plot_center)
+            except:
+                center = group.com
             ax.scatter(center[xaxis], center[yaxis],
                        marker='x', s=pointsize, color=color)
 
