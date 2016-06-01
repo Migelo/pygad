@@ -13,7 +13,7 @@ from profiles import *
 
 def show_FoF_groups(s, groups, colors='rand', plot_center=True, plot_parts=False,
                     plot_hull=True, pointsize=20, alpha=0.02, linewidth=1,
-                    linestyle='-', **plotargs):
+                    linestyle='solid', **plotargs):
     '''
     Plot the image of the (sub-)snapshot `s` and overplot the convex hulls of the
     (projected) FoF-groups.
@@ -81,8 +81,10 @@ def show_FoF_groups(s, groups, colors='rand', plot_center=True, plot_parts=False
                 center = getattr(group, plot_center)
             except:
                 center = group.com
+            c = mpl.colors.rgb_to_hsv(color)
+            c = mpl.colors.hsv_to_rgb( [c[0], c[1]*0.6, c[2]*0.8] )
             ax.scatter(center[xaxis], center[yaxis],
-                       marker='x', s=pointsize, color=color)
+                       marker='x', s=1.5*pointsize, color=c)
 
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
