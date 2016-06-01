@@ -345,7 +345,9 @@ class Halo(object):
             'parts':    'number of particles per species',
             'com':      'center of mass',
             'ssc':      'shrinking sphere center',
-            'Rmax':     'maximum distance of a particle from com',
+            'vel':          'mass-weighted velocity',
+            'vel_sigma':    'mass-weighted velocity dispersion',
+            'Rmax':         'maximum distance of a particle from com',
             'lowres_part':  'number of low-resolution particles',
             'lowres_mass':  'mass of low-resolution particles',
     }
@@ -427,6 +429,11 @@ class Halo(object):
                 val = UnitScalar(0.0, halo['mass'].units)
             else:
                 val = sub['mass'].sum()
+        elif prop == 'vel':
+            val = mass_weighted_mean(halo, 'vel')
+        elif prop == 'vel_sigma':
+            v0 = mass_weighted_mean(halo, 'vel')
+            val = np.sqrt(np.sum(mass_weighted_mean(halo,'vel**2') - v0**2))
         elif prop == 'ssc':
             R_max = np.percentile(periodic_distance_to(halo['pos'],
                                                        self.com,
