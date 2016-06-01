@@ -23,37 +23,40 @@ Examples:
     >>> Translation(-center).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_320"... done.
 
-    >>> FoF, N_FoF = find_FoF_groups(s.highres.dm, '3.5 kpc',
-    ...                              dvmax='100 km/s') # doctest: +ELLIPSIS
+    >>> l3 = 1500.*s.cosmology.rho_crit(s.redshift)/np.median(s.highres.dm['mass'])
+    >>> FoF, N_FoF = find_FoF_groups(s.highres.dm,
+    ...             l=l3**Fraction(-1,3),
+    ...             dvmax='100 km/s') # doctest: +ELLIPSIS
     load block vel... done.
     perform a FoF search on 1,001,472 particles:
-      l      = 3.5 [kpc]
+      l      = 2.2 [kpc]
       dv_max = 1e+02 [s**-1 km]
       N     >= 100
-    found 123 groups
+    found 89 groups
     the 3 most massive ones are:
-      group 0:   1.59e+11 [Msol]  @  [-0..., 0..., -0...] [kpc]
-      group 1:   6.88e+10 [Msol]  @  [4..., 9..., 4...] [kpc]
-      group 2:   1.56e+10 [Msol]  @  [-1...+03, -1...e+03, -1...e+03] [kpc]
+      group 0:   7.24e+10 [Msol]  @  [0..., 0..., ...] [kpc]
+      group 1:   3.32e+10 [Msol]  @  [4..., 9..., 4...] [kpc]
+      group 2:   7.02e+09 [Msol]  @  [2..., ..., ...] [kpc]
 
     # find galaxies (exclude those with almost only gas)
-    >>> galaxies = generate_FoF_catalogue(s.baryons, l='3 kpc', min_N=3e2,
+    >>> galaxies = generate_FoF_catalogue(s.baryons,
+    ...             min_N=300,
     ...             dvmax='100 km/s', #max_halos=5,
     ...             exclude=lambda g,s: g.Mgas/g.mass>0.9)  # doctest: +ELLIPSIS
     perform a FoF search on 1,001,472 particles:
-      l      = 3 [kpc]
+      l      = 1.3 [kpc]
       dv_max = 1e+02 [s**-1 km]
       N     >= 300
-    found 7 groups
+    found 4 groups
     the 3 most massive ones are:
-      group 0:   3.76e+10 [Msol]  @  [-0..., 0..., 0...] [kpc]
-      group 1:    7.1e+09 [Msol]  @  [4..., 9..., 4...] [kpc]
-      group 2:   4.71e+09 [Msol]  @  [8..., 1...e+03, 7...] [kpc]
+      group 0:   2.99e+10 [Msol]  @  [0..., 0..., 0...] [kpc]
+      group 1:   6.91e+09 [Msol]  @  [4..., 9..., 4...] [kpc]
+      group 2:    3.2e+09 [Msol]  @  [8..., 1...e+03, 7...] [kpc]
     initialize halos from FoF group IDs...
     load block ID... done.
     initialized 3 halos.
     >>> galaxies[0] # doctest: +ELLIPSIS
-    <Halo N = 66,... /w M = 3.8e+10 [Msol] @ com = [-0..., 0..., 0...] [kpc]>
+    <Halo N = 52,... /w M = 3e+10 [Msol] @ com = [0..., 0..., 0...] [kpc]>
     >>> gal = s[galaxies[0]]
     >>> assert len(gal) == len(galaxies[0])
     >>> assert set(gal['ID']) == set(galaxies[0].IDs)
@@ -230,7 +233,10 @@ def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True,
 
     Args:
         s (Snap):           The (sub-)snapshot to perform the FoF finder on.
-        l (UnitScalar):     The linking length to use for the FoF finder.
+        l (UnitScalar):     The linking length to use for the FoF finder (for dark
+                            matter / all matter it turned out that
+                            ( 1500. * rho_crit / median(mass) )^(-1/3) is a
+                            reasonable value).
         dvmax (UnitScalar): The "linking velocity" to use for the FoF finder.
         min_N (int):        The minimum number of particles in a FoF group to
                             actually define it as such.
@@ -534,7 +540,11 @@ def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
 
     Args:
         s (Snap):           The snapshot to generate the FoF groups for.
-        l (UnitScalar):     The linking length for the FoF groups.
+        l (UnitScalar):     The linking length for the FoF groups (for dark
+                            matter / all matter it turned out that
+                            ( 1500. * rho_crit / median(mass) )^(-1/3) is a
+                            reasonable value, which will be used as default, when
+                            l=None).
         calc (set, list, tuple):
                             A list of the properties to calculate at instantiation
                             of the Halo instances.
@@ -563,6 +573,9 @@ def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
         N_FoF (int):        The number of FoF groups in `FoF`.
     '''
     if FoF is None:
+        if l is None:
+            l = ( 1500. * s.cosmology.rho_crit(s.redshift)
+                        / np.median(s['mass']) )**Fraction(-1,3)
         FoF, N_FoF = find_FoF_groups(s, l=l, verbose=verbose, **kwargs)
     else:
         N_FoF = len(set(FoF)) - 1

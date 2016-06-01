@@ -119,8 +119,9 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
                             particle types (e.g. [0,1,4]).
         linking_length (UnitScalar):
                             The linking length used for the FoF finder in mode
-                            "FoF" (no reasonable default, hence the default to
-                            None).
+                            "FoF" (if None, it defaults to
+                            ( 1500.*rho_crit / median(mass) )^(-1/3) as defined in
+                            `generate_FoF_catalogue`).
         linking_vel (UnitScalar):
                             The linking velocity used for the FoF finder in mode
                             "FoF". Only used for defining the galaxy, not for the
@@ -198,10 +199,6 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
         center = info['center']
     elif mode in ['ssc', 'FoF']:
         if mode == 'FoF':
-            #raise NotImplementedError('Mode "FoF" is not yet implemented.')
-            if linking_length is None:
-                raise ValueError('You have to define `linking_length` in ' +
-                                 '"FoF" mode -- cannot be None!')
             halos = generate_FoF_catalogue(
                     s,
                     l = linking_length,
