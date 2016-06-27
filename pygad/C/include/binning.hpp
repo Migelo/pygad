@@ -18,6 +18,18 @@ void sph_bin_3D(size_t N,
                 double periodic);
 
 extern "C"
+void sph_bin_3D_nonorm(size_t N,
+                       double *pos,
+                       double *hsml,
+                       double *dV,
+                       double *qty,
+                       double *extent,
+                       size_t Npx[3],
+                       double *grid,
+                       const char *kernel_,
+                       double periodic);
+
+extern "C"
 void sph_3D_bin_2D(size_t N,
                    double *pos,
                    double *hsml,
@@ -28,6 +40,18 @@ void sph_3D_bin_2D(size_t N,
                    double *grid,
                    const char *kernel_,
                    double periodic);
+
+extern "C"
+void sph_3D_bin_2D_nonorm(size_t N,
+                          double *pos,
+                          double *hsml,
+                          double *dV,
+                          double *qty,
+                          double *extent,
+                          size_t Npx[2],
+                          double *grid,
+                          const char *kernel_,
+                          double periodic);
 
 
 // Mind the reversed indexing of i_min, i_max, and i due to performace at accessing
@@ -61,7 +85,7 @@ inline size_t construct_linear_idx(const size_t *i, const size_t *Npx) {
 }
 // end of helper funktion templates
 
-template <int d, bool projected=false>
+template <int d, bool projected=false, bool norm=true>
 void bin_sph(size_t N,
              double *pos,
              double *hsml,
@@ -114,32 +138,36 @@ void bin_sph(size_t N,
             i_max[(d-1)-k] = std::min<size_t>( (rj[k]-extent[2*k]+hj) / res[k] + 1.0, Npx[k]);
         }
 
-        double S;
-        // no correction for particles that extent out of the grid and the
-        // integral is not over the entire kernel
-        if (hj > H_lim_out_of_grid*res_min and extents_out_of_grid<d>(i_min, i_max, Npx)) {
-            S = 1.0;
+        double S;   // the discrete grid integral of the kernel
+        if ( norm ) {
+            // no correction for particles that extent out of the grid and the
+            // integral is not over the entire kernel
+            if (hj > H_lim_out_of_grid*res_min and extents_out_of_grid<d>(i_min, i_max, Npx)) {
+                S = 1.0;
+            } else {
+                S = 0.0;
+                size_t i[d];
+                double grid_r[d];
+                nested_loops<d>::do_loops(i, i_min, i_max,
+                    [&](unsigned n, size_t *i, size_t *i_min, size_t *i_max){
+                        const unsigned k = (d-1)-n;
+                        grid_r[k] = extent[2*k] + (i[n]+0.5)*res[k];
+                    },
+                    [&](unsigned n, size_t *i, size_t *i_min, size_t *i_max){
+                        const unsigned k = (d-1)-n;
+                        grid_r[k] = extent[2*k] + (i[n]+0.5)*res[k];
+                        double dj = dist_periodic<d>(grid_r, rj, periodic);
+                        if (projected)
+                            S += dV_px * kernel.proj_value(dj/hj, hj);
+                        else
+                            S += dV_px * kernel.value(dj/hj, hj);
+                });
+            }
         } else {
-            S = 0.0;
-            size_t i[d];
-            double grid_r[d];
-            nested_loops<d>::do_loops(i, i_min, i_max,
-                [&](unsigned n, size_t *i, size_t *i_min, size_t *i_max){
-                    const unsigned k = (d-1)-n;
-                    grid_r[k] = extent[2*k] + (i[n]+0.5)*res[k];
-                },
-                [&](unsigned n, size_t *i, size_t *i_min, size_t *i_max){
-                    const unsigned k = (d-1)-n;
-                    grid_r[k] = extent[2*k] + (i[n]+0.5)*res[k];
-                    double dj = dist_periodic<d>(grid_r, rj, periodic);
-                    if (projected)
-                        S += dV_px * kernel.proj_value(dj/hj, hj);
-                    else
-                        S += dV_px * kernel.value(dj/hj, hj);
-            });
+            S = 1.0;
         }
 
-        if (S<1e-4) {
+        if ( norm and S<1e-4 ) {
             // Mind the reversed indexing of i_min, i_max, and i due to performace
             // at accessing array elements in reversed loop order in
             // nested_loops<d>::do_loops(...)!

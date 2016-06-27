@@ -67,7 +67,8 @@ from .. import C
 from numbers import Number
 from ..snapshot import BoxMask
 
-def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml'):
+def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml',
+                  normed=True):
     '''
     Bin some SPH quantity onto a 3D grid, fully accouting for the smoothing
     lengths.
@@ -168,16 +169,20 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml'):
     extent = extent.view(np.ndarray).astype(np.float64).copy()
     grid = np.empty(np.prod(Npx), dtype=np.float64)
     Npx = Npx.astype(np.intp)
-    C.cpygad.sph_bin_3D(C.c_size_t(len(sub)),
-                        C.c_void_p(pos.ctypes.data),
-                        C.c_void_p(hsml.ctypes.data),
-                        C.c_void_p(dV.ctypes.data),
-                        C.c_void_p(qty.ctypes.data),
-                        C.c_void_p(extent.ctypes.data),
-                        C.c_void_p(Npx.ctypes.data),
-                        C.c_void_p(grid.ctypes.data),
-                        C.create_string_buffer(kernel),
-                        C.c_double(s.boxsize.in_units_of(s['pos'].units)),
+    if normed:
+        sph_bin = C.cpygad.sph_bin_3D
+    else:
+        sph_bin = C.cpygad.sph_bin_3D_nonorm
+    sph_bin(C.c_size_t(len(sub)),
+            C.c_void_p(pos.ctypes.data),
+            C.c_void_p(hsml.ctypes.data),
+            C.c_void_p(dV.ctypes.data),
+            C.c_void_p(qty.ctypes.data),
+            C.c_void_p(extent.ctypes.data),
+            C.c_void_p(Npx.ctypes.data),
+            C.c_void_p(grid.ctypes.data),
+            C.create_string_buffer(kernel),
+            C.c_double(s.boxsize.in_units_of(s['pos'].units)),
     )
     grid = UnitArr(grid.reshape(tuple(Npx)), qty_units)
 
@@ -187,7 +192,7 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml'):
     return grid, res
 
 def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
-                  hsml='hsml'):
+                  hsml='hsml', normed=True):
     '''
     Bin some SPH quantity onto a 2D grid, fully accouting for the smoothing
     lengths.
@@ -288,16 +293,20 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
     extent = extent.view(np.ndarray).astype(np.float64).copy()
     grid = np.empty(np.prod(Npx), dtype=np.float64)
     Npx = Npx.astype(np.intp)
-    C.cpygad.sph_3D_bin_2D(C.c_size_t(len(sub)),
-                           C.c_void_p(pos.ctypes.data),
-                           C.c_void_p(hsml.ctypes.data),
-                           C.c_void_p(dV.ctypes.data),
-                           C.c_void_p(qty.ctypes.data),
-                           C.c_void_p(extent.ctypes.data),
-                           C.c_void_p(Npx.ctypes.data),
-                           C.c_void_p(grid.ctypes.data),
-                           C.create_string_buffer(kernel),
-                           C.c_double(s.boxsize.in_units_of(s['pos'].units)),
+    if normed:
+        sph_bin = C.cpygad.sph_3D_bin_2D
+    else:
+        sph_bin = C.cpygad.sph_3D_bin_2D_nonorm
+    sph_bin(C.c_size_t(len(sub)),
+            C.c_void_p(pos.ctypes.data),
+            C.c_void_p(hsml.ctypes.data),
+            C.c_void_p(dV.ctypes.data),
+            C.c_void_p(qty.ctypes.data),
+            C.c_void_p(extent.ctypes.data),
+            C.c_void_p(Npx.ctypes.data),
+            C.c_void_p(grid.ctypes.data),
+            C.create_string_buffer(kernel),
+            C.c_double(s.boxsize.in_units_of(s['pos'].units)),
     )
     grid = UnitArr(grid.reshape(tuple(Npx)), qty_units)
 
