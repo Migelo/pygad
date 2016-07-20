@@ -150,7 +150,7 @@ void bin_sph(size_t N,
             if ( out_of_grid<d>(i, Npx) )
                 continue;
             size_t I = construct_linear_idx<d>(i, Npx);
-            double VV = dVj / dV_px;
+            double VV = (projected ? dVj/hj : dVj) / dV_px;
 #pragma omp atomic
             grid[I] += VV * Qj;
         } else {
