@@ -13,13 +13,14 @@ from ..binning import *
 from ..gadget import config
 from ..snapshot import BoxMask
 import warnings
+from .. import environment
 
 def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
-          extent=None, Npx=256, xaxis=0, yaxis=1, vlim=None, cmap=None,
-          normcmaplum=True, desat=0.1, colors=None, colors_av=None, cunits=None,
-          clogscale=None, csurf_dens=None, clim=None, ax=None, showcbar=True, 
-          cbartitle=None, scaleind='line', scaleunits=None, fontcolor='white', 
-          fontsize=14, interpolation='nearest', **kwargs):
+          field=None, reduction=None, extent=None, Npx=256, xaxis=0, yaxis=1,
+          vlim=None, cmap=None, normcmaplum=True, desat=0.1, colors=None,
+          colors_av=None, cunits=None, clogscale=None, csurf_dens=None, clim=None,
+          ax=None, showcbar=True, cbartitle=None, scaleind='line',
+          scaleunits=None, fontcolor='white', fontsize=14, interpolation='nearest', **kwargs):
     '''
     Show an image of the snapshot.
 
@@ -58,6 +59,14 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                             Default: True
         surface_dens (bool):Whether to plot the surface density of qty rather than
                             just sum it up along the line of sight per pixel.
+        reduction (str):    If not None, interpret the SPH quantity not as a SPH
+                            field, but as a particle property and reduce with this
+                            given method along the third axis / line of sight.
+        field (bool):       If no `reduction` is given, this determines whether
+                            the SPH-quantity is interpreted as a density-field or
+                            its integral quantity.
+                            For instance: rho would be the density-field of the
+                            integral quantity mass.
         extent (UnitQty):   The extent of the image. It can be a scalar and then
                             is taken to be the total side length of a square
                             around the origin or a sequence of the minima and
@@ -158,6 +167,11 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         av = np.asarray(av)            # containers
     if isinstance(av, np.ndarray):     # includes the derived UnitArr and SimArr
         av = av[mask]
+    if 'dV' in kwargs:
+        if isinstance(kwargs['dV'], (list,tuple)):  # enable masking for non-standard
+            kwargs['dV'] = np.asarray(kwargs['dV']) # containers
+        if isinstance(kwargs['dV'], np.ndarray):    # includes the derived UnitArr and SimArr
+            kwargs['dV'] = kwargs['dV'][mask]
 
     if qty is None and av is None:
         """
@@ -169,6 +183,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         """
         if (len(s)!=0 and len(s.stars)==len(s)) \
                 or (s.descriptor.endswith('stars') and len(s)==0):
+            # stars only
             qty, av = 'lum_v', None
             if logscale is None:        logscale = True
             if surface_dens is None:    surface_dens = True
@@ -178,9 +193,11 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
             if units is None:           units = s['mass'].units / s['pos'].units**2
             if logscale is None:        logscale = True
             if surface_dens is None:    surface_dens = True
+            if field is None:           field = False
         if colors is None and colors_av is None:
             if (len(s)!=0 and len(s.stars)==len(s)) \
                     or (s.descriptor.endswith('stars') and len(s)==0):
+                # stars only
                 colors, colors_av = 'age.in_units_of("Gyr")', 'lum_v'
                 if cmap is None:        cmap = 'Age'
                 if clim is None:        clim = [0,13]
@@ -188,25 +205,56 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                                                     '$[\mathrm{Gyr}]$'
             elif (len(s)!=0 and len(s.gas)==len(s)) \
                     or (s.descriptor.endswith('gas') and len(s)==0):
+                # gas only
                 colors, colors_av = 'temp.in_units_of("K")', 'rho'
                 if clogscale is None:   clogscale = True
                 if cmap is None:        cmap = 'Bright'
                 if cbartitle is None:   cbartitle = r'$\log_{10}(T\,[\mathrm{K}])$'
+                if field is None:       field = False
             else:
                 if cmap is None:        cmap = 'BlackGreen' if len(s.baryons)==0 \
                                                     else 'BlackPurple'
                 if cbartitle is None:   cbartitle = r'$\log_{10}(\Sigma\,[%s])$' % (
                                                         units.latex() )
     if logscale is None: logscale = True
-    if surface_dens is None: surface_dens = True
     if cmap is None: cmap = 'cubehelix' if colors is None else 'Bright'
     if csurf_dens is None: csurf_dens = False
+    if field is None:
+        if reduction is None:
+            field = (len(s.gas)==len(s) and len(s.gas)>0)
+        else:
+            field = False
+    if surface_dens is None: surface_dens = (reduction is None and not field)
 
     if scaleunits is None:
         scaleunits = s['pos'].units
     else:
         scaleunits = Unit(scaleunits)
         extent.convert_to(scaleunits, subs=s)
+
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'plot a map - paramters:'
+        if isinstance(qty,str) or qty is None:
+            print '  qty:         ', qty
+        else:
+            print '  qty:         ', type(qty)
+        if isinstance(av,str) or av is None:
+            print '  av:          ', av
+        else:
+            print '  av:          ', type(av)
+        if isinstance(colors,str) or colors is None:
+            print '  colors:      ', colors
+        else:
+            print '  colors:      ', type(colors)
+        if isinstance(colors_av,str) or colors_av is None:
+            print '  colors_av:   ', colors_av
+        else:
+            print '  colors_av:   ', type(colors_av)
+        print '  field:       ', field
+        print '  surface_dens:', surface_dens
+        print '  logscale:    ', logscale
+        print '  clogscale:   ', clogscale
+        print '  [...]'
 
     # create luminance map
     if len(s) == 0:
@@ -220,7 +268,8 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                              getattr(qty,'units',None))
         px2 = np.prod(res)
     else:
-        im_lum, px2 = map_qty(s, extent=extent, qty=qty, av=av, Npx=Npx,
+        im_lum, px2 = map_qty(s, extent=extent, field=field, qty=qty, av=av,
+                              reduction=reduction, Npx=Npx,
                               xaxis=xaxis, yaxis=yaxis, **kwargs)
         if surface_dens:
             im_lum /= px2
@@ -252,8 +301,10 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     elif len(s)==0:
         im = np.zeros(tuple(Npx)+(3,))  # at vlim[0] -> black with any color coding
     else:
-        im_col, px2 = map_qty(s, extent=extent, qty=colors, av=colors_av, Npx=Npx,
-                              xaxis=xaxis, yaxis=yaxis, **kwargs)
+        im_col, px2 = map_qty(s, extent=extent, field=field, qty=colors,
+                              av=colors_av, reduction=reduction, Npx=Npx,
+                              xaxis=xaxis, yaxis=yaxis,
+                              **kwargs)
         if csurf_dens:
             im_col /= px2
         if cunits is not None:
@@ -283,17 +334,28 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
             cqty = colors if colors is not None else qty
             if isinstance(cqty,str):
                 cname = cqty
+                if reduction is not None:
+                    cname = '%s(%s)' % (reduction, cname)
                 if colors is not None:
+                    if cunits is None and len(s)>0:
+                        cunits = s.get(cqty).units
+                        if field:
+                            cunits = (cunits * s['pos'].units).gather()
+                        if csurf_dens:
+                            cunits = (cunits * px2.units).gather()
                     if csurf_dens:
-                        if cunits is None and len(s)>0:
-                            cunits = s.get(cqty).units/px2.units
                         cname = 'surface-density of ' + cname
-                    else:
-                        if cunits is None and len(s)>0:
-                            cunits = s.get(cqty).units
                 else:
                     if cunits is None:
-                        cunits = units if units is not None else None if len(s)==0 else s.get(cqty).units
+                        if units is None:
+                            if len(s) == 0:
+                                cunits = None
+                            else:
+                                cunits = s.get(cqty).units
+                                if field:
+                                    cunits = (cunits * s['pos'].units).gather()
+                        else:
+                            cunits = units
             else:
                 cname = ''
                 if cunits is None:

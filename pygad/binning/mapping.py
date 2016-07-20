@@ -19,15 +19,15 @@ Example:
     apply Rotation to "pos" of "snap_M1196_4x_470"... done.
     >>> sub = s[BoxMask('120 kpc', sph_overlap=True)]
     load block hsml... done.
-    >>> m_b, px2 = map_qty(sub.baryons, '120 kpc', 'mass', Npx=256)
+    >>> m_b, px2 = map_qty(sub.baryons, '120 kpc', False, 'mass', Npx=256)
     create a 256 x 256 map (120 x 120 [kpc])...
     load block rho... done.
     derive block dV... done.
     create a 256 x 256 SPH-grid (120 x 120 [kpc])...
     done with SPH grid
-    >>> m_s, px2 = map_qty(sub.stars, '120 kpc', 'mass', Npx=256)
+    >>> m_s, px2 = map_qty(sub.stars, '120 kpc', False, 'mass', Npx=256)
     create a 256 x 256 map (120 x 120 [kpc])...
-    >>> m_g, px2 = map_qty(sub.gas, '120 kpc', 'mass', Npx=256)
+    >>> m_g, px2 = map_qty(sub.gas, '120 kpc', False, 'mass', Npx=256)
     create a 256 x 256 map (120 x 120 [kpc])...
     create a 256 x 256 SPH-grid (120 x 120 [kpc])...
     done with SPH grid
@@ -44,8 +44,8 @@ from ..gadget import *
 from ..kernels import *
 from .. import environment
 
-def map_qty(s, extent, qty, av=None, Npx=256, xaxis=0, yaxis=1, softening=None,
-            sph=True, kernel=None):
+def map_qty(s, extent, field, qty, av=None, reduction=None, Npx=256,
+            xaxis=0, yaxis=1, softening=None, sph=True, kernel=None, dV='dV'):
     '''
     A fast pure-Python routine for binning SPH quantities onto a map.
 
@@ -55,10 +55,18 @@ def map_qty(s, extent, qty, av=None, Npx=256, xaxis=0, yaxis=1, softening=None,
                             taken to be the total side length of a square around
                             the origin or a sequence of the minima and maxima of
                             the directions: [[xmin,xmax],[ymin,ymax]]
+        field (bool):       If no `reduction` is given, this determines whether
+                            the SPH-quantity is interpreted as a density-field or
+                            its integral quantity.
+                            For instance: rho would be the density-field of the
+                            integral quantity mass.
         qty (UnitQty, str): The quantity to map. It can be a UnitArr of length
                             L=len(s) and dimension 1 (i.e. shape (L,)) or a string
                             that can be passed to s.get and returns such an array.
         av (UnitQty, str):  The quantity to average over. Otherwise as 'qty'.
+        reduction (str):    If not None, interpret the SPH quantity not as a SPH
+                            field, but as a particle property and reduce with this
+                            given method along the third axis / line of sight.
         Npx (int, sequence):The number of pixel per side. Either an integer that
                             is taken for both sides or a pair of such, the first
                             for the x-direction, the second for the y-direction.
@@ -75,6 +83,7 @@ def map_qty(s, extent, qty, av=None, Npx=256, xaxis=0, yaxis=1, softening=None,
                             particle.
         kernel (str):       The kernel to use for smoothing. (Default: 'kernel'
                             from config file `gadget.cfg`)
+        dV (UnitQty, str):  The volume elements of the particles.
 
     Returns:
         grid (UnitArr):     The quantity summed along the third axis over the area
@@ -94,15 +103,16 @@ def map_qty(s, extent, qty, av=None, Npx=256, xaxis=0, yaxis=1, softening=None,
     if av is not None:
         if isinstance(av, str):
             av = s.get(av)
-        grid, px2 = map_qty(s, extent, av*qty, av=None, Npx=Npx,
-                            xaxis=xaxis, yaxis=yaxis, softening=softening,
-                            sph=sph, kernel=kernel)
-        norm, px2 = map_qty(s, extent, av, av=None, Npx=Npx,
-                            xaxis=xaxis, yaxis=yaxis, softening=softening,
-                            sph=sph, kernel=kernel)
-        grid /= norm
-        grid[np.isnan(grid)] = 0.0
-        return grid, px2
+        if reduction is None:
+            grid, px2 = map_qty(s, extent, field, av*qty, av=None, Npx=Npx,
+                                xaxis=xaxis, yaxis=yaxis, softening=softening,
+                                sph=sph, kernel=kernel, dV=dV)
+            norm, px2 = map_qty(s, extent, field, av, av=None, Npx=Npx,
+                                xaxis=xaxis, yaxis=yaxis, softening=softening,
+                                sph=sph, kernel=kernel, dV=dV)
+            grid /= norm
+            grid[np.isnan(grid)] = 0.0
+            return grid, px2
 
     # prepare arguments
     extent, Npx, res = grid_props(extent=extent, Npx=Npx, dim=2)
@@ -119,7 +129,8 @@ def map_qty(s, extent, qty, av=None, Npx=256, xaxis=0, yaxis=1, softening=None,
 
     grid = np.zeros(Npx)
     if isinstance(qty, UnitArr):
-        grid = UnitArr(grid, qty.units)
+        grid = UnitArr(grid,
+                (qty.units*s['pos'].units).gather() if field else qty.units)
 
     if len(s) == 0:
         return grid, np.prod(res)
@@ -128,13 +139,31 @@ def map_qty(s, extent, qty, av=None, Npx=256, xaxis=0, yaxis=1, softening=None,
         sph = s.gas
         sph_qty = qty[s.gas._mask]
         if len(sph) != 0:
-            from cbinning import SPH_to_2Dgrid
-            dV = sph['dV'].in_units_of(sph['pos'].units**3)
-            sph_binned, px2 = SPH_to_2Dgrid(sph, qty=sph_qty/dV, extent=extent,
-                                            Npx=Npx, xaxis=xaxis, yaxis=yaxis,
-                                            kernel=kernel)
-            px2 = np.prod(px2)
-            sph_binned *= px2
+            if isinstance(dV, str):
+                dV = s.gas.get(dV)
+            dV = UnitQty(dV, sph['pos'].units**3)
+            if reduction is not None:
+                from cbinning import SPH_to_2Dgrid_by_particle
+                sph_binned, px2 = SPH_to_2Dgrid_by_particle(sph, qty=sph_qty,
+                                                            av=av, dV=dV,
+                                                            extent=extent,
+                                                            Npx=Npx,
+                                                            reduction=reduction,
+                                                            xaxis=xaxis,
+                                                            yaxis=yaxis,
+                                                            kernel=kernel)
+                px2 = np.prod(px2)
+            else:
+                from cbinning import SPH_to_2Dgrid
+                sph_binned, px2 = SPH_to_2Dgrid(sph,
+                                                qty = sph_qty if field
+                                                            else sph_qty/dV,
+                                                extent=extent,
+                                                Npx=Npx, xaxis=xaxis, yaxis=yaxis,
+                                                kernel=kernel)
+                px2 = np.prod(px2)
+                if not field:
+                    sph_binned *= px2
 
             assert abs((px2 - np.prod(res)) / px2) < 1e-3
             grid += sph_binned
