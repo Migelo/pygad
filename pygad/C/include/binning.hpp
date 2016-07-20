@@ -114,13 +114,13 @@ void bin_sph(size_t N,
             i_max[(d-1)-k] = std::min<size_t>( (rj[k]-extent[2*k]+hj) / res[k] + 1.0, Npx[k]);
         }
 
-        double W_int;
+        double S;
         // no correction for particles that extent out of the grid and the
         // integral is not over the entire kernel
         if (hj > H_lim_out_of_grid*res_min and extents_out_of_grid<d>(i_min, i_max, Npx)) {
-            W_int = 1.0;
+            S = 1.0;
         } else {
-            W_int = 0.0;
+            S = 0.0;
             size_t i[d];
             double grid_r[d];
             nested_loops<d>::do_loops(i, i_min, i_max,
@@ -133,13 +133,13 @@ void bin_sph(size_t N,
                     grid_r[k] = extent[2*k] + (i[n]+0.5)*res[k];
                     double dj = dist_periodic<d>(grid_r, rj, periodic);
                     if (projected)
-                        W_int += dV_px * kernel.proj_value(dj/hj, hj);
+                        S += dV_px * kernel.proj_value(dj/hj, hj);
                     else
-                        W_int += dV_px * kernel.value(dj/hj, hj);
+                        S += dV_px * kernel.value(dj/hj, hj);
             });
         }
 
-        if (W_int<1e-4) {
+        if (S<1e-4) {
             // Mind the reversed indexing of i_min, i_max, and i due to performace
             // at accessing array elements in reversed loop order in
             // nested_loops<d>::do_loops(...)!
@@ -168,9 +168,9 @@ void bin_sph(size_t N,
                     double dj = dist_periodic<d>(grid_r, rj, periodic);
                     double dVj_Wj;
                     if (projected)
-                        dVj_Wj = dVj / W_int * kernel.proj_value(dj/hj, hj);
+                        dVj_Wj = dVj / S * kernel.proj_value(dj/hj, hj);
                     else
-                        dVj_Wj = dVj / W_int * kernel.value(dj/hj, hj);
+                        dVj_Wj = dVj / S * kernel.value(dj/hj, hj);
 #pragma omp atomic
                     grid[I] += dVj_Wj * Qj;
             });

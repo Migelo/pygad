@@ -151,9 +151,13 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     s = s[bmask]
 
     if isinstance(qty, (list,tuple)):   # enable masking for non-standard
-        qty = np.ndarray(qty)           # containers
+        qty = np.asarray(qty)           # containers
     if isinstance(qty, np.ndarray):     # includes the derived UnitArr and SimArr
         qty = qty[mask]
+    if isinstance(av, (list,tuple)):   # enable masking for non-standard
+        av = np.asarray(av)            # containers
+    if isinstance(av, np.ndarray):     # includes the derived UnitArr and SimArr
+        av = av[mask]
 
     if qty is None and av is None:
         """
