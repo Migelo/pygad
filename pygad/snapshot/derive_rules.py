@@ -6,13 +6,14 @@ A function for a derived block shall return the derived block with units as a
 direct dependencies, i.e. the blocks it needs directly to calculate the derived
 one from.
 '''
-__all__ = ['calc_temps', 'age_from_form', 'calc_x_ray_lum']
+__all__ = ['calc_temps', 'age_from_form', 'calc_x_ray_lum', 'calc_HI_mass']
 
 from .. import environment
 from ..units import UnitArr, UnitScalar, UnitError
 import numpy as np
 from .. import physics
 from .. import gadget
+from .. import data
 from fractions import Fraction
 from multiprocessing import Pool, cpu_count
 import warnings
@@ -194,4 +195,58 @@ def calc_x_ray_lum(s, lumtable, **kwargs):
     from ..analysis import x_ray_luminosity
     return x_ray_luminosity(s, lumtable=lumtable, **kwargs)
 calc_x_ray_lum._deps = set(['Z', 'ne', 'H', 'rho', 'mass', 'temp'])
+
+def calc_HI_mass(s, UVB='FG11'):
+    '''
+    Estimate the HI mass with the fitting formula from Rahmati et al. (2013).
+
+    Args:
+        s (Snap):       The (gas-particles sub-)snapshot to use.
+        UVB (str):      The name of the UV background as named in `data.UVB`.
+
+    Returns:
+        HI (UnitArr):   The HI mass block for the gas (within `s`).
+    '''
+    uvb     = data.UVB[UVB]
+    z       = s.redshift
+    fbaryon = s.cosmology.Omega_b / s.cosmology.Omega_m
+
+    # interpolate Gamma_HI from the UV background radiation table for the current
+    # redshift (TODO: which formula of the paper? formula 1 or 3?)
+    # formula numbers are those of Rahmati et al. (2013)
+    Gamma_HI = np.interp(np.log10(z+1.),
+                         uvb['logz'], uvb['gH0'])
+    # calculate the characteristic self-shielding density
+    sigHI      = 3.27e-18 * (1.+z)**(-0.2)  # units in cm^2
+    # formula (13), the T4^0.17 dependecy gets factored in later:
+    nHss_gamma = 6.73e-3 * (sigHI/2.49e-18)**(-2./3.) * (fbaryon/0.17)**(-1./3.) \
+            * (Gamma_HI*1e12)**(2./3.)
+
+    # prepare the blocks needed
+    T     = s.gas['temp'].in_units_of('K')
+    rhoH  = s.gas['rho'] * s.gas['H']/s.gas['mass'] / physics.m_H
+    rhoH.convert_to('cm**-3', subs=s)
+    # calculatation is done unitless
+    T     = T.view(np.ndarray)
+    rhoH  = rhoH.view(np.ndarray)
+
+    # formula (13):
+    nHss = nHss_gamma * (T/1e4)**0.17   # in cm^-3
+    # formula (14):
+    fgamma_HI = 0.98 * (1.+(rhoH/nHss)**(1.64))**(-2.28) + 0.02*(1.+rhoH/nHss)**(-0.84)
+    l         = 315614. / T
+    alpha_A   = 1.269e-13 * l**1.503 / (1.+(l/0.522)**0.47)**1.923          # in cm^3/s
+    # Collisional ionization Gamma_Col = Lambda_T*(1-eta)*n (Theuns et al., 1998)
+    Lambda_T  = 1.17e-10*np.sqrt(T)*np.exp(-157809/T)/(1+np.sqrt(T/1e5))    # in cm^3/s
+    
+    # fitting (formula A8):
+    A = alpha_A + Lambda_T
+    B = 2.*alpha_A + Gamma_HI*fgamma_HI/rhoH + Lambda_T
+    C = alpha_A
+    det = B**2 - 4.*A*C
+    fHI = (B - np.sqrt(det)) / (2.*A)
+    fHI[ det<0 ] = 0.0
+
+    return fHI * s.gas['H']
+calc_HI_mass._deps = set(['temp'])
 

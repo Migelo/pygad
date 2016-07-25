@@ -20,9 +20,12 @@ Examples:
 
     TODO: Why is this actually not closer to one?!
 '''
-__all__ = ['alpha_elements', 'G', 'c', 'h', 'kB', 'N_A', 'R', 'e', 'm_p', 'm_n',
-           'm_u', 'm_e', 'solar', 'SMH_Moster_2013', 'SMH_Behroozi_2013',
-           'SMH_Kravtsov_2014', 'Reff_van_der_Wel_2014', 'SFR_Elbaz_2007',
+__all__ = ['alpha_elements',
+           'G', 'c', 'h', 'kB', 'N_A', 'R', 'e', 'm_p', 'm_n', 'm_u', 'm_e',
+           'm_H', 'm_He',
+           'solar',
+           'SMH_Moster_2013', 'SMH_Behroozi_2013', 'SMH_Kravtsov_2014',
+           'Reff_van_der_Wel_2014', 'SFR_Elbaz_2007',
            'Jeans_length', 'Jeans_mass']
 
 import numpy as np
@@ -58,6 +61,8 @@ m_u = UnitArr(scipy.constants.value('atomic mass constant'),
               scipy.constants.unit('atomic mass constant').replace('^','**'))
 m_e = UnitArr(scipy.constants.value('electron mass'),
               scipy.constants.unit('electron mass').replace('^','**'))
+m_H = UnitArr(1.00794, 'u')
+m_He = UnitArr(4.002602, 'u')
 
 class solar(object):
     '''

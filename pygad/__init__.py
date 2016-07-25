@@ -77,6 +77,7 @@ import ssp
 import binning
 import analysis
 import tools
+import data
 if environment.interactive:
     import plotting
 
