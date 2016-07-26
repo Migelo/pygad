@@ -11,6 +11,8 @@ Also doctest other parts of this sub-module:
     TestResults(failed=0, attempted=29)
     >>> doctest.testmod(profiles)
     TestResults(failed=0, attempted=19)
+    >>> doctest.testmod(absorption_spectra)
+    TestResults(failed=0, attempted=0)
 
     #>>> doctest.testmod(analysis)
     #TestResults(failed=0, attempted=20)
@@ -20,4 +22,5 @@ from properties import *
 from halo import *
 from profiles import *
 #from analysis import *
+from absorption_spectra import *
 
