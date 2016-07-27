@@ -21,8 +21,9 @@ Examples:
     TODO: Why is this actually not closer to one?!
 '''
 __all__ = ['alpha_elements',
-           'G', 'c', 'h', 'kB', 'N_A', 'R', 'e', 'm_p', 'm_n', 'm_u', 'm_e',
-           'm_H', 'm_He',
+           'constants',
+           'G', 'c', 'h', 'hbar', 'kB', 'N_A', 'epsilon0', 'mu0', 'q_e', 'm_p',
+           'm_n', 'm_u', 'm_e', 'm_H', 'm_He', 'R',
            'solar',
            'SMH_Moster_2013', 'SMH_Behroozi_2013', 'SMH_Kravtsov_2014',
            'Reff_van_der_Wel_2014', 'SFR_Elbaz_2007',
@@ -38,31 +39,36 @@ alpha_elements = ['O', 'C', 'Ne', 'Si', 'Mg', 'S', 'Ca']
 # sometimes Carbon & Nitrogen are also considered alpha elements; sometimes Oxygen
 # is not considered an alpha element; Ar and Ti are not followed...
 
-# Some usefule constants:
-G = UnitArr(scipy.constants.value('Newtonian constant of gravitation'),
-            scipy.constants.unit('Newtonian constant of gravitation')
-                                .replace('^','**'))
-c = UnitArr(scipy.constants.value('speed of light in vacuum'),
-            scipy.constants.unit('speed of light in vacuum').replace('^','**'))
-h = UnitArr(scipy.constants.value('Planck constant'),
-            scipy.constants.unit('Planck constant').replace('^','**'))
-kB = UnitArr(scipy.constants.value('Boltzmann constant'),
-             scipy.constants.unit('Boltzmann constant').replace('^','**'))
-N_A = UnitArr(scipy.constants.value('Avogadro constant'),
-              scipy.constants.unit('Avogadro constant').replace('^','**'))
-R = N_A * kB    # ideal gas constant
-e = UnitArr(scipy.constants.value('elementary charge'),
-            scipy.constants.unit('elementary charge').replace('^','**'))
-m_p = UnitArr(scipy.constants.value('proton mass'),
-              scipy.constants.unit('proton mass').replace('^','**'))
-m_n = UnitArr(scipy.constants.value('neutron mass'),
-              scipy.constants.unit('neutron mass').replace('^','**'))
-m_u = UnitArr(scipy.constants.value('atomic mass constant'),
-              scipy.constants.unit('atomic mass constant').replace('^','**'))
-m_e = UnitArr(scipy.constants.value('electron mass'),
-              scipy.constants.unit('electron mass').replace('^','**'))
-m_H = UnitArr(1.00794, 'u')
-m_He = UnitArr(4.002602, 'u')
+# All scipy constants:
+constants = {}
+for name in scipy.constants.find():
+    try:
+        value = scipy.constants.value(name)
+        units = scipy.constants.unit(name)
+        constants[name] = UnitArr(value,
+                                  units.replace('^','**').replace('ohm','Ohm')
+                                    if units else None)
+    except UnitError:
+        pass
+    except SyntaxError:
+        pass
+# Some useful constants:
+G        = constants['Newtonian constant of gravitation']
+c        = constants['speed of light in vacuum']
+h        = constants['Planck constant']
+hbar     = constants['Planck constant over 2 pi']
+kB       = constants['Boltzmann constant']
+N_A      = constants['Avogadro constant']
+epsilon0 = constants['electric constant']
+mu0      = constants['mag. constant']
+q_e      = constants['elementary charge']
+m_p      = constants['proton mass']
+m_n      = constants['neutron mass']
+m_u      = constants['atomic mass constant']
+m_e      = constants['electron mass']
+m_H      = UnitArr(1.00794, 'u')
+m_He     = UnitArr(4.002602, 'u')
+R        = N_A * kB    # ideal gas constant
 
 class solar(object):
     '''

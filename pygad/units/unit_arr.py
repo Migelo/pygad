@@ -95,6 +95,8 @@ Examples:
     UnitArr(5.515856e+12, units="kg km**-3")
     >>> (0.5 * M_earth * v_earth**2).in_units_of('J')
     UnitArr(2.648129e+33, units="J")
+    >>> UnitArr('1.2 N*m').in_base_units()
+    UnitArr(1.200000e+03, units="g m**2 s**-2")
 
     Unit conversion at construction:
     >>> UnitArr('10**8 km', units='AU')
@@ -515,6 +517,25 @@ class UnitArr(np.ndarray):
         c = self.copy()
         c.convert_to(units=units, subs=subs)
         return c
+
+    def convert_to_base_units(self, subs=None):
+        '''
+        Convert to the base units, i.e. the units all other units are defined in.
+
+        For more information see `convert_to`.
+        '''
+        units = self.units.standardize().free_of_factors()
+        return self.convert_to(units, subs=subs)
+
+    def in_base_units(self, subs=None, copy=False):
+        '''
+        Return the array in the base units, i.e. the units all other units are
+        defined in.
+
+        For more information see `in_units_of`.
+        '''
+        units = self.units.standardize().free_of_factors()
+        return self.in_units_of(units, subs=subs, copy=copy)
 
 
     def __setitem__(self, i, value):
