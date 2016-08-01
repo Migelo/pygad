@@ -13,7 +13,7 @@ Example:
     >>> families['dm']
     [1, 2, 3]
     >>> general
-    {'unclear_blocks': 'warning', 'kernel': 'cubic', 'vol_def_x': 'ones(len(gas))', 'SSP_dir': 'pygad//../bc03', 'IMF': 'Kroupa'}
+    {'kernel': 'cubic', 'unclear_blocks': 'warning', 'IMF': 'Kroupa', 'UVB': 'HM01', 'vol_def_x': 'ones(len(gas))', 'SSP_dir': 'pygad//../bc03'}
     >>> block_infos['MASS'], block_infos['HSML']
     ((1, 'float', None), (1, 'float', 'gas'))
     >>> get_block_units('RHO ')
@@ -42,6 +42,7 @@ elements = []
 general = {
     'kernel': '<undefined>',
     'vol_def_x': '<undefined>',
+    'UVB': '<undefined>',
     'IMF': '<undefined>',
     'SSP_dir': '<undefined>',
     'unclear_blocks': 'warning',
@@ -67,8 +68,8 @@ def read_config(config):
                         types. It must define gas, stars, dm (dark matter),
                         baryons, and bh (black holes).
     general:            A definition of the block ordering for format 1 files
-                        (without info block) and a list of the elements in block
-                        'Z'. This block is optional
+                        (without info block), a list of the elements in block 'Z',
+                        IFM definition, and more.
     base units:         The (default) Gadget base units (length, velocity, mass).
     block units:        The units for the different blocks.
     hdf5 names:         Name correspondences blocks in HDF5 files. (From HDF5 to
@@ -127,6 +128,7 @@ def read_config(config):
     if x == '1':
         x = 'ones(len(gas))'
     general['vol_def_x'] = x
+    general['UVB'] = cfg.get('general', 'UVB')
     IMF = cfg.get('general', 'IMF')
     if IMF not in ['Kroupa', 'Salpeter', 'Chabrier']:
         raise ValueError('IMF "%s" is unknown!' % IMF)

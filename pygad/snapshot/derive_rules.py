@@ -196,13 +196,14 @@ def calc_x_ray_lum(s, lumtable, **kwargs):
     return x_ray_luminosity(s, lumtable=lumtable, **kwargs)
 calc_x_ray_lum._deps = set(['Z', 'ne', 'H', 'rho', 'mass', 'temp'])
 
-def calc_HI_mass(s, UVB='FG11'):
+def calc_HI_mass(s, UVB=gadget.general['UVB']):
     '''
     Estimate the HI mass with the fitting formula from Rahmati et al. (2013).
 
     Args:
         s (Snap):       The (gas-particles sub-)snapshot to use.
         UVB (str):      The name of the UV background as named in `data.UVB`.
+                        Defaults to the value of the UVB in the `gadget.cfg`.
 
     Returns:
         HI (UnitArr):   The HI mass block for the gas (within `s`).
