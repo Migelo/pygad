@@ -217,8 +217,15 @@ def calc_HI_mass(s, UVB=gadget.general['UVB']):
     # formula numbers are those of Rahmati et al. (2013)
     Gamma_HI = np.interp(np.log10(z+1.),
                          uvb['logz'], uvb['gH0'])
-    # calculate the characteristic self-shielding density
-    sigHI      = 3.27e-18 * (1.+z)**(-0.2)  # units in cm^2
+    # calculate the characteristic self-shielding density (in units in cm^2)
+    if UVB == 'FG11':
+        # TODO: this is a bit off...
+        sigHI = 3.27e-18 * (1.+z)**(-0.2)
+    elif UVB == 'HM01':
+        # good fit for z<~5
+        sigHI = 2.31e-18 + 0.96e-18*(1.+z)**(-1.18)
+    else:
+        raise ValueError('HI cross section no known for UVB "%s"!' % UVB)
     # formula (13), the T4^0.17 dependecy gets factored in later:
     nHss_gamma = 6.73e-3 * (sigHI/2.49e-18)**(-2./3.) * (fbaryon/0.17)**(-1./3.) \
             * (Gamma_HI*1e12)**(2./3.)
