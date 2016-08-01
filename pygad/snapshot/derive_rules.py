@@ -249,5 +249,5 @@ def calc_HI_mass(s, UVB=gadget.general['UVB']):
     fHI[ det<0 ] = 0.0
 
     return fHI * s.gas['H']
-calc_HI_mass._deps = set(['temp'])
+calc_HI_mass._deps = set(['H', 'temp', 'rho', 'mass'])
 
