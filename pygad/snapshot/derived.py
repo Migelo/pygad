@@ -8,6 +8,11 @@ Examples:
     >>> assert rules == _rules
     >>> rules['r'], rules['Z']
     ('dist(pos)', 'metals/elements.sum(axis=1)')
+    >>> general
+    {'always_cache': set(['Ekin', 'temp', 'age', 'mag*', 'angmom', 'LX', 'jcirc']), 'cache_derived': True}
+    >>> iontable
+    {'ions': ['H I', 'He I', 'He II', 'C II', 'C III', 'C IV', 'N V', 'O VI', 'Mg II', 'Si II', 'Si III', 'Si IV', 'P IV', 'S VI'], 'tabledir': '/Users/bernhard/programming/pygad/iontbls/', 'T_vals': [2.5, 0.05, 150.0], 'nH_vals': [-8.0, 0.05, 160.0], 'pattern': 'lt<z>f10'}
+
     >>> from snapshot import Snap
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470')
     >>> ptypes_and_deps(rules['r'], s)
@@ -15,6 +20,21 @@ Examples:
     >>> ptypes_and_deps(rules['Z'], s)  # derived from mass (for all particles
     ...                                 # types) and elements (baryons only)
     ([True, False, False, False, True, False], set(['elements', 'metals']))
+    >>> s.gas['CIV'] # doctest: +ELLIPSIS
+    load block elements... done.
+    derive block H... done.
+    load block mass... done.
+    load block rho... done.
+    load block u... done.
+    load block ne... done.
+    derive block temp... done.
+    derive block CIV... load tables:
+      "/Users/bernhard/programming/pygad/iontbls/lt00f10" (z=0.000)
+      "/Users/bernhard/programming/pygad/iontbls/lt01f10" (z=0.100)
+    derive block C... done.
+    done.
+    SimArr([...],
+           units="1e+10 Msol h_0**-1", snap="snap_M1196_4x_470":gas)
 
 '''
 __all__ = ['ptypes_and_deps', 'read_derived_rules', 'general']
@@ -31,6 +51,13 @@ _rules = {}
 general = {
         'cache_derived': True,
         'always_cache': set(),
+}
+iontable = {
+        'tabledir': None,
+        'pattern':  'lt<z>f10',
+        'ions':     [],
+        'nH_vals':  [-8  , 0.05, 160],
+        'T_vals':   [ 2.5, 0.05, 140],
 }
 
 def ptypes_and_deps(defi, snap):
@@ -80,7 +107,7 @@ def ptypes_and_deps(defi, snap):
                     return [False]*6, set()
     return ptypes, deps
 
-def read_derived_rules(config, store_as_default=True, delete_old=False):
+def read_derived_rules(config, delete_old=False):
     '''
     Read rules for derived blocks from a config file.
 
@@ -90,15 +117,9 @@ def read_derived_rules(config, store_as_default=True, delete_old=False):
 
     Args:
         config (list):              list of possible filenames for the config file.
-        store_as_default (bool):    Wether to store them as global defaults.
-        delete_old (bool):          If store_as_default==True, delete old
-                                    definition before
+        delete_old (bool):          Delete old definition before add the new ones.
     '''
-    global _rules, general
-    if store_as_default:
-        rules = _rules
-    else:
-        rules = {}
+    global _rules, general, iontable
 
     def test_section(cfg, section, entries):
         if not cfg.has_section(section):
@@ -132,19 +153,47 @@ def read_derived_rules(config, store_as_default=True, delete_old=False):
 
     if delete_old:
         _rules.clear()
+        general.clear()
+        general['cache_derived'] = True
+        general['always_cache'] = set()
+        iontable.clear()
+        iontable['tabledir'] = None
+        iontable['pattern'] = 'lt<z>f10'
+        iontable['ions'] = []
+        iontable['nH_vals'] = [-8  , 0.05, 160]
+        iontable['T_vals']  = [ 2.5, 0.05, 140]
+
+    if cfg.has_section('iontable'):
+        test_section(cfg, 'iontable', ['tabledir', 'ions', 'nH_vals', 'T_vals'])
+        iontable['tabledir'] = cfg.get('iontable', 'tabledir')
+        if cfg.has_option('iontable', 'pattern'):
+            iontable['pattern'] = cfg.get('iontable', 'pattern')
+        iontable['ions'] = [ion.strip()
+                for ion in cfg.get('iontable','ions').split(',')]
+        for vals in ['nH_vals', 'T_vals']:
+            iontable[vals] = [float(v.strip())
+                    for v in cfg.get('iontable',vals).split(',')]
 
     for i,el in enumerate(gadget.elements):
-        rules[el] = 'elements[:,%d]' % i
-    rules.update( cfg.items('rules') )
+        _rules[el] = 'elements[:,%d]' % i
+    _rules.update( cfg.items('rules') )
 
-    for derived_name in rules.keys():
+    for derived_name in _rules.keys():
         if derived_name=='mag':
             mag, lum = 'mag', 'lum'
         elif re.match('mag_[a-zA-Z]', derived_name):
             mag, lum = derived_name, 'lum_'+derived_name[-1]
         else:
             continue
-        rules[lum] = "UnitQty(10**(-0.4*(%s-solar.abs_mag)),'Lsol')" % mag
+        _rules[lum] = "UnitQty(10**(-0.4*(%s-solar.abs_mag)),'Lsol')" % mag
 
-    return rules
+    # add the ions from the Cloudy table as derived blocks
+    for ion in iontable['ions']:
+        el, ionisation = ion.split()
+        ion = el + ionisation   # getting rid of the white space
+        if ion in _rules:
+            continue
+        _rules[ion] = "calc_ion_mass(gas, '%s', '%s')" % (el, ionisation)
+
+    return _rules
 

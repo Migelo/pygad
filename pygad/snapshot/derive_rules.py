@@ -6,7 +6,8 @@ A function for a derived block shall return the derived block with units as a
 direct dependencies, i.e. the blocks it needs directly to calculate the derived
 one from.
 '''
-__all__ = ['calc_temps', 'age_from_form', 'calc_x_ray_lum', 'calc_HI_mass']
+__all__ = ['calc_temps', 'age_from_form', 'calc_x_ray_lum', 'calc_HI_mass',
+           'calc_ion_mass']
 
 from .. import environment
 from ..units import UnitArr, UnitScalar, UnitError
@@ -14,6 +15,7 @@ import numpy as np
 from .. import physics
 from .. import gadget
 from .. import data
+import derived
 from fractions import Fraction
 from multiprocessing import Pool, cpu_count
 import warnings
@@ -250,4 +252,31 @@ def calc_HI_mass(s, UVB=gadget.general['UVB']):
 
     return fHI * s.gas['H']
 calc_HI_mass._deps = set(['H', 'temp', 'rho', 'mass'])
+
+def calc_ion_mass(s, el, ionisation, iontbl=None):
+    '''
+    Calculate the mass of the given ion from Cloudy tables.
+
+    Args:
+        s (Snap):           The (gas-particles sub-)snapshot to use.
+        el (str):           The name of the ion-element. Needs also to be a block
+                            name (e.g. as one of the 'element' block).
+        ionisation (str):   The ionisation state. The concatenation of `el` and
+                            this must result in an ion name in the Cloudy table.
+        iontbl (IonisationTable):
+                            The ionisation table to use for the table
+                            interpolation. Default to the one given by
+                            `derived.cfg` for the redshift of the (sub-)snapshot.
+
+    Returns:
+        ion_mass (UnitArr): The mass block of the ion (per particle) in units if
+                            the block given by `el`.
+    '''
+    # if there is some ion table specified in the config, use it as default
+    iontbl = data.config_ion_table(s.redshift) if iontbl is None else iontbl
+    f_ion = 10.**iontbl.interp_snap(el+' '+ionisation, s.gas)
+    return f_ion * s.gas.get(el)
+# this is not super correct: typically the element is taken from the block
+# 'elements', but could in principle also be defined seperately!
+calc_ion_mass._deps = set(['H', 'mass', 'rho', 'temp', 'elements'])
 

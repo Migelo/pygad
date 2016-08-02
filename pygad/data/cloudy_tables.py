@@ -2,7 +2,7 @@
 Read and interpolate Cloudy tables for ionisation states as a function of density
 and temperature for a given redshift.
 '''
-__all__ = ['IonisationTable']
+__all__ = ['config_ion_table', 'IonisationTable']
 
 from .. import environment
 from ..units import Unit, UnitQty
@@ -10,6 +10,36 @@ import numpy as np
 import copy
 import re
 import os
+
+def config_ion_table(redshift):
+    '''
+    Load & interpolate an IonisationTable for the given redshift as defined in the
+    config file `derived.cfg`.
+
+    Args:
+        redshift (float):   The redshift to load/interpolate the table(s) for.
+
+    Returns:
+        iontbl (IonisationTable):   The ionisation table class.
+    '''
+    from ..snapshot.derived import iontable
+    if iontable['tabledir'] is None:
+        raise RuntimeError('No Cloudy table directory defined in `derived.cfg`!')
+    nH_vals = iontable['nH_vals']
+    nH_vals = np.linspace(nH_vals[0],
+                          nH_vals[0] + nH_vals[1]*(nH_vals[2]-1),
+                          nH_vals[2])
+    T_vals = iontable['T_vals']
+    T_vals = np.linspace(T_vals[0],
+                         T_vals[0] + T_vals[1]*(T_vals[2]-1),
+                         T_vals[2])
+    iontbl = IonisationTable(redshift,
+                             nH=nH_vals,
+                             T=T_vals,
+                             ions=iontable['ions'],
+                             tabledir=iontable['tabledir'],
+                             table_pattern=iontable['pattern'])
+    return iontbl
 
 class IonisationTable(object):
     '''
@@ -90,6 +120,9 @@ class IonisationTable(object):
         Given nH and temperatures for a list of particles, get the fractions for
         a given ion by a bilinear interpolation of the table for each particle.
 
+        If values out of the table bounds are encountered, the corresponding
+        values will be the nearest table values.
+
         Args:
             ion (int,str):      The index of name of the ion in question.
             nH (UnitQty):       The Hydrogen number densities of the particles (if
@@ -120,10 +153,10 @@ class IonisationTable(object):
         N_T  = len(self._T_vals)
         k_nH = -np.ones(len(nH), dtype=int)
         for k in xrange( N_nH ):
-            k_nH[ self._nH_vals[k] <= nH ] = k
+            k_nH[ self._nH_vals[k] < nH ] = k
         l_T = -np.ones(len(T), dtype=int)
         for l in xrange( N_T ):
-            l_T[ self._T_vals[l] <= T ] = l
+            l_T[ self._T_vals[l] < T ] = l
 
         # do bilinear interpolation
 
@@ -131,10 +164,10 @@ class IonisationTable(object):
         high_nH = (k_nH>=N_nH-1)
         low_T   = (l_T <0)
         high_T  = (l_T >=N_T -1)
-        out_of_bounds = ( low_nH | high_nH | low_T | high_T )
-        if np.any( out_of_bounds ):
+        out_of_bounds = np.sum( low_nH | high_nH | low_T | high_T )
+        if out_of_bounds:
             import sys
-            print >> sys.stderr, 'WARNING: %d particles out of bounds' % np.sum(out_of_bounds)
+            print >> sys.stderr, 'WARNING: %d particles out of bounds!' % out_of_bounds
         # avoid invalid indices in the following (masking would slow down and be
         # not very readable):
         k_nH[ low_nH  ] = 0
@@ -154,13 +187,16 @@ class IonisationTable(object):
         a = (nH - nH1) / (nH2 - nH1)
         f1 = (1.-a) * f11 + a * f21
         f2 = (1.-a) * f12 + a * f22
+        f1[low_nH]  = f11[low_nH]
+        f1[high_nH] = f21[high_nH]
+        f2[low_nH]  = f12[low_nH]
+        f2[high_nH] = f22[high_nH]
         # interpolate in T
         T1, T2 = self._T_vals[l_T], self._T_vals[l_T+1]
         a = (T - T1) / (T2 - T1)
         f = (1.-a) * f1 + a * f2
-
-        # TODO: handle out of grid cases differently?
-        f[out_of_bounds] = np.nan
+        f[low_T]  = f1[low_T]
+        f[high_T] = f2[high_T]
 
         return f
 
@@ -202,11 +238,12 @@ class IonisationTable(object):
             z1, z2 = avail_z[i], avail_z[i+1]
         else:
             z1, z2 = avail_z[i-1], avail_z[i]
-        if z1 == z2:
+        if z1==z2 or z1==self._redshift or z2==self._redshift:
+            z = z2 if z2 == self._redshift else z1
             if environment.verbose >= environment.VERBOSE_NORMAL:
                 print 'load table:'
-                print '  "%s" (z=%.3f)' % (tables[z1], z1)
-            table = self._read_cloudy_table(tables[z1])
+                print '  "%s" (z=%.3f)' % (tables[z], z)
+            table = self._read_cloudy_table(tables[z])
         else:
             if environment.verbose >= environment.VERBOSE_NORMAL:
                 print 'load tables:'
