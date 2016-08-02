@@ -1,11 +1,11 @@
 '''
-Read and interpolate CLOUDY tables for ionisation states as a function of density
+Read and interpolate Cloudy tables for ionisation states as a function of density
 and temperature for a given redshift.
 '''
 __all__ = ['IonisationTable']
 
 from .. import environment
-from ..units import UnitQty
+from ..units import Unit, UnitQty
 import numpy as np
 import copy
 import re
@@ -14,6 +14,10 @@ import os
 class IonisationTable(object):
     '''
     Read in a Cloudy table for fractions of ions and prepare it for interpolation.
+
+    Note:
+        For debugging purposes, there is a method to plot the tables read in:
+        `show_table`.
 
     Args:
         redshift (float):       The redshift to create the table for. The two
@@ -214,4 +218,59 @@ class IonisationTable(object):
             table = (1.-a) * table1 + a * table2
 
         return table
+
+    def show_table(self, ion=None, cmap='Bright'):
+        '''
+        Plot the table of the given ion.
+
+        Args:
+            ion (str, int):     The ion to plot the table for. If None, all tables
+                                are plotted (and a list is returned).
+            cmap (str):         The colormap to use.
+
+        Returns:
+            fig (Figure):       The figure of the axis plotted on.
+            ax (AxesSubplot):   The axis plotted on.
+            im (AxesImage):     The image instance created.
+            cbar (Colobar):     The colorbar.
+        '''
+        import matplotlib as mpl
+        from ..plotting import show_image
+        from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
+        if ion is None:
+            plts = []
+            for ion in self._ions:
+                plts.append( self.show_table(ion, cmap=cmap) )
+            return plts
+        ionname = 'ion'
+        if isinstance(ion, str):
+            ionname = ion
+            ion = self._ions.index(ion)
+
+        fontsize = 16
+
+        # plot the table as an image
+        fig, ax, im = show_image(self._table[:,:,ion],
+                                 extent=[[self._nH_vals.min(),self._nH_vals.max()],
+                                         [self._T_vals.min(),self._T_vals.max()]],
+                                 cmap=cmap)
+        ax.set_xlabel(r'$\log_{10}(n\ [%s])$' % Unit('cm**-3').latex(),
+                      fontsize=fontsize)
+        ax.set_ylabel(r'$\log_{10}(T\ [%s])$' % Unit('K').latex(),
+                      fontsize=fontsize)
+
+        # add a colorbar
+        clim = [self._table[:,:,ion].min(), self._table[:,:,ion].max()]
+        cax = inset_axes(ax, width="70%", height="3%", loc=1)
+        norm = mpl.colors.Normalize(vmin=clim[0], vmax=clim[1])
+        cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm,
+                                         orientation='horizontal')
+        cbar.ax.tick_params(labelsize=8)
+        for tl in cbar.ax.get_xticklabels():
+            tl.set_fontsize(0.65*fontsize)
+        cbar.set_label(r'$\log_{10}(f_\mathrm{%s})$' % ionname,
+                       fontsize=fontsize, labelpad=12)
+
+        return fig, ax, im, cbar
 
