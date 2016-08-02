@@ -11,7 +11,7 @@ Examples:
     >>> general
     {'always_cache': set(['Ekin', 'temp', 'age', 'mag*', 'angmom', 'LX', 'jcirc']), 'cache_derived': True}
     >>> iontable
-    {'ions': ['H I', 'He I', 'He II', 'C II', 'C III', 'C IV', 'N V', 'O VI', 'Mg II', 'Si II', 'Si III', 'Si IV', 'P IV', 'S VI'], 'tabledir': '/Users/bernhard/programming/pygad/iontbls/', 'T_vals': [2.5, 0.05, 150.0], 'nH_vals': [-8.0, 0.05, 160.0], 'pattern': 'lt<z>f10'}
+    {'ions': ['H I', 'He I', 'He II', 'C II', 'C III', 'C IV', 'N V', 'O VI', 'Mg II', 'Si II', 'Si III', 'Si IV', 'P IV', 'S VI'], 'tabledir': 'pygad//../iontbls/', 'T_vals': [2.5, 0.05, 150.0], 'nH_vals': [-8.0, 0.05, 160.0], 'pattern': 'lt<z>f10'}
 
     >>> from snapshot import Snap
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470')
@@ -29,8 +29,8 @@ Examples:
     load block ne... done.
     derive block temp... done.
     derive block CIV... load tables:
-      "/Users/bernhard/programming/pygad/iontbls/lt00f10" (z=0.000)
-      "/Users/bernhard/programming/pygad/iontbls/lt01f10" (z=0.100)
+      "pygad//../iontbls/lt00f10" (z=0.000)
+      "pygad//../iontbls/lt01f10" (z=0.100)
     derive block C... done.
     done.
     SimArr([...],
@@ -165,9 +165,11 @@ def read_derived_rules(config, delete_old=False):
 
     if cfg.has_section('iontable'):
         test_section(cfg, 'iontable', ['tabledir', 'ions', 'nH_vals', 'T_vals'])
-        iontable['tabledir'] = cfg.get('iontable', 'tabledir')
+        iontable['tabledir'] = cfg.get('iontable', 'tabledir',
+                                       vars={'PYGAD_DIR':environment.module_dir})
         if cfg.has_option('iontable', 'pattern'):
-            iontable['pattern'] = cfg.get('iontable', 'pattern')
+            iontable['pattern'] = cfg.get('iontable', 'pattern',
+                                          vars={'PYGAD_DIR':environment.module_dir})
         iontable['ions'] = [ion.strip()
                 for ion in cfg.get('iontable','ions').split(',')]
         for vals in ['nH_vals', 'T_vals']:
