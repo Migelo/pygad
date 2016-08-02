@@ -16,6 +16,8 @@ void absorption_spectrum(size_t N,
                          double b_0,
                          double Xsec,
                          double *taus,
+                         double *los_dens,
+                         double *los_temp,
                          const char *kernel_,
                          double periodic);
 

@@ -58,17 +58,19 @@ def mock_absorption_spectrum_of(s, los, vel_extent, line,
 
     Returns:
         taus (np.ndarray):      The optical depths for the velocity bins.
+        los_dens (np.ndarray):  The column densities restricted to the velocity bins.
+        los_temp (np.ndarray):  The (mass-weighted) particle temperatures
+                                restricted to the velocity bins.
         v_edges (UnitArr):      The velocities at the bin edges.
     '''
     if isinstance(line,str):
         line = lines[line]
-    taus, v_edges = mock_absorption_spectrum(s, los, vel_extent,
-                                             line['ion'],
-                                             l=line['l'], f=line['f'],
-                                             atomwt=line['atomwt'],
-                                             Nbins=Nbins, hsml=hsml, kernel=kernel,
-                                             xaxis=xaxis, yaxis=yaxis, **kwargs)
-    return taus, v_edges
+    return mock_absorption_spectrum(s, los, vel_extent,
+                                    line['ion'],
+                                    l=line['l'], f=line['f'],
+                                    atomwt=line['atomwt'],
+                                    Nbins=Nbins, hsml=hsml, kernel=kernel,
+                                    xaxis=xaxis, yaxis=yaxis, **kwargs)
 
 def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
                              Nbins=1000, hsml='hsml', kernel=None,
@@ -107,6 +109,9 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
 
     Returns:
         taus (np.ndarray):      The optical depths for the velocity bins.
+        los_dens (np.ndarray):  The column densities restricted to the velocity bins.
+        los_temp (np.ndarray):  The (mass-weighted) particle temperatures
+                                restricted to the velocity bins.
         v_edges (UnitArr):      The velocities at the bin edges.
     """
     # internally used units
@@ -177,6 +182,8 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
     Xsec = float(Xsec.in_units_of(l_units**2 * v_units, subs=s))
 
     taus = np.empty(Nbins, dtype=np.float64)
+    los_dens = np.empty(Nbins, dtype=np.float64)
+    los_temp = np.empty(Nbins, dtype=np.float64)
     C.cpygad.absorption_spectrum(C.c_size_t(len(s.gas)),
                                  C.c_void_p(pos.ctypes.data),
                                  C.c_void_p(vel.ctypes.data),
@@ -189,6 +196,8 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
                                  C.c_double(b_0),
                                  C.c_double(Xsec),
                                  C.c_void_p(taus.ctypes.data),
+                                 C.c_void_p(los_dens.ctypes.data),
+                                 C.c_void_p(los_temp.ctypes.data),
                                  C.create_string_buffer(kernel),
                                  C.c_double(s.boxsize.in_units_of(l_units))
     )
@@ -205,7 +214,7 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
         print '  v0 =', v_mean
         print '  l0 =', l_mean
 
-    return taus, v_edges
+    return taus, los_dens, los_temp, v_edges
 
 def EW(taus, edges):
     '''
