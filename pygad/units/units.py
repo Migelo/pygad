@@ -269,6 +269,9 @@ class _UnitClass(object):
     def __rtruediv__(self, rhs):
         return self.__rdiv__(rhs)
 
+    def sqrt(self):
+        return self.__pow__(Fraction(1,2))
+
     def __pow__(self, power):
         if not isinstance(power, (int, Fraction)):
             raise UnitError('Units can only be raised to integer of fractional '
