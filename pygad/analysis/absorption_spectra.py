@@ -1,7 +1,8 @@
 """
 Produce mock absorption spectra for given line transition(s) and line-of-sight(s).
 """
-__all__ = ['mock_absorption_spectrum', 'EW', 'velocities_to_redshifts']
+__all__ = ['mock_absorption_spectrum_of', 'mock_absorption_spectrum',
+           'EW', 'velocities_to_redshifts']
 
 from ..units import Unit, UnitArr, UnitQty, UnitScalar
 from ..physics import kB, m_H, c, q_e, m_e, epsilon0
@@ -11,7 +12,65 @@ from .. import C
 from .. import environment
 import numpy as np
 
-def mock_absorption_spectrum(s, los, vel_extent, element, l, f, atomwt,
+lines = {
+    'H1215':     {'ion':'HI',     'l':'1215.6701 Angstrom', 'f':0.4164, 'atomwt':m_H},
+    'HeII':      {'ion':'HeII',   'l': '303.918 Angstrom',  'f':0.4173, 'atomwt': '3.971 u'},
+    'CIII977':   {'ion':'CIII',   'l': '977.020 Angstrom',  'f':0.7620, 'atomwt':'12.011 u'},
+    'CIV1548':   {'ion':'CIV',    'l':'1548.195 Angstrom',  'f':0.1908, 'atomwt':'12.011 u'},
+    'OIV787':    {'ion':'OIV',    'l': '787.711 Angstrom',  'f':0.110,  'atomwt':'15.9994 u'},
+    'OVI1031':   {'ion':'OVI',    'l':'1031.927 Angstrom',  'f':0.1329, 'atomwt':'15.9994 u'},
+    'NeVIII770': {'ion':'NeVIII', 'l': '770.409 Angstrom',  'f':0.103,  'atomwt':'20.180 u'},
+    'MgII2796':  {'ion':'MgII',   'l':'2796.352 Angstrom',  'f':0.6123, 'atomwt':'24.305 u'},
+    'SiIV1393':  {'ion':'SiIV',   'l':'1393.755 Angstrom',  'f':0.5280, 'atomwt':'28.086 u'},
+}
+
+def mock_absorption_spectrum_of(s, los, vel_extent, line,
+                                Nbins=1000, hsml='hsml', kernel=None,
+                                xaxis=0, yaxis=1, **kwargs):
+    '''
+    Create a mock absorption spectrum for the given line of sight (l.o.s.) for the
+    given line transition.
+
+    This function basically just calls `mock_absorption_spectrum` for the given
+    line.
+
+    Args:
+        s (Snap):               The snapshot to shoot the l.o.s. though.
+        los (UnitQty):          The position of the l.o.s.. By default understood
+                                as in units of s['pos'], if not explicitly
+                                specified.
+        vel_extent (UnitQty):   The limits of the spectrum in (rest frame)
+                                velocity space. Units default to 'km/s'.
+        line (str,dict):        Either a name of a line as defined in
+                                `absorption_spectra.lines` or a custom dictionary
+                                of the same kind, which values are than passed to
+                                `mock_absorption_spectrum`.
+        Nbins (int):            The number of bins for the spectrum.
+        hsml (str, UnitQty, Unit):
+                                The smoothing lengths to use. Can be a block name,
+                                a block itself or a Unit that is taken as constant
+                                volume for all particles.
+        kernel (str):           The kernel to use for smoothing. (By default use
+                                the kernel defined in `gadget.cfg`.)
+        xaxis/yaxis (int):      The x- and y-axis for the l.o.s.. The implicitly
+                                defined z-axis goes along the l.o.s.. The axis
+                                must be chosen from [0,1,2].
+
+    Returns:
+        taus (np.ndarray):      The optical depths for the velocity bins.
+        v_edges (UnitArr):      The velocities at the bin edges.
+    '''
+    if isinstance(line,str):
+        line = lines[line]
+    taus, v_edges = mock_absorption_spectrum(s, los, vel_extent,
+                                             line['ion'],
+                                             l=line['l'], f=line['f'],
+                                             atomwt=line['atomwt'],
+                                             Nbins=Nbins, hsml=hsml, kernel=kernel,
+                                             xaxis=xaxis, yaxis=yaxis, **kwargs)
+    return taus, v_edges
+
+def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
                              Nbins=1000, hsml='hsml', kernel=None,
                              xaxis=0, yaxis=1):
     """
@@ -25,8 +84,11 @@ def mock_absorption_spectrum(s, los, vel_extent, element, l, f, atomwt,
                                 specified.
         vel_extent (UnitQty):   The limits of the spectrum in (rest frame)
                                 velocity space. Units default to 'km/s'.
-        element (str):          The name of the element that has the line
-                                transition (e.g. H for Lyman alpha).
+        ion (str, UnitQty):     The block for the masses of the ion that generates
+                                the line asked for (e.g. HI for Lyman alpha or CIV
+                                for CIV1548).
+                                If given as a UnitQty without units, they default
+                                to those of the 'mass' block.
         l (UnitScalar):         The wavelength of the line transition. By default
                                 understood in Angstrom.
         f (float):              The oscillatr strength of the line transition.
@@ -71,7 +133,10 @@ def mock_absorption_spectrum(s, los, vel_extent, element, l, f, atomwt,
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print 'create a mock absorption spectrum:'
         print '  at', los
-        print '  for', element, 'at lambda =', l
+        if isinstance(ion,str):
+            print '  for', ion, 'at lambda =', l
+        else:
+            print '  at lambda =', l
         print '  with oscillator strength f =', f
         print '  and atomic weight', atomwt
         print '  using kernel "%s"' % kernel
@@ -95,9 +160,13 @@ def mock_absorption_spectrum(s, los, vel_extent, element, l, f, atomwt,
     if hsml.base is not None:
         hsml.copy()
 
+    if isinstance(ion,str):
+        ion = s.gas.get(ion)
+    else:
+        ion = UnitQty(ion, units=s['mass'].units, subs=s)
     # double precision needed in order not to overflow
     # 1 Msol / 1 u = 1.2e57, float max = 3.4e38, but double max = 1.8e308
-    n = (s.gas.get(element).astype(np.float64) / atomwt).in_units_of(1, subs=s)
+    n = (ion.astype(np.float64) / atomwt).in_units_of(1, subs=s)
     n = n.view(np.ndarray).astype(np.float64)
 
     los = los.in_units_of(l_units,subs=s) \
