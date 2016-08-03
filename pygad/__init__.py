@@ -77,7 +77,7 @@ import ssp
 import binning
 import analysis
 import tools
-import data
+import cloudy
 if environment.interactive:
     import plotting
 

@@ -14,7 +14,7 @@ from ..units import UnitArr, UnitScalar, UnitError
 import numpy as np
 from .. import physics
 from .. import gadget
-from .. import data
+from .. import cloudy
 import derived
 from fractions import Fraction
 from multiprocessing import Pool, cpu_count
@@ -204,13 +204,13 @@ def calc_HI_mass(s, UVB=gadget.general['UVB']):
 
     Args:
         s (Snap):       The (gas-particles sub-)snapshot to use.
-        UVB (str):      The name of the UV background as named in `data.UVB`.
+        UVB (str):      The name of the UV background as named in `cloudy.UVB`.
                         Defaults to the value of the UVB in the `gadget.cfg`.
 
     Returns:
         HI (UnitArr):   The HI mass block for the gas (within `s`).
     '''
-    uvb     = data.UVB[UVB]
+    uvb     = cloudy.UVB[UVB]
     z       = s.redshift
     fbaryon = s.cosmology.Omega_b / s.cosmology.Omega_m
 
@@ -280,7 +280,7 @@ def calc_ion_mass(s, el, ionisation, iontbl=None):
                             the block given by `el`.
     '''
     # if there is some ion table specified in the config, use it as default
-    iontbl = data.config_ion_table(s.redshift) if iontbl is None else iontbl
+    iontbl = cloudy.config_ion_table(s.redshift) if iontbl is None else iontbl
     f_ion = 10.**iontbl.interp_snap(el+' '+ionisation, s.gas)
     return f_ion * s.gas.get(el)
 # this is not super correct: typically the element is taken from the block
