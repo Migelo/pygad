@@ -20,7 +20,7 @@ Example:
     load block pos... done.
     Unit("cMpc h_0**-1")
     >>> s.gadget_units
-    {'VELOCITY': 'km / s', 'LENGTH': 'cMpc/h_0', 'MASS': '1e10 Msol / h_0'}
+    {'VELOCITY': 'a**(1/2) km / s', 'LENGTH': 'cMpc/h_0', 'MASS': '1e10 Msol / h_0'}
     >>> print 'current age of the universe: %s' % s.cosmic_time().in_units_of('Myr')
     current age of the universe: 12.8697344013 [Myr]
     >>> s.loadable_blocks()
@@ -160,7 +160,7 @@ Example:
     load block mass... done.
     derive block r... done.
     writing block POS  (dtype=float32, units=[ckpc h_0**-1])... done.
-    writing block VEL  (dtype=float32, units=[s**-1 km])... done.
+    writing block VEL  (dtype=float32, units=[a**1/2 s**-1 km])... done.
     writing block ID   (dtype=uint32, units=[1])... done.
     writing block MASS (dtype=float32, units=[1e+10 Msol h_0**-1])... done.
     writing block R    (dtype=float32, units=[kpc])... done.
@@ -186,7 +186,7 @@ Example:
     load block nh... done.
     ...
     writing block POS  (dtype=float32, units=[ckpc h_0**-1])... done.
-    writing block VEL  (dtype=float32, units=[s**-1 km])... done.
+    writing block VEL  (dtype=float32, units=[a**1/2 s**-1 km])... done.
     writing block ID   (dtype=uint32, units=[1])... done.
     writing block MASS (dtype=float32, units=[1e+10 Msol h_0**-1])... done.
     writing block NH   (dtype=float32, units=[1])... done.
@@ -212,7 +212,7 @@ Example:
     >>> gadget.write(s, dest_file_hdf5) # doctest:+ELLIPSIS
     ...
     writing block POS  (dtype=float32, units=[ckpc h_0**-1])... done.
-    writing block VEL  (dtype=float32, units=[s**-1 km])... done.
+    writing block VEL  (dtype=float32, units=[a**1/2 s**-1 km])... done.
     writing block ID   (dtype=uint32, units=[1])... done.
     writing block MASS (dtype=float32, units=[1e+10 Msol h_0**-1])... done.
     writing block NH   (dtype=float32, units=[1])... done.
@@ -226,7 +226,7 @@ Example:
     load block nh... done.
     ...
     writing block POS  (dtype=float32, units=[ckpc h_0**-1])... done.
-    writing block VEL  (dtype=float32, units=[s**-1 km])... done.
+    writing block VEL  (dtype=float32, units=[a**1/2 s**-1 km])... done.
     writing block ID   (dtype=uint32, units=[1])... done.
     writing block MASS (dtype=float32, units=[1e+10 Msol h_0**-1])... done.
     writing block NH   (dtype=float32, units=[1])... done.
