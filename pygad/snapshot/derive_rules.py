@@ -215,7 +215,7 @@ def calc_HI_mass(s, UVB=gadget.general['UVB']):
     return cloudy.Rahmati_HI_mass(s, UVB)
 calc_HI_mass._deps = set(['H', 'temp', 'rho', 'mass'])
 
-def calc_ion_mass(s, el, ionisation, iontbl=None):
+def calc_ion_mass(s, el, ionisation, selfshield=True, iontbl=None):
     '''
     Calculate the mass of the given ion from Cloudy tables.
 
@@ -225,6 +225,10 @@ def calc_ion_mass(s, el, ionisation, iontbl=None):
                             name (e.g. as one of the 'element' block).
         ionisation (str):   The ionisation state. The concatenation of `el` and
                             this must result in an ion name in the Cloudy table.
+        selfshield (bool):  Whether to account for self-shielding by assuming the
+                            attenuation of the UVB as experienced by HI using the
+                            Rahmati+ (2013) prescription (formula (14) of the
+                            paper). Note that this is just a rough approximation!
         iontbl (IonisationTable):
                             The ionisation table to use for the table
                             interpolation. Default to the one given by
@@ -236,7 +240,8 @@ def calc_ion_mass(s, el, ionisation, iontbl=None):
     '''
     # if there is some ion table specified in the config, use it as default
     iontbl = cloudy.config_ion_table(s.redshift) if iontbl is None else iontbl
-    f_ion = 10.**iontbl.interp_snap(el+' '+ionisation, s.gas)
+    f_ion = 10.**iontbl.interp_snap(el+' '+ionisation, s.gas,
+                                    selfshield=selfshield)
     return f_ion * s.gas.get(el)
 # this is not super correct: typically the element is taken from the block
 # 'elements', but could in principle also be defined seperately!

@@ -6,6 +6,7 @@ __all__ = ['config_ion_table', 'IonisationTable']
 
 from .. import environment
 from ..units import Unit, UnitQty
+from .. import gadget
 import numpy as np
 import copy
 import re
@@ -104,18 +105,20 @@ class IonisationTable(object):
     def data(self):
         return self._table
 
-    def interp_snap(self, ion, s, nH='H/mass*rho/m_H', T='temp'):
+    def interp_snap(self, ion, s, nH='H/mass*rho/m_H', T='temp', selfshield=True):
         '''
-        Convenience function: calling `interp_parts(ion, s.get(nH), s.get(T), subs=s)`.
+        Convenience function: calling `interp_parts(ion, s.get(nH), s.get(T),
+        selfshield, subs=s)`.
         '''
         if abs(s.redshift - self._redshift) > 0.01:
             import sys
             print >> sys.stderr, 'WARNING: the snapshot\'s redshift ' + \
                                  '(%.3f) does not match the ' % s.redshift + \
                                  'table\'s redshift (%.3f)!' % self._redshift
-        return self.interp_parts(ion, s.get(nH), s.get(T), subs=s)
+        return self.interp_parts(ion, s.get(nH), s.get(T), selfshield, subs=s)
 
-    def interp_parts(self, ion, nH, T, subs=None):
+    def interp_parts(self, ion, nH, T, selfshield=True, UVB=gadget.general['UVB'],
+                     z=None, fbaryon=None, subs=None):
         '''
         Given nH and temperatures for a list of particles, get the fractions for
         a given ion by a bilinear interpolation of the table for each particle.
@@ -129,7 +132,23 @@ class IonisationTable(object):
                                 given unitless, interpreted as in cm^-3).
             T (UnitQty):        The temperatures of the particles (if given
                                 unitless, interpreted as in K).
-            subs (dict, snap):  Used for substitutions that might be neccessary
+            selfshield (bool):  Whether to account for self-shielding by assuming
+                                the attenuation of the UVB as experienced by HI
+                                using the Rahmati+ (2013) prescription (formula
+                                (14) of the paper). Note that this is just a rough
+                                approximation!
+            UVB (str):          The UVB background used for the self-shielding. If
+                                no self-shielding is used, the argument is ignored.
+            z (float):          The redshift used for the self-shielding. If None
+                                and subs is a (sub-)snapshot, it is taken from the
+                                snapshot. If no self-shielding is used, the
+                                argument is ignored.
+            fbaryon (float):    The cosmic baryon density used for the
+                                self-shielding. If None and subs is a
+                                (sub-)snapshot, it is taken from the snapshot's
+                                cosmology. If no self-shielding is used, the
+                                argument is ignored.
+            subs (dict, Snap):  Used for substitutions that might be neccessary
                                 when converting units (for more info see
                                 `UnitArr.in_units_of`).
 
@@ -145,8 +164,39 @@ class IonisationTable(object):
         if ion<0 or self._table.shape[-1]<=ion:
             raise ValueError('Ion index (%d) out of bounds!' % ion)
         # units of table
-        nH = np.log10( UnitQty(nH, 'cm**-3', subs=subs) )
-        T  = np.log10( UnitQty(T , 'K',      subs=subs) )
+        nH = UnitQty(nH, 'cm**-3', subs=subs)
+        T  = UnitQty(T , 'K',      subs=subs)
+
+        if selfshield:
+            # with Rahmati+ (2013) description
+            from ..snapshot.snapshot import _Snap
+            from ..cloudy import Rahmati_fGamma_HI
+            if isinstance(subs,_Snap):
+                if z is None:
+                    z = subs.redshift
+                if fbaryon is None:
+                    fbaryon = subs.cosmology.Omega_b / subs.cosmology.Omega_m
+            else:
+                if z is None:
+                    raise ValueError('Redshift is needed for self-shielding!')
+                if fbaryon is None:
+                    # just some reasonable value
+                    cosmo = physics.Planck2013()
+                    fbaryon = cosmo.Omega_b / cosmo.Omega_m
+                    import sys
+                    print >> sys.stderr, 'WARNING: fbaryon was not given, using', fbaryon
+            fG = Rahmati_fGamma_HI(z, nH, T, fbaryon, UVB=UVB, subs=subs)
+            # limit the attenuation in very dense gas (assuming not all of the
+            # particle mass actually is at these high densities)
+            fG_limit = 1e-3
+            fG[ fG < fG_limit ] = fG_limit
+            # decreasing the radiation by a factor of fG corresponds to increasing
+            # the density by the same factor fG:
+            nH /= fG
+
+        # look-up tables use log10-values
+        nH = np.log10( nH )
+        T  = np.log10( T  )
 
         # find lower indices
         N_nH = len(self._nH_vals)

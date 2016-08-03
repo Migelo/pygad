@@ -11,7 +11,7 @@ Examples:
     >>> general
     {'always_cache': set(['Ekin', 'temp', 'age', 'mag*', 'angmom', 'LX', 'jcirc']), 'cache_derived': True}
     >>> iontable
-    {'ions': ['H I', 'He I', 'He II', 'C II', 'C III', 'C IV', 'N V', 'O VI', 'Mg II', 'Si II', 'Si III', 'Si IV', 'P IV', 'S VI'], 'tabledir': 'pygad//../iontbls/', 'T_vals': [2.5, 0.05, 150.0], 'nH_vals': [-8.0, 0.05, 160.0], 'pattern': 'lt<z>f10'}
+    {'ions': ['H I', 'He I', 'He II', 'C II', 'C III', 'C IV', 'N V', 'O VI', 'Mg II', 'Si II', 'Si III', 'Si IV', 'P IV', 'S VI'], 'selfshield': True, 'pattern': 'lt<z>f10', 'tabledir': 'pygad//../iontbls/', 'T_vals': [2.5, 0.05, 150.0], 'nH_vals': [-8.0, 0.05, 160.0]}
 
     >>> from snapshot import Snap
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470')
@@ -53,11 +53,12 @@ general = {
         'always_cache': set(),
 }
 iontable = {
-        'tabledir': None,
-        'pattern':  'lt<z>f10',
-        'ions':     [],
-        'nH_vals':  [-8  , 0.05, 160],
-        'T_vals':   [ 2.5, 0.05, 140],
+        'tabledir':     None,
+        'pattern':      'lt<z>f10',
+        'ions':         [],
+        'nH_vals':      [-8  , 0.05, 160],
+        'T_vals':       [ 2.5, 0.05, 140],
+        'selfshield':   True,
 }
 
 def ptypes_and_deps(defi, snap):
@@ -162,6 +163,7 @@ def read_derived_rules(config, delete_old=False):
         iontable['ions'] = []
         iontable['nH_vals'] = [-8  , 0.05, 160]
         iontable['T_vals']  = [ 2.5, 0.05, 140]
+        iontable['selfshield'] = True
 
     if cfg.has_section('iontable'):
         test_section(cfg, 'iontable', ['tabledir', 'ions', 'nH_vals', 'T_vals'])
@@ -175,6 +177,8 @@ def read_derived_rules(config, delete_old=False):
         for vals in ['nH_vals', 'T_vals']:
             iontable[vals] = [float(v.strip())
                     for v in cfg.get('iontable',vals).split(',')]
+        if cfg.has_option('iontable', 'selfshield'):
+            iontable['selfshield'] = cfg.getboolean('iontable', 'selfshield')
 
     for i,el in enumerate(gadget.elements):
         _rules[el] = 'elements[:,%d]' % i
@@ -195,7 +199,8 @@ def read_derived_rules(config, delete_old=False):
         ion = el + ionisation   # getting rid of the white space
         if ion in _rules:
             continue
-        _rules[ion] = "calc_ion_mass(gas, '%s', '%s')" % (el, ionisation)
+        _rules[ion] = "calc_ion_mass(gas, '%s', '%s', selfshield=%s)" % (
+                                el, ionisation, iontable['selfshield'])
 
     return _rules
 

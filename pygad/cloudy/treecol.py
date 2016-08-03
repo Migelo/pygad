@@ -5,12 +5,29 @@ from .. import gadget
 from .. import physics
 
 def Gamma_HI(z, UVB=gadget.general['UVB']):
-    '''TODO'''
+    '''
+    Look up the Gamma for HI in the UVB_data tables for a given redshift with
+    interpolation.
+    '''
     uvb = UVB_data[UVB]
     return np.interp(np.log10(z+1.), uvb['logz'], uvb['gH0'])
 
 def sigHI(z, UVB=gadget.general['UVB']):
-    '''TODO'''
+    '''
+    Calculate the characteristic self-shielding density (in units in cm^2).
+
+    Done by an eyeball fitting formulat for the values of Rahmati+ (2013), Table
+    2.
+
+    Args:
+        z (float):  The redshift to calculate fGamma_HI at.
+        UVB (str):  The name of the UV background as named in `cloudy.UVB`.
+                    Defaults to the value of the UVB in the `gadget.cfg`.
+
+    Returns:
+        sigHI (float):  The characteristic self-shielding density
+                        (in units in cm^2).
+    '''
     # calculate the characteristic self-shielding density (in units in cm^2)
     if UVB == 'FG11':
         # TODO: this is a bit off...
@@ -25,12 +42,18 @@ def sigHI(z, UVB=gadget.general['UVB']):
 def Rahmati_fGamma_HI(z, nH, T, fbaryon, UVB=gadget.general['UVB'], subs=None):
     '''
     The fraction of the photoionising background that is not self-shielded as with
-    the fitting formula of Rahmati et al. (2013).
+    the fitting formula of Rahmati et al. (2013) (formula (14)).
 
     Args:
-        TODO
-        UVB (str):      The name of the UV background as named in `cloudy.UVB`.
-                        Defaults to the value of the UVB in the `gadget.cfg`.
+        z (float):          The redshift to calculate fGamma_HI at.
+        nH (UnitQty):       The Hydrogen number densities. Default units are cm**-3.
+        T (UnitQty):        The temperatures. Default units are K.
+        fbaryon (float):    The cosmic baryon fraction.
+        UVB (str):          The name of the UV background as named in
+                            `cloudy.UVB`. Defaults to the value of the UVB in the
+                            `gadget.cfg`.
+        subs (dict, Snap):  Used for substitutions in unit conversions (c.f.
+                            `UnitArr.convert_to`).
 
     Returns:
         fGamma_HI (UnitArr):   The HI mass block for the gas (within `s`).
@@ -47,8 +70,8 @@ def Rahmati_fGamma_HI(z, nH, T, fbaryon, UVB=gadget.general['UVB'], subs=None):
             * (_Gamma_HI*1e12)**(2./3.)
 
     # prepare the blocks needed
-    T  = T.in_units_of('K', subs=subs)
-    nH = nH.in_units_of('cm**-3', subs=subs)
+    T  = UnitQty( T,  'K',      subs=subs)
+    nH = UnitQty( nH, 'cm**-3', subs=subs)
     # calculatation is done unitless
     T  = T.view(np.ndarray)
     nH = nH.view(np.ndarray)
