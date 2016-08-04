@@ -125,7 +125,9 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml',
     # prepare (sub-)snapshot
     if isinstance(qty, str):
         qty = s.get(qty)
-    qty_units = getattr(qty,'units',None).gather()
+    qty_units = getattr(qty,'units',None)
+    if qty_units is not None:
+        qty_units = qty_units.gather()
     if qty.shape!=(len(s),):
         raise ValueError('Quantity has to have shape (N,)!')
     if len(s) == 0:
@@ -252,7 +254,11 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
     # prepare (sub-)snapshot
     if isinstance(qty, str):
         qty = s.get(qty)
-    qty_units = (getattr(qty,'units',None) * s['pos'].units).gather()   # integrated!
+    qty_units = getattr(qty,'units',None)
+    if qty_units is None:
+        qty_units = s['pos'].units**-2
+    else:
+        qty_units = (qty_units * s['pos'].units).gather()   # integrated!
     if qty.shape!=(len(s),):
         raise ValueError('Quantity has to have shape (N,)!')
     if len(s) == 0:

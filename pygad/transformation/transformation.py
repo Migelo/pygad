@@ -29,7 +29,7 @@ Examples:
     SimArr([[-119.9617691 , -215.21350098, -218.84106445],
             [-100.0279007 , -203.89819336, -218.8409729 ],
             [-107.25678253, -204.94604492, -213.70817566]],
-           dtype=float32, units="s**-1 km", snap="snap_M1196_4x_470")
+           dtype=float32, units="a**1/2 s**-1 km", snap="snap_M1196_4x_470")
     >>> Translation(UnitArr([10,-20,30],'Mpc')).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_470"... done.
     >>> s['pos'][:3]
@@ -50,7 +50,7 @@ Examples:
             [  59.79833984, -180.23754883,   15.16521835],
             [ 147.31933594,  -25.50907898, -103.11534119],
             [  60.9321785 ,  114.03372955,  -84.46931458]],
-           dtype=float32, units="1e+10 ckpc h_0**-1 Msol h_0**-1 km s**-1", snap="snap_M1196_4x_470")
+           dtype=float32, units="1e+10 ckpc h_0**-1 Msol a**1/2 h_0**-1 km s**-1", snap="snap_M1196_4x_470")
     >>> rot.apply(s)
     apply Rotation to "vel" of "snap_M1196_4x_470"... done.
     apply Rotation to "pos" of "snap_M1196_4x_470"... done.
@@ -64,7 +64,7 @@ Examples:
             [-180.23754883,   15.16521835,   59.79833984],
             [ -25.50907898, -103.11534119,  147.31933594],
             [ 114.03372955,  -84.46931458,   60.9321785 ]],
-           dtype=float32, units="1e+10 ckpc h_0**-1 Msol h_0**-1 km s**-1", snap="snap_M1196_4x_470")
+           dtype=float32, units="1e+10 ckpc h_0**-1 Msol a**1/2 h_0**-1 km s**-1", snap="snap_M1196_4x_470")
     >>> ca, sa = np.cos(12), np.sin(12)
     >>> Rotation([[ca,sa,0],[-sa,ca,0],[0,0,1]]).apply(s)
     apply Rotation to "vel" of "snap_M1196_4x_470"... done.
@@ -106,7 +106,7 @@ Examples:
     SimArr([[  14.27710342,  -56.8183403 ,   54.35939789],
             [  37.94758224,   84.52431488,  130.14624023],
             [  37.37803268,   64.14741516,   -4.18749571]],
-           dtype=float32, units="s**-1 km", snap="snap_M1196_4x_470")
+           dtype=float32, units="a**1/2 s**-1 km", snap="snap_M1196_4x_470")
 '''
 __all__ = ['Transformation', 'Translation', 'Rotation', 'rot_from_axis_angle',
            'rot_to_z']

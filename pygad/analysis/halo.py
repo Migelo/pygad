@@ -32,11 +32,11 @@ Examples:
       l      = 2.2 [kpc]
       dv_max = 1e+02 [s**-1 km]
       N     >= 100
-    found 89 groups
+    found 90 groups
     the 3 most massive ones are:
-      group 0:   7.24e+10 [Msol]  @  [0..., 0..., ...] [kpc]
-      group 1:   3.32e+10 [Msol]  @  [4..., 9..., 4...] [kpc]
-      group 2:   7.02e+09 [Msol]  @  [2..., ..., ...] [kpc]
+      group 0:   1.02e+11 [Msol]  @  [0..., 0..., 0...] [kpc]
+      group 1:    4.1e+10 [Msol]  @  [4..., 9..., 4...] [kpc]
+      group 2:   8.37e+09 [Msol]  @  [...] [kpc]
 
     # find galaxies (exclude those with almost only gas)
     >>> galaxies = generate_FoF_catalogue(s.baryons,
@@ -49,14 +49,14 @@ Examples:
       N     >= 300
     found 4 groups
     the 3 most massive ones are:
-      group 0:   2.99e+10 [Msol]  @  [0..., 0..., 0...] [kpc]
-      group 1:   6.91e+09 [Msol]  @  [4..., 9..., 4...] [kpc]
-      group 2:    3.2e+09 [Msol]  @  [8..., 1...e+03, 7...] [kpc]
+      group 0:   3.12e+10 [Msol]  @  [0..., 0..., 0...] [kpc]
+      group 1:   6.94e+09 [Msol]  @  [4..., 9..., 4...] [kpc]
+      group 2:   3.36e+09 [Msol]  @  [8..., 1...e+03, 7...] [kpc]
     initialize halos from FoF group IDs...
     load block ID... done.
     initialized 3 halos.
     >>> galaxies[0] # doctest: +ELLIPSIS
-    <Halo N = 52,... /w M = 3e+10 [Msol] @ com = [0..., 0..., 0...] [kpc]>
+    <Halo N = 55,... /w M = 3.1e+10 [Msol] @ com = [0..., 0..., 0...] [kpc]>
     >>> gal = s[galaxies[0]]
     >>> assert len(gal) == len(galaxies[0])
     >>> assert set(gal['ID']) == set(galaxies[0].IDs)

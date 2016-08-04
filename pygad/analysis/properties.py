@@ -24,7 +24,7 @@ Example:
     apply Rotation to "vel" of "snap_M1196_4x_320"... done.
     apply Rotation to "pos" of "snap_M1196_4x_320"... done.
     >>> if np.linalg.norm(sub['angmom'].sum(axis=0) -
-    ...         UnitArr([-4.24e+08,2.90e+07,1.49e+14],'kpc Msol km/s')) > 1e12:
+    ...         UnitArr([3.18e+08,-5.05e+07,1.24e+14],'kpc Msol km/s')) > 1e12:
     ...     print sub['angmom'].sum(axis=0)
     derive block momentum... done.
     derive block angmom... done.
@@ -66,21 +66,21 @@ Example:
     ...     print half_mass_radius(sub.stars)
     >>> ifr, ofr = flow_rates(s, '50 kpc')
     derive block vrad... done.
-    >>> if abs(ifr - '428 Msol/yr') > '10 Msol/yr' or abs(ofr - '388 Msol/yr') > '10 Msol/yr':
+    >>> if abs(ifr - '355 Msol/yr') > '10 Msol/yr' or abs(ofr - '337 Msol/yr') > '10 Msol/yr':
     ...     print ifr, ofr
-    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc')) - '-5.5 Msol/yr') > '0.2 Msol/yr':
+    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc')) - '-4.6 Msol/yr') > '0.2 Msol/yr':
     ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'))
-    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'in') - '-14.7 Msol/yr') > '0.2 Msol/yr':
+    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'in') - '-12.2 Msol/yr') > '0.2 Msol/yr':
     ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'in')
-    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'out') - '9.1 Msol/yr') > '0.2 Msol/yr':
+    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'out') - '7.6 Msol/yr') > '0.2 Msol/yr':
     ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'out')
     >>> ifr, ofr = flow_rates(s.gas, '50 kpc')
 
-    >>> if abs(ifr - '15.3 Msol/yr') > '1.0 Msol/yr' or abs(ofr - '11 Msol/yr') > '0.1 Msol/yr':
+    >>> if abs(ifr - '13.0 Msol/yr') > '1.0 Msol/yr' or abs(ofr - '9.1 Msol/yr') > '0.1 Msol/yr':
     ...     print ifr, ofr
     >>> eta = ofr / s.gas['sfr'].sum()
     load block sfr... done.
-    >>> if abs(eta - 2.4) > 0.2:
+    >>> if abs(eta - 2.0) > 0.2:
     ...     print 'mass loading:', eta
 
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470', load_double_prec=True)

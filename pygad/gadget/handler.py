@@ -97,9 +97,8 @@ class FileReader(object):
                                 actual block name is passed, it is tried to
                                 convert from the standard Gadget block name to the
                                 HDF5 one via 'gadget.config.std_name_to_HDF5'.
-            gad_units (dict):   The basic gadget units. If None, length is
-                                'ckpc/h_0', velocity is 'km/s', and mass is
-                                '1e10 Msol'.
+            gad_units (dict):   The basic gadget units. If None, take the units
+                                defined in the `gadget.cfg`.
             unit (Unit):        The unit to give the data. If it is None, use a
                                 default one if defined, Unit(1) otherwise.
 

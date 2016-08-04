@@ -784,8 +784,8 @@ def write_block(gfile, block_name, data, gformat, endianness='=',
                             should be written explicitly).
         endianness (str):   The endianness of the file (either native '=' or
                             non-native '<' (little) or '>' (big)).
-        gad_units (dict):   The basic gadget units. If None, length is 'kpc/h_0',
-                            velocity is 'km/s', and mass is '1e10 Msol'.
+        gad_units (dict):   The basic gadget units. If None, take the units
+                            defined in the `gadget.cfg`.
     '''
     if gformat not in [1,2,3]:
         raise ValueError('Only formats 1, 2, and 3 (HDF5) are known!')

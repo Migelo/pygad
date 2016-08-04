@@ -644,6 +644,15 @@ class UnitArr(np.ndarray):
             res = np.ndarray.__pow__(self,x)
         return res
 
+    def __ipow__(self, x):
+        if isinstance(x,Fraction) and self.dtype.kind=='f':
+            # way faster to use floats:
+            np.ndarray.__ipow__(self.view(np.ndarray),float(x))
+        else:
+            np.ndarray.__ipow__(self,x)
+        self.units **= x
+        return self
+
     def prod(self, axis=None, *args, **kwargs):
         x = np.ndarray.prod(self, axis, *args, **kwargs).view(UnitArr)
         if self.units is not None:
