@@ -25,6 +25,7 @@ lines = {
 }
 
 def mock_absorption_spectrum_of(s, los, vel_extent, line,
+                                spatial_bins=False, spatial_extent=None,
                                 Nbins=1000, hsml='hsml', kernel=None,
                                 xaxis=0, yaxis=1, **kwargs):
     '''
@@ -45,6 +46,14 @@ def mock_absorption_spectrum_of(s, los, vel_extent, line,
                                 `absorption_spectra.lines` or a custom dictionary
                                 of the same kind, which values are than passed to
                                 `mock_absorption_spectrum`.
+        spatial_bins (bool, int):
+                                If True, do not bin the particles directly to
+                                velocity space, but first onto a spatial grid
+                                along the l.o.s. and then to velocity space. If
+                                this is an integer, it specifies the number of
+                                these spatial bins.
+        spatial_extent (UnitQty):
+                                The extent in the spatial bins along the l.o.s..
         Nbins (int):            The number of bins for the spectrum.
         hsml (str, UnitQty, Unit):
                                 The smoothing lengths to use. Can be a block name,
@@ -69,10 +78,13 @@ def mock_absorption_spectrum_of(s, los, vel_extent, line,
                                     line['ion'],
                                     l=line['l'], f=line['f'],
                                     atomwt=line['atomwt'],
+                                    spatial_bins=spatial_bins,
+                                    spatial_extent=spatial_extent,
                                     Nbins=Nbins, hsml=hsml, kernel=kernel,
                                     xaxis=xaxis, yaxis=yaxis, **kwargs)
 
 def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
+                             spatial_bins=False, spatial_extent=None,
                              Nbins=1000, hsml='hsml', kernel=None,
                              xaxis=0, yaxis=1):
     """
@@ -96,6 +108,14 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
         f (float):              The oscillatr strength of the line transition.
         atomwt (UnitScalar):    The atomic weight. By default interpreted in
                                 atomic mass units.
+        spatial_bins (bool, int):
+                                If True, do not bin the particles directly to
+                                velocity space, but first onto a spatial grid
+                                along the l.o.s. and then to velocity space. If
+                                this is an integer, it specifies the number of
+                                these spatial bins.
+        spatial_extent (UnitQty):
+                                The extent in the spatial bins along the l.o.s..
         Nbins (int):            The number of bins for the spectrum.
         hsml (str, UnitQty, Unit):
                                 The smoothing lengths to use. Can be a block name,
@@ -149,22 +169,7 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
     v_edges = UnitArr(np.linspace(vel_extent[0], vel_extent[1], Nbins+1),
                       vel_extent.units)
 
-    pos = s.gas['pos'].in_units_of(l_units).view(np.ndarray)[:,(xaxis,yaxis)].astype(np.float64).copy()
-    vel = s.gas['vel'].in_units_of(v_units).view(np.ndarray)[:,zaxis].astype(np.float64).copy()
-    temp = s.gas['temp'].in_units_of('K').view(np.ndarray).astype(np.float64)
-    if temp.base is not None:
-        temp.copy()
-
-    if isinstance(hsml, str):
-        hsml = s.gas[hsml]
-    elif isinstance(hsml, (Number, Unit)):
-        hsml = UnitScalar(hsml,s['pos'].units) * np.ones(len(s.gas),dtype=np.float64)
-    else:
-        hsml = UnitQty(hsml, s['pos'].units, subs=s)
-    hsml = hsml.in_units_of(l_units,subs=s).view(np.ndarray).astype(np.float64)
-    if hsml.base is not None:
-        hsml.copy()
-
+    # get ne number of ions per particle
     if isinstance(ion,str):
         ion = s.gas.get(ion)
     else:
@@ -174,18 +179,92 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
     n = (ion.astype(np.float64) / atomwt).in_units_of(1, subs=s)
     n = n.view(np.ndarray).astype(np.float64)
 
+    if spatial_bins:
+        # do SPH smoothing along the l.o.s.
+        from ..binning import SPH_to_3Dgrid
+        los = los.in_units_of(s['pos'].units, subs=s)
+        if spatial_bins is True:
+            N = int( 1e5 )
+        else:
+            N = int( spatial_bins )
+        Npx = np.ones(3, dtype=int)
+        Npx[zaxis] = N
+        if spatial_extent is None:
+            spatial_extent = [ np.min( s.gas['pos'][:,zaxis] - s.gas['hsml'] ),
+                               np.max( s.gas['pos'][:,zaxis] + s.gas['hsml'] ) ]
+            spatial_extent = UnitArr(spatial_extent, spatial_extent[0].units)
+            spatial_extent.convert_to(s['pos'].units, subs=s)
+        else:
+            spatial_extent = UnitQty( spatial_extent, s['pos'].units, subs=s )
+        w = spatial_extent.ptp() / N / 2.0
+        extent = np.empty((3,2), dtype=float)
+        extent[xaxis] = [los[0]-w, los[0]+w]
+        extent[yaxis] = [los[1]-w, los[1]+w]
+        extent[zaxis] = spatial_extent
+        # restrict to particles intersecting the l.o.s.:
+        sub = s.gas[ (s.gas['pos'][:,xaxis] - s.gas['hsml'] < los[0]) &
+                     (s.gas['pos'][:,xaxis] + s.gas['hsml'] > los[0]) &
+                     (s.gas['pos'][:,yaxis] - s.gas['hsml'] < los[1]) &
+                     (s.gas['pos'][:,yaxis] + s.gas['hsml'] > los[1]) ]
+        dV = sub['dV'].in_units_of(sub['pos'].units**3)
+        gridargs = {
+                'extent': extent,
+                'Npx': Npx,
+                'kernel': kernel,
+                'dV': dV,
+                'hsml': hsml,
+                'normed': False,
+        }
+        n_parts = n[sub._mask]
+        n   , px    = SPH_to_3Dgrid(sub, n_parts/dV, **gridargs)
+        n           = n.reshape(N) * np.prod(px)
+        non0n       = (n!=0)
+        vel , px    = SPH_to_3Dgrid(sub, n_parts*sub['vel'][:,zaxis]/dV, **gridargs)
+        vel         = vel.reshape(N) * np.prod(px)
+        vel[non0n]  = vel[non0n] / n[non0n]
+        temp, px    = SPH_to_3Dgrid(sub, n_parts*np.sqrt(sub['temp'])/dV, **gridargs)
+        temp        = temp.reshape(N) * np.prod(px)
+        temp[non0n] = temp[non0n] / n[non0n]
+        temp      **= 2
+        vel.convert_to(v_units, subs=s)
+        temp.convert_to('K', subs=s)
+        # `hsml` here is the pixel size, needed for calculating column densities
+        hsml        = px[(xaxis,yaxis),].in_units_of(l_units, subs=s)
+        # positions are not needed
+        pos         = None #np.linspace(extent[zaxis][0], extent[zaxis][1], Npx[zaxis])
+    else:
+        pos = s.gas['pos'].in_units_of(l_units).view(np.ndarray)[:,(xaxis,yaxis)].astype(np.float64).copy()
+        vel = s.gas['vel'].in_units_of(v_units).view(np.ndarray)[:,zaxis].astype(np.float64).copy()
+        temp = s.gas['temp'].in_units_of('K').view(np.ndarray).astype(np.float64)
+        if temp.base is not None:
+            temp.copy()
+
+        if isinstance(hsml, str):
+            hsml = s.gas[hsml]
+        elif isinstance(hsml, (Number, Unit)):
+            hsml = UnitScalar(hsml,s['pos'].units) * np.ones(len(s.gas),dtype=np.float64)
+        else:
+            hsml = UnitQty(hsml, s['pos'].units, subs=s)
+        hsml = hsml.in_units_of(l_units,subs=s).view(np.ndarray).astype(np.float64)
+        if hsml.base is not None:
+            hsml.copy()
+
+        N = len(s.gas)
+
     los = los.in_units_of(l_units,subs=s) \
              .view(np.ndarray).astype(np.float64).copy()
     vel_extent = vel_extent.in_units_of(v_units,subs=s) \
                            .view(np.ndarray).astype(np.float64).copy()
+
     b_0 = float(b_0.in_units_of(v_units, subs=s))
     Xsec = float(Xsec.in_units_of(l_units**2 * v_units, subs=s))
 
     taus = np.empty(Nbins, dtype=np.float64)
     los_dens = np.empty(Nbins, dtype=np.float64)
     los_temp = np.empty(Nbins, dtype=np.float64)
-    C.cpygad.absorption_spectrum(C.c_size_t(len(s.gas)),
-                                 C.c_void_p(pos.ctypes.data),
+    C.cpygad.absorption_spectrum(not bool(spatial_bins),
+                                 C.c_size_t(N),
+                                 C.c_void_p(pos.ctypes.data) if pos is not None else None,
                                  C.c_void_p(vel.ctypes.data),
                                  C.c_void_p(hsml.ctypes.data),
                                  C.c_void_p(n.ctypes.data),

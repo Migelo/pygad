@@ -4,11 +4,12 @@
 #include "looploop.hpp"
 
 extern "C"
-void absorption_spectrum(size_t N,
+void absorption_spectrum(bool particles,
+                         size_t N,
                          double *pos,
                          double *vel,
                          double *hsml,
-                         double *element_atoms,
+                         double *n,
                          double *temp,
                          double *los_pos,
                          double *vel_extent,
