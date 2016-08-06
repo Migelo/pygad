@@ -90,6 +90,10 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
     """
     Create a mock absorption spectrum for the given line of sight (l.o.s.) for the
     given line transition.
+
+    Credits to Neal Katz and Romeel Dave, who wrote a code taken as a basis for
+    this one, first called specexbin and later specexsnap that did the same (with
+    the spatial bins), and who helped me with the gist of this one.
     
     Args:
         s (Snap):               The snapshot to shoot the l.o.s. though.
@@ -129,9 +133,10 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
 
     Returns:
         taus (np.ndarray):      The optical depths for the velocity bins.
-        los_dens (np.ndarray):  The column densities restricted to the velocity bins.
-        los_temp (np.ndarray):  The (mass-weighted) particle temperatures
-                                restricted to the velocity bins.
+        los_dens (UnitArr):     The column densities restricted to the velocity
+                                bins (in cm^-2).
+        los_temp (UnitArr):     The (mass-weighted) particle temperatures
+                                restricted to the velocity bins (in K).
         v_edges (UnitArr):      The velocities at the bin edges.
     """
     # internally used units
@@ -190,12 +195,19 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
         Npx = np.ones(3, dtype=int)
         Npx[zaxis] = N
         if spatial_extent is None:
-            spatial_extent = [ np.min( s.gas['pos'][:,zaxis] - s.gas['hsml'] ),
-                               np.max( s.gas['pos'][:,zaxis] + s.gas['hsml'] ) ]
-            spatial_extent = UnitArr(spatial_extent, spatial_extent[0].units)
+            spatial_extent = [ np.min( s.gas['pos'][:,zaxis] ),
+                               np.max( s.gas['pos'][:,zaxis] ) ]
+            spatial_extent = UnitArr(spatial_extent, spatial_extent[-1].units)
+            if 1.01 * s.boxsize > spatial_extent.ptp() > 0.8 * s.boxsize:
+                # the box seems to be full with gas
+                missing = s.boxsize - spatial_extent.ptp()
+                spatial_extent[0] -= missing / 2.0
+                spatial_extent[1] += missing / 2.0
             spatial_extent.convert_to(s['pos'].units, subs=s)
         else:
             spatial_extent = UnitQty( spatial_extent, s['pos'].units, subs=s )
+        if environment.verbose >= environment.VERBOSE_NORMAL:
+            print '  using an spatial extent of:', spatial_extent
         w = spatial_extent.ptp() / N / 2.0
         extent = np.empty((3,2), dtype=float)
         extent[xaxis] = [los[0]-w, los[0]+w]
@@ -281,14 +293,19 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
                                  C.c_double(s.boxsize.in_units_of(l_units))
     )
 
+    los_dens = UnitArr(los_dens, 'cm**-2')
+    los_temp = UnitArr(los_temp, 'K')
+
     if environment.verbose >= environment.VERBOSE_NORMAL:
         # calculate parameters
         z_edges = velocities_to_redshifts(v_edges, z0=s.redshift)
         l_edges = l * (1.0 + z_edges)
         EW_l = EW(taus, l_edges)
         extinct = np.exp(-np.asarray(taus))
-        v_mean = np.average((v_edges[:-1]+v_edges[1:])/2., weights=extinct)
-        l_mean = np.average((l_edges[:-1]+l_edges[1:])/2., weights=extinct)
+        v_mean = UnitArr( np.average((v_edges[:-1]+v_edges[1:])/2.,
+                                     weights=extinct), v_edges.units )
+        l_mean = UnitArr( np.average((l_edges[:-1]+l_edges[1:])/2.,
+                                     weights=extinct), l_edges.units )
         print '  EW =', EW_l
         print '  v0 =', v_mean
         print '  l0 =', l_mean
