@@ -142,12 +142,13 @@ Example:
     True
 
     New custom blocks can be set easily (though have to fit the (sub-)snapshot):
-    >>> sub = s.baryons[s.baryons['Z']>1e-3].stars
-    load block elements... done.
+    >>> sub = s.baryons[s.baryons['metallicity']>1e-3].stars
+    load block Z... done.
+    derive block elements... done.
     derive block H... done.
     derive block He... done.
     derive block metals... done.
-    derive block Z... done.
+    derive block metallicity... done.
     >>> s.stars['new'] = np.ones(len(s.stars))
     >>> sub['new']
     SimArr([ 1.,  1.,  1., ...,  1.,  1.,  1.], snap="snap_M1196_4x_470":stars)
@@ -194,7 +195,7 @@ Example:
     >>> s2 = Snap(dest_file, physical=False)
     >>> s2.load_all_blocks()    # doctest:+ELLIPSIS
     load block nh... done.
-    load block elements... done.
+    load block cste... done.
     load block sfr... done.
     load block pot... done.
     load block inim... done.
@@ -240,9 +241,9 @@ Example:
     ...     assert np.all( b == b2 )
     load block pos... done.
     load block nh... done.
-    load block elements... done.
     load block hsml... done.
     load block pot... done.
+    load block inim... done.
     ...
     >>> assert s.redshift == s2.redshift
     >>> for name, prop in s.properties.iteritems():
@@ -411,10 +412,8 @@ def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
             new_name = name.strip().lower()
 
         # some renaming
-        if new_name in ['id']:
+        if new_name in ['id', 'z']:
             new_name = new_name.upper()
-        elif new_name == 'z':
-            new_name = 'elements'
         elif new_name == 'age':
             new_name = 'form_time'
 
@@ -1312,7 +1311,8 @@ class _SubSnap(_Snap):
 
         s[mask], however, is not host (!)
         >>> assert np.all( s[mask]['elements'] == s.baryons['elements'] )
-        load block elements... done.
+        load block Z... done.
+        derive block elements... done.
         >>> len(slim[slim_mask]['elements'])
         10015
         >>> assert s[2:-123:10].stars['form_time'].shape[0] == len(s[2:-123:10].stars)

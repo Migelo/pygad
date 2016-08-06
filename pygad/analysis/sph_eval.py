@@ -32,7 +32,8 @@ Examples:
     ...     print s.stars['gas_rho'][-1]
 
     >>> v1 = SPH_qty_at(s, 'elements', s.gas['pos'][:200:10])
-    load block elements... done.
+    load block Z... done.
+    derive block elements... done.
     >>> v2 = SPH_qty_at(s, 'elements', s.gas['pos'][:200])[::10]
     >>> if np.max(np.abs(v1-v2)/v1) > 1e-6:
     ...     print v1

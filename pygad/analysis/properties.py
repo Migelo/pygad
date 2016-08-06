@@ -52,11 +52,12 @@ Example:
     ...     print eff_radius(sub, 'V', proj=None)
     load block form_time... done.
     derive block age... done.
-    load block elements... done.
+    load block Z... done.
+    derive block elements... done.
     derive block H... done.
     derive block He... done.
     derive block metals... done.
-    derive block Z... done.
+    derive block metallicity... done.
     derive block mag_v... done.
     derive block lum_v... done.
     >>> if abs(eff_radius(sub, 'V', proj=2) - '10.7 kpc') > '0.2 kpc':
@@ -85,11 +86,12 @@ Example:
 
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470', load_double_prec=True)
     >>> s.gas['lx'] = x_ray_luminosity(s, lumtable=module_dir+'../snaps/em.dat')
-    load block elements... done.
+    load block Z... done.
+    derive block elements... done.
     derive block H... done.
     derive block He... done.
     derive block metals... done.
-    derive block Z... done.
+    derive block metallicity... done.
     load block ne... done.
     load block rho... done.
     load block mass... done.
@@ -471,7 +473,7 @@ def x_ray_luminosity(s, lumtable='em.dat', tempbin=None, lx0bin=None, dlxbin=Non
         tempbin = np.asarray(tempbin)
 
     tlow = tempbin[0] - 0.5*(tempbin[1]-tempbin[0]) # lower temperature bin limit
-    Z = s.gas['Z'] / physics.solar.Z()              # metallicity in solar units
+    Z = s.gas['metallicity'] / physics.solar.Z()    # metallicity in solar units
     mp = physics.m_p.in_units_of('g')               # proton mass
     # emission measure of gas particles (n_e * n_H * V)
     em = np.float64(s.gas['ne']) * np.float64(s.gas['H']).in_units_of('g')**2 * \
