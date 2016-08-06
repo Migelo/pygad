@@ -26,11 +26,7 @@ void _absorption_spectrum(size_t N,
     std::memset(los_dens, 0, Nbins*sizeof(double));
     std::memset(los_temp, 0, Nbins*sizeof(double));
 
-    double px_area;
-    if ( not particles ) {
-        px_area = hsml[0] * hsml[1];
-        printf("px_area = %e\n", px_area);
-    }
+    double px_area = (particles ? 0.0 : hsml[0]*hsml[1]);
 
 #pragma omp parallel for default(shared) schedule(dynamic,10)
     for (size_t j=0; j<N; j++) {

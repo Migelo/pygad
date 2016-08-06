@@ -27,6 +27,7 @@ lines = {
 def mock_absorption_spectrum_of(s, los, vel_extent, line,
                                 spatial_bins=False, spatial_extent=None,
                                 Nbins=1000, hsml='hsml', kernel=None,
+                                zero_Hubble_flow_at=0,
                                 xaxis=0, yaxis=1, **kwargs):
     '''
     Create a mock absorption spectrum for the given line of sight (l.o.s.) for the
@@ -61,6 +62,10 @@ def mock_absorption_spectrum_of(s, los, vel_extent, line,
                                 volume for all particles.
         kernel (str):           The kernel to use for smoothing. (By default use
                                 the kernel defined in `gadget.cfg`.)
+        zero_Hubble_flow_at (UnitScalar):
+                                The position along the l.o.s. where there is no
+                                Hubble flow. If not units are given, they are
+                                assume to be those of s['pos'].
         xaxis/yaxis (int):      The x- and y-axis for the l.o.s.. The implicitly
                                 defined z-axis goes along the l.o.s.. The axis
                                 must be chosen from [0,1,2].
@@ -81,11 +86,13 @@ def mock_absorption_spectrum_of(s, los, vel_extent, line,
                                     spatial_bins=spatial_bins,
                                     spatial_extent=spatial_extent,
                                     Nbins=Nbins, hsml=hsml, kernel=kernel,
+                                    zero_Hubble_flow_at=zero_Hubble_flow_at,
                                     xaxis=xaxis, yaxis=yaxis, **kwargs)
 
 def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
                              spatial_bins=False, spatial_extent=None,
                              Nbins=1000, hsml='hsml', kernel=None,
+                             zero_Hubble_flow_at=0,
                              xaxis=0, yaxis=1):
     """
     Create a mock absorption spectrum for the given line of sight (l.o.s.) for the
@@ -127,6 +134,10 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
                                 volume for all particles.
         kernel (str):           The kernel to use for smoothing. (By default use
                                 the kernel defined in `gadget.cfg`.)
+        zero_Hubble_flow_at (UnitScalar):
+                                The position along the l.o.s. where there is no
+                                Hubble flow. If not units are given, they are
+                                assume to be those of s['pos'].
         xaxis/yaxis (int):      The x- and y-axis for the l.o.s.. The implicitly
                                 defined z-axis goes along the l.o.s.. The axis
                                 must be chosen from [0,1,2].
@@ -153,6 +164,7 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
         raise ValueError("x- and y-axis must be in [0,1,2] and different!")
     if kernel is None:
         kernel = gadget.general['kernel']
+    zero_Hubble_flow_at = UnitScalar(zero_Hubble_flow_at, s['pos'].units, subs=s)
 
     b_0 = np.sqrt(2.0 * kB * UnitScalar('1 K') / atomwt)
     b_0.convert_to(v_units)
@@ -188,12 +200,6 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
         # do SPH smoothing along the l.o.s.
         from ..binning import SPH_to_3Dgrid
         los = los.in_units_of(s['pos'].units, subs=s)
-        if spatial_bins is True:
-            N = int( 1e5 )
-        else:
-            N = int( spatial_bins )
-        Npx = np.ones(3, dtype=int)
-        Npx[zaxis] = N
         if spatial_extent is None:
             spatial_extent = [ np.min( s.gas['pos'][:,zaxis] ),
                                np.max( s.gas['pos'][:,zaxis] ) ]
@@ -206,13 +212,21 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
             spatial_extent.convert_to(s['pos'].units, subs=s)
         else:
             spatial_extent = UnitQty( spatial_extent, s['pos'].units, subs=s )
-        if environment.verbose >= environment.VERBOSE_NORMAL:
-            print '  using an spatial extent of:', spatial_extent
-        w = spatial_extent.ptp() / N / 2.0
-        extent = np.empty((3,2), dtype=float)
+        if spatial_bins is True:
+            N = int(max( 1e3,
+                         (spatial_extent.ptp()/UnitArr('1 kpc')).in_units_of(1,subs=s) ))
+        else:
+            N = int( spatial_bins )
+        Npx = np.ones(3, dtype=int)
+        Npx[zaxis] = N
+        w = (spatial_extent.ptp() / N / 2.0).in_units_of(los.units, subs=s)
+        extent = UnitArr(np.empty((3,2), dtype=float), los.units)
         extent[xaxis] = [los[0]-w, los[0]+w]
         extent[yaxis] = [los[1]-w, los[1]+w]
         extent[zaxis] = spatial_extent
+        if environment.verbose >= environment.VERBOSE_NORMAL:
+            print '  using an spatial extent of:', spatial_extent
+            print '  ... with %d bins of size %s^3' % (N, 2.*w)
         # restrict to particles intersecting the l.o.s.:
         sub = s.gas[ (s.gas['pos'][:,xaxis] - s.gas['hsml'] < los[0]) &
                      (s.gas['pos'][:,xaxis] + s.gas['hsml'] > los[0]) &
@@ -234,20 +248,26 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
         vel , px    = SPH_to_3Dgrid(sub, n_parts*sub['vel'][:,zaxis]/dV, **gridargs)
         vel         = vel.reshape(N) * np.prod(px)
         vel[non0n]  = vel[non0n] / n[non0n]
+        # average sqrt(T), since thats what the therm. broadening scales with
         temp, px    = SPH_to_3Dgrid(sub, n_parts*np.sqrt(sub['temp'])/dV, **gridargs)
         temp        = temp.reshape(N) * np.prod(px)
         temp[non0n] = temp[non0n] / n[non0n]
         temp      **= 2
+        # `hsml` here is the pixel size, needed for calculating column densities
+        hsml        = px[(xaxis,yaxis),]
+        pos         = None  # no use of positions in the C function
+        # the z-coordinates for the Hubble flow
+        los_pos     = UnitArr(np.linspace(extent[zaxis][0],
+                                  extent[zaxis][1]-px[zaxis], Npx[zaxis]),
+                      extent.units)
+
+        # inplace conversion possible (later conversion does not add to runtime!)
         vel.convert_to(v_units, subs=s)
         temp.convert_to('K', subs=s)
-        # `hsml` here is the pixel size, needed for calculating column densities
-        hsml        = px[(xaxis,yaxis),].in_units_of(l_units, subs=s)
-        # positions are not needed
-        pos         = None #np.linspace(extent[zaxis][0], extent[zaxis][1], Npx[zaxis])
     else:
-        pos = s.gas['pos'].in_units_of(l_units).view(np.ndarray)[:,(xaxis,yaxis)].astype(np.float64).copy()
-        vel = s.gas['vel'].in_units_of(v_units).view(np.ndarray)[:,zaxis].astype(np.float64).copy()
-        temp = s.gas['temp'].in_units_of('K').view(np.ndarray).astype(np.float64)
+        pos = s.gas['pos'][:,(xaxis,yaxis)]
+        vel = s.gas['vel'][:,zaxis]
+        temp = s.gas['temp']
         if temp.base is not None:
             temp.copy()
 
@@ -257,11 +277,25 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
             hsml = UnitScalar(hsml,s['pos'].units) * np.ones(len(s.gas),dtype=np.float64)
         else:
             hsml = UnitQty(hsml, s['pos'].units, subs=s)
-        hsml = hsml.in_units_of(l_units,subs=s).view(np.ndarray).astype(np.float64)
         if hsml.base is not None:
             hsml.copy()
 
         N = len(s.gas)
+
+        # the z-coordinates for the Hubble flow
+        los_pos = s.gas['pos'][:,zaxis]
+
+    # add the Hubble flow
+    zero_Hubble_flow_at.convert_to(los_pos.units, subs=s)
+    H_flow = s.cosmology.H(s.redshift) * (los_pos - zero_Hubble_flow_at)
+    H_flow.convert_to(vel.units, subs=s)
+    vel = vel + H_flow
+
+    if pos is not None:
+        pos = pos.astype(np.float64).in_units_of(l_units,subs=s).view(np.ndarray).copy()
+    vel  = vel.astype(np.float64).in_units_of(v_units,subs=s).view(np.ndarray).copy()
+    temp = temp.in_units_of('K',subs=s).view(np.ndarray).astype(np.float64)
+    hsml = hsml.in_units_of(l_units,subs=s).view(np.ndarray).astype(np.float64)
 
     los = los.in_units_of(l_units,subs=s) \
              .view(np.ndarray).astype(np.float64).copy()
@@ -297,18 +331,24 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
     los_temp = UnitArr(los_temp, 'K')
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        # calculate parameters
-        z_edges = velocities_to_redshifts(v_edges, z0=s.redshift)
-        l_edges = l * (1.0 + z_edges)
-        EW_l = EW(taus, l_edges)
-        extinct = np.exp(-np.asarray(taus))
-        v_mean = UnitArr( np.average((v_edges[:-1]+v_edges[1:])/2.,
-                                     weights=extinct), v_edges.units )
-        l_mean = UnitArr( np.average((l_edges[:-1]+l_edges[1:])/2.,
-                                     weights=extinct), l_edges.units )
-        print '  EW =', EW_l
-        print '  v0 =', v_mean
-        print '  l0 =', l_mean
+        # if called with bad parameters sum(taus)==0 and, hence, no normation
+        # possible:
+        try:
+            # calculate parameters
+            z_edges = velocities_to_redshifts(v_edges, z0=s.redshift)
+            l_edges = l * (1.0 + z_edges)
+            EW_l = EW(taus, l_edges)
+            extinct = np.exp(-np.asarray(taus))
+            v_mean = UnitArr( np.average((v_edges[:-1]+v_edges[1:])/2.,
+                                         weights=extinct), v_edges.units )
+            l_mean = UnitArr( np.average((l_edges[:-1]+l_edges[1:])/2.,
+                                         weights=extinct), l_edges.units )
+            print 'created line with:'
+            print '  EW =', EW_l
+            print '  v0 =', v_mean
+            print '  l0 =', l_mean
+        except:
+            pass
 
     return taus, los_dens, los_temp, v_edges
 
