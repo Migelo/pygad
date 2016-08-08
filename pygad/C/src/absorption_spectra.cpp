@@ -63,8 +63,11 @@ void _absorption_spectrum(size_t N,
 
         if ( vi_min == vi_max ) {
             assert( std::abs(vi_min - vi) < 0.501 );
+#pragma omp atomic
             taus[vi_min] += Nj;
+#pragma omp atomic
             los_dens[vi_min] += Nj;
+#pragma omp atomic
             los_temp[vi_min] += Tj * Nj;
         } else {
             // antiderivative of tb_b: int_0_v dv' tb_b(v') = 1/2 * erf(v/b)
@@ -73,8 +76,11 @@ void _absorption_spectrum(size_t N,
                 double v1 = (i-vi+0.5) * dv;
                 double Dtb = 0.5 * (std::erf(v1/b) - std::erf(v0/b));
                 double DtbNj = Dtb * Nj;
+#pragma omp atomic
                 taus[i] += DtbNj;
+#pragma omp atomic
                 los_dens[i] += DtbNj;
+#pragma omp atomic
                 los_temp[i] += Tj * DtbNj;
             }
         }

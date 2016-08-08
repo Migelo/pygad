@@ -1,5 +1,53 @@
 """
 Produce mock absorption spectra for given line transition(s) and line-of-sight(s).
+
+Doctests:
+    >>> from ..environment import module_dir
+    >>> from ..snapshot import Snap
+    >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=False)
+    
+    >>> los_arr = UnitArr([[ 34700.,  35600.],
+    ...                    [ 34550.,  35500.],
+    ...                    [ 35000.,  35600.]], 'ckpc/h_0')
+    >>> environment.verbose = environment.VERBOSE_QUIET
+    >>> for los in los_arr:
+    ...     print 'l.o.s.:', los
+    ...     for line in ['H1215', 'OVI1031']:
+    ...         print '  ', line
+    ...         tau, dens, temp, v_edges = mock_absorption_spectrum_of(
+    ...             s, los,
+    ...             vel_extent=UnitArr([2400.,3100.], 'km/s'),
+    ...             line=line
+    ...         )
+    ...         N = dens.sum()
+    ...         print '    N  = %.3e %s' % (N, N.units)
+    ...         z_edges = velocities_to_redshifts(v_edges, z0=s.redshift)
+    ...         l = UnitArr(lines[line]['l'])
+    ...         l_edges = l * (1.0 + z_edges)
+    ...         EW_l = EW(tau, l_edges)
+    ...         print '    EW = %.3f %s' % (EW_l, EW_l.units)
+    l.o.s.: [ 34700.  35600.] [ckpc h_0**-1]
+       H1215
+        N  = 2.299e+15 [cm**-2]
+        EW = 1.401 [Angstrom]
+       OVI1031
+        N  = 7.447e+14 [cm**-2]
+        EW = 0.672 [Angstrom]
+    l.o.s.: [ 34550.  35500.] [ckpc h_0**-1]
+       H1215
+        N  = 5.297e+14 [cm**-2]
+        EW = 0.628 [Angstrom]
+       OVI1031
+        N  = 2.250e+14 [cm**-2]
+        EW = 0.281 [Angstrom]
+    l.o.s.: [ 35000.  35600.] [ckpc h_0**-1]
+       H1215
+        N  = 4.377e+13 [cm**-2]
+        EW = 0.288 [Angstrom]
+       OVI1031
+        N  = 1.209e+14 [cm**-2]
+        EW = 0.186 [Angstrom]
+    >>> environment.verbose = environment.VERBOSE_NORMAL
 """
 __all__ = ['mock_absorption_spectrum_of', 'mock_absorption_spectrum',
            'EW', 'velocities_to_redshifts']
