@@ -40,7 +40,8 @@ def sigHI(z, UVB=gadget.general['UVB']):
         raise ValueError('HI cross section not known for UVB "%s"!' % UVB)
     return sigHI
 
-def Rahmati_fGamma_HI(z, nH, T, fbaryon, UVB=gadget.general['UVB'], subs=None):
+def Rahmati_fGamma_HI(z, nH, T, fbaryon, UVB=gadget.general['UVB'],
+                      flux_factor=None, subs=None):
     '''
     The fraction of the photoionising background that is not self-shielded as with
     the fitting formula of Rahmati et al. (2013) (formula (14)).
@@ -53,6 +54,10 @@ def Rahmati_fGamma_HI(z, nH, T, fbaryon, UVB=gadget.general['UVB'], subs=None):
         UVB (str):          The name of the UV background as named in
                             `cloudy.UVB`. Defaults to the value of the UVB in the
                             `gadget.cfg`.
+        flux_factor (float):Adjust the UVB by this factor (assume a optically thin
+                            limit and scale down the densities during the look-up
+                            by this factor).
+                            Note `sigHI` is not adjusted!
         subs (dict, Snap):  Used for substitutions in unit conversions (c.f.
                             `UnitArr.convert_to`).
 
@@ -61,11 +66,15 @@ def Rahmati_fGamma_HI(z, nH, T, fbaryon, UVB=gadget.general['UVB'], subs=None):
     '''
     # formula numbers are those of Rahmati et al. (2013)
 
+    if flux_factor is None:
+        from ..snapshot import derived
+        flux_factor = derived.iontable['flux_factor']
+
     # interpolate Gamma_HI from the UV background radiation table for the current
     # redshift (formula 3)
-    _Gamma_HI = Gamma_HI(z,UVB)
+    _Gamma_HI = float(flux_factor) * Gamma_HI(z,UVB)
     # calculate the characteristic self-shielding density (in units in cm^2)
-    _sigHI = sigHI(z,UVB)
+    _sigHI = sigHI(z,UVB)   # TODO: might change with the flux factor as well!
     # formula (13), the T4^0.17 dependecy gets factored in later:
     nHss_gamma = 6.73e-3 * (_sigHI/2.49e-18)**(-2./3.) * (fbaryon/0.17)**(-1./3.) \
             * (_Gamma_HI*1e12)**(2./3.)
@@ -85,31 +94,40 @@ def Rahmati_fGamma_HI(z, nH, T, fbaryon, UVB=gadget.general['UVB'], subs=None):
 
     return fGamma_HI
 
-def Rahmati_HI_mass(s, UVB=gadget.general['UVB']):
+def Rahmati_HI_mass(s, UVB=gadget.general['UVB'], flux_factor=None):
     '''
     Estimate the HI mass with the fitting formula from Rahmati et al. (2013).
 
     Args:
-        s (Snap):       The (gas-particles sub-)snapshot to use.
-        UVB (str):      The name of the UV background as named in `cloudy.UVB`.
-                        Defaults to the value of the UVB in the `gadget.cfg`.
+        s (Snap):               The (gas-particles sub-)snapshot to use.
+        UVB (str):              The name of the UV background as named in
+                                `cloudy.UVB`. Defaults to the value of the UVB in
+                                the `gadget.cfg`.
+        flux_factor (float):    Adjust the UVB by this factor (assume a optically
+                                thin limit and scale down the densities during the
+                                look-up by this factor).
+                                (Note: `sigHI` is not adjusted!)
 
     Returns:
         HI (UnitArr):   The HI mass block for the gas (within `s`).
     '''
+    if flux_factor is None:
+        from ..snapshot import derived
+        flux_factor = derived.iontable['flux_factor']
+
     T  = s.gas['temp'].in_units_of('K')
     nH = s.gas['rho'] * s.gas['H']/s.gas['mass'] / physics.m_H
     nH.convert_to('cm**-3', subs=s)
 
     fgamma_HI = Rahmati_fGamma_HI(s.redshift, nH=nH, T=T, 
                                   fbaryon=s.cosmology.Omega_b/s.cosmology.Omega_m,
-                                  UVB=UVB, subs=s)
+                                  UVB=UVB, flux_factor=flux_factor, subs=s)
 
     # calculatation is done unitless
     T  = T.view(np.ndarray)
     nH = nH.view(np.ndarray)
 
-    _Gamma_HI = Gamma_HI(s.redshift,UVB)
+    _Gamma_HI = float(flux_factor) * Gamma_HI(s.redshift,UVB)
     l         = 315614. / T
     alpha_A   = 1.269e-13 * l**1.503 / (1.+(l/0.522)**0.47)**1.923          # in cm^3/s
     # Collisional ionization Gamma_Col = Lambda_T*(1-eta)*n (Theuns et al., 1998)

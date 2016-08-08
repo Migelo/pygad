@@ -198,7 +198,7 @@ def calc_x_ray_lum(s, lumtable, **kwargs):
     return x_ray_luminosity(s, lumtable=lumtable, **kwargs)
 calc_x_ray_lum._deps = set(['metallicity', 'ne', 'H', 'rho', 'mass', 'temp'])
 
-def calc_HI_mass(s, UVB=gadget.general['UVB']):
+def calc_HI_mass(s, UVB=gadget.general['UVB'], flux_factor=None):
     '''
     Estimate the HI mass with the fitting formula from Rahmati et al. (2013).
 
@@ -208,11 +208,17 @@ def calc_HI_mass(s, UVB=gadget.general['UVB']):
         s (Snap):       The (gas-particles sub-)snapshot to use.
         UVB (str):      The name of the UV background as named in `cloudy.UVB`.
                         Defaults to the value of the UVB in the `gadget.cfg`.
+        flux_factor (float):
+                        Adjust the UVB by this factor (assume a optically thin
+                        limit and scale down the densities during the look-up by
+                        this factor).
+                        (Note: `sigHI` used in the Rahmati fitting formula is not
+                        adjusted!)
 
     Returns:
         HI (UnitArr):   The HI mass block for the gas (within `s`).
     '''
-    return cloudy.Rahmati_HI_mass(s, UVB)
+    return cloudy.Rahmati_HI_mass(s, UVB, flux_factor=flux_factor)
 calc_HI_mass._deps = set(['H', 'temp', 'rho', 'mass'])
 
 def calc_ion_mass(s, el, ionisation, selfshield=True, iontbl=None):
