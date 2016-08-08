@@ -67,6 +67,9 @@ class IonisationTable(object):
         flux_factor (float):    Adjust the UVB by this factor (assume a optically
                                 thin limit and scale down the densities during the
                                 lookup by this factor).
+                                (Note: `sigHI` used in the Rahmati fitting formula
+                                needed for an approximation of self-shielding is
+                                not adjusted!)
     '''
 
     def __init__(self, redshift, nH, T, ions, tabledir,
@@ -198,7 +201,8 @@ class IonisationTable(object):
                     fbaryon = cosmo.Omega_b / cosmo.Omega_m
                     import sys
                     print >> sys.stderr, 'WARNING: fbaryon was not given, using', fbaryon
-            fG = Rahmati_fGamma_HI(z, nH, T, fbaryon, UVB=UVB, subs=subs)
+            fG = Rahmati_fGamma_HI(z, nH, T, fbaryon, UVB=UVB,
+                                   flux_factor=self.flux_factor, subs=subs)
             # limit the attenuation in very dense gas (assuming not all of the
             # particle mass actually is at these high densities)
             fG_limit = 1e-3
@@ -207,6 +211,7 @@ class IonisationTable(object):
             # the density by the same factor fG:
             nH /= fG
 
+        # assume the optical thin limit (as done for the self-shielding, too)
         if self._flux_factor != 1.0:
             nH /= self._flux_factor
 
