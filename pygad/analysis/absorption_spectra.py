@@ -290,7 +290,7 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
 
         # do some padding in the 3D binning in order to use the the normation
         # process
-        pad = 7
+        pad = 0 #7
         Npx = (1+2*pad)*np.ones(3, dtype=int)
         Npx[zaxis] = N
         m = [pad] * 3

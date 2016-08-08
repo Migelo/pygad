@@ -22,7 +22,8 @@ Examples:
     ...                                          # (baryons only)
     ([True, False, False, False, True, False], set(['elements', 'metals']))
     >>> s.gas['CIV'] # doctest: +ELLIPSIS
-    load block elements... done.
+    load block Z... done.
+    derive block elements... done.
     derive block H... done.
     load block mass... done.
     load block rho... done.
