@@ -46,7 +46,7 @@ doctests:
     TestResults(failed=0, attempted=4)
     >>> print >> sys.stderr, 'testing module analysis...'
     >>> doctest.testmod(analysis)
-    TestResults(failed=0, attempted=5)
+    TestResults(failed=0, attempted=6)
     >>> print >> sys.stderr, 'testing module tools...'
     >>> doctest.testmod(tools)
     TestResults(failed=0, attempted=0)
@@ -77,7 +77,7 @@ import ssp
 import binning
 import analysis
 import tools
-import data
+import cloudy
 if environment.interactive:
     import plotting
 
