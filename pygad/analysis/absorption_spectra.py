@@ -55,6 +55,12 @@ def mock_absorption_spectrum_of(s, los, vel_extent, line,
                                 these spatial bins.
         spatial_extent (UnitQty):
                                 The extent in the spatial bins along the l.o.s..
+        spatial_res (UnitScalar):
+                                The resolution of the spatial bins. If given, it
+                                overwrites the number of spatial bins as given by
+                                spatial_bins (if given). If not units are
+                                provided, it is assumed it is given in those of
+                                s['pos'].
         Nbins (int):            The number of bins for the spectrum.
         hsml (str, UnitQty, Unit):
                                 The smoothing lengths to use. Can be a block name,
@@ -91,6 +97,7 @@ def mock_absorption_spectrum_of(s, los, vel_extent, line,
 
 def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
                              spatial_bins=False, spatial_extent=None,
+                             spatial_res=None,
                              Nbins=1000, hsml='hsml', kernel=None,
                              zero_Hubble_flow_at=0,
                              xaxis=0, yaxis=1):
@@ -127,6 +134,12 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
                                 these spatial bins.
         spatial_extent (UnitQty):
                                 The extent in the spatial bins along the l.o.s..
+        spatial_res (UnitScalar):
+                                The resolution of the spatial bins. If given, it
+                                overwrites the number of spatial bins as given by
+                                spatial_bins (if given). If not units are
+                                provided, it is assumed it is given in those of
+                                s['pos'].
         Nbins (int):            The number of bins for the spectrum.
         hsml (str, UnitQty, Unit):
                                 The smoothing lengths to use. Can be a block name,
@@ -200,6 +213,7 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
         # do SPH smoothing along the l.o.s.
         from ..binning import SPH_to_3Dgrid
         los = los.in_units_of(s['pos'].units, subs=s)
+
         if spatial_extent is None:
             spatial_extent = [ np.min( s.gas['pos'][:,zaxis] ),
                                np.max( s.gas['pos'][:,zaxis] ) ]
@@ -212,21 +226,35 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
             spatial_extent.convert_to(s['pos'].units, subs=s)
         else:
             spatial_extent = UnitQty( spatial_extent, s['pos'].units, subs=s )
-        if spatial_bins is True:
-            N = int(max( 1e3,
-                         (spatial_extent.ptp()/UnitArr('1 kpc')).in_units_of(1,subs=s) ))
-        else:
+
+        if spatial_bins is True and spatial_res is None:
+            # you do not want N=int(True)=1...
+            spatial_res = UnitArr(np.percentile(s.gas['hsml'],1), s.gas['hsml'].units)
+        if spatial_res is None:
             N = int( spatial_bins )
-        Npx = np.ones(3, dtype=int)
+            spatial_res = spatial_extent.ptp() / N
+        else:
+            spatial_res = UnitScalar(spatial_res, s['pos'].units, subs=s)
+            N = int(max( 1e3,
+                         2.*(spatial_extent.ptp()/spatial_res).in_units_of(1,subs=s) ))
+
+        # do some padding in the 3D binning in order to use the the normation
+        # process
+        pad = 7
+        Npx = (1+2*pad)*np.ones(3, dtype=int)
         Npx[zaxis] = N
-        w = (spatial_extent.ptp() / N / 2.0).in_units_of(los.units, subs=s)
+        m = [pad] * 3
+        m[zaxis] = slice(None)
+
+        w = ((0.5+2.*pad) * spatial_res).in_units_of(los.units, subs=s)
         extent = UnitArr(np.empty((3,2), dtype=float), los.units)
         extent[xaxis] = [los[0]-w, los[0]+w]
         extent[yaxis] = [los[1]-w, los[1]+w]
         extent[zaxis] = spatial_extent
+
         if environment.verbose >= environment.VERBOSE_NORMAL:
             print '  using an spatial extent of:', spatial_extent
-            print '  ... with %d bins of size %s^3' % (N, 2.*w)
+            print '  ... with %d bins of size %s^3' % (N, spatial_res)
         # restrict to particles intersecting the l.o.s.:
         sub = s.gas[ (s.gas['pos'][:,xaxis] - s.gas['hsml'] < los[0]) &
                      (s.gas['pos'][:,xaxis] + s.gas['hsml'] > los[0]) &
@@ -234,23 +262,25 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
                      (s.gas['pos'][:,yaxis] + s.gas['hsml'] > los[1]) ]
         dV = sub['dV'].in_units_of(sub['pos'].units**3)
         gridargs = {
-                'extent': extent,
-                'Npx': Npx,
-                'kernel': kernel,
-                'dV': dV,
-                'hsml': hsml,
-                'normed': False,
+                'extent':   extent,
+                'Npx':      Npx,
+                'kernel':   kernel,
+                'dV':       dV,
+                'hsml':     hsml,
+                'normed':   True,
         }
         n_parts = n[sub._mask]
         n   , px    = SPH_to_3Dgrid(sub, n_parts/dV, **gridargs)
-        n           = n.reshape(N) * np.prod(px)
+        n           = n[m].reshape(N) * np.prod(px)
         non0n       = (n!=0)
-        vel , px    = SPH_to_3Dgrid(sub, n_parts*sub['vel'][:,zaxis]/dV, **gridargs)
-        vel         = vel.reshape(N) * np.prod(px)
+        vel , px    = SPH_to_3Dgrid(sub, n_parts*sub['vel'][:,zaxis]/dV,
+                                    **gridargs)
+        vel         = vel[m].reshape(N) * np.prod(px)
         vel[non0n]  = vel[non0n] / n[non0n]
         # average sqrt(T), since thats what the therm. broadening scales with
-        temp, px    = SPH_to_3Dgrid(sub, n_parts*np.sqrt(sub['temp'])/dV, **gridargs)
-        temp        = temp.reshape(N) * np.prod(px)
+        temp, px    = SPH_to_3Dgrid(sub, n_parts*np.sqrt(sub['temp'])/dV,
+                                    **gridargs)
+        temp        = temp[m].reshape(N) * np.prod(px)
         temp[non0n] = temp[non0n] / n[non0n]
         temp      **= 2
         # `hsml` here is the pixel size, needed for calculating column densities
