@@ -30,8 +30,6 @@ class Kernel {
 
         void init(KernelType type_);
         void init(const char *name);
-        void generate_projection(int N);
-        int proj_table_size() const {return _proj.size();}
 
         KernelType type() const {return _type;}
         KernelType norm() const {return _norm;}
@@ -44,13 +42,23 @@ class Kernel {
         double value(double q, double H) const {
             return q<1.0 ? value_ql1(q,H) : 0.0;
         }
+        double operator()(double q, double H) const {return value(q,H);}
+
+        // these function do not make sense for d == 2 and are only tested for
+        // d == 3, no higher dimension
+        void generate_projection(int N);
+        int proj_table_size() const {return _proj.size();}
+        void generate_los_integrals(int N, int M);
+        int los_integrals_table_size() const {
+            return _los_integ.empty() ? 0 : _los_integ.size()*_los_integ[0].size();
+        }
 
         double proj_value_ql1(double q, double H) const;
         double proj_value(double q, double H) const {
             return q<1.0 ? proj_value_ql1(q,H) : 0.0;
         }
 
-        double operator()(double q, double H) const {return value(q,H);}
+        double los_integ_value(double b, double x, double y, double H) const;
 
     private:
         KernelType _type;
@@ -58,6 +66,10 @@ class Kernel {
         double (*_w)(double q);
 
         std::vector<double> _proj;
+        std::vector<std::vector<double>> _los_integ;
+
+        double _los_integ_loockup(int b1, int b2, double alpha_b,
+                                  int x1, int x2, double alpha_x) const;
 };
 
 extern "C" double cubic(double q, double H);
@@ -83,6 +95,7 @@ Kernel<d>::Kernel()
     : _type(UNDEFINED_KERNEL), _norm(1.0), _w([](double q){return q;})
 {
     generate_projection(126);
+    generate_los_integrals(10, 10);     // just to ensure to have some values
 }
 
 template<int d>
@@ -179,6 +192,7 @@ void Kernel<d>::init(KernelType type_)
     }
 
     generate_projection(126);
+    generate_los_integrals(10, 10);     // just to ensure to have some values
 }
 
 template<int d>
@@ -230,6 +244,40 @@ void Kernel<d>::generate_projection(int N) {
 }
 
 template<int d>
+void Kernel<d>::generate_los_integrals(int N, int M) {
+    assert(0<N);
+    assert(0<M);
+
+    _los_integ.resize(N+1);
+    size_t Nws = 4096;
+    gsl_integration_workspace *ws = gsl_integration_workspace_alloc(Nws);
+    gsl_function F;
+    F.function = _gsl_integ_w_along_b;
+    struct _gsl_integ_w_along_b_param_t params;
+    params.w = _w;
+    F.params = (void *)&params;
+    double res, error;
+    for (int i=0; i<=N; i++) {
+        params.b = double(i) / N;   // impact parameter to integrate at
+        double l_max = std::sqrt(1.0 - std::pow(params.b, 2.0));
+        _los_integ[i].resize(M+1);
+        for (int j=0; j<=M; j++) {
+            double l = double(j) / M;   // upper integration bound
+            if ( l > l_max )
+                l = l_max;
+            gsl_integration_qag(&F, 0.0, l,
+                                1e-13, 1e-13, Nws, GSL_INTEG_GAUSS61,
+                                ws, &res, &error);
+            if (error > 1e-12)
+                fprintf(stderr, "WARNING: Error in kernel integration >1e-12!\n");
+            assert(res >= 0.0 && "line-of-sight integration of kernel cannot be negative!");
+            _los_integ[i][j] = res;
+        }
+    }
+    gsl_integration_workspace_free(ws);
+}
+
+template<int d>
 double Kernel<d>::proj_value_ql1(double q, double H) const {
     assert(0.0 <= q and q <= 1.0);
     double qi = q * _proj.size();
@@ -238,5 +286,69 @@ double Kernel<d>::proj_value_ql1(double q, double H) const {
     double alpha = qi-i1;
     double proj_w = (1.0-alpha)*_proj[i1] + alpha*_proj[i2];
     return pow(H,-d+1) * _norm * proj_w;
+}
+
+template<int d>
+double Kernel<d>::_los_integ_loockup(int b1, int b2, double alpha_b,
+                                     int x1, int x2, double alpha_x) const {
+    assert( 0<=b1 and (unsigned)b1 < _los_integ.size() );
+    assert( 0<=b2 and (unsigned)b2 < _los_integ.size() );
+    assert( 0<=alpha_b and alpha_b<=1.0 );
+    assert( 0<=x1 and (unsigned)x1 < _los_integ[0].size() );
+    assert( 0<=x2 and (unsigned)x2 < _los_integ[0].size() );
+    assert( 0<=alpha_x and alpha_x<=1.0 );
+
+    // bi-linear interpolation
+    double I_b1 = (1.0-alpha_x) * _los_integ[b1][x1] + alpha_x * _los_integ[b1][x2];
+    double I_b2 = (1.0-alpha_x) * _los_integ[b2][x1] + alpha_x * _los_integ[b2][x2];
+    return (1.0-alpha_b) * I_b1 + alpha_b * I_b2;
+}
+template<int d>
+double Kernel<d>::los_integ_value(double b, double x, double y, double H) const {
+    // integral along a line from x to y at impact parameter b, using bi-linear
+    // interpolation within the table
+    assert( x <= y );
+
+    if ( b >= 1.0 )
+        return 0.0;
+    // get b-indices and alpha
+    assert( 0.0 <= b );
+    double bi = b * _los_integ.size();
+    int b1=int(bi), b2=std::min<int>(b1+1, _los_integ.size()-1);
+    assert( 0<=b1 and (unsigned)b1 < _los_integ.size() );
+    double alpha_b = bi-b1;
+
+    // get |x|-indices and alpha
+    double xi = std::abs(x) * _los_integ.size();
+    int x1=std::min<int>(int(xi), _los_integ[0].size()-1);
+    int x2=std::min<int>(x1+1,    _los_integ[0].size()-1);
+    assert( 0<=x1 and (unsigned)x1 < _los_integ[0].size() );
+    double alpha_x = xi-x1;
+
+    // get |y|-indices and alpha
+    double yi = std::abs(y) * _los_integ.size();
+    int y1=std::min<int>(int(yi), _los_integ[0].size()-1);
+    int y2=std::min<int>(y1+1,    _los_integ[0].size()-1);
+    assert( 0<=y1 and (unsigned)y1 < _los_integ[0].size() );
+    double alpha_y = yi-y1;
+
+    // lookup the integrals from 0 to |x|/|y|
+    double I_b_0x = _los_integ_loockup( b1,b2,alpha_b, x1,x2,alpha_x );
+    double I_b_0y = _los_integ_loockup( b1,b2,alpha_b, y1,y2,alpha_y );
+
+    // combine the integral to the integral from x to y
+    assert( x <= y );
+    double I;
+    if ( 0.0 <= x ) {   // =>  0 <= y
+        I = I_b_0y - I_b_0x;
+    } else {    // x < 0
+        if ( y < 0.0 ) {
+            I = I_b_0x - I_b_0y;
+        } else {    // 0 <= y
+            I = I_b_0x + I_b_0y;
+        }
+    }
+
+    return pow(H,-d+1) * _norm * I;
 }
 

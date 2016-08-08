@@ -145,7 +145,7 @@ def mock_absorption_spectrum_of(s, los, vel_extent, line,
 
 def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
                              spatial_bins=False, spatial_extent=None,
-                             spatial_res=None,
+                             spatial_res=None, pad=0,
                              Nbins=1000, hsml='hsml', kernel=None,
                              zero_Hubble_flow_at=0,
                              xaxis=0, yaxis=1):
@@ -188,6 +188,10 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
                                 spatial_bins (if given). If not units are
                                 provided, it is assumed it is given in those of
                                 s['pos'].
+        pad (int):              Pad this number of voxels into each direction
+                                around the line of side, when creating the spatial
+                                bins in order to make use of the S-normation in
+                                the 3D binning (ensuring integral conservation).
         Nbins (int):            The number of bins for the spectrum.
         hsml (str, UnitQty, Unit):
                                 The smoothing lengths to use. Can be a block name,
@@ -290,7 +294,7 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
 
         # do some padding in the 3D binning in order to use the the normation
         # process
-        pad = 7
+        pad = 5 if pad is None else int(pad)
         Npx = (1+2*pad)*np.ones(3, dtype=int)
         Npx[zaxis] = N
         m = [pad] * 3

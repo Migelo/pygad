@@ -1,9 +1,9 @@
 GSL_HOME	:= ${GSL_HOME} /opt/local
 
 CC 		= g++
-CFLAGS 	= -Wall -std=c++11 -Ofast -DNDEBUG -fopenmp
-#CFLAGS 	= -Wall -std=c++11 -O2 -fopenmp
-#CFLAGS 	= -Wall -std=c++11 -O0 -DDEBUG
+CFLAGS 	= -Wall -std=c++11
+CFLAGS 	+= -Ofast -DNDEBUG -fopenmp
+#CFLAGS 	+= -Wno-unknown-pragmas -O2 -DDEBUG
 IPATH	= $(addprefix -I, $(addsuffix /include, $(GSL_HOME)))
 LPATH	= $(addprefix -L, $(addsuffix /lib, $(GSL_HOME)))
 LDFLAGS = -lm -fopenmp -lgsl -lgslcblas
