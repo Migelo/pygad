@@ -39,7 +39,8 @@ def config_ion_table(redshift):
                              T=T_vals,
                              ions=iontable['ions'],
                              tabledir=iontable['tabledir'],
-                             table_pattern=iontable['pattern'])
+                             table_pattern=iontable['pattern'],
+                             flux_factor=iontable['flux_factor'])
     return iontbl
 
 class IonisationTable(object):
@@ -63,10 +64,13 @@ class IonisationTable(object):
         table_pattern (str):    The pattern of the table file names. It is their
                                 filename with '<z>' where the redshift is encoded.
                                 This code is 10*z rounded to the next integer.
+        flux_factor (float):    Adjust the UVB by this factor (assume a optically
+                                thin limit and scale down the densities during the
+                                lookup by this factor).
     '''
 
     def __init__(self, redshift, nH, T, ions, tabledir,
-                 table_pattern='lt<z>f10'):
+                 table_pattern='lt<z>f10', flux_factor=1.0):
         nH = np.asarray(nH)
         T = np.asarray(T)
         if nH.ndim!=1 or T.ndim!=1:
@@ -82,6 +86,7 @@ class IonisationTable(object):
         self._T_vals = T.copy()
         self._ions = list(ions)
         self._table = self._get_table()
+        self.flux_factor = flux_factor
 
     @property
     def redshift(self):
@@ -104,6 +109,14 @@ class IonisationTable(object):
     @property
     def data(self):
         return self._table
+    @property
+    def flux_factor(self):
+        return self._flux_factor
+    @flux_factor.setter
+    def flux_factor(self, value):
+        if float(value) <= 0.0:
+            raise ValueError('The flux factor needs to be positive!')
+        self._flux_factor = float(value)
 
     def interp_snap(self, ion, s, nH='H/mass*rho/m_H', T='temp', selfshield=True):
         '''
@@ -193,6 +206,9 @@ class IonisationTable(object):
             # decreasing the radiation by a factor of fG corresponds to increasing
             # the density by the same factor fG:
             nH /= fG
+
+        if self._flux_factor != 1.0:
+            nH /= self._flux_factor
 
         # look-up tables use log10-values
         nH = np.log10( nH )

@@ -11,7 +11,7 @@ Examples:
     >>> general
     {'always_cache': set(['Ekin', 'temp', 'age', 'mag*', 'angmom', 'LX', 'jcirc']), 'cache_derived': True}
     >>> iontable
-    {'ions': ['H I', 'He I', 'He II', 'C II', 'C III', 'C IV', 'N V', 'O VI', 'Mg II', 'Si II', 'Si III', 'Si IV', 'P IV', 'S VI'], 'selfshield': True, 'pattern': 'lt<z>f10', 'tabledir': 'pygad//../iontbls/', 'T_vals': [2.5, 0.05, 150.0], 'nH_vals': [-8.0, 0.05, 160.0]}
+    {'ions': ['H I', 'He I', 'He II', 'C II', 'C III', 'C IV', 'N V', 'O VI', 'Mg II', 'Si II', 'Si III', 'Si IV', 'P IV', 'S VI'], 'selfshield': True, 'pattern': 'lt<z>f10', 'tabledir': 'pygad//../iontbls/', 'flux_factor': 1.0, 'T_vals': [2.5, 0.05, 150.0], 'nH_vals': [-8.0, 0.05, 160.0]}
 
     >>> from snapshot import Snap
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470')
@@ -59,6 +59,7 @@ iontable = {
         'nH_vals':      [-8  , 0.05, 160],
         'T_vals':       [ 2.5, 0.05, 140],
         'selfshield':   True,
+        'flux_factor':  1.0
 }
 
 def ptypes_and_deps(defi, snap):
@@ -164,6 +165,7 @@ def read_derived_rules(config, delete_old=False):
         iontable['nH_vals'] = [-8  , 0.05, 160]
         iontable['T_vals']  = [ 2.5, 0.05, 140]
         iontable['selfshield'] = True
+        iontable['flux_factor'] = 1.0
 
     if cfg.has_section('iontable'):
         test_section(cfg, 'iontable', ['tabledir', 'ions', 'nH_vals', 'T_vals'])
@@ -179,6 +181,8 @@ def read_derived_rules(config, delete_old=False):
                     for v in cfg.get('iontable',vals).split(',')]
         if cfg.has_option('iontable', 'selfshield'):
             iontable['selfshield'] = cfg.getboolean('iontable', 'selfshield')
+        if cfg.has_option('iontable', 'flux_factor'):
+            iontable['flux_factor'] = cfg.getfloat('iontable', 'flux_factor')
 
     for i,el in enumerate(gadget.elements):
         _rules[el] = 'elements[:,%d]' % i

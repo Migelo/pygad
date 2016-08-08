@@ -241,7 +241,9 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
         else:
             print '  at lambda =', l
         print '  with oscillator strength f =', f
+        print '  => Xsec =', Xsec
         print '  and atomic weight', atomwt
+        print '  => b(T=1e4K) =', b_0*np.sqrt(1e4)
         print '  using kernel "%s"' % kernel
 
     v_edges = UnitArr(np.linspace(vel_extent[0], vel_extent[1], Nbins+1),
