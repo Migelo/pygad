@@ -333,14 +333,14 @@ double Kernel<d>::los_integ_value(double b, double x, double y, double H) const 
     double alpha_b = bi-b1;
 
     // get |x|-indices and alpha
-    double xi = std::abs(x) * _los_integ.size();
+    double xi = std::min(std::abs(x),1.0) * _los_integ[0].size();
     int x1=std::min<int>(int(xi), _los_integ[0].size()-1);
     int x2=std::min<int>(x1+1,    _los_integ[0].size()-1);
     assert( 0<=x1 and (unsigned)x1 < _los_integ[0].size() );
     double alpha_x = xi-x1;
 
     // get |y|-indices and alpha
-    double yi = std::abs(y) * _los_integ.size();
+    double yi = std::min(std::abs(y),1.0) * _los_integ[0].size();
     int y1=std::min<int>(int(yi), _los_integ[0].size()-1);
     int y2=std::min<int>(y1+1,    _los_integ[0].size()-1);
     assert( 0<=y1 and (unsigned)y1 < _los_integ[0].size() );
