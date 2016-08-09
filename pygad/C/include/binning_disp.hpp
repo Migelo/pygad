@@ -45,10 +45,8 @@ void bin_sph_proj_by_particle(size_t N,
                               F reduction_func,
                               double empty_val) {
     constexpr int d=2;
-
-    //printf("initialze kernel...\n");
-    Kernel<d+1> kernel(kernel_);
-    kernel.generate_projection(1024);
+    Kernel<d+1> &kernel = kernels.at(kernel_);
+    kernel.require_table_size(2048,0);
 
     //printf("initizalize grid...\n");
     size_t Ngrid = Npx[0];

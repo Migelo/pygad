@@ -96,11 +96,8 @@ void bin_sph(size_t N,
              double *grid,
              const char *kernel_,
              double periodic) {
-    //printf("initialze kernel...\n");
-    Kernel<(projected ? d+1 : d)> kernel(kernel_);
-    if (projected) {
-        kernel.generate_projection(1024);
-    }
+    Kernel<(projected ? d+1 : d)> &kernel = kernels.at(kernel_);
+    kernel.require_table_size(2048,0);
 
     //printf("initizalize grid...\n");
     size_t Ngrid = Npx[0];
@@ -211,5 +208,4 @@ void bin_sph(size_t N,
     printf("binning %son %dD grid took %.6f s\n", (projected ? "(projected) ": ""), d, diff.count());
     */
 }
-
 

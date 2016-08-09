@@ -28,24 +28,24 @@ Doctests:
     ...         print '    EW = %.3f %s' % (EW_l, EW_l.units)
     l.o.s.: [ 34700.  35600.] [ckpc h_0**-1]
        H1215
-        N  = 2.299e+15 [cm**-2]
+        N  = 2.301e+15 [cm**-2]
         EW = 1.401 [Angstrom]
        OVI1031
-        N  = 7.447e+14 [cm**-2]
-        EW = 0.672 [Angstrom]
+        N  = 7.455e+14 [cm**-2]
+        EW = 0.673 [Angstrom]
     l.o.s.: [ 34550.  35500.] [ckpc h_0**-1]
        H1215
-        N  = 5.297e+14 [cm**-2]
+        N  = 5.303e+14 [cm**-2]
         EW = 0.628 [Angstrom]
        OVI1031
-        N  = 2.250e+14 [cm**-2]
+        N  = 2.252e+14 [cm**-2]
         EW = 0.281 [Angstrom]
     l.o.s.: [ 35000.  35600.] [ckpc h_0**-1]
        H1215
-        N  = 4.377e+13 [cm**-2]
-        EW = 0.288 [Angstrom]
+        N  = 4.382e+13 [cm**-2]
+        EW = 0.289 [Angstrom]
        OVI1031
-        N  = 1.209e+14 [cm**-2]
+        N  = 1.210e+14 [cm**-2]
         EW = 0.186 [Angstrom]
     >>> environment.verbose = environment.VERBOSE_NORMAL
 """

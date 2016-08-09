@@ -18,9 +18,12 @@ void _absorption_spectrum(size_t N,
                          const char *kernel_,
                          double periodic) {
     double dv = (vel_extent[1] - vel_extent[0]) / Nbins;
-    Kernel<3> kernel(kernel_);
-    if ( particles )
-        kernel.generate_projection(1024);
+    Kernel<3> &kernel = kernels.at(kernel_);
+    if ( particles ) {
+        kernel.require_table_size(2048,0);
+    } else {
+        kernel.require_table_size(0,1024);
+    }
 
     std::memset(taus, 0, Nbins*sizeof(double));
     std::memset(los_dens, 0, Nbins*sizeof(double));

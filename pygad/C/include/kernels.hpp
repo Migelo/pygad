@@ -3,6 +3,7 @@
 
 #include <gsl/gsl_integration.h>
 #include <vector>
+#include <map>
 
 enum KernelType {
     UNDEFINED_KERNEL,
@@ -25,11 +26,15 @@ class Kernel {
         static_assert(0<d, "Dimension has to be positive!");
 
         Kernel();
-        Kernel(KernelType type_);
-        Kernel(const char *name);
+        Kernel(KernelType type_, unsigned proj_tbl_size=128,
+                                 unsigned los_tbl_size=32);
+        Kernel(const char *name, unsigned proj_tbl_size=128,
+                                 unsigned los_tbl_size=32);
 
-        void init(KernelType type_);
-        void init(const char *name);
+        void init(KernelType type_, unsigned proj_tbl_size, unsigned los_tbl_size);
+        void init(const char *name, unsigned proj_tbl_size, unsigned los_tbl_size);
+
+        void require_table_size(unsigned proj_tbl_size, unsigned los_tbl_size);
 
         KernelType type() const {return _type;}
         KernelType norm() const {return _norm;}
@@ -44,8 +49,9 @@ class Kernel {
         }
         double operator()(double q, double H) const {return value(q,H);}
 
-        // these function do not make sense for d == 2 and are only tested for
+        // the following function do not make sense for d == 2 and are only tested for
         // d == 3, no higher dimension
+
         void generate_projection(int N);
         int proj_table_size() const {return _proj.size();}
         void generate_los_integrals(int N, int M);
@@ -71,6 +77,7 @@ class Kernel {
         double _los_integ_loockup(int b1, int b2, double alpha_b,
                                   int x1, int x2, double alpha_x) const;
 };
+extern std::map<std::string,Kernel<3>> kernels;
 
 extern "C" double cubic(double q, double H);
 extern "C" double quartic(double q, double H);
@@ -94,26 +101,24 @@ template<int d>
 Kernel<d>::Kernel()
     : _type(UNDEFINED_KERNEL), _norm(1.0), _w([](double q){return q;})
 {
-    generate_projection(126);
-    generate_los_integrals(10, 10);     // just to ensure to have some values
 }
 
 template<int d>
-Kernel<d>::Kernel(KernelType type_)
+Kernel<d>::Kernel(KernelType type_, unsigned proj_tbl_size, unsigned los_tbl_size)
     : _type(type_), _norm(), _w()
 {
-    init(type_);
+    init(type_, proj_tbl_size, los_tbl_size);
 }
 
 template<int d>
-Kernel<d>::Kernel(const char *name)
+Kernel<d>::Kernel(const char *name, unsigned proj_tbl_size, unsigned los_tbl_size)
     : _type(), _norm(), _w()
 {
-    init(name);
+    init(name, proj_tbl_size, los_tbl_size);
 }
 
 template<int d>
-void Kernel<d>::init(KernelType type_)
+void Kernel<d>::init(KernelType type_, unsigned proj_tbl_size, unsigned los_tbl_size)
 {
     _type = type_;
 
@@ -191,22 +196,30 @@ void Kernel<d>::init(KernelType type_)
             _norm = 1.0;
     }
 
-    generate_projection(126);
-    generate_los_integrals(10, 10);     // just to ensure to have some values
+    require_table_size(proj_tbl_size, los_tbl_size);
 }
 
 template<int d>
-void Kernel<d>::init(const char *name)
+void Kernel<d>::init(const char *name, unsigned proj_tbl_size, unsigned los_tbl_size)
 {
     for (int type=UNDEFINED_KERNEL+1; type<NUM_DEF_KERNELS; type++) {
         if (!strcmp(name, kernel_name[type])) {
-            init((KernelType)type);
+            init((KernelType)type, proj_tbl_size, los_tbl_size);
             return;
         }
     }
 
     fprintf(stderr, "ERROR: unknown kernel '%s'\n", name);
-    init(UNDEFINED_KERNEL);
+    init(UNDEFINED_KERNEL, 0, 0);
+}
+
+template<int d>
+void Kernel<d>::require_table_size(unsigned proj_tbl_size, unsigned los_tbl_size) {
+    //printf("require table sizes of %d and %d\n", proj_tbl_size, los_tbl_size);
+    if ( proj_tbl_size > _proj.size() )
+        generate_projection(proj_tbl_size);
+    if ( los_tbl_size > _los_integ.size() or los_tbl_size > _los_integ[0].size() )
+        generate_los_integrals(los_tbl_size, los_tbl_size);
 }
 
 struct _gsl_integ_w_along_b_param_t {
@@ -217,7 +230,7 @@ double _gsl_integ_w_along_b(double q, void *w);
 template<int d>
 void Kernel<d>::generate_projection(int N) {
     assert(0<N);
-    //printf("projecting kernel '%s'\n", name());
+    //printf("projecting kernel '%s' - table with %d entries\n", name(), N);
 
     _proj.resize(N+1);
     _proj[N] = 0.0;
@@ -305,6 +318,7 @@ double Kernel<d>::_los_integ_loockup(int b1, int b2, double alpha_b,
 }
 template<int d>
 double Kernel<d>::los_integ_value(double b, double x, double y, double H) const {
+    assert( d == 3 );
     // integral along a line from x to y at impact parameter b, using bi-linear
     // interpolation within the table
     assert( x <= y );
