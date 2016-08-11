@@ -3,7 +3,7 @@ Basic loading of the fast C library.
 '''
 from .. import environment
 from ctypes import cdll, c_void_p, c_size_t, c_double, c_int, c_uint, POINTER, \
-                   byref, create_string_buffer
+                   byref, create_string_buffer, c_char_p
 cpygad = cdll.LoadLibrary(environment.module_dir+'C/cpygad.so')
 
 cpygad.cubic.restype = c_double
