@@ -2,31 +2,32 @@
 
 template <bool particles>
 void _absorption_spectrum(size_t N,
-                         double *pos,
-                         double *vel,
-                         double *hsml,
-                         double *n,
-                         double *temp,
-                         double *los_pos,
-                         double *vel_extent,
-                         size_t Nbins,
-                         double b_0,
-                         double Xsec,
-                         double *taus,
-                         double *los_dens,
-                         double *los_temp,
-                         const char *kernel_,
-                         double periodic) {
+                          double *pos,
+                          double *vel,
+                          double *hsml,
+                          double *n,
+                          double *temp,
+                          double *los_pos,
+                          double *vel_extent,
+                          size_t Nbins,
+                          double b_0,
+                          double Xsec,
+                          double *taus,
+                          double *los_dens,
+                          double *los_temp,
+                          const char *kernel_,
+                          double periodic) {
     double dv = (vel_extent[1] - vel_extent[0]) / Nbins;
-    Kernel<3> kernel(kernel_);
-    if ( particles )
-        kernel.generate_projection(1024);
+    Kernel<3> &kernel = kernels.at(kernel_);
+    if ( particles ) {
+        kernel.require_table_size(2048,0);
+    } else {
+        kernel.require_table_size(0,1024);
+    }
 
     std::memset(taus, 0, Nbins*sizeof(double));
     std::memset(los_dens, 0, Nbins*sizeof(double));
     std::memset(los_temp, 0, Nbins*sizeof(double));
-
-    double px_area = (particles ? 0.0 : hsml[0]*hsml[1]);
 
 #pragma omp parallel for default(shared) schedule(dynamic,10)
     for (size_t j=0; j<N; j++) {
@@ -42,8 +43,6 @@ void _absorption_spectrum(size_t N,
                 continue;
             double Wj = kernel.proj_value(dj/hj, hj);
             Nj *= Wj;
-        } else {
-            Nj /= px_area;
         }
 
         // column density of the particles / cells along the line of sight

@@ -24,6 +24,17 @@ const char* kernel_name[NUM_DEF_KERNELS] = {
     "Wendland C6",
 };
 
+std::map<std::string,Kernel<3>> kernels = {
+    {"<undefined>", Kernel<3>()},
+
+    {"cubic",       Kernel<3>(CUBIC_SPLINE)},
+    {"quartic",     Kernel<3>(QUARTIC_SPLINE)},
+    {"quintic",     Kernel<3>(QUINTIC_SPLINE)},
+    {"Wendland C2", Kernel<3>(WENDLAND_C2)},
+    {"Wendland C4", Kernel<3>(WENDLAND_C4)},
+    {"Wendland C6", Kernel<3>(WENDLAND_C6)},
+};
+
 double _gsl_integ_w_along_b(double l, void *params) {
     struct _gsl_integ_w_along_b_param_t *param = (struct _gsl_integ_w_along_b_param_t *)params;
     return param->w( std::sqrt(l*l + std::pow(param->b,2.0)) );

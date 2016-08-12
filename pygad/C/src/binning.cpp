@@ -54,3 +54,17 @@ void sph_3D_bin_2D(size_t N,
     bin_sph<2,true>(N, pos, hsml, dV, qty, extent, Npx, grid, kernel_, periodic);
 }
 
+void bin_sph_along_line(size_t N,
+                        double *pos,
+                        double *hsml,
+                        double *dV,
+                        double *qty,
+                        double *los,
+                        double *extent,
+                        size_t Npx,
+                        double *line,
+                        const char *kernel_,
+                        double periodic) {
+    bin_sph_line<3>(N, pos, hsml, dV, qty, los, extent, Npx, line, kernel_, periodic);
+}
+

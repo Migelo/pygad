@@ -6,7 +6,7 @@ Also doctest other parts of this sub-module:
     >>> doctest.testmod(core)
     TestResults(failed=0, attempted=25)
     >>> doctest.testmod(cbinning)
-    TestResults(failed=0, attempted=26)
+    TestResults(failed=0, attempted=34)
     >>> doctest.testmod(mapping)
     TestResults(failed=0, attempted=12)
 '''
