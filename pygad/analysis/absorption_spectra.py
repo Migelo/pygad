@@ -76,7 +76,8 @@ Doctests:
     >>> environment.verbose = environment.VERBOSE_NORMAL
 """
 __all__ = ['mock_absorption_spectrum_of', 'mock_absorption_spectrum',
-           'EW', 'velocities_to_redshifts']
+           'EW', 'velocities_to_redshifts',
+           'Voigt', 'Gaussian', 'Lorentzian']
 
 from ..units import Unit, UnitArr, UnitQty, UnitScalar
 from ..physics import kB, m_H, c, q_e, m_e, epsilon0
@@ -87,16 +88,90 @@ from .. import environment
 import numpy as np
 
 lines = {
-    'H1215':     {'ion':'HI',     'l':'1215.6701 Angstrom', 'f':0.4164, 'atomwt':m_H},
-    'HeII':      {'ion':'HeII',   'l': '303.918 Angstrom',  'f':0.4173, 'atomwt': '3.971 u'},
-    'CIII977':   {'ion':'CIII',   'l': '977.020 Angstrom',  'f':0.7620, 'atomwt':'12.011 u'},
-    'CIV1548':   {'ion':'CIV',    'l':'1548.195 Angstrom',  'f':0.1908, 'atomwt':'12.011 u'},
-    'OIV787':    {'ion':'OIV',    'l': '787.711 Angstrom',  'f':0.110,  'atomwt':'15.9994 u'},
-    'OVI1031':   {'ion':'OVI',    'l':'1031.927 Angstrom',  'f':0.1329, 'atomwt':'15.9994 u'},
-    'NeVIII770': {'ion':'NeVIII', 'l': '770.409 Angstrom',  'f':0.103,  'atomwt':'20.180 u'},
-    'MgII2796':  {'ion':'MgII',   'l':'2796.352 Angstrom',  'f':0.6123, 'atomwt':'24.305 u'},
-    'SiIV1393':  {'ion':'SiIV',   'l':'1393.755 Angstrom',  'f':0.5280, 'atomwt':'28.086 u'},
+    'H1215':     {'ion':'HI',     'l':'1215.6701 Angstrom', 'f':0.4164,
+                    'atomwt':m_H,       'gamma':'6.06076e-3 km/s'},
+    'HeII':      {'ion':'HeII',   'l': '303.918 Angstrom',  'f':0.4173, 
+                    'atomwt':'3.971 u'},
+    'CIII977':   {'ion':'CIII',   'l': '977.020 Angstrom',  'f':0.7620,
+                    'atomwt':'12.011 u'},
+    'CIV1548':   {'ion':'CIV',    'l':'1548.195 Angstrom',  'f':0.1908,
+                    'atomwt':'12.011 u'},
+    'OIV787':    {'ion':'OIV',    'l': '787.711 Angstrom',  'f':0.110,
+                    'atomwt':'15.9994 u'},
+    'OVI1031':   {'ion':'OVI',    'l':'1031.927 Angstrom',  'f':0.1329,
+                    'atomwt':'15.9994 u'},
+    'NeVIII770': {'ion':'NeVIII', 'l': '770.409 Angstrom',  'f':0.103,
+                    'atomwt':'20.180 u'},
+    'MgII2796':  {'ion':'MgII',   'l':'2796.352 Angstrom',  'f':0.6123,
+                    'atomwt':'24.305 u'},
+    'SiIV1393':  {'ion':'SiIV',   'l':'1393.755 Angstrom',  'f':0.5280,
+                    'atomwt':'28.086 u'},
 }
+lines['Lyman_alpha'] = lines['H1215']
+
+def Gaussian(x, sigma):
+    '''
+    The Gaussian function:
+
+                              1                /    1     x^2    \ 
+    G (x; sigma)  =  --------------------  exp | - --- --------- |
+                      sigma sqrt( 2 pi )       \    2   sigma^2  /
+
+    which is normed to 1.
+
+    Args:
+        x (float, np.ndarray):  The argument of the Gaussian function.
+        sigma (float):          The standard deviation of the Gaussian.
+
+    Returns:
+        y (float, np.ndarray):  The value(s) of the Gaussian.
+    '''
+    return np.exp(-0.5*(x/sigma)**2) / ( sigma * np.sqrt(2.*np.pi) )
+
+def Lorentzian(x, gamma):
+    '''
+    The Lorentz function:
+
+                             gamma
+    L (x; gamma)  =  ----------------------
+                      pi ( x^2 + gamma^2 )
+
+    which is normed to 1.
+
+    Args:
+        x (float, np.ndarray):  The argument of the Gauss function.
+        gamma (float):          The standard deviation of the Gaussian.
+
+    Returns:
+        y (float, np.ndarray):  The value(s) of the Gaussian.
+    '''
+    return gamma / (np.pi * (x**2 + gamma**2))
+
+def Voigt(x, sigma, gamma):
+    '''
+    The Voigt function.
+
+    It is defined as a convolution of a Gaussian and a Lorentz function:
+
+                           oo
+                           /\ 
+    V (x; gamma, sigma) =  |  dx' G(x';sigma) L(x-x';gamma)
+                          \/
+                         -oo
+
+    which is normed to one, since G and L are normed to 1.
+
+    Args:
+        x (float, np.ndarray):  The argument of the Voigt function.
+        sigma (float):          The standard deviation of the Gaussian.
+        gamma (float):          The gamma value of the Lorentz function.
+
+    Returns:
+        y (float, np.ndarray):  The value(s) of the Voigt profile.
+    '''
+    from scipy.special import wofz
+    z = (x + 1j*gamma) / (sigma * np.sqrt(2.))
+    return np.real(wofz(z)) / ( sigma * np.sqrt(2.*np.pi) )
 
 def mock_absorption_spectrum_of(s, los, vel_extent, line, **kwargs):
     '''

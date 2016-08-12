@@ -75,6 +75,7 @@ void _absorption_spectrum(size_t N,
                 double v1 = (i-vi+0.5) * dv;
                 double Dtb = 0.5 * (std::erf(v1/b) - std::erf(v0/b));
                 double DtbNj = Dtb * Nj;
+                // TODO: addtional loop for the Lorentz profile
 #pragma omp atomic
                 taus[i] += DtbNj;
 #pragma omp atomic
