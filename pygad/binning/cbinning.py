@@ -409,7 +409,7 @@ def SPH_3D_to_line(s, qty, los, extent, Npx, xaxis=0, yaxis=1, kernel=None,
         qty = s.get(qty)
     qty_units = getattr(qty,'units',None)
     if qty_units is None:
-        qty_units = s['pos'].units**-2
+        qty_units = s['pos'].units
     else:
         qty_units = (qty_units * s['pos'].units).gather()   # integrated!
     if qty.shape!=(len(s),):
