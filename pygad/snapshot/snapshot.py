@@ -782,7 +782,7 @@ class _Snap(object):
         '''
         done = set()
         if forthis:
-            names = self._block.iterkeys() if present else self.available_blocks()
+            names = self._blocks.iterkeys() if present else self.available_blocks()
         else:
             names = self._root._block_avail.iterkeys()
         for block_name in names:
