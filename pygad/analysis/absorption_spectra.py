@@ -14,39 +14,65 @@ Doctests:
     ...     print 'l.o.s.:', los
     ...     for line in ['H1215', 'OVI1031']:
     ...         print '  ', line
-    ...         tau, dens, temp, v_edges = mock_absorption_spectrum_of(
-    ...             s, los,
-    ...             vel_extent=UnitArr([2400.,3100.], 'km/s'),
-    ...             line=line
-    ...         )
-    ...         N = dens.sum()
-    ...         print '    N  = %.3e %s' % (N, N.units)
-    ...         z_edges = velocities_to_redshifts(v_edges, z0=s.redshift)
-    ...         l = UnitArr(lines[line]['l'])
-    ...         l_edges = l * (1.0 + z_edges)
-    ...         EW_l = EW(tau, l_edges)
-    ...         print '    EW = %.3f %s' % (EW_l, EW_l.units)
+    ...         for method in ['particles', 'line', 'column']:
+    ...             tau, dens, temp, v_edges = mock_absorption_spectrum_of(
+    ...                 s, los,
+    ...                 vel_extent=UnitArr([2400.,3100.], 'km/s'),
+    ...                 line=line,
+    ...                 method=method,
+    ...             )
+    ...             N = dens.sum()
+    ...             print '    N  = %.3e %s' % (N, N.units)
+    ...             z_edges = velocities_to_redshifts(v_edges, z0=s.redshift)
+    ...             l = UnitArr(lines[line]['l'])
+    ...             l_edges = l * (1.0 + z_edges)
+    ...             EW_l = EW(tau, l_edges)
+    ...             print '    EW = %.3f %s' % (EW_l, EW_l.units)
     l.o.s.: [ 34700.  35600.] [ckpc h_0**-1]
        H1215
         N  = 2.301e+15 [cm**-2]
         EW = 1.401 [Angstrom]
+        N  = 2.299e+15 [cm**-2]
+        EW = 1.129 [Angstrom]
+        N  = 2.304e+15 [cm**-2]
+        EW = 1.111 [Angstrom]
        OVI1031
         N  = 7.455e+14 [cm**-2]
         EW = 0.673 [Angstrom]
+        N  = 7.447e+14 [cm**-2]
+        EW = 0.547 [Angstrom]
+        N  = 7.462e+14 [cm**-2]
+        EW = 0.539 [Angstrom]
     l.o.s.: [ 34550.  35500.] [ckpc h_0**-1]
        H1215
         N  = 5.303e+14 [cm**-2]
         EW = 0.628 [Angstrom]
+        N  = 5.297e+14 [cm**-2]
+        EW = 0.565 [Angstrom]
+        N  = 5.309e+14 [cm**-2]
+        EW = 0.559 [Angstrom]
        OVI1031
         N  = 2.252e+14 [cm**-2]
         EW = 0.281 [Angstrom]
+        N  = 2.250e+14 [cm**-2]
+        EW = 0.256 [Angstrom]
+        N  = 2.254e+14 [cm**-2]
+        EW = 0.253 [Angstrom]
     l.o.s.: [ 35000.  35600.] [ckpc h_0**-1]
        H1215
         N  = 4.382e+13 [cm**-2]
         EW = 0.289 [Angstrom]
+        N  = 4.377e+13 [cm**-2]
+        EW = 0.284 [Angstrom]
+        N  = 4.386e+13 [cm**-2]
+        EW = 0.284 [Angstrom]
        OVI1031
         N  = 1.210e+14 [cm**-2]
         EW = 0.186 [Angstrom]
+        N  = 1.209e+14 [cm**-2]
+        EW = 0.182 [Angstrom]
+        N  = 1.211e+14 [cm**-2]
+        EW = 0.182 [Angstrom]
     >>> environment.verbose = environment.VERBOSE_NORMAL
 """
 __all__ = ['mock_absorption_spectrum_of', 'mock_absorption_spectrum',
@@ -72,64 +98,21 @@ lines = {
     'SiIV1393':  {'ion':'SiIV',   'l':'1393.755 Angstrom',  'f':0.5280, 'atomwt':'28.086 u'},
 }
 
-def mock_absorption_spectrum_of(s, los, vel_extent, line,
-                                spatial_bins=False, spatial_extent=None,
-                                Nbins=1000, hsml='hsml', kernel=None,
-                                zero_Hubble_flow_at=0,
-                                xaxis=0, yaxis=1, **kwargs):
+def mock_absorption_spectrum_of(s, los, vel_extent, line, **kwargs):
     '''
     Create a mock absorption spectrum for the given line of sight (l.o.s.) for the
     given line transition.
 
     This function basically just calls `mock_absorption_spectrum` for the given
-    line.
+    line:
 
-    Args:
-        s (Snap):               The snapshot to shoot the l.o.s. though.
-        los (UnitQty):          The position of the l.o.s.. By default understood
-                                as in units of s['pos'], if not explicitly
-                                specified.
-        vel_extent (UnitQty):   The limits of the spectrum in (rest frame)
-                                velocity space. Units default to 'km/s'.
-        line (str,dict):        Either a name of a line as defined in
-                                `absorption_spectra.lines` or a custom dictionary
-                                of the same kind, which values are than passed to
-                                `mock_absorption_spectrum`.
-        spatial_bins (bool, int):
-                                If True, do not bin the particles directly to
-                                velocity space, but first onto a spatial grid
-                                along the l.o.s. and then to velocity space. If
-                                this is an integer, it specifies the number of
-                                these spatial bins.
-        spatial_extent (UnitQty):
-                                The extent in the spatial bins along the l.o.s..
-        spatial_res (UnitScalar):
-                                The resolution of the spatial bins. If given, it
-                                overwrites the number of spatial bins as given by
-                                spatial_bins (if given). If not units are
-                                provided, it is assumed it is given in those of
-                                s['pos'].
-        Nbins (int):            The number of bins for the spectrum.
-        hsml (str, UnitQty, Unit):
-                                The smoothing lengths to use. Can be a block name,
-                                a block itself or a Unit that is taken as constant
-                                volume for all particles.
-        kernel (str):           The kernel to use for smoothing. (By default use
-                                the kernel defined in `gadget.cfg`.)
-        zero_Hubble_flow_at (UnitScalar):
-                                The position along the l.o.s. where there is no
-                                Hubble flow. If not units are given, they are
-                                assume to be those of s['pos'].
-        xaxis/yaxis (int):      The x- and y-axis for the l.o.s.. The implicitly
-                                defined z-axis goes along the l.o.s.. The axis
-                                must be chosen from [0,1,2].
-
-    Returns:
-        taus (np.ndarray):      The optical depths for the velocity bins.
-        los_dens (np.ndarray):  The column densities restricted to the velocity bins.
-        los_temp (np.ndarray):  The (mass-weighted) particle temperatures
-                                restricted to the velocity bins.
-        v_edges (UnitArr):      The velocities at the bin edges.
+        if isinstance(line,str):
+            line = lines[line]
+        return mock_absorption_spectrum(s, los, vel_extent,
+                                        line['ion'],
+                                        l=line['l'], f=line['f'],
+                                        atomwt=line['atomwt'],
+                                        **kwargs)
     '''
     if isinstance(line,str):
         line = lines[line]
@@ -137,16 +120,13 @@ def mock_absorption_spectrum_of(s, los, vel_extent, line,
                                     line['ion'],
                                     l=line['l'], f=line['f'],
                                     atomwt=line['atomwt'],
-                                    spatial_bins=spatial_bins,
-                                    spatial_extent=spatial_extent,
-                                    Nbins=Nbins, hsml=hsml, kernel=kernel,
-                                    zero_Hubble_flow_at=zero_Hubble_flow_at,
-                                    xaxis=xaxis, yaxis=yaxis, **kwargs)
+                                    **kwargs)
 
-def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
-                             spatial_bins=False, spatial_extent=None,
-                             spatial_res=None, pad=0,
-                             Nbins=1000, hsml='hsml', kernel=None,
+def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt, Nbins=1000,
+                             method='particles',
+                             spatial_extent=None, spatial_res=None,
+                             col_width=None, pad=7,
+                             hsml='hsml', kernel=None,
                              zero_Hubble_flow_at=0,
                              xaxis=0, yaxis=1):
     """
@@ -154,8 +134,8 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
     given line transition.
 
     Credits to Neal Katz and Romeel Dave, who wrote a code taken as a basis for
-    this one, first called specexbin and later specexsnap that did the same (with
-    the spatial bins), and who helped me with the gist of this one.
+    this one, first called 'specexbin' and later 'specexsnap' that did the same
+    as in the method 'line', and who helped me with the gist of this one.
     
     Args:
         s (Snap):               The snapshot to shoot the l.o.s. though.
@@ -174,25 +154,48 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
         f (float):              The oscillatr strength of the line transition.
         atomwt (UnitScalar):    The atomic weight. By default interpreted in
                                 atomic mass units.
-        spatial_bins (bool, int):
-                                If True, do not bin the particles directly to
-                                velocity space, but first onto a spatial grid
-                                along the l.o.s. and then to velocity space. If
-                                this is an integer, it specifies the number of
-                                these spatial bins.
-        spatial_extent (UnitQty):
-                                The extent in the spatial bins along the l.o.s..
-        spatial_res (UnitScalar):
-                                The resolution of the spatial bins. If given, it
-                                overwrites the number of spatial bins as given by
-                                spatial_bins (if given). If not units are
-                                provided, it is assumed it is given in those of
-                                s['pos'].
-        pad (int):              Pad this number of voxels into each direction
-                                around the line of side, when creating the spatial
-                                bins in order to make use of the S-normation in
-                                the 3D binning (ensuring integral conservation).
         Nbins (int):            The number of bins for the spectrum.
+        method (str):           How to do the binning into velocity space. The
+                                available choices are:
+                                * 'particles':  Create a line for each particle
+                                                individually and then add them up.
+                                * 'line':       First create a infinitesimal line
+                                                along the l.o.s. in position space
+                                                and bin the SPH quantities onto
+                                                that, then for each of these bins
+                                                create a line and add those up.
+                                * 'column':     Same as the 'line' method, but use
+                                                a square column with finite
+                                                thickness (of `col_width`).
+                                Note that the ionisation fractions are always
+                                calculated on the particle basis, which yields to
+                                inconsitencies (eps. in the thermal broadening,
+                                which is done with the ion mass-weighted
+                                temperature of the spatial bins, not the particle
+                                temperature). This is a problem in multi-phase SPH
+                                and with wind particles.
+                                The particle variant, however, does not properly
+                                capture sheer flows and the Hubble flow within a
+                                particle.
+        spatial_extent (UnitQty):
+                                Ignored, if method=='particles'.
+                                The extent in the spatial bins along the l.o.s..
+                                If not units are provided, it is assumed it is
+                                given in those of s['pos'].
+        spatial_res (UnitScalar):
+                                Ignored, if method=='particles'.
+                                The resolution of the spatial bins. If not units
+                                are provided, it is assumed it is given in those
+                                of s['pos']. Defaults to the 0.1% quantile of the
+                                smoothing lengths of the given snapshot.
+        col_width (UnitScalar): Ignored, if method!='column'.
+                                Defines the side length of the column.
+        pad (int):              Ignored, if method!='column'.
+                                Pad this number of voxels into each direction
+                                around the column. Needed in order to make use of
+                                the S-normation in the 3D binning (ensuring
+                                integral conservation); see SPH_to_3Dgrid for more
+                                information.
         hsml (str, UnitQty, Unit):
                                 The smoothing lengths to use. Can be a block name,
                                 a block itself or a Unit that is taken as constant
@@ -219,8 +222,8 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
     v_units = Unit('km/s')
     l_units = Unit('cm')
 
-    los = UnitQty(los, s['pos'].units, dtype=float)
-    vel_extent = UnitQty(vel_extent, 'km/s', dtype=float)
+    los = UnitQty(los, s['pos'].units, dtype=float, subs=s)
+    vel_extent = UnitQty(vel_extent, 'km/s', dtype=float, subs=s)
     l = UnitScalar(l, 'Angstrom')
     f = float(f)
     atomwt = UnitScalar(atomwt, 'u')
@@ -263,11 +266,8 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
     n = (ion.astype(np.float64) / atomwt).in_units_of(1, subs=s)
     n = n.view(np.ndarray).astype(np.float64)
 
-    if spatial_bins:
+    if method != 'particles':
         # do SPH smoothing along the l.o.s.
-        from ..binning import SPH_to_3Dgrid
-        los = los.in_units_of(s['pos'].units, subs=s)
-
         if spatial_extent is None:
             spatial_extent = [ np.min( s.gas['pos'][:,zaxis] ),
                                np.max( s.gas['pos'][:,zaxis] ) ]
@@ -281,70 +281,135 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
         else:
             spatial_extent = UnitQty( spatial_extent, s['pos'].units, subs=s )
 
-        if spatial_bins is True and spatial_res is None:
-            # you do not want N=int(True)=1...
-            spatial_res = UnitArr(np.percentile(s.gas['hsml'],1), s.gas['hsml'].units)
         if spatial_res is None:
-            N = int( spatial_bins )
-            spatial_res = spatial_extent.ptp() / N
+            spatial_res = UnitArr(np.percentile(s.gas['hsml'], .1),
+                                  s.gas['hsml'].units)
+        spatial_res = UnitScalar(spatial_res, s['pos'].units, subs=s)
+        N = int(max( 1e3,
+                     2.*(spatial_extent.ptp()/spatial_res).in_units_of(1,subs=s) ))
+
+        if method == 'column':
+            # do some padding in the 3D binning in order to use the the normation
+            # process
+            pad = int(pad)
+            Npx = (1+2*pad)*np.ones(3, dtype=int)
+            Npx[zaxis] = N
+            # mask for getting the middle column of interest
+            m = [pad] * 3
+            m[zaxis] = slice(None)
+
+            if col_width is None:
+                col_width = spatial_res
+            col_width = UnitScalar(col_width, s['pos'].units, subs=s)
+            w = ((0.5+2.*pad) * col_width).in_units_of(los.units, subs=s)
+            extent = UnitArr(np.empty((3,2), dtype=float), los.units)
+            extent[xaxis] = [los[0]-w, los[0]+w]
+            extent[yaxis] = [los[1]-w, los[1]+w]
+            extent[zaxis] = spatial_extent
+
+            binargs = {
+                    'extent':   extent,
+                    'Npx':      Npx,
+                    'kernel':   kernel,
+                    'dV':       'dV',
+                    'hsml':     hsml,
+                    'normed':   True,
+            }
+
+            # restrict to particles intersecting the l.o.s. column:
+            sub = s.gas[ (s.gas['pos'][:,xaxis] - s.gas['hsml'] < los[0] + col_width) &
+                         (s.gas['pos'][:,xaxis] + s.gas['hsml'] > los[0] - col_width) &
+                         (s.gas['pos'][:,yaxis] - s.gas['hsml'] < los[1] + col_width) &
+                         (s.gas['pos'][:,yaxis] + s.gas['hsml'] > los[1] - col_width) ]
+
+            dV = sub['dV'].in_units_of(sub['pos'].units**3)
+
+            if environment.verbose >= environment.VERBOSE_NORMAL:
+                print '  using an spatial extent of:', spatial_extent
+                print '  ... with %d bins of size %sx%s^2' % (N, col_width, spatial_res)
+
+            from ..binning import SPH_to_3Dgrid
+            def bin_func(s, qty, **args):
+                Q, px = SPH_to_3Dgrid(sub, qty, **args)
+                Q     = Q[m].reshape(N) * np.prod(px)
+                return Q, px
+
+            n_parts = n[sub._mask]
+            n   , px    = bin_func(sub, n_parts/dV, **binargs)
+            non0n       = (n!=0)
+            vel , px    = bin_func(sub, n_parts*sub['vel'][:,zaxis]/dV,
+                                   **binargs)
+            vel[non0n]  = vel[non0n] / n[non0n]
+            # average sqrt(T), since thats what the therm. broadening scales with
+            temp, px    = bin_func(sub, n_parts*np.sqrt(sub['temp'])/dV,
+                                   **binargs)
+            temp[non0n] = temp[non0n] / n[non0n]
+            temp      **= 2
+            # we actually need the column densities, not the number of particles
+            n          /= np.prod(px[(xaxis,yaxis),])
+
+            # the z-coordinates for the Hubble flow
+            los_pos     = UnitArr(np.linspace(spatial_extent[0],
+                                              spatial_extent[1]-px[zaxis], N),
+                                  spatial_extent.units)
+        elif method == 'line':
+            binargs = {
+                    'los':      los,
+                    'extent':   spatial_extent,
+                    'Npx':      N,
+                    'kernel':   kernel,
+                    'dV':       'dV',
+                    'hsml':     hsml,
+                    'xaxis':    xaxis,
+                    'yaxis':    yaxis,
+            }
+
+            # restrict to particles intersecting the l.o.s.:
+            sub = s.gas[ (s.gas['pos'][:,xaxis] - s.gas['hsml'] < los[0]) &
+                         (s.gas['pos'][:,xaxis] + s.gas['hsml'] > los[0]) &
+                         (s.gas['pos'][:,yaxis] - s.gas['hsml'] < los[1]) &
+                         (s.gas['pos'][:,yaxis] + s.gas['hsml'] > los[1]) ]
+
+            dV = sub['dV'].in_units_of(sub['pos'].units**3)
+
+            if environment.verbose >= environment.VERBOSE_NORMAL:
+                print '  using an spatial extent of:', spatial_extent
+                print '  ... with %d bins of length %s' % (N, spatial_res)
+
+            from ..binning import SPH_3D_to_line
+            bin_func = SPH_3D_to_line
+            def bin_func(s, qty, **args):
+                Q, px = SPH_3D_to_line(sub, qty, **args)
+                Q    /= px
+                Q.units = Q.units.gather()
+                return Q, px
+
+            n_parts = n[sub._mask]
+            n   , px    = bin_func(sub, n_parts/dV, **binargs)
+            # we actually need the column densities, not the number of particles
+            n          *= px
+            # for averaging, we want the integral over n_parts, not its density
+            n_  , px    = bin_func(sub, n_parts, **binargs)
+            non0n       = (n_!=0)
+            vel , px    = bin_func(sub, n_parts*sub['vel'][:,zaxis],
+                                   **binargs)
+            vel[non0n]  = vel[non0n] / n_[non0n]
+            # average sqrt(T), since thats what the therm. broadening scales with
+            temp, px    = bin_func(sub, n_parts*np.sqrt(sub['temp']),
+                                   **binargs)
+            temp[non0n] = temp[non0n] / n_[non0n]
+            temp      **= 2
+
+            # the z-coordinates for the Hubble flow
+            los_pos     = UnitArr(np.linspace(spatial_extent[0],
+                                              spatial_extent[1]-px, N),
+                                  spatial_extent.units)
         else:
-            spatial_res = UnitScalar(spatial_res, s['pos'].units, subs=s)
-            N = int(max( 1e3,
-                         2.*(spatial_extent.ptp()/spatial_res).in_units_of(1,subs=s) ))
+            raise ValueError("Unkown method '%s'!" % method)
 
-        # do some padding in the 3D binning in order to use the the normation
-        # process
-        pad = 5 if pad is None else int(pad)
-        Npx = (1+2*pad)*np.ones(3, dtype=int)
-        Npx[zaxis] = N
-        m = [pad] * 3
-        m[zaxis] = slice(None)
-
-        w = ((0.5+2.*pad) * spatial_res).in_units_of(los.units, subs=s)
-        extent = UnitArr(np.empty((3,2), dtype=float), los.units)
-        extent[xaxis] = [los[0]-w, los[0]+w]
-        extent[yaxis] = [los[1]-w, los[1]+w]
-        extent[zaxis] = spatial_extent
-
-        if environment.verbose >= environment.VERBOSE_NORMAL:
-            print '  using an spatial extent of:', spatial_extent
-            print '  ... with %d bins of size %s^3' % (N, spatial_res)
-        # restrict to particles intersecting the l.o.s.:
-        sub = s.gas[ (s.gas['pos'][:,xaxis] - s.gas['hsml'] < los[0]) &
-                     (s.gas['pos'][:,xaxis] + s.gas['hsml'] > los[0]) &
-                     (s.gas['pos'][:,yaxis] - s.gas['hsml'] < los[1]) &
-                     (s.gas['pos'][:,yaxis] + s.gas['hsml'] > los[1]) ]
-        dV = sub['dV'].in_units_of(sub['pos'].units**3)
-        gridargs = {
-                'extent':   extent,
-                'Npx':      Npx,
-                'kernel':   kernel,
-                'dV':       dV,
-                'hsml':     hsml,
-                'normed':   True,
-        }
-        n_parts = n[sub._mask]
-        n   , px    = SPH_to_3Dgrid(sub, n_parts/dV, **gridargs)
-        n           = n[m].reshape(N) * np.prod(px)
-        non0n       = (n!=0)
-        vel , px    = SPH_to_3Dgrid(sub, n_parts*sub['vel'][:,zaxis]/dV,
-                                    **gridargs)
-        vel         = vel[m].reshape(N) * np.prod(px)
-        vel[non0n]  = vel[non0n] / n[non0n]
-        # average sqrt(T), since thats what the therm. broadening scales with
-        temp, px    = SPH_to_3Dgrid(sub, n_parts*np.sqrt(sub['temp'])/dV,
-                                    **gridargs)
-        temp        = temp[m].reshape(N) * np.prod(px)
-        temp[non0n] = temp[non0n] / n[non0n]
-        temp      **= 2
-        # `hsml` here is the pixel size, needed for calculating column densities
-        hsml        = px[(xaxis,yaxis),]
-        pos         = None  # no use of positions in the C function
-        # the z-coordinates for the Hubble flow
-        los_pos     = UnitArr(np.linspace(extent[zaxis][0],
-                                  extent[zaxis][1]-px[zaxis], Npx[zaxis]),
-                      extent.units)
-
+        n.convert_to(l_units**-2, subs=s)
+        pos = None  # no use of positions in the C function
+        hsml = None  # no use of smoothing lengths in the C function
         # inplace conversion possible (later conversion does not add to runtime!)
         vel.convert_to(v_units, subs=s)
         temp.convert_to('K', subs=s)
@@ -379,7 +444,8 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
         pos = pos.astype(np.float64).in_units_of(l_units,subs=s).view(np.ndarray).copy()
     vel  = vel.astype(np.float64).in_units_of(v_units,subs=s).view(np.ndarray).copy()
     temp = temp.in_units_of('K',subs=s).view(np.ndarray).astype(np.float64)
-    hsml = hsml.in_units_of(l_units,subs=s).view(np.ndarray).astype(np.float64)
+    if hsml is not None:
+        hsml = hsml.in_units_of(l_units,subs=s).view(np.ndarray).astype(np.float64)
 
     los = los.in_units_of(l_units,subs=s) \
              .view(np.ndarray).astype(np.float64).copy()
@@ -392,11 +458,11 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt,
     taus = np.empty(Nbins, dtype=np.float64)
     los_dens = np.empty(Nbins, dtype=np.float64)
     los_temp = np.empty(Nbins, dtype=np.float64)
-    C.cpygad.absorption_spectrum(not bool(spatial_bins),
+    C.cpygad.absorption_spectrum(method == 'particles',
                                  C.c_size_t(N),
                                  C.c_void_p(pos.ctypes.data) if pos is not None else None,
                                  C.c_void_p(vel.ctypes.data),
-                                 C.c_void_p(hsml.ctypes.data),
+                                 C.c_void_p(hsml.ctypes.data) if hsml is not None else None,
                                  C.c_void_p(n.ctypes.data),
                                  C.c_void_p(temp.ctypes.data),
                                  C.c_void_p(los.ctypes.data),
