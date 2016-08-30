@@ -810,9 +810,14 @@ def _same_units_binary(a, b):
 @UnitArr.ufunc_rule(np.abs)
 @UnitArr.ufunc_rule(np.floor)
 @UnitArr.ufunc_rule(np.ceil)
+@UnitArr.ufunc_rule(np.trunc)
+@UnitArr.ufunc_rule(np.round)   # TODO: does not work, since the
+@UnitArr.ufunc_rule(np.around)  # function does something more inbetween
+@UnitArr.ufunc_rule(np.round_)  # than others (and calls np.rint)
+@UnitArr.ufunc_rule(np.rint)
+@UnitArr.ufunc_rule(np.fix)
 @UnitArr.ufunc_rule(np.transpose)
 @UnitArr.ufunc_rule(np.conjugate)
-@UnitArr.ufunc_rule(np.round)
 def _same_units_unary(a):
     return a.units
 

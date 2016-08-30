@@ -21,20 +21,21 @@ Examples:
     >>> from ..environment import module_dir
     >>> from ..snapshot import Snap
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=True)
-    >>> inter_bc_qty(s.stars['age'], s.stars['Z'], qty='log Nly')
+    >>> inter_bc_qty(s.stars['age'], s.stars['metallicity'], qty='log Nly')
     load block form_time... done.
     derive block age... done.
-    load block elements... done.
+    load block Z... done.
+    derive block elements... done.
     derive block H... done.
     derive block He... done.
     derive block metals... done.
-    derive block Z... done.
+    derive block metallicity... done.
     UnitArr([ 40.88760733,  40.87670045,  41.10933622, ...,  41.1284523 ,
               41.21504043,  41.10660553])
-    >>> inter_bc_qty(s.stars['age'], s.stars['Z'], qty='Vmag', IMF='Chabrier')
+    >>> inter_bc_qty(s.stars['age'], s.stars['metallicity'], qty='Vmag', IMF='Chabrier')
     UnitArr([ 5.38572149,  5.38222705,  5.95851407, ...,  6.24853992,
               5.89012057,  6.2964592 ])
-    >>> inter_bc_qty(s.stars['age'], s.stars['Z'], qty='Vmag', IMF='Salpeter')
+    >>> inter_bc_qty(s.stars['age'], s.stars['metallicity'], qty='Vmag', IMF='Salpeter')
     UnitArr([ 5.73452262,  5.72079989,  6.27333274, ...,  6.56081867,
               6.19076843,  6.60469198])
 '''

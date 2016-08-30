@@ -9,7 +9,8 @@ Example:
     load block pos... done.
     >>> radially_binned(s.stars, 'Fe/mass', av='mass', center=center,
     ...                 r_edges=np.linspace(0,15,30))
-    load block elements... done.
+    load block Z... done.
+    derive block elements... done.
     derive block Fe... done.
     load block mass... done.
     UnitArr([ 0.00080558,  0.00065764,  0.00053465,  0.00049411,  0.00046332,

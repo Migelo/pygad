@@ -196,7 +196,7 @@ def calc_x_ray_lum(s, lumtable, **kwargs):
     '''
     from ..analysis import x_ray_luminosity
     return x_ray_luminosity(s, lumtable=lumtable, **kwargs)
-calc_x_ray_lum._deps = set(['Z', 'ne', 'H', 'rho', 'mass', 'temp'])
+calc_x_ray_lum._deps = set(['metallicity', 'ne', 'H', 'rho', 'mass', 'temp'])
 
 def calc_HI_mass(s, UVB=gadget.general['UVB'], flux_factor=None):
     '''

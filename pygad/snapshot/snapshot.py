@@ -142,12 +142,13 @@ Example:
     True
 
     New custom blocks can be set easily (though have to fit the (sub-)snapshot):
-    >>> sub = s.baryons[s.baryons['Z']>1e-3].stars
-    load block elements... done.
+    >>> sub = s.baryons[s.baryons['metallicity']>1e-3].stars
+    load block Z... done.
+    derive block elements... done.
     derive block H... done.
     derive block He... done.
     derive block metals... done.
-    derive block Z... done.
+    derive block metallicity... done.
     >>> s.stars['new'] = np.ones(len(s.stars))
     >>> sub['new']
     SimArr([ 1.,  1.,  1., ...,  1.,  1.,  1.], snap="snap_M1196_4x_470":stars)
@@ -194,7 +195,7 @@ Example:
     >>> s2 = Snap(dest_file, physical=False)
     >>> s2.load_all_blocks()    # doctest:+ELLIPSIS
     load block nh... done.
-    load block elements... done.
+    load block cste... done.
     load block sfr... done.
     load block pot... done.
     load block inim... done.
@@ -240,9 +241,9 @@ Example:
     ...     assert np.all( b == b2 )
     load block pos... done.
     load block nh... done.
-    load block elements... done.
     load block hsml... done.
     load block pot... done.
+    load block inim... done.
     ...
     >>> assert s.redshift == s2.redshift
     >>> for name, prop in s.properties.iteritems():
@@ -411,10 +412,8 @@ def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
             new_name = name.strip().lower()
 
         # some renaming
-        if new_name in ['id']:
+        if new_name in ['id', 'z']:
             new_name = new_name.upper()
-        elif new_name == 'z':
-            new_name = 'elements'
         elif new_name == 'age':
             new_name = 'form_time'
 
@@ -428,47 +427,7 @@ def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
     # now the mass block is named 'mass' for all cases (HDF5 or other)
     s._block_avail['mass'] = [n>0 for n in s._N_part]
 
-    # calculate the dependencies and particle types of the derived blocks
-    changed = True
-    rules = derived._rules.copy()
-    # define 'dV' by 'vol_def_x' if not explicitly given
-    if 'dV' not in rules:
-        x = gadget.config.general['vol_def_x']
-        if x != '<undefined>':
-            rules['dV'] = '%s / kernel_weighted(gas,%s)' % (x,x)
-    # remove derived blocks that can be loaded
-    for name in rules.keys():
-        if name in s._load_name:
-            del rules[name]
-    # calculate the dependencies
-    while changed:
-        changed = False
-        for name, rule in rules.iteritems():
-            if name in s._load_name:
-                continue    # this derived block can actually be loaded
-            ptypes, deps = derived.ptypes_and_deps(rule, s)
-            if name in s._block_avail:
-                if ptypes!=s._block_avail[name] \
-                        or deps!=s._derive_rule_deps[name][1]:
-                   changed = True
-            else:
-               changed = True
-            s._block_avail[name] = ptypes
-            s._derive_rule_deps[name] = (rule, deps)
-    # now remove those derived blocks, that depend on non-existent blocks
-    not_available = set()
-    removed = -1
-    while removed != len(not_available):
-        removed = len(not_available)
-        for name, (rule, deps) in s._derive_rule_deps.iteritems():
-            if not (any(s._block_avail[name]) and (deps-not_available)):
-                not_available.add(name)
-        for name in not_available:
-            s._block_avail.pop(name,None)
-            s._derive_rule_deps.pop(name,None)
-
-    s._always_cache = set(s._derive_rule_deps.iterkeys()) \
-                        & derived.general['always_cache']
+    s.fill_derived_rules()
 
     s._descriptor = '"' + s._descriptor + '"'
 
@@ -687,6 +646,75 @@ class _Snap(object):
                 utils.nice_big_num_str(len(self)),
                 self._root.redshift)
 
+    def fill_derived_rules(self, rules=None, clear_old=False):
+        '''
+        Fill the derived rules for (the root of) this snapshot.
+
+        Args:
+            rules (dict):       A dictionary of the rules to add. The keys are the
+                                names of the blocks (blocks that can be loaded
+                                will not be added!). The entries shall be strings
+                                with the rule.
+                                Defaults to the list loaded from `derived.cfg`.
+            clear_old (dict):   Whether to first clear any already existing rules.
+        '''
+        if not self is self.root:
+            self.root.fill_derived_rules(rules, clear_old)
+            return
+
+        if rules is None:
+            rules = derived._rules
+        rules = rules.copy()
+
+        if clear_old:
+            for name in self._derive_rule_deps.iterkeys():
+                self._block_avail.pop(name,None)
+            self._derive_rule_deps = {}
+
+        # calculate the dependencies and particle types of the derived blocks
+        # define 'dV' by 'vol_def_x' if not explicitly given
+        if 'dV' not in rules:
+            x = gadget.config.general['vol_def_x']
+            if x != '<undefined>':
+                rules['dV'] = '%s / kernel_weighted(gas,%s)' % (x,x)
+
+        # remove derived blocks that can be loaded
+        for name in rules.keys():
+            if name in self._load_name:
+                del rules[name]
+
+        # calculate the dependencies
+        changed = True
+        while changed:
+            changed = False
+            for name, rule in rules.iteritems():
+                if name in self._load_name:
+                    continue    # this derived block can actually be loaded
+                ptypes, deps = derived.ptypes_and_deps(rule, self)
+                if name in self._block_avail:
+                    if ptypes!=self._block_avail[name] \
+                            or deps!=self._derive_rule_deps[name][1]:
+                       changed = True
+                else:
+                   changed = True
+                self._block_avail[name] = ptypes
+                self._derive_rule_deps[name] = (rule, deps)
+
+        # now remove those derived blocks, that depend on non-existent blocks
+        not_available = set()
+        removed = -1
+        while removed != len(not_available):
+            removed = len(not_available)
+            for name, (rule, deps) in self._derive_rule_deps.iteritems():
+                if not (any(self._block_avail[name]) and (deps-not_available)):
+                    not_available.add(name)
+            for name in not_available:
+                self._block_avail.pop(name,None)
+                self._derive_rule_deps.pop(name,None)
+
+        self._always_cache = set(self._derive_rule_deps.iterkeys()) \
+                            & derived.general['always_cache']
+
     def __dir__(self):
         # Add the families available such that they occure in tab completion in
         # iPython, for instance.
@@ -754,7 +782,7 @@ class _Snap(object):
         '''
         done = set()
         if forthis:
-            names = self._block.iterkeys() if present else self.available_blocks()
+            names = self._blocks.iterkeys() if present else self.available_blocks()
         else:
             names = self._root._block_avail.iterkeys()
         for block_name in names:
@@ -1312,7 +1340,8 @@ class _SubSnap(_Snap):
 
         s[mask], however, is not host (!)
         >>> assert np.all( s[mask]['elements'] == s.baryons['elements'] )
-        load block elements... done.
+        load block Z... done.
+        derive block elements... done.
         >>> len(slim[slim_mask]['elements'])
         10015
         >>> assert s[2:-123:10].stars['form_time'].shape[0] == len(s[2:-123:10].stars)

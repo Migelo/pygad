@@ -6,7 +6,7 @@ Examples:
     >>> rules = read_derived_rules([module_dir+'snapshot/derived.cfg'])
     reading config file "pygad/snapshot/derived.cfg"
     >>> assert rules == _rules
-    >>> rules['r'], rules['Z']
+    >>> rules['r'], rules['metallicity']
     ('dist(pos)', 'metals/elements.sum(axis=1)')
     >>> general
     {'always_cache': set(['Ekin', 'temp', 'age', 'mag*', 'angmom', 'LX', 'jcirc']), 'cache_derived': True}
@@ -17,11 +17,13 @@ Examples:
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470')
     >>> ptypes_and_deps(rules['r'], s)
     ([True, True, True, True, True, False], set(['pos']))
-    >>> ptypes_and_deps(rules['Z'], s)  # derived from mass (for all particles
-    ...                                 # types) and elements (baryons only)
+    >>> ptypes_and_deps(rules['metallicity'], s) # derived from mass (for all
+    ...                                          # particles types) and elements
+    ...                                          # (baryons only)
     ([True, False, False, False, True, False], set(['elements', 'metals']))
     >>> s.gas['CIV'] # doctest: +ELLIPSIS
-    load block elements... done.
+    load block Z... done.
+    derive block elements... done.
     derive block H... done.
     load block mass... done.
     load block rho... done.
