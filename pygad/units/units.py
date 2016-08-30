@@ -35,6 +35,10 @@ Conversion factors can conveniently be calculated as long as they are convertabl
 Traceback (most recent call last):
 ...
 UnitError: 'Units [m] and [s] are not convertable!'
+>>> convertable('m', 'km')
+True
+>>> convertable('m', 'km/s')
+False
 
 Expanding, comparing, and undefining units is also straight forward:
 >>> kg = define('kg')
@@ -83,7 +87,8 @@ reading units definitions from "pygad/units/units.cfg"
 'M_\\\\odot\\\\,h_0^{-1}'
 '''
 __all__ = ['UnitError', 'define', 'set_latex_repr', 'undefine', 'undefine_all',
-           'defined_units', 'define_from_cfg', 'Unit', 'Units', 'Fraction']
+           'defined_units', 'define_from_cfg', 'Unit', 'Units', 'Fraction',
+           'convertable']
 
 from numbers import Number
 from fractions import Fraction
@@ -688,3 +693,24 @@ def Units(l, allow_undefined=False):
             return Units(map(str.strip,l.split(',')), allow_undefined)
         return [Unit(l, allow_undefined)]
     return [Unit(n, allow_undefined) for n in l]
+
+def convertable(u1, u2, subs=None):
+    '''
+    Tests whether to units are convertable (provided substitutions).
+
+    Args:
+        u1, u2 (Unit, str):     The units to test.
+        subs (dict, Snap):      Unit to substitute with numbers in the convertion.
+                                For more information see '_UnitClass.substitute'.
+
+    Returns:
+        convertable (bool):     The result of the test.
+    '''
+    u1, u2 = Unit(u1), Unit(u2)
+    try:
+        u1.in_units_of(u2, subs=subs)
+    except:
+        return False
+    else:
+        return True
+
