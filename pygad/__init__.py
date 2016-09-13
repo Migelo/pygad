@@ -13,7 +13,7 @@ doctests:
     >>> print >> sys.stderr, "ATTENTION: full doctest takes a few minutes!!!"
     >>> print >> sys.stderr, 'testing module utils...'
     >>> doctest.testmod(utils)
-    TestResults(failed=0, attempted=3)
+    TestResults(failed=0, attempted=4)
     >>> print >> sys.stderr, 'testing module environment...'
     >>> doctest.testmod(environment)
     TestResults(failed=0, attempted=0)

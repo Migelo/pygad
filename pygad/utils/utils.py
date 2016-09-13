@@ -4,11 +4,15 @@ A collection of some general (low-level) functions.
 Doctests are in the functions themselves.
 '''
 __all__ = ['static_vars', 'nice_big_num_str', 'float_to_nice_latex', 'perm_inv',
-           'periodic_distance_to', 'sane_slice', 'is_consecutive', 'rand_dir']
+           'periodic_distance_to', 'sane_slice', 'is_consecutive', 'rand_dir',
+           'ProgressBar']
 
 import numpy as np
 import re
 import scipy.spatial.distance
+import sys
+from term import *
+import time
 
 def static_vars(**kwargs):
     '''
@@ -319,4 +323,297 @@ def rand_dir(dim=3):
         r = np.random.uniform(-1.,1., size=dim)
         length = np.linalg.norm(r)
     return r / length
+
+class ProgressBar(object):
+    '''
+    This function creates an iterable context manager that can be used to iterate
+    over something while showing a progress bar.
+    
+    It will either iterate over the `iterable` or `length` items (that are counted
+    up). While iteration happens, this function will print a rendered progress bar
+    to the given `file` (defaults to stdout) and will attempt to calculate
+    remaining time and more.
+
+    The context manager creates the progress bar. When the context manager is
+    entered the progress bar is already displayed. With every iteration over the
+    progress bar, the iterable passed to the bar is advanced and the bar is
+    updated. When the context manager exits, a newline is printed and the progress
+    bar is finalized on screen.
+
+    Note:
+        No printing must happen or the progress bar will be unintentionally
+        destroyed!
+
+    Example usage:
+
+    >>> with ProgressBar(xrange(100)) as pbar:
+    ...     for i in pbar:
+    ...         time.sleep(0.005)
+
+    Alternatively, if no iterable is specified, one can manually update the
+    progress bar through the `update()` method instead of directly iterating over
+    the progress bar. The update method accepts the number of steps to increment
+    the bar with:
+
+    >>> chunks = [123, 32, 72, 201, 173, 88, 64]
+    >>> with ProgressBar(length=sum(chunks)) as pbar:
+    ...     for chunk in chunks:
+    ...         pass # process_chunk chunk...
+    ...         pbar.update(chunk)
+    ...         time.sleep(0.1)
+
+    Args:
+        iterable (iterable):    An iterable to iterate over. If not provided the
+                                length is required, however, it can also just be a
+                                number, then the iterable will be
+                                `xrange(iterable)`.
+        length (int):           The number of items to iterate over. By default
+                                the progress bar will attempt to ask the iterator
+                                about its length with `len(iterable)`. Providing
+                                the length, overwrites this.
+                                If the iterable is None, length is required!
+        label (str):            The label to show left to the progress bar.
+        show_eta (bool):        Enables or disables the estimated time display.
+        show_percent(bool):     Enables or disables the percentage display.
+        show_iteration (bool):  Enables or disables the absolute iteration
+                                display.
+        item_show_func (function):
+                                A function called with the current item which can
+                                return a string to show the current item next to
+                                the progress bar. Note that the current item can
+                                be `None`!
+        fill_char (str):        The character to use to show the filled part of
+                                the progress bar (needs to be a single character).
+        empty_char (str):       The character to use to show the non-filled part
+                                of the progress bar (needs to be a single
+                                character).
+        bar_template (str):     The format string to use as template for the bar.
+                                The parameters in it are 'label' for the label,
+                                'bar' for the progress bar and 'info' for the info
+                                section.
+        info_sep (str):         The separator between multiple info items (eta etc.).
+        width (int):            The width of the progress bar in characters, None
+                                means full terminal width.
+        file (file):            The file to write to.
+    '''
+    BEFORE_BAR = '\r\033[?25l'
+    AFTER_BAR = '\033[?25h\n'
+    ETA_AVERAGE_OVER = 6
+
+    def __init__(self, iterable=None, length=None,
+                 show_eta=True, show_percent=True, show_iteration=True,
+                 item_show_func=None,
+                 fill_char='#', empty_char='.',
+                 bar_template='%(label)s  [%(bar)s]  %(info)s',
+                 info_sep='  ', file=sys.stdout, label=None,
+                 width=36):
+        if iterable is None and isinstance(length,int):
+            self._length = length
+            self._iterable = xrange(length)
+        else:
+            if isinstance(iterable,int):
+                iterable = xrange(iterable)
+            self._length = int(length) if length else len(iterable)
+            self._iterable = iter(iterable)
+        self.show_eta = bool(show_eta)
+        self.show_percent = bool(show_percent)
+        self.show_iteration = bool(show_iteration)
+        self.fill_char = str(fill_char)
+        self.empty_char = str(empty_char)
+        if len(self.fill_char)!=1 or len(self.empty_char)!=1:
+            raise ValueError("The fill and the empty char both must have length 1.")
+        self.bar_template = str(bar_template)
+        self.info_sep = str(info_sep)
+        self._file = file
+        self.label = '' if label is None else str(label)
+        self._auto_width = width is None
+        self._width = 0 if width is None else width
+        self._item_show_func = item_show_func
+
+        self._start = self._last_eta = time.time()
+        self._last_line = None
+        self._it_times = []
+        self._eta_known = False
+        self._finished = False
+        self._entered = False
+        self._it = 0
+        self._current_item = None
+
+    def __enter__(self):
+        self._entered = True
+        self._start = time.time()
+        self._it = 0
+        self.render()
+        return self
+
+    def __exit__(self, exc_type, exc_value, tb):
+        self._render_finish()
+
+    def __iter__(self):
+        if not self._entered:
+            raise RuntimeError('You need to use progress bars in a with block.')
+        self.render()
+        return self
+
+    def next(self):
+        try:
+            rv = next(self._iterable)
+            self._current_item = rv
+        except StopIteration:
+            self._finish()
+            self.render()
+            raise StopIteration()
+        else:
+            self.update(1)
+            return rv
+
+    def __len__(self):
+        return self._length
+
+    @property
+    def auto_width(self):
+        return self._auto_width
+    @auto_width.setter
+    def auto_width(self, value):
+        self._auto_width = bool(value)
+
+    @property
+    def width(self):
+        return self._width
+    @width.setter
+    def width(self, value):
+        if value is None:
+            self._auto_width = True
+        else:
+            self._width = max(0, int(value))
+
+    @property
+    def pct(self):
+        '''The percent done (as fraction, i.e. finished is 1.0).'''
+        return min(float(self._it) / self._length, 1.0)
+
+    @property
+    def time_per_iteration(self):
+        if not self._it_times:
+            return 0.0
+        return sum(self._it_times) / float(len(self._it_times))
+
+    @property
+    def eta(self):
+        if not self._finished:
+            return self.time_per_iteration * (self._length - self._it)
+        return 0.0
+
+    def format_iteration(self):
+        '''The iteration formatted to a string.'''
+        return '%s/%s' % (self._it, self._length)
+
+    def format_pct(self):
+        '''The percent done formatted to a string.'''
+        return '%3d%%' % int(self.pct * 100.)
+
+    def format_eta(self):
+        '''The ETA formatted to a string (if unknown return '').'''
+        if self._eta_known:
+            t = int(self.eta + 1)
+            seconds = t % 60
+            t /= 60
+            minutes = t % 60
+            t /= 60
+            hours = t % 24
+            t /= 24
+            if t > 0:
+                days = t
+                return '%dd %d:%02d:%02d' % (days, hours, minutes, seconds)
+            else:
+                return '%d:%02d:%02d' % (hours, minutes, seconds)
+        return ''
+
+    def format_progress_line(self):
+        '''Create the progress bar string (for printing use `render`).'''
+        info_bits = []
+
+        bar_length = int(self.pct * self._width)
+        bar = self.fill_char * bar_length
+        bar += self.empty_char * (self._width - bar_length)
+
+        if self.show_iteration:
+            info_bits.append(self.format_iteration())
+        if self.show_percent:
+            info_bits.append(self.format_pct())
+        if self.show_eta and self._eta_known and not self._finished:
+            info_bits.append(self.format_eta())
+        if self._item_show_func is not None:
+            item_info = self._item_show_func(self._current_item)
+            if item_info is not None:
+                info_bits.append(str(item_info))
+
+        return (self.bar_template % {
+            'label': self.label,
+            'bar': bar,
+            'info': self.info_sep.join(info_bits)
+        }).rstrip()
+
+    def render(self):
+        '''Render the progress bar.'''
+        buf = []
+
+        if self.auto_width:
+            old_width = self._width
+            self._width = 0
+            clutter_length = term_len(self.format_progress_line())
+            new_width = max(0, get_terminal_size()[0] - clutter_length)
+            if new_width < old_width:
+                buf.append(self.BEFORE_BAR)
+                buf.append(' ' * old_width)
+            self._width = new_width
+
+        clear_width = self._width
+
+        buf.append(self.BEFORE_BAR)
+        line = self.format_progress_line()
+        line_len = term_len(line)
+        buf.append(line)
+
+        buf.append(' ' * (clear_width - line_len))
+        line = ''.join(buf)
+        
+        if line != self._last_line:
+            self._last_line = line
+            self._file.write(line)
+            self._file.flush()
+
+    def _render_finish(self):
+        self._file.write(self.AFTER_BAR)
+        self._file.flush()
+
+    def _finish(self):
+        self._eta_known = False
+        self._current_item = None
+        self._finished = True
+
+    def update(self, n_steps):
+        '''
+        Advance the progress bar by the given number of steps and re-render it.
+
+        Args:
+            n_steps (int):  The number of steps to advance.
+        '''
+        self._make_step(n_steps)
+        self.render()
+
+    def _make_step(self, n_steps):
+        self._it += n_steps
+        if self._it >= self._length:
+            self._finished = True
+
+        t = time.time()
+        if (t - self._last_eta) < 1.0:
+            # not sufficiently good estimate
+            return
+
+        self._last_eta = t
+        self._it_times = self._it_times[-self.ETA_AVERAGE_OVER:] \
+                + [(t - self._start) / (self._it)]
+        self._eta_known = True
 
