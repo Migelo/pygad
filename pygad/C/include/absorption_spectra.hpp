@@ -19,6 +19,8 @@ void absorption_spectrum(bool particles,
                          double *taus,
                          double *los_dens,
                          double *los_temp,
+                         double *v_lims,
+                         double *contributions,
                          const char *kernel_,
                          double periodic);
 
