@@ -1,0 +1,74 @@
+#!/usr/bin/env python
+'''
+gconv - convert Gadget snapshots to different formats.
+'''
+
+import argparse
+
+parser = argparse.ArgumentParser(
+            description='Convert a Gadget snapshot to a different format.')
+parser.add_argument('orig',
+                    help='The snapshot to convert.')
+parser.add_argument('dest',
+                    help='The filename of the converted snapshot.')
+parser.add_argument('--format', '-f',
+                    choices=['1','2','3','hdf5','HDF5'],
+                    default=470,
+                    help='The format to convert to.')
+parser.add_argument('--no_info_block',
+                    dest='info_block',
+                    action='store_false',
+                    help='Do not write an info block (has no effect for HDF5 ' + \
+                         'snapshots).')
+parser.add_argument('--double_prec',
+                    action='store_true',
+                    help='Write in double precision.')
+parser.add_argument('--blocks',
+                    nargs='+',
+                    default=None,
+                    help='The blocks to copy (positions, velocities, IDs and ' + \
+                         'masses are always copied). If not specified, all ' + \
+                         'blocks are copied.')
+parser.add_argument('--overwrite',
+                    action='store_true',
+                    help='Force to overwrite possibly existing files in the ' + \
+                         'trace folder.')
+parser.add_argument('--verbose', '-v',
+                    action='store_true',
+                    help='Run in verbose mode.')
+
+
+if __name__ == '__main__':
+    args = parser.parse_args()
+
+    if args.verbose: print 'starting up...'
+
+    # Suspend importing to here, after parsing the arguments to be quick,
+    # if only the help has to be displayed or there already occurs and
+    # error in parsing the arguments.
+    import os
+    import sys
+    if os.path.exists(args.dest) and not args.overwrite:
+        print >> sys.stderr, 'ERROR: file "%s" exists!' % args.dest
+        print >> sys.stderr, 'Consider --overwrite.'
+        sys.exit(1)
+    import pygad
+    pygad.environment.verbose = args.verbose
+    if args.verbose:
+        print 'imported pygad', pygad.version
+
+    if args.format.lower() == 'hdf5':
+        args.format = 3
+    else:
+        args.format = int(args.format)
+
+    pygad.environment.verbose = args.verbose
+    snap = pygad.Snap(args.orig)
+    pygad.snapshot.write(snap, args.dest, gformat=args.format,
+                         blocks=args.blocks,
+                         infoblock=args.info_block,
+                         double_prec=args.double_prec,
+                         overwrite=args.overwrite)
+
+    if args.verbose: print 'finished.'
+

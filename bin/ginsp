@@ -1,0 +1,252 @@
+#!/usr/bin/env python
+'''
+ginsp - a programm to inspect gadget files.
+'''
+
+import argparse
+import time
+from datetime import datetime
+
+parser = argparse.ArgumentParser(
+            description='Inspect a single Gadget file of format 1, 2, or 3 ' +
+                        '(HDF5). This program automatically detects the format ' +
+                        'and does good guesswork on the unkown properties of ' +
+                        'the blocks in the file, if it is a format 1 file and ' +
+                        'there is no info block. Information such as the ' +
+                        'particle counts and set flags can be printed. This ' +
+                        'program does not actually read data from the file.')
+parser.add_argument('file', metavar='<FILE>', help='The file to inspect.')
+
+parser.add_argument('--general', '-g', action='store_true',
+                    help='Print general information about the file.')
+parser.add_argument('--time', '-t', action='store_true',
+                    help='Print time information.')
+parser.add_argument('--particle', '-p', action='store_true',
+                    help='Print particle information.')
+parser.add_argument('--cosmology', '-c', action='store_true',
+                    help='Print cosmology information.')
+parser.add_argument('--more_header', '-m', action='store_true',
+                    help='Print more header information.')
+parser.add_argument('--block', '-b', action='store_true',
+                    help='Print block information.')
+
+parser.add_argument('--all', action='store_true', help='Print all information.')
+
+parser.add_argument('--verbose', '-v', action='store_true',
+                    help='Run in verbose mode.')
+
+
+def human_readable_size(size, base=1024, suffix='B'):
+    for unit in ['','k','M','G','T','P','E','Z']:
+        if abs(size) < base:
+            return "%3.1f %s%s" % (size, unit, suffix)
+        size /= float(base)
+    return "%.1f %s%s" % (size, 'Y', suffix)
+
+def print_file_info(gfile):
+    print 'file:'
+    print '====='
+    print '  format:            ', gfile.format, ('(HDF5)' if gfile.format==3
+                                                  else '')
+    print '  endianness:        ', {'=': sys.byteorder+' (native)',
+                                    '<':'little (non-native)',
+                                    '>':'big (non-native)',
+                                    None:'unknown'}[gfile.endianness]
+    print '  size:              ', \
+            human_readable_size( os.path.getsize(gfile.filename) )
+    print '  creation time:     ', \
+            datetime.fromtimestamp( os.path.getctime(gfile.filename) )
+
+def print_time_info(gfile):
+    cosmology = pygad.physics.FLRWCosmo(
+            h_0          = gfile.header['h_0'],
+            Omega_Lambda = gfile.header['Omega_Lambda'],
+            Omega_m      = gfile.header['Omega_m'],
+            )
+    print 'time:'
+    print '====='
+    print '  time / scale factor: %.6f' % gfile.header['time']
+    print '  redshift:            %.6f' % gfile.header['redshift']
+    print '  universe age:        %6f Gyr' % \
+            cosmology.cosmic_time(gfile.header['redshift']).in_units_of('Gyr')
+    print '  lookback time:       %6f Gyr' % \
+            cosmology.lookback_time(gfile.header['redshift']).in_units_of('Gyr')
+
+def print_particle_info(gfile):
+    if gfile.header['N_files'] == 1:
+        print 'particles:'
+        print '=========='
+        for s in xrange(6):
+            print '   %d      %11s' % (s,
+                                       pygad.utils.nice_big_num_str(
+                                           gfile.header['N_part'][s]))
+        print '          %12s' % (11*'-')
+        print '  total   %11s' % pygad.utils.nice_big_num_str(
+                                        sum(gfile.header['N_part']))
+    else:
+        print 'particles: %11s   %12s' % ('this file',
+                                           'all %2d files' %
+                                           gfile.header['N_files'])
+        print '=========='
+        for s in xrange(6):
+            print '   %d      %11s    %11s' % (s,
+                                               pygad.utils.nice_big_num_str(
+                                                   gfile.header['N_part'][s]),
+                                               pygad.utils.nice_big_num_str(
+                                                   gfile.header['N_part_all'][s]))
+        print '          %12s   %12s' % (11*'-', 11*'-')
+        print '  total   %11s    %11s' % (pygad.utils.nice_big_num_str(
+                                            sum(gfile.header['N_part'])),
+                                          pygad.utils.nice_big_num_str(
+                                            sum(gfile.header['N_part_all'])))
+
+def print_cosmology_info(gfile):
+    cosmology = pygad.physics.FLRWCosmo(
+            h_0          = gfile.header['h_0'],
+            Omega_Lambda = gfile.header['Omega_Lambda'],
+            Omega_m      = gfile.header['Omega_m'],
+            )
+    print 'cosmology:'
+    print '=========='
+    print '  h(z)         = %5.3f' % cosmology.h(gfile.header['redshift'])
+    print '  h_0          = %5.3f' % gfile.header['h_0']
+    print '  Omega_matter = %5.3f' % gfile.header['Omega_m']
+    print '  Omega_Lambda = %5.3f' % gfile.header['Omega_Lambda']
+
+def print_more_header_info(gfile):
+    header = gfile.header
+    const_mass = header['mass']
+    print 'header:'
+    print '======='
+    if 0.0 == const_mass[0] and const_mass[0] == const_mass[1] \
+            and const_mass[1] == const_mass[2] \
+            and const_mass[2] == const_mass[3] \
+            and const_mass[3] == const_mass[4] \
+            and const_mass[4] == const_mass[5]:
+        print '  const. masses        none'
+    else:
+        for s in xrange(6):
+            if s == 0:
+                print '  const. masses       ',
+            else:
+                print '                      ',
+            if const_mass[s] != 0:
+                print '%d = %13g [internal mass units]' % (s, const_mass[s])
+            else:
+                print '%d =      <varying masses>' % s
+    print '  box size             %g [internal length units]' % header['boxsize']
+    print '  snapshot files      ', header['N_files']
+    print '  star formation      ', ('on' if header['flg_sfr'] else "off")
+    print '  feedback            ', ('on' if header['flg_feedback'] else "off")
+    print '  cooling             ', ('on' if header['flg_cool'] else "off")
+    print '  stellar ages        ', ('on' if header['flg_age'] else "off")
+    print '  metals              ', ('on' if header['flg_metals'] else "off")
+    print '  entropy instead u   ', (header['flg_entropy_instead_u'] != 0)
+    print '  double prec.        ', (header['flg_doubleprecision'] != 0)
+    print '  IC info:            ',
+    if header['flg_ic_info'] == 0:
+        print '<no info>'
+    else:
+        if header['flg_ic_info'] == 1:
+            print 'Zeldovich ICs'
+        elif header['flg_ic_info'] == 3:
+            print '2nd order ICs'
+        elif header['flg_ic_info'] == 4:
+            print 'evolved Zeldovich ICs'
+        elif header['flg_ic_info'] == 5:
+            print 'evolved 2nd order LPT ICs'
+        elif header['flg_ic_info'] == 6:
+            print 'normal 2nd order LPT ICs'
+        print '  LPT scaling factor = %s' % header['lpt_scalingfactor']
+
+def print_block_info(gfile):
+    infos = gfile.infos()
+    print 'blocks:'
+    print '======='
+    if gfile.format == 3:
+        print '   # |         name         | dimension |     type     | species '
+        print ' ----+----------------------+-----------+--------------+---------'
+        table_format_str = ' {:3} | {:<20} | {:^9} | {:^12} |  {}'
+    else:
+        print '   # | name |    size [B]    | dimension |        type        | species '
+        print ' ----+------+----------------+-----------+--------------------+---------'
+        table_format_str = ' {:3} | {:<4} | {:>14} | {:^9} | {:^18} |  {}'
+    for i, blockinfo in enumerate(infos):
+        block_name = blockinfo.name
+        if gfile.format == 3:
+            block_name = block_name[:20] if len(block_name)<=20 \
+                            else (block_name[:15]+'[...]')
+        format_params = [
+                i+1,
+                block_name,
+                pygad.utils.nice_big_num_str(blockinfo.size) if blockinfo.size
+                    else None,
+                blockinfo.dimension,
+                blockinfo.dtype.name if (blockinfo.dtype is not None) else '<unknown>',
+                ''.join([(str(s) if blockinfo.ptypes[s] else ' ')
+                         for s in xrange(6)]) \
+                    if (blockinfo.dtype is not None) and blockinfo.dtype.isbuiltin
+                    else '-----'
+                ]
+        if gfile.format == 3:
+            print table_format_str.format(
+                    *tuple(format_params[:2]+format_params[3:]))
+        else:
+            print table_format_str.format(*tuple(format_params))
+
+
+if __name__ == '__main__':
+    args = parser.parse_args()
+
+    if args.verbose: print 'starting up...'
+
+    import sys
+    import os
+
+    if not os.path.exists(args.file):
+        print >> sys.stderr, 'File "%s" does not exist.' % args.file
+        sys.exit(1)
+    if not os.path.isfile(args.file) or not os.access(args.file, os.R_OK):
+        print >> sys.stderr, '"%s" is not an accessable file.' % args.file
+        sys.exit(2)
+
+    # Don't waste time on importing this module, if something of the upper part
+    # fails. The import command takes about more than a seccond on my machine.
+    import pygad
+    pygad.environment.verbose = args.verbose
+    if args.verbose:
+        print 'imported pygad', pygad.version
+    h5py = pygad.environment.secure_get_h5py()
+
+    if args.verbose: print 'read file information of "%s"...' % args.file
+
+    # unclear blocks are appropiately indicated in the blocks section -- no need
+    # for exceptions or warnings
+    gfile = pygad.gadget.FileReader(args.file, unclear_blocks='ignore')
+
+    print 'Gadget format %d file "%s"' % (gfile.format, gfile.filename)
+
+    if args.general or args.all:
+        print
+        print_file_info(gfile)
+
+    if args.time or args.all:
+        print
+        print_time_info(gfile)
+
+    if args.particle or args.all:
+        print
+        print_particle_info(gfile)
+
+    if args.cosmology or args.all:
+        print
+        print_cosmology_info(gfile)
+
+    if args.more_header or args.all:
+        print
+        print_more_header_info(gfile)
+
+    if args.block or args.all:
+        print
+        print_block_info(gfile)
+
