@@ -340,7 +340,7 @@ class IonisationTable(object):
             fig (Figure):       The figure of the axis plotted on.
             ax (AxesSubplot):   The axis plotted on.
             im (AxesImage):     The image instance created.
-            cbar (Colobar):     The colorbar.
+            cbar (Colorbar):    The colorbar.
         '''
         import matplotlib as mpl
         from ..plotting import show_image

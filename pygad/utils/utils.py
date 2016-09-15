@@ -488,6 +488,11 @@ class ProgressBar(object):
             self._width = max(0, int(value))
 
     @property
+    def iteration(self):
+        '''The iteration being processed.'''
+        return self._it
+
+    @property
     def pct(self):
         '''The percent done (as fraction, i.e. finished is 1.0).'''
         return min(float(self._it) / self._length, 1.0)

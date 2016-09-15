@@ -343,7 +343,7 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
         fig (Figure):       The figure of the axis plotted on.
         ax (AxesSubplot):   The axis plotted on.
         im (AxesImage):     The image instance created.
-       [cbar (Colobar):     The colorbar, if showcbar is True.]
+       [cbar (Colorbar):    The colorbar, if showcbar is True.]
     '''
     xname = ''
     yname = ''

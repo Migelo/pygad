@@ -128,7 +128,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         fig (Figure):       The figure of the axis plotted on.
         ax (AxesSubplot):   The axis plotted on.
         im (AxesImage):     The image instance created.
-       [cbar (Colobar):     The colorbar, if showcbar is True.]
+       [cbar (Colorbar):    The colorbar, if showcbar is True.]
     '''
     zaxis = (set([0,1,2]) - set([xaxis, yaxis])).pop()
     if set([xaxis, yaxis, zaxis]) != set([0,1,2]):
@@ -434,7 +434,7 @@ def phase_diagram(s, rho_units='Msol/pc**3', T_units='K',
         fig (Figure):       The figure of the axis plotted on.
         ax (AxesSubplot):   The axis plotted on.
         im (AxesImage):     The image instance created.
-       [cbar (Colobar):     The colorbar, if showcbar is True.]
+       [cbar (Colorbar):    The colorbar, if showcbar is True.]
     '''
     if 'logscale' not in kwargs:    kwargs['logscale'] = True
     if 'showcbar' not in kwargs:    kwargs['showcbar'] = False
