@@ -16,7 +16,8 @@ required...
 '''
 __all__ = ['cm_k_b', 'cm_k_y', 'cm_age', 'cm_k_g', 'cm_k_p', 'cm_nobl',
            'cm_nobl_r', 'cm_temp',
-           'luminance', 'isolum_cmap', 'color_code', 'show_image', 'scatter_map']
+           'luminance', 'isolum_cmap', 'color_code', 'show_image', 'scatter_map',
+           'make_scale_indicators', 'add_cbar']
 
 import numpy as np
 import matplotlib as mpl
@@ -464,4 +465,95 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
         return fig, ax, im, cbar
     else:
         return fig, ax, im
+
+def make_scale_indicators(ax, extent, scaleind='line', scaleunits=None,
+                          xaxis=0, yaxis=1, fontsize=14, fontcolor='black'):
+    '''
+    Set the scale indicators for a map.
+
+    Args:
+        ax (AxesSubplot):       The axis to set the indicators for.
+        extent (UnitArr):       The extent plotted over. It needs to be of the
+                                form: [[min(x),max(x)],[min(y),max(y)]]
+        scaleind (str):         Can be:
+                                    'labels':   ticks and labels are drawn on the
+                                                axes
+                                    'line':     a bar is drawn in the lower left
+                                                corner indicating the scale
+                                    'none':     neither nor is done -- make the
+                                                axes unvisible
+        scaleunits (str):       If the scale indication is 'labels', this is the
+                                units of these. (Can still be None, though.)
+        xaxis/yaxis (int):      The x- and y-axis in indices used to label the
+                                axis in 'labels' scale mode.
+        fontsize (int,float):   The font size to use.
+        fontcolor (str):        The font color to use.
+    '''
+    if scaleind in [None, 'none']:
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+    elif scaleind == 'labels':
+        if scaleunits is None:
+            units_txt = r' [$%s$]' % scaleunits.latex()
+        else:
+            units_txt = ''
+        x_label = r'$%s$%s' % ({0:'x',1:'y',2:'z'}[xaxis], units_txt)
+        ax.set_xlabel(x_label, fontsize=fontsize)
+        y_label = r'$%s$%s' % ({0:'x',1:'y',2:'z'}[yaxis], units_txt)
+        ax.set_ylabel(y_label, fontsize=fontsize)
+        for tl in ax.get_xticklabels():
+            tl.set_fontsize(0.8*fontsize)
+        for tl in ax.get_yticklabels():
+            tl.set_fontsize(0.8*fontsize)
+    elif scaleind == 'line':
+        width = extent[:,1] - extent[:,0]
+        scale = width.min() / 4.0
+        order = 10.0**int(np.log10(scale))
+        if scale/order<2.0:     scale = 1.0*order
+        elif scale/order<5.0:   scale = 2.0*order
+        else:                   scale = 5.0*order
+        from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
+        from matplotlib.font_manager import FontProperties
+        fp = FontProperties(size=0.9*fontsize)
+        asb =  AnchoredSizeBar(ax.transData, scale,
+                               r'%g $%s$' % (scale, width.units.latex()),
+                               loc=3, pad=0.1, borderpad=0.7, sep=12,
+                               frameon=False, color=fontcolor, fontproperties=fp)
+        ax.add_artist(asb)
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+    else:
+        warnings.warn('Unknown scaling indicator scaleind="%s"!' % scaleind)
+
+def add_cbar(ax, cbartitle, clim, cmap=None, fontcolor='black', fontsize=14):
+    '''
+    Adding a pygad standard colorbar for a map.
+
+    Args:
+        ax (AxesSubplot):       The axis to set the indicators for.
+        cbartitle (str):        The title for the color bar.
+        clim (array-like):      The limits of the color bar.
+        cmap (str, Colormap):   The colormap to use.
+        fontcolor (str):        The font color for the ticks and the title.
+        fontsize (int,float):   The font size of the title (ticks are 0.65 this
+                                size).
+
+    Returns:
+        cbar (Colorbar):         The added colorbar instance.
+    '''
+    from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
+    cax = inset_axes(ax, width="70%", height="3%", loc=1)
+    norm = mpl.colors.Normalize(vmin=clim[0], vmax=clim[1])
+    cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm,
+                                     orientation='horizontal')
+
+    cbar.ax.tick_params(labelsize=8)
+    for tl in cbar.ax.get_xticklabels():
+        tl.set_color(fontcolor)
+        tl.set_fontsize(0.65*fontsize)
+
+    cbar.set_label(cbartitle, color=fontcolor, fontsize=fontsize, labelpad=12)
+
+    return cbar
 

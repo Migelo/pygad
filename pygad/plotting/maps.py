@@ -102,10 +102,11 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         cbartitle (str):    The title for the colorbar. In certain cases it can be
                             created automatically.
         scaleind (str):     Can be:
-                                'labels':   ticks and labels are drawn on the axee
+                                'labels':   ticks and labels are drawn on the axes
                                 'line':     a bar is drawn in the lower left
                                             corner indicating the scale
-                                'none':     neither nor is done
+                                'none':     neither nor is done -- make the
+                                            axes unvisible
         scaleunits (str, Unit):
                             If scaleind=='line', these units are used for
                             indication.
@@ -321,15 +322,6 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                              interpolation=interpolation)
 
     if showcbar:
-        from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-        cax = inset_axes(ax, width="70%", height="3%", loc=1)
-        norm = mpl.colors.Normalize(vmin=clim[0], vmax=clim[1])
-        cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm,
-                                         orientation='horizontal')
-        cbar.ax.tick_params(labelsize=8) 
-        for tl in cbar.ax.get_xticklabels():
-            tl.set_color(fontcolor)
-            tl.set_fontsize(0.65*fontsize)
         if cbartitle is None:
             cqty = colors if colors is not None else qty
             if isinstance(cqty,str):
@@ -372,39 +364,13 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
             if (logscale and colors is None) or \
                     (clogscale and colors is not None):
                 cbartitle = r'$\log_{10}$(' + cbartitle + ')'
-        cbar.set_label(cbartitle, color=fontcolor, fontsize=fontsize, labelpad=12)
 
-    if scaleind in [None, 'none']:
-        ax.get_xaxis().set_visible(False)
-        ax.get_yaxis().set_visible(False)
-    elif scaleind == 'labels':
-        x_label = r'$%s$ [$%s$]' % ({0:'x',1:'y',2:'z'}[xaxis], scaleunits.latex())
-        ax.set_xlabel(x_label, fontsize=fontsize)
-        y_label = r'$%s$ [$%s$]' % ({0:'x',1:'y',2:'z'}[yaxis], scaleunits.latex())
-        ax.set_ylabel(y_label, fontsize=fontsize)
-        for tl in ax.get_xticklabels():
-            tl.set_fontsize(0.8*fontsize)
-        for tl in ax.get_yticklabels():
-            tl.set_fontsize(0.8*fontsize)
-    elif scaleind == 'line':
-        width = extent[:,1] - extent[:,0]
-        scale = width.min() / 4.0
-        order = 10.0**int(np.log10(scale))
-        if scale/order<2.0:     scale = 1.0*order
-        elif scale/order<5.0:   scale = 2.0*order
-        else:                   scale = 5.0*order
-        from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
-        from matplotlib.font_manager import FontProperties
-        fp = FontProperties(size=0.9*fontsize)
-        asb =  AnchoredSizeBar(ax.transData, scale,
-                               r'%g $%s$' % (scale, width.units.latex()),
-                               loc=3, pad=0.1, borderpad=0.7, sep=12,
-                               frameon=False, color=fontcolor, fontproperties=fp)
-        ax.add_artist(asb)
-        ax.get_xaxis().set_visible(False)
-        ax.get_yaxis().set_visible(False)
-    else:
-        warnings.warn('Unknown scaling indicator scaleind="%s"!' % scaleind)
+        cbar = add_cbar(ax, cbartitle, clim=clim, cmap=cmap,
+                        fontcolor=fontcolor, fontsize=fontsize)
+
+    make_scale_indicators(ax, extent, scaleind=scaleind, scaleunits=scaleunits,
+                          xaxis=xaxis, yaxis=yaxis, fontsize=fontsize,
+                          fontcolor=fontcolor)
 
     if showcbar:
         return fig, ax, im, cbar
