@@ -21,6 +21,8 @@ package_data = {'pygad.C':              ['cpygad.so'],
                 'pygad.gadget':         ['gadget.cfg'],
                 'pygad.snapshot':       ['derived.cfg'],
                 'pygad.ssp':            ['SSP-model/*']}
+# define scripts
+scripts = ['bin/ginsp', 'bin/gconv']
 
 # find all sub-packages
 modules = []
@@ -60,6 +62,7 @@ try:
           url = 'https://bitbucket.org/broett/pygad',
           packages = map(str,modules),
           package_data = package_data,
+          scripts=scripts,
          )
 except:
     raise
