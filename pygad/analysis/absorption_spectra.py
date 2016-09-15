@@ -15,7 +15,7 @@ Doctests:
     ...     for line in ['H1215', 'OVI1031']:
     ...         print '  ', line
     ...         for method in ['particles', 'line', 'column']:
-    ...             tau, dens, temp, v_edges = mock_absorption_spectrum_of(
+    ...             tau, dens, temp, v_edges, contrib = mock_absorption_spectrum_of(
     ...                 s, los,
     ...                 vel_extent=UnitArr([2400.,3100.], 'km/s'),
     ...                 line=line,
@@ -76,7 +76,8 @@ Doctests:
     >>> environment.verbose = environment.VERBOSE_NORMAL
 """
 __all__ = ['mock_absorption_spectrum_of', 'mock_absorption_spectrum',
-           'EW', 'velocities_to_redshifts']
+           'EW', 'velocities_to_redshifts',
+           'Voigt', 'Gaussian', 'Lorentzian']
 
 from ..units import Unit, UnitArr, UnitQty, UnitScalar
 from ..physics import kB, m_H, c, q_e, m_e, epsilon0
@@ -87,16 +88,90 @@ from .. import environment
 import numpy as np
 
 lines = {
-    'H1215':     {'ion':'HI',     'l':'1215.6701 Angstrom', 'f':0.4164, 'atomwt':m_H},
-    'HeII':      {'ion':'HeII',   'l': '303.918 Angstrom',  'f':0.4173, 'atomwt': '3.971 u'},
-    'CIII977':   {'ion':'CIII',   'l': '977.020 Angstrom',  'f':0.7620, 'atomwt':'12.011 u'},
-    'CIV1548':   {'ion':'CIV',    'l':'1548.195 Angstrom',  'f':0.1908, 'atomwt':'12.011 u'},
-    'OIV787':    {'ion':'OIV',    'l': '787.711 Angstrom',  'f':0.110,  'atomwt':'15.9994 u'},
-    'OVI1031':   {'ion':'OVI',    'l':'1031.927 Angstrom',  'f':0.1329, 'atomwt':'15.9994 u'},
-    'NeVIII770': {'ion':'NeVIII', 'l': '770.409 Angstrom',  'f':0.103,  'atomwt':'20.180 u'},
-    'MgII2796':  {'ion':'MgII',   'l':'2796.352 Angstrom',  'f':0.6123, 'atomwt':'24.305 u'},
-    'SiIV1393':  {'ion':'SiIV',   'l':'1393.755 Angstrom',  'f':0.5280, 'atomwt':'28.086 u'},
+    'H1215':     {'ion':'HI',     'l':'1215.6701 Angstrom', 'f':0.4164,
+                    'atomwt':m_H,       'gamma':'6.06076e-3 km/s'},
+    'HeII':      {'ion':'HeII',   'l': '303.918 Angstrom',  'f':0.4173, 
+                    'atomwt':'3.971 u'},
+    'CIII977':   {'ion':'CIII',   'l': '977.020 Angstrom',  'f':0.7620,
+                    'atomwt':'12.011 u'},
+    'CIV1548':   {'ion':'CIV',    'l':'1548.195 Angstrom',  'f':0.1908,
+                    'atomwt':'12.011 u'},
+    'OIV787':    {'ion':'OIV',    'l': '787.711 Angstrom',  'f':0.110,
+                    'atomwt':'15.9994 u'},
+    'OVI1031':   {'ion':'OVI',    'l':'1031.927 Angstrom',  'f':0.1329,
+                    'atomwt':'15.9994 u'},
+    'NeVIII770': {'ion':'NeVIII', 'l': '770.409 Angstrom',  'f':0.103,
+                    'atomwt':'20.180 u'},
+    'MgII2796':  {'ion':'MgII',   'l':'2796.352 Angstrom',  'f':0.6123,
+                    'atomwt':'24.305 u'},
+    'SiIV1393':  {'ion':'SiIV',   'l':'1393.755 Angstrom',  'f':0.5280,
+                    'atomwt':'28.086 u'},
 }
+lines['Lyman_alpha'] = lines['H1215']
+
+def Gaussian(x, sigma):
+    '''
+    The Gaussian function:
+
+                              1                /    1     x^2    \ 
+    G (x; sigma)  =  --------------------  exp | - --- --------- |
+                      sigma sqrt( 2 pi )       \    2   sigma^2  /
+
+    which is normed to 1.
+
+    Args:
+        x (float, np.ndarray):  The argument of the Gaussian function.
+        sigma (float):          The standard deviation of the Gaussian.
+
+    Returns:
+        y (float, np.ndarray):  The value(s) of the Gaussian.
+    '''
+    return np.exp(-0.5*(x/sigma)**2) / ( sigma * np.sqrt(2.*np.pi) )
+
+def Lorentzian(x, gamma):
+    '''
+    The Lorentz function:
+
+                             gamma
+    L (x; gamma)  =  ----------------------
+                      pi ( x^2 + gamma^2 )
+
+    which is normed to 1.
+
+    Args:
+        x (float, np.ndarray):  The argument of the Gauss function.
+        gamma (float):          The standard deviation of the Gaussian.
+
+    Returns:
+        y (float, np.ndarray):  The value(s) of the Gaussian.
+    '''
+    return gamma / (np.pi * (x**2 + gamma**2))
+
+def Voigt(x, sigma, gamma):
+    '''
+    The Voigt function.
+
+    It is defined as a convolution of a Gaussian and a Lorentz function:
+
+                           oo
+                           /\ 
+    V (x; gamma, sigma) =  |  dx' G(x';sigma) L(x-x';gamma)
+                          \/
+                         -oo
+
+    which is normed to one, since G and L are normed to 1.
+
+    Args:
+        x (float, np.ndarray):  The argument of the Voigt function.
+        sigma (float):          The standard deviation of the Gaussian.
+        gamma (float):          The gamma value of the Lorentz function.
+
+    Returns:
+        y (float, np.ndarray):  The value(s) of the Voigt profile.
+    '''
+    from scipy.special import wofz
+    z = (x + 1j*gamma) / (sigma * np.sqrt(2.))
+    return np.real(wofz(z)) / ( sigma * np.sqrt(2.*np.pi) )
 
 def mock_absorption_spectrum_of(s, los, vel_extent, line, **kwargs):
     '''
@@ -127,6 +202,7 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt, Nbins=1000,
                              spatial_extent=None, spatial_res=None,
                              col_width=None, pad=7,
                              hsml='hsml', kernel=None,
+                             contrib_lims=None,
                              zero_Hubble_flow_at=0,
                              xaxis=0, yaxis=1):
     """
@@ -202,6 +278,11 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt, Nbins=1000,
                                 volume for all particles.
         kernel (str):           The kernel to use for smoothing. (By default use
                                 the kernel defined in `gadget.cfg`.)
+        contrib_lims (UnitQty): The velocity limits for a window of interest. For
+                                each particles the fraction of its line (in
+                                tau-space) is calculated and returned as the
+                                `contributions` array.
+                                Only works for method 'particles'.
         zero_Hubble_flow_at (UnitScalar):
                                 The position along the l.o.s. where there is no
                                 Hubble flow. If not units are given, they are
@@ -217,13 +298,26 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt, Nbins=1000,
         los_temp (UnitArr):     The (mass-weighted) particle temperatures
                                 restricted to the velocity bins (in K).
         v_edges (UnitArr):      The velocities at the bin edges.
+        contributions (np.ndarray):
+                                The fractions of the tau of each particle that
+                                falls into the window of interest defined by
+                                `contrib_lims`.
+                                Only reasonable values for method 'particles'.
     """
     # internally used units
     v_units = Unit('km/s')
     l_units = Unit('cm')
 
-    los = UnitQty(los, s['pos'].units, dtype=float, subs=s)
-    vel_extent = UnitQty(vel_extent, 'km/s', dtype=float, subs=s)
+    los = UnitQty(los, s['pos'].units, dtype=np.float64, subs=s)
+    vel_extent = UnitQty(vel_extent, 'km/s', dtype=np.float64, subs=s)
+    if contrib_lims is None:
+        contrib_lims = vel_extent.copy()
+    else:
+        if method != 'particles':
+            import sys
+            print >> sys.stderr, 'WARNING: asked for contributing masked,', \
+                                 'but method is "%s"' % method
+        contrib_lims = UnitQty(contrib_lims, 'km/s', dtype=np.float64, subs=s)
     l = UnitScalar(l, 'Angstrom')
     f = float(f)
     atomwt = UnitScalar(atomwt, 'u')
@@ -292,7 +386,7 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt, Nbins=1000,
             # do some padding in the 3D binning in order to use the the normation
             # process
             pad = int(pad)
-            Npx = (1+2*pad)*np.ones(3, dtype=int)
+            Npx = (1+2*pad)*np.ones(3, dtype=np.int)
             Npx[zaxis] = N
             # mask for getting the middle column of interest
             m = [pad] * 3
@@ -458,6 +552,8 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt, Nbins=1000,
     taus = np.empty(Nbins, dtype=np.float64)
     los_dens = np.empty(Nbins, dtype=np.float64)
     los_temp = np.empty(Nbins, dtype=np.float64)
+    contrib_lims = contrib_lims.view(np.ndarray).astype(np.float64)
+    contributions = np.empty(N, dtype=np.float64)
     C.cpygad.absorption_spectrum(method == 'particles',
                                  C.c_size_t(N),
                                  C.c_void_p(pos.ctypes.data) if pos is not None else None,
@@ -473,6 +569,8 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt, Nbins=1000,
                                  C.c_void_p(taus.ctypes.data),
                                  C.c_void_p(los_dens.ctypes.data),
                                  C.c_void_p(los_temp.ctypes.data),
+                                 C.c_void_p(contrib_lims.ctypes.data),
+                                 C.c_void_p(contributions.ctypes.data),
                                  C.create_string_buffer(kernel),
                                  C.c_double(s.boxsize.in_units_of(l_units))
     )
@@ -500,7 +598,7 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt, Nbins=1000,
         except:
             pass
 
-    return taus, los_dens, los_temp, v_edges
+    return taus, los_dens, los_temp, v_edges, contributions
 
 def EW(taus, edges):
     '''

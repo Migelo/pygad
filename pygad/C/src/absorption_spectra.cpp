@@ -1,5 +1,9 @@
 #include "absorption_spectra.hpp"
 
+static inline bool in_lims(double v, double *v_lims) {
+    return ( v_lims[0] <= v ) and ( v <= v_lims[1] );
+}
+
 template <bool particles>
 void _absorption_spectrum(size_t N,
                           double *pos,
@@ -15,6 +19,8 @@ void _absorption_spectrum(size_t N,
                           double *taus,
                           double *los_dens,
                           double *los_temp,
+                          double *v_lims,
+                          double *contributions,
                           const char *kernel_,
                           double periodic) {
     double dv = (vel_extent[1] - vel_extent[0]) / Nbins;
@@ -31,6 +37,7 @@ void _absorption_spectrum(size_t N,
 
 #pragma omp parallel for default(shared) schedule(dynamic,10)
     for (size_t j=0; j<N; j++) {
+        contributions[j] = 0.0;  // for proper values when skipping
         double Nj = n[j];
 
         if ( particles ) {
@@ -68,20 +75,41 @@ void _absorption_spectrum(size_t N,
             los_dens[vi_min] += Nj;
 #pragma omp atomic
             los_temp[vi_min] += Tj * Nj;
+
+            if( in_lims(vj,v_lims) )
+                contributions[j] = 1.0;
         } else {
+            double contrib_lim = 0.0;
+            double contrib_total = 0.0;
             // antiderivative of tb_b: int_0_v dv' tb_b(v') = 1/2 * erf(v/b)
             for ( size_t i=vi_min; i<=vi_max; i++ ) {
-                double v0 = (i-vi-0.5) * dv;
-                double v1 = (i-vi+0.5) * dv;
-                double Dtb = 0.5 * (std::erf(v1/b) - std::erf(v0/b));
+                double Dtb;
+                double v = (i-vi) * dv;
+                if ( b < 10.*dv ) {
+                    // standard deviation gets comparable with the bin size, do
+                    // proper integrals of the line-profile over the bins
+                    double v0 = (i-vi-0.5) * dv;
+                    double v1 = (i-vi+0.5) * dv;
+                    Dtb = 0.5 * (std::erf(v1/b) - std::erf(v0/b));
+                } else {
+                    // approximate the line as constant over the bin
+                    Dtb = std::exp(-std::pow(v/b,2.0)) / (b * std::sqrt(M_PI)) * dv;
+                }
                 double DtbNj = Dtb * Nj;
+                // TODO: addtional loop for the Lorentz profile
 #pragma omp atomic
                 taus[i] += DtbNj;
 #pragma omp atomic
                 los_dens[i] += DtbNj;
 #pragma omp atomic
                 los_temp[i] += Tj * DtbNj;
+
+                contrib_total += Dtb;
+                if ( in_lims(v,v_lims) )
+                    contrib_lim += Dtb;
             }
+
+            contributions[j] = contrib_lim/contrib_total;
         }
     }
 
@@ -110,6 +138,8 @@ void absorption_spectrum(bool particles,
                          double *taus,
                          double *los_dens,
                          double *los_temp,
+                         double *v_lims,
+                         double *contributions,
                          const char *kernel_,
                          double periodic) {
     if ( particles ) {
@@ -117,12 +147,14 @@ void absorption_spectrum(bool particles,
                                           los_pos, vel_extent, Nbins,
                                           b_0, Xsec,
                                           taus, los_dens, los_temp,
+                                          v_lims, contributions,
                                           kernel_, periodic);
     } else {
         return _absorption_spectrum<false>(N, pos, vel, hsml, n, temp,
                                            los_pos, vel_extent, Nbins,
                                            b_0, Xsec,
                                            taus, los_dens, los_temp,
+                                           v_lims, contributions,
                                            kernel_, periodic);
     }
 }
