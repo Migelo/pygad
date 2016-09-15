@@ -189,8 +189,12 @@ def mock_absorption_spectrum_of(s, los, vel_extent, line, **kwargs):
                                         atomwt=line['atomwt'],
                                         **kwargs)
     '''
-    if isinstance(line,str):
-        line = lines[line]
+    try:
+        if isinstance(line,str):
+            line = lines[line]
+    except KeyError:
+        raise KeyError("unkown line '%s' -- " +
+                       "see `analysis.absorption_spectra.lines.keys()`" % line)
     return mock_absorption_spectrum(s, los, vel_extent,
                                     line['ion'],
                                     l=line['l'], f=line['f'],
