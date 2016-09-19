@@ -20,7 +20,8 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
           vlim=None, cmap=None, normcmaplum=True, desat=0.1, colors=None,
           colors_av=None, cunits=None, clogscale=None, csurf_dens=None, clim=None,
           ax=None, showcbar=True, cbartitle=None, scaleind='line',
-          scaleunits=None, fontcolor='white', fontsize=14, interpolation='nearest', **kwargs):
+          scaleunits=None, fontcolor='white', fontsize=14,
+          interpolation='nearest', maps=None, **kwargs):
     '''
     Show an image of the snapshot.
 
@@ -119,6 +120,8 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         softening (UnitQty):A list of te softening lengthes that are taken for
                             smoothing the maps of the paticle types. Is
                             consequently has to have length 6. Default: None.
+        maps (dict):        If this is a dictionary, the created 2D grids (qty,
+                            and colors) are added for later use.
         **kwargs:           Further keyword arguments are to pass to map_qty. I
                             want to mention 'softening' here, which is a list of
                             the sotening lengthes used to smooth the maps of the
@@ -284,6 +287,8 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         im_lum = np.log10(im_lum)
         if vlim is not None:
             vlim = map(np.log10, vlim)
+    if maps is not None:
+        maps['qty'] = im_lum
 
     if vlim is None:
         tmp = im_lum[np.isfinite(im_lum)]
@@ -312,6 +317,8 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
             im_col.convert_to(cunits, subs=s)
         if clogscale:
             im_col = np.log10(im_col)
+        if maps is not None:
+            maps['colors'] = im_col
         if clim is None:
             clim = np.percentile(im_col[np.isfinite(im_col)], [0.1,99.99])
         if normcmaplum:
