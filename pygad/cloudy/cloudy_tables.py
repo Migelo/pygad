@@ -370,15 +370,10 @@ class IonisationTable(object):
 
         # add a colorbar
         clim = [self._table[:,:,ion].min(), self._table[:,:,ion].max()]
-        cax = inset_axes(ax, width="70%", height="3%", loc=1)
-        norm = mpl.colors.Normalize(vmin=clim[0], vmax=clim[1])
-        cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm,
-                                         orientation='horizontal')
-        cbar.ax.tick_params(labelsize=8)
-        for tl in cbar.ax.get_xticklabels():
-            tl.set_fontsize(0.65*fontsize)
-        cbar.set_label(r'$\log_{10}(f_\mathrm{%s})$' % ionname,
-                       fontsize=fontsize, labelpad=12)
+        cbar = add_cbar(ax, r'$\log_{10}(f_\mathrm{%s})$' % ionname,
+                        clim=clim, fontsize=fontsize,
+                        nticks=7)
+
 
         return fig, ax, im, cbar
 

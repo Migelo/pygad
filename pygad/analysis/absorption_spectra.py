@@ -192,6 +192,9 @@ def mock_absorption_spectrum_of(s, los, vel_extent, line, **kwargs):
     try:
         if isinstance(line,str):
             line = lines[line]
+        elif not isinstance(line,dict):
+            raise ValueError('`line` needs to be a string or a dictionary, ' +
+                             'not %s!' % type(line))
     except KeyError:
         raise KeyError("unkown line '%s' -- " +
                        "see `analysis.absorption_spectra.lines.keys()`" % line)
