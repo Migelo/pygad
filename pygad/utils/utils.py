@@ -398,7 +398,7 @@ class ProgressBar(object):
     '''
     BEFORE_BAR = '\r\033[?25l'
     AFTER_BAR = '\033[?25h\n'
-    ETA_AVERAGE_OVER = 6
+    ETA_AVERAGE_OVER = 20
 
     def __init__(self, iterable=None, length=None,
                  show_eta=True, show_percent=True, show_iteration=True,
@@ -501,7 +501,13 @@ class ProgressBar(object):
     def time_per_iteration(self):
         if not self._it_times:
             return 0.0
-        return sum(self._it_times) / float(len(self._it_times))
+        dt1 = (self._it_times[-1] - self._it_times[0]) / float(len(self._it_times))
+        dt_all = (self._it_times[-1] - self._start) / float(self._it)
+        if dt1 > 0:
+            # some weighted average
+            return 0.2*dt1 + 0.8*dt_all
+        else:
+            return dt_all
 
     @property
     def eta(self):
@@ -618,7 +624,6 @@ class ProgressBar(object):
             return
 
         self._last_eta = t
-        self._it_times = self._it_times[-self.ETA_AVERAGE_OVER:] \
-                + [(t - self._start) / (self._it)]
+        self._it_times = self._it_times[-self.ETA_AVERAGE_OVER:] + [t]
         self._eta_known = True
 

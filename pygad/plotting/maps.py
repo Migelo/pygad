@@ -366,7 +366,8 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                 cbartitle = r'$\log_{10}$(' + cbartitle + ')'
 
         cbar = add_cbar(ax, cbartitle, clim=clim, cmap=cmap,
-                        fontcolor=fontcolor, fontsize=fontsize)
+                        fontcolor=fontcolor, fontsize=fontsize,
+                        nticks=7)
 
     make_scale_indicators(ax, extent, scaleind=scaleind, scaleunits=scaleunits,
                           xaxis=xaxis, yaxis=yaxis, fontsize=fontsize,

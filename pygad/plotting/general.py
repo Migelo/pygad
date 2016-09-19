@@ -525,7 +525,8 @@ def make_scale_indicators(ax, extent, scaleind='line', scaleunits=None,
     else:
         warnings.warn('Unknown scaling indicator scaleind="%s"!' % scaleind)
 
-def add_cbar(ax, cbartitle, clim, cmap=None, fontcolor='black', fontsize=14):
+def add_cbar(ax, cbartitle, clim, cmap=None, fontcolor='black', fontsize=14,
+             nticks=None, tick_dist=None):
     '''
     Adding a pygad standard colorbar for a map.
 
@@ -537,9 +538,13 @@ def add_cbar(ax, cbartitle, clim, cmap=None, fontcolor='black', fontsize=14):
         fontcolor (str):        The font color for the ticks and the title.
         fontsize (int,float):   The font size of the title (ticks are 0.65 this
                                 size).
+        nticks (int):           Set the number of ticks in the colorbar. If None,
+                                it will be chosen automatically.
+        tick_dist (float):      The distance between the tick labels, i.e. they
+                                are placed at multiples of the given number.
 
     Returns:
-        cbar (Colorbar):         The added colorbar instance.
+        cbar (Colorbar):        The added colorbar instance.
     '''
     from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
@@ -547,6 +552,12 @@ def add_cbar(ax, cbartitle, clim, cmap=None, fontcolor='black', fontsize=14):
     norm = mpl.colors.Normalize(vmin=clim[0], vmax=clim[1])
     cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm,
                                      orientation='horizontal')
+
+    if tick_dist is not None:
+        cbar.locator = mpl.ticker.MultipleLocator(tick_dist)
+    if nticks is not None:
+        cbar.locator = mpl.ticker.MaxNLocator(nbins=nticks)
+    cbar.update_ticks()
 
     cbar.ax.tick_params(labelsize=8)
     for tl in cbar.ax.get_xticklabels():
