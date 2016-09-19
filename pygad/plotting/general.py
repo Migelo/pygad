@@ -424,15 +424,6 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
                              clim=clim, **kwargs)
 
     if showcbar:
-        from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-        cax = inset_axes(ax, width="70%", height="3%", loc=1)
-        norm = mpl.colors.Normalize(vmin=clim[0], vmax=clim[1])
-        cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm,
-                                         orientation='horizontal')
-        cbar.ax.tick_params(labelsize=8)
-        for tl in cbar.ax.get_xticklabels():
-            tl.set_color(fontcolor)
-            tl.set_fontsize(0.65*fontsize)
         if cbartitle is None:
             name = cname if colors is not None else qtyname
             count_units = r'$\mathrm{count}$'
@@ -450,7 +441,9 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
             if (logscale and colors is None) or \
                     (clogscale and colors is not None):
                 cbartitle = r'$\log_{10}$(' + cbartitle + ')'
-        cbar.set_label(cbartitle, color=fontcolor, fontsize=fontsize, labelpad=12)
+
+        cbar = add_cbar(ax, cbartitle, clim=clim, fontcolor=fontcolor,
+                        fontsize=fontsize, nticks=7)
 
     xunits = r'[$%s$]' % x.units.latex() if getattr(x,'units',None) else ''
     yunits = r'[$%s$]' % y.units.latex() if getattr(y,'units',None) else ''
