@@ -398,7 +398,6 @@ class ProgressBar(object):
     '''
     BEFORE_BAR = '\r\033[?25l'
     AFTER_BAR = '\033[?25h\n'
-    ETA_AVERAGE_OVER = 20
 
     def __init__(self, iterable=None, length=None,
                  show_eta=True, show_percent=True, show_iteration=True,
@@ -406,7 +405,7 @@ class ProgressBar(object):
                  fill_char='#', empty_char='.',
                  bar_template='%(label)s  [%(bar)s]  %(info)s',
                  info_sep='  ', file=sys.stdout, label=None,
-                 width=36):
+                 width=36, eta_average_over=20):
         if iterable is None and isinstance(length,int):
             self._length = length
             self._iterable = xrange(length)
@@ -429,10 +428,12 @@ class ProgressBar(object):
         self._auto_width = width is None
         self._width = 0 if width is None else width
         self._item_show_func = item_show_func
+        self._eta_average_over = eta_average_over
 
         self._start = self._last_eta = time.time()
         self._last_line = None
         self._it_times = []
+        self._it_time_its = []
         self._eta_known = False
         self._finished = False
         self._entered = False
@@ -499,15 +500,9 @@ class ProgressBar(object):
 
     @property
     def time_per_iteration(self):
-        if not self._it_times:
+        if len(self._it_times) < 2:
             return 0.0
-        dt1 = (self._it_times[-1] - self._it_times[0]) / float(len(self._it_times))
-        dt_all = (self._it_times[-1] - self._start) / float(self._it)
-        if dt1 > 0:
-            # some weighted average
-            return 0.2*dt1 + 0.8*dt_all
-        else:
-            return dt_all
+        return np.ptp(self._it_times) / float(np.ptp(self._it_time_its))
 
     @property
     def eta(self):
@@ -624,6 +619,8 @@ class ProgressBar(object):
             return
 
         self._last_eta = t
-        self._it_times = self._it_times[-self.ETA_AVERAGE_OVER:] + [t]
+        self._it_times = self._it_times[-self._eta_average_over:] + [t]
+        self._it_time_its = self._it_time_its[-self._eta_average_over:] + \
+                                [self._it]
         self._eta_known = True
 
