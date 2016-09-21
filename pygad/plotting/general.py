@@ -442,7 +442,7 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
                     (clogscale and colors is not None):
                 cbartitle = r'$\log_{10}$(' + cbartitle + ')'
 
-        cbar = add_cbar(ax, cbartitle, clim=clim, fontcolor=fontcolor,
+        cbar = add_cbar(ax, cbartitle, clim=clim, cmap=cmap, fontcolor=fontcolor,
                         fontsize=fontsize, nticks=7)
 
     xunits = r'[$%s$]' % x.units.latex() if getattr(x,'units',None) else ''

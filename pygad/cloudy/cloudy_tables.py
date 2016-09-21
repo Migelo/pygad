@@ -371,7 +371,7 @@ class IonisationTable(object):
         # add a colorbar
         clim = [self._table[:,:,ion].min(), self._table[:,:,ion].max()]
         cbar = add_cbar(ax, r'$\log_{10}(f_\mathrm{%s})$' % ionname,
-                        clim=clim, fontsize=fontsize,
+                        clim=clim, cmap=cmap, fontsize=fontsize,
                         nticks=7)
 
 
