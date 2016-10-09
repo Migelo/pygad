@@ -201,7 +201,8 @@ def isolum_cmap(cmap, desat=None):
     return mpl.colors.LinearSegmentedColormap.from_list(cmap.name + '_lumnormed',
                                                         colors, cmap.N)        
 
-def color_code(im_lum, im_col, cmap='Bright', vlim=None, clim=None):
+def color_code(im_lum, im_col, cmap='Bright', vlim=None, clim=None,
+               zero_is_white=False):
     '''
     Colorcode a mono-chrome image with onother one.
 
@@ -216,6 +217,10 @@ def color_code(im_lum, im_col, cmap='Bright', vlim=None, clim=None):
                                 im_col into actual colors.
         vlim (sequence):        The limits for brightnesses.
         clim (sequence):        The limits for the colors.
+        zero_is_white (bool):   Instead of scaling the image luminance by im_lum,
+                                desaturate the colors to white for im_lum values
+                                approaching the lower limit of vlim (or zero if
+                                this is None).
 
     Returns:
         im (np.ndarray):        The rgb image (shape (w,h,3)).
@@ -231,9 +236,15 @@ def color_code(im_lum, im_col, cmap='Bright', vlim=None, clim=None):
     if isinstance(cmap,str): cmap = mpl.cm.get_cmap(cmap)
     im = cmap(im_col)
 
-    im[:,:,0] *= im_lum
-    im[:,:,1] *= im_lum
-    im[:,:,2] *= im_lum
+    if zero_is_white:
+        white = np.ones( im.shape[:-1] )
+        im[:,:,0] = im_lum*im[:,:,0] + (1.-im_lum)*white
+        im[:,:,1] = im_lum*im[:,:,1] + (1.-im_lum)*white
+        im[:,:,2] = im_lum*im[:,:,2] + (1.-im_lum)*white
+    else:
+        im[:,:,0] *= im_lum
+        im[:,:,1] *= im_lum
+        im[:,:,2] *= im_lum
 
     return im
 
@@ -294,10 +305,11 @@ def show_image(im, extent=None, cmap='Bright', vlim=None, aspect=None,
 
     return fig, ax, im
 
-def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
-                vlim=None, cmap=None, colors=None, colors_av=None, clim=None,
-                clogscale=False, fontcolor=None, fontsize=14, cbartitle=None,
-                showcbar=True, aspect='auto', ax=None, **kwargs):
+def scatter_map(x, y, s=None, qty=None, av=None, bins=150, extent=None,
+                logscale=False, vlim=None, cmap=None, colors=None, colors_av=None,
+                clim=None, clogscale=False, fontcolor=None, fontsize=14,
+                cbartitle=None, showcbar=True, aspect='auto', ax=None,
+                zero_is_white=False, **kwargs):
     '''
     Do a binned scatter plot.
 
@@ -313,6 +325,8 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
                                 colors_av is a string (block name).
         qty (str, array-like):  If given, not just scatter, but actually bin this
                                 quantity onto a grid.
+        av (str, array-like):   If given, plot the average the quantity `qty`,
+                                weighted by this quantity.
         bins (int, sequence):   The number of bins per axis.
         extent (UnitArr):       The extent to plot over:
                                 [[min(x),max(x)],[min(y),max(y)]]
@@ -338,6 +352,10 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
         aspect (str, float):    The aspect ratio of the plot.
         ax (AxesSubplot):       The axis object to plot on. If None, a new one is
                                 created by plt.subplots().
+        zero_is_white (bool):   Instead of scaling the image luminance by `qty` if
+                                if there is a color given, desaturate the colors
+                                to white for `qty` values approaching the lower
+                                limit of vlim (or zero if this is None).
         **kwargs:               Further arguments are passed to show_image.
 
     Returns:
@@ -359,12 +377,14 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
     if isinstance(qty,str):
         qtyname = qty
         qty = s.get(qty)
+    if isinstance(av,str):
+        av = s.get(av)
     if cmap is None:
         cmap = 'cubehelix' if colors is None else 'Bright'
         cmap = mpl.cm.get_cmap(cmap)
-        cmap.set_bad('k')
+        cmap.set_bad('w' if zero_is_white else 'k')
         if fontcolor is None:
-            fontcolor = 'w'
+            fontcolor = 'k' if zero_is_white else 'w'
     if isinstance(cmap,str):
         cmap = mpl.cm.get_cmap(cmap)
     if isinstance(colors,str):
@@ -373,7 +393,7 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
     if isinstance(colors_av,str):
         colors_av = s.get(colors_av)
     if fontcolor is None:
-        fontcolor = 'k'
+        fontcolor = 'k' if zero_is_white else 'w'
 
     if extent is None:
         extent = np.asarray( [[np.min(x), np.max(x)], [np.min(y), np.max(y)]] )
@@ -386,7 +406,14 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
                 extent[1] = extent[1].in_units_of(y.units)
         extent = np.asarray(extent)
 
-    grid = gridbin2d(x, y, qty, bins=bins, extent=extent, nanval=0.0)
+    if av is not None:
+        grid = gridbin2d(x, y, av*qty, bins=bins, extent=extent,
+                        nanval=0.0)
+        grid /= gridbin2d(x, y, av, bins=bins, extent=extent,
+                         nanval=0.0)
+        #grid[np.isnan(grid)] = 0.0
+    else:
+        grid = gridbin2d(x, y, qty, bins=bins, extent=extent, nanval=0.0)
     if getattr(vlim,'units',None) is not None \
             and getattr(grid,'units',None) is not None:
         vlim = vlim.in_units_of(grid.units)
@@ -395,7 +422,7 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
         if vlim is not None:
             vlim = np.log10(vlim)
     if vlim is None:
-        vlim = np.percentile(grid[np.isfinite(grid)], [0,100])
+        vlim = np.percentile(grid[np.isfinite(grid)], [1,99])
 
     if colors is None:
         clim = vlim
@@ -418,7 +445,8 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
             finitegrid = col[np.isfinite(col)]
             clim = [finitegrid.min(), finitegrid.max()]
             del finitegrid
-        grid = color_code(grid, col, cmap=cmap, vlim=vlim, clim=clim)
+        grid = color_code(grid, col, cmap=cmap, vlim=vlim, clim=clim,
+                          zero_is_white=zero_is_white)
 
     fig, ax, im = show_image(grid, extent=extent, cmap=cmap, aspect=aspect, ax=ax,
                              clim=clim, **kwargs)

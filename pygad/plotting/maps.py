@@ -21,7 +21,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
           colors_av=None, cunits=None, clogscale=None, csurf_dens=None, clim=None,
           ax=None, showcbar=True, cbartitle=None, scaleind='line',
           scaleunits=None, fontcolor='white', fontsize=14,
-          interpolation='nearest', maps=None, **kwargs):
+          interpolation='nearest', maps=None, zero_is_white=False, **kwargs):
     '''
     Show an image of the snapshot.
 
@@ -122,6 +122,11 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                             consequently has to have length 6. Default: None.
         maps (dict):        If this is a dictionary, the created 2D grids (qty,
                             and colors) are added for later use.
+        zero_is_white (bool):
+                            Instead of scaling the image luminance by `qty` if
+                            there is a color given, desaturate the colors to white
+                            for `qty` values approaching the lower limit of vlim
+                            (or zero if this is None).
         **kwargs:           Further keyword arguments are to pass to map_qty. I
                             want to mention 'softening' here, which is a list of
                             the sotening lengthes used to smooth the maps of the
@@ -323,7 +328,8 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
             clim = np.percentile(im_col[np.isfinite(im_col)], [0.1,99.99])
         if normcmaplum:
             cmap = isolum_cmap(cmap, desat=desat)
-        im = color_code(im_lum, im_col, cmap=cmap, vlim=vlim, clim=clim)
+        im = color_code(im_lum, im_col, cmap=cmap, vlim=vlim, clim=clim,
+                        zero_is_white=zero_is_white)
 
     fig, ax, im = show_image(im, extent=extent, ax=ax, cmap=cmap, vlim=vlim,
                              interpolation=interpolation)
