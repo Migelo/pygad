@@ -1088,6 +1088,10 @@ class _Snap(object):
         self._root._block_avail[name] = list(ptypes)
         host = self.get_host_subsnap(name)
         if host is not self:
+            print >> sys.stderr, "name:", name
+            print >> sys.stderr, "for particle types:", self._root._block_avail[name]
+            print >> sys.stderr, "self:", self
+            print >> sys.stderr, "host:", host
             del self._root._block_avail[name]
             raise RuntimeError('Can only set new blocks for entire family '
                                'sub-snapshots or the root.')

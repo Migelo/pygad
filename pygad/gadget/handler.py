@@ -347,6 +347,8 @@ def write(snap, filename, blocks=None, gformat=2, endianness='native',
                 hdf5name = snap._root._load_name.get(name)
                 if hdf5name in config.std_name_to_HDF5:
                     hdf5name = config.std_name_to_HDF5[hdf5name]
+                if hdf5name is None:
+                    hdf5name = name
 
                 if environment.verbose >= environment.VERBOSE_NORMAL:
                     print 'writing block', hdf5name,

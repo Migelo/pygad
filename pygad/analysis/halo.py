@@ -100,7 +100,7 @@ def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
     '''
     Find the densest point by shrinking sphere technique.
 
-    Cf. TODO: cite!!!
+    Technique is described in Power et al. (2003).
 
     Args:
         s (Snap):               The (sub-)snapshot to find the densest point for.

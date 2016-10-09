@@ -149,8 +149,8 @@ def center_of_mass(snap):
 
 def reduced_inertia_tensor(s):
     '''
-    Calculate the 'reduced' inertia tensor by Raini and Steinmetz (2005) of this
-    ensemble.
+    Calculate the 'reduced' inertia tensor by Gerhard (1983) / Bailin & Steinmetz
+    (2005) of this ensemble.
 
     $I_ij = \\sum_k m_k \\frac{r_{k,i} r_{k,j}}{r_k^2}$
     I_ij = sum_k m_k (r_ki r_kj) / r_k^2
