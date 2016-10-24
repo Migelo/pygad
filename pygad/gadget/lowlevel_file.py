@@ -147,12 +147,12 @@ def read_header(gfile, gformat, endianness):
     else:
         gfile.seek(4 if gformat == 1 else 4+8+4+4)
 
-        header['N_part'] = list(struct.unpack(endianness + '6i', gfile.read(6*4)))
+        header['N_part'] = list(struct.unpack(endianness + '6I', gfile.read(6*4)))
         header['mass'] = list(struct.unpack(endianness + '6d', gfile.read(6*8)))
         header['time'], header['redshift'], header['flg_sfr'], \
             header['flg_feedback'] \
                 = struct.unpack(endianness + 'd d i i', gfile.read(8+8+4+4))
-        header['N_part_all'] = list(struct.unpack(endianness + '6i', gfile.read(6*4)))
+        header['N_part_all'] = list(struct.unpack(endianness + '6I', gfile.read(6*4)))
         header['flg_cool'], header['N_files'], header['boxsize'], \
             header['Omega_m'], header['Omega_Lambda'], header['h_0'], \
             header['flg_age'], header['flg_metals'], \

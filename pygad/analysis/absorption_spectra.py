@@ -15,14 +15,20 @@ Doctests:
     ...     for line in ['H1215', 'OVI1031']:
     ...         print '  ', line
     ...         for method in ['particles', 'line', 'column']:
-    ...             tau, dens, temp, v_edges, contrib = mock_absorption_spectrum_of(
-    ...                 s, los,
+    ...             tau, dens, temp, v_edges, kernel_int = mock_absorption_spectrum_of(
+    ...                 s, los, line=line,
     ...                 vel_extent=UnitArr([2400.,3100.], 'km/s'),
-    ...                 line=line,
     ...                 method=method,
     ...             )
     ...             N = dens.sum()
     ...             print '    N  = %.3e %s' % (N, N.units)
+    ...             if method == 'particles':
+    ...                 ion_name = lines[line]['ion']
+    ...                 atomwt = UnitArr(lines[line]['atomwt'])
+    ...                 N2 = np.sum(s.gas[ion_name] * kernel_int) / atomwt
+    ...                 N2.convert_to('cm**-2', subs=s)
+    ...                 if np.abs((N2 - N) / N) > 0.01:
+    ...                     print '    N  = %.3e %s' % (N2, N2.units)
     ...             z_edges = velocities_to_redshifts(v_edges, z0=s.redshift)
     ...             l = UnitArr(lines[line]['l'])
     ...             l_edges = l * (1.0 + z_edges)
@@ -173,7 +179,7 @@ def Voigt(x, sigma, gamma):
     z = (x + 1j*gamma) / (sigma * np.sqrt(2.))
     return np.real(wofz(z)) / ( sigma * np.sqrt(2.*np.pi) )
 
-def mock_absorption_spectrum_of(s, los, vel_extent, line, **kwargs):
+def mock_absorption_spectrum_of(s, los, line, vel_extent, **kwargs):
     '''
     Create a mock absorption spectrum for the given line of sight (l.o.s.) for the
     given line transition.
@@ -183,10 +189,10 @@ def mock_absorption_spectrum_of(s, los, vel_extent, line, **kwargs):
 
         if isinstance(line,str):
             line = lines[line]
-        return mock_absorption_spectrum(s, los, vel_extent,
-                                        line['ion'],
+        return mock_absorption_spectrum(s, los, line['ion'],
                                         l=line['l'], f=line['f'],
                                         atomwt=line['atomwt'],
+                                        vel_extent=vel_extent,
                                         **kwargs)
     '''
     try:
@@ -198,18 +204,19 @@ def mock_absorption_spectrum_of(s, los, vel_extent, line, **kwargs):
     except KeyError:
         raise KeyError("unkown line '%s' -- " +
                        "see `analysis.absorption_spectra.lines.keys()`" % line)
-    return mock_absorption_spectrum(s, los, vel_extent,
-                                    line['ion'],
+    return mock_absorption_spectrum(s, los, line['ion'],
                                     l=line['l'], f=line['f'],
                                     atomwt=line['atomwt'],
+                                    vel_extent=vel_extent,
                                     **kwargs)
 
-def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt, Nbins=1000,
+def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
+                             vel_extent, Nbins=1000,
                              method='particles',
                              spatial_extent=None, spatial_res=None,
                              col_width=None, pad=7,
                              hsml='hsml', kernel=None,
-                             contrib_lims=None,
+                             kernel_int_lims=None,
                              zero_Hubble_flow_at=0,
                              xaxis=0, yaxis=1):
     """
@@ -225,8 +232,6 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt, Nbins=1000,
         los (UnitQty):          The position of the l.o.s.. By default understood
                                 as in units of s['pos'], if not explicitly
                                 specified.
-        vel_extent (UnitQty):   The limits of the spectrum in (rest frame)
-                                velocity space. Units default to 'km/s'.
         ion (str, UnitQty):     The block for the masses of the ion that generates
                                 the line asked for (e.g. HI for Lyman alpha or CIV
                                 for CIV1548).
@@ -237,6 +242,8 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt, Nbins=1000,
         f (float):              The oscillatr strength of the line transition.
         atomwt (UnitScalar):    The atomic weight. By default interpreted in
                                 atomic mass units.
+        vel_extent (UnitQty):   The limits of the spectrum in (rest frame)
+                                velocity space. Units default to 'km/s'.
         Nbins (int):            The number of bins for the spectrum.
         method (str):           How to do the binning into velocity space. The
                                 available choices are:
@@ -285,10 +292,12 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt, Nbins=1000,
                                 volume for all particles.
         kernel (str):           The kernel to use for smoothing. (By default use
                                 the kernel defined in `gadget.cfg`.)
-        contrib_lims (UnitQty): The velocity limits for a window of interest. For
+        kernel_int_lims (UnitQty):
+                                The velocity limits for a window of interest. For
                                 each particles the fraction of its line (in
-                                tau-space) is calculated and returned as the
-                                `contributions` array.
+                                tau-space) is calculated and the kernel integral,
+                                returned as the `kernel_int` array, is weighted by
+                                this fraction.
                                 Only works for method 'particles'.
         zero_Hubble_flow_at (UnitScalar):
                                 The position along the l.o.s. where there is no
@@ -305,35 +314,36 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt, Nbins=1000,
         los_temp (UnitArr):     The (mass-weighted) particle temperatures
                                 restricted to the velocity bins (in K).
         v_edges (UnitArr):      The velocities at the bin edges.
-        contributions (np.ndarray):
-                                The fractions of the tau of each particle that
-                                falls into the window of interest defined by
-                                `contrib_lims`.
+        kernel_int (np.ndarray):
+                                The integral of the kernels along the line of
+                                sight, weighted by the fraction of the tau of each
+                                particle that falls into the window of interest
+                                defined by `kernel_int_lims`.
                                 Only reasonable values for method 'particles'.
     """
     # internally used units
     v_units = Unit('km/s')
     l_units = Unit('cm')
 
-    los = UnitQty(los, s['pos'].units, dtype=np.float64, subs=s)
-    vel_extent = UnitQty(vel_extent, 'km/s', dtype=np.float64, subs=s)
-    if contrib_lims is None:
-        contrib_lims = vel_extent.copy()
-    else:
-        if method != 'particles':
-            import sys
-            print >> sys.stderr, 'WARNING: asked for contributing masked,', \
-                                 'but method is "%s"' % method
-        contrib_lims = UnitQty(contrib_lims, 'km/s', dtype=np.float64, subs=s)
-    l = UnitScalar(l, 'Angstrom')
-    f = float(f)
-    atomwt = UnitScalar(atomwt, 'u')
     zaxis = (set([0,1,2]) - set([xaxis,yaxis])).pop()
     if set([xaxis,yaxis,zaxis]) != set([0,1,2]):
         raise ValueError("x- and y-axis must be in [0,1,2] and different!")
+    los = UnitQty(los, s['pos'].units, dtype=np.float64, subs=s)
+    zero_Hubble_flow_at = UnitScalar(zero_Hubble_flow_at, s['pos'].units, subs=s)
+    vel_extent = UnitQty(vel_extent, 'km/s', dtype=np.float64, subs=s)
+    if kernel_int_lims is None:
+        kernel_int_lims = vel_extent.copy()
+    else:
+        if method != 'particles':
+            import sys
+            print >> sys.stderr, 'WARNING: asked for kernel integral masked,', \
+                                 'but method is "%s"' % method
+        kernel_int_lims = UnitQty(kernel_int_lims, 'km/s', dtype=np.float64, subs=s)
+    l = UnitScalar(l, 'Angstrom')
+    f = float(f)
+    atomwt = UnitScalar(atomwt, 'u')
     if kernel is None:
         kernel = gadget.general['kernel']
-    zero_Hubble_flow_at = UnitScalar(zero_Hubble_flow_at, s['pos'].units, subs=s)
 
     b_0 = np.sqrt(2.0 * kB * UnitScalar('1 K') / atomwt)
     b_0.convert_to(v_units)
@@ -559,8 +569,8 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt, Nbins=1000,
     taus = np.empty(Nbins, dtype=np.float64)
     los_dens = np.empty(Nbins, dtype=np.float64)
     los_temp = np.empty(Nbins, dtype=np.float64)
-    contrib_lims = contrib_lims.view(np.ndarray).astype(np.float64)
-    contributions = np.empty(N, dtype=np.float64)
+    kernel_int_lims = kernel_int_lims.view(np.ndarray).astype(np.float64)
+    kernel_int = np.empty(N, dtype=np.float64)
     C.cpygad.absorption_spectrum(method == 'particles',
                                  C.c_size_t(N),
                                  C.c_void_p(pos.ctypes.data) if pos is not None else None,
@@ -576,14 +586,15 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt, Nbins=1000,
                                  C.c_void_p(taus.ctypes.data),
                                  C.c_void_p(los_dens.ctypes.data),
                                  C.c_void_p(los_temp.ctypes.data),
-                                 C.c_void_p(contrib_lims.ctypes.data),
-                                 C.c_void_p(contributions.ctypes.data),
+                                 C.c_void_p(kernel_int_lims.ctypes.data),
+                                 C.c_void_p(kernel_int.ctypes.data),
                                  C.create_string_buffer(kernel),
                                  C.c_double(s.boxsize.in_units_of(l_units))
     )
 
     los_dens = UnitArr(los_dens, 'cm**-2')
     los_temp = UnitArr(los_temp, 'K')
+    kernel_int = UnitArr(kernel_int, l_units**(-2))
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
         # if called with bad parameters sum(taus)==0 and, hence, no normation
@@ -605,7 +616,7 @@ def mock_absorption_spectrum(s, los, vel_extent, ion, l, f, atomwt, Nbins=1000,
         except:
             pass
 
-    return taus, los_dens, los_temp, v_edges, contributions
+    return taus, los_dens, los_temp, v_edges, kernel_int
 
 def EW(taus, edges):
     '''
