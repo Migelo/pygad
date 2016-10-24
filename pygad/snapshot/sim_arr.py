@@ -61,7 +61,7 @@ class SimArr(UnitArr):
         ua = UnitArr(data, units=units, subs=subs, **kwargs)
         
         new = ua.view(subtype)
-        if snap:
+        if snap is not None:
             new._snap = weakref.ref(snap)
         else:
             new._snap = getattr(data,'_snap',lambda: None)
