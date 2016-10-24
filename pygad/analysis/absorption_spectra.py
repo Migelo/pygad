@@ -96,6 +96,8 @@ import numpy as np
 lines = {
     'H1215':     {'ion':'HI',     'l':'1215.6701 Angstrom', 'f':0.4164,
                     'atomwt':m_H,       'gamma':'6.06076e-3 km/s'},
+    'H1025':     {'ion':'HI',     'l':'1025.44 Angstrom',   'f':0.079121,
+                    'atomwt':m_H},
     'HeII':      {'ion':'HeII',   'l': '303.918 Angstrom',  'f':0.4173, 
                     'atomwt':'3.971 u'},
     'CIII977':   {'ion':'CIII',   'l': '977.020 Angstrom',  'f':0.7620,
@@ -114,6 +116,7 @@ lines = {
                     'atomwt':'28.086 u'},
 }
 lines['Lyman_alpha'] = lines['H1215']
+lines['Lyman_beta'] = lines['H1025']
 
 def Gaussian(x, sigma):
     '''

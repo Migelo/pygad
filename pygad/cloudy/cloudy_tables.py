@@ -238,7 +238,9 @@ class IonisationTable(object):
         out_of_bounds = np.sum( low_nH | high_nH | low_T | high_T )
         if out_of_bounds:
             import sys
-            print >> sys.stderr, 'WARNING: %d particles out of bounds!' % out_of_bounds
+            from .. import utils
+            print >> sys.stderr, 'WARNING: %s particles out of bounds!' % \
+                    utils.nice_big_num_str(out_of_bounds)
         # avoid invalid indices in the following (masking would slow down and be
         # not very readable):
         k_nH[ low_nH  ] = 0
