@@ -5,7 +5,7 @@ Doctests are in the functions themselves.
 '''
 __all__ = ['static_vars', 'nice_big_num_str', 'float_to_nice_latex', 'perm_inv',
            'periodic_distance_to', 'sane_slice', 'is_consecutive', 'rand_dir',
-           'ProgressBar']
+           'ProgressBar', 'sec_to_nice_str']
 
 import numpy as np
 import re
@@ -13,6 +13,7 @@ import scipy.spatial.distance
 import sys
 from term import *
 import time
+import numbers
 
 def static_vars(**kwargs):
     '''
@@ -623,4 +624,67 @@ class ProgressBar(object):
         self._it_time_its = self._it_time_its[-self._eta_average_over:] + \
                                 [self._it]
         self._eta_known = True
+
+def sec_to_nice_str(secs, prec=None, days=None):
+    '''
+    Convert a number of seconds to a nice string.
+
+    Args:
+        secs (int, float):  The number of seconds to format into a nice string.
+        prec (int):         The precision of the seconds. If not specified, it
+                            will either just be integer precision for integral
+                            values of secs, or it defaults to a precision of
+                            three otherwise.
+        days (bool):        Whether to print the number of days or just break it
+                            down to hours. When not specified / None, the number
+                            of days is only printed, it the duration (`secs`)
+                            exceeds 24h.
+
+    Returns:
+        repr (str):         A human readable string representation of the time in
+                            (days,) hours, minutes, and seconds.
+
+    Examples:
+        >>> sec_to_nice_str(12345)
+        '3h 25m 45s'
+        >>> sec_to_nice_str(123e4)
+        '14d 5h 40m 0.000s'
+        >>> sec_to_nice_str(int(123e4))
+        '14d 5h 40m 0s'
+        >>> sec_to_nice_str(int(123e4), days=False)
+        '341h 40m 0s'
+        >>> sec_to_nice_str(180, days=True)
+        '0d 0h 3m 0s'
+        >>> sec_to_nice_str(123.456)
+        '0h 2m 3.456s'
+        >>> sec_to_nice_str(123.456, prec=1)
+        '0h 2m 3.5s'
+        >>> sec_to_nice_str(1.23e-7)
+        '0h 0m 0.000000123s'
+        >>> sec_to_nice_str(1.23e-12)
+        '0h 0m 0.000000000s'
+    '''
+    if secs < 0:
+        raise ValueError("Negative durations are not supported!")
+    if not (prec is None or (isinstance(prec,int) and prec>=0)):
+        raise ValueError("Precision needs to be a positive integer!")
+
+    if isinstance(secs,numbers.Integral):
+        tformat = '%dh %dm %ds'
+    else:
+        if prec is None:
+            prec = 3 if secs>1 else min(9,3-np.log10(secs))
+        tformat = '%%dh %%dm %%.%dfs' % prec
+
+    m, s = divmod(secs, 60)
+    m = int(m)
+    h, m = divmod(m, 60)
+
+    if days or (days is None and h >= 24):
+        d, h = divmod(h, 24)
+        string = ('%dd ' + tformat) % (d, h, m, s)
+    else:
+        string = tformat % (h, m, s)
+
+    return string
 
