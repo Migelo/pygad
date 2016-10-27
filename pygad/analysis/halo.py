@@ -82,8 +82,9 @@ Examples:
     >>> assert np.all(gal_2.com == gal.com)
 '''
 __all__ = ['shrinking_sphere', 'virial_info', 'find_FoF_groups',
-           'NO_FOF_GROUP_ID', 'Halo', 'generate_FoF_catalogue',
-           'find_most_massive_progenitor']
+           'NO_FOF_GROUP_ID', 'Rockstar_halo_field_names',
+           'Rockstar_particle_field_names', 'read_Rockstar_file',
+           'Halo', 'generate_FoF_catalogue', 'find_most_massive_progenitor']
 
 import numpy as np
 from .. import utils
@@ -310,6 +311,73 @@ def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True,
         sys.stdout.flush()
 
     return FoF, N_FoF
+
+_ROCKSTAR_HALO_DTYPES = [
+        ('ID','i'), ('internal ID','i'), ('num particles','i'),
+        ('Mvir','f'), ('Mvir bound','f'), ('Rvir','f'), ('vmax','f'),
+        ('vrmax','f'), ('vrms','f'), ('x','f'), ('y','f'), ('z','f'),
+        ('vx','f'), ('vy','f'), ('vz','f'), ('Jx','f'), ('Jy','f'),
+        ('Jz','f'), ('energy','f'), ('spin','f')
+]
+_ROCKSTAR_PART_DTYPES = [
+        ('x','f'), ('y','f'), ('z','f'), ('vx','f'), ('vy','f'), ('vz','f'),
+        ('ID','i'), ('assigned internal ID','i'), ('internal ID','i'),
+        ('external ID','i')
+]
+def Rockstar_halo_field_names():
+    return [name for name,t in _ROCKSTAR_HALO_DTYPES]
+def Rockstar_particle_field_names():
+    return [name for name,t in _ROCKSTAR_PART_DTYPES]
+def read_Rockstar_file(fname):
+    '''
+    Read in a Rockstar file.
+
+    Note:
+        Rockstar had to be run with the option 'FULL_PARTICLE_CHUNKS = 1', in
+        order to output the whole particle data, which is needed here. This is
+        also the file which filename needs to be specified.
+
+    Args:
+        fname (str):            The path to the particle(!) Rockstar output.
+
+    Returns:
+        header (unicode):       The header from the Rockstar file.
+        halos (np.ndarray):     A numpy array with the halo table.
+        particles (np.ndarray): A numpy array with the particle table.
+    '''
+    from io import StringIO
+    import codecs
+    BEFORE_HALO_TBL = '#Halo table begins here:'
+    BEFORE_PART_TBL = '#Particle table begins here:'
+
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'read Rockstar file "%s"' % fname
+    with codecs.open(fname,'r',"utf-8") as f:
+        rs_file = f.read()
+
+    halo_start = rs_file.find(BEFORE_HALO_TBL)
+    particle_start = rs_file.find(BEFORE_PART_TBL)
+
+    # read the header
+    header = rs_file[:halo_start]
+
+    # read the halo table
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print '  read halo table'
+    # get rid of the leading '#'
+    halo_tbl = u'\n'.join( line[1:] \
+                           for line in
+                           rs_file[halo_start+len(BEFORE_HALO_TBL)+1:particle_start].split('\n') )
+    halos = np.loadtxt( StringIO(halo_tbl), dtype=_ROCKSTAR_HALO_DTYPES )
+
+    # read the particle table
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print '  read particle table'
+    particles = np.loadtxt(
+            StringIO(rs_file[particle_start+len(BEFORE_PART_TBL)+1:]),
+            dtype=_ROCKSTAR_PART_DTYPES )
+
+    return header, halos, particles
 
 class Halo(object):
     '''
