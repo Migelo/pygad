@@ -56,7 +56,7 @@ Examples:
     load block ID... done.
     initialized 3 halos.
     >>> galaxies[0] # doctest: +ELLIPSIS
-    <Halo N = 55,... /w M = 3.1e+10 [Msol] @ com = [0..., 0..., 0...] [kpc]>
+    <Halo @0x..., N = 55,..., M = 3.1e+10 [Msol]>
     >>> gal = s[galaxies[0]]
     >>> assert len(gal) == len(galaxies[0])
     >>> assert set(gal['ID']) == set(galaxies[0].IDs)
@@ -64,7 +64,8 @@ Examples:
     >>> assert gal['mass'].sum() == galaxies[0].props['mass']
     >>> assert gal.stars['mass'].sum() == galaxies[0].Mstars
     >>> gal = galaxies[0]
-    >>> gal._calc_prop('ssc', s)
+    >>> gal.calc_prop('ssc', root=s)    # doctest:+ELLIPSIS
+    UnitArr([...], units="kpc")
     >>> if np.linalg.norm(gal.ssc - gal.com) > '1.0 kpc':
     ...     print gal.ssc
     ...     print gal.com
@@ -318,24 +319,27 @@ class Halo(object):
     as total mass and R200) are calculated.
 
     Args:
-        halo (Snap):                The sub-snapshot that defines the halo.
-
-        alternatively:
-
         IDs (set, array-like):      The IDs that define the halo.
-        snap (Snap):                Some (sub-)snapshot that entirely contains the
-                                    halo defining IDs.
-
+        halo (Snap):                A sub-snapshot that defines the halo. Only
+                                    used if `IDs` is None.
         calc (set, list, tuple):    A list of the properties to calculate at
-                                    isinstantiation.
-                                    'mass', 'com', and 'parts' are always
-                                    calculated (since they might be needed by some
-                                    of the other properties anyway).
-                                    If calc='all' -- the default --, all defined
-                                    properties are calculated.
+                                    instantiation.
+                                    If calc='all', all defined properties are
+                                    calculated.
                                     For an overview of the available properties
-                                    see `Halo.calculable_props()` and
+                                    see `Halo.calculable_props()` (also see
                                     `Halo.prop_descr(pro_name)`.
+        root (Snap):                Some (sub-)snapshot that entirely contains the
+                                    halo-defining IDs. It is only needed in case
+                                    properties are about to calculate and `halo`
+                                    is not given, otherwise it will be set to
+                                    `halo.root`.
+        properties (dict):          Properties to be set. This is done before the
+                                    property calculation, meaning if a property
+                                    would be calculated otherwise, it will not be
+                                    if specified here.
+        testing (bool):             Perform some (rather compute intensive)
+                                    consistency checks.
     '''
     __long_name_prop__ = {
             'mass':     'total mass',
@@ -380,125 +384,69 @@ class Halo(object):
         return Halo.__long_name_prop__.get(name, 'unknown')
 
 
-    def __init__(self, halo=None, IDs=None, snap=None, calc='all'):
-        if halo is None:
-            halo = snap[IDMask(IDs)]
-            if len(halo) != len(IDs):
-                print >> sys.stderr, 'WARNING: The given snapshot does not ' + \
-                                     'contain all specified IDs!'
-        elif IDs is not None:
-            raise ValueError('If the sub-snapshot `halo` is given, the Halo ' + \
-                             'will be defined by this and `IDs` must be None ' + \
-                             'to avoid confusion!')
-        elif snap is not None:
-            if halo.root is not snap.root:
-                raise ValueError('If the sub-snapshot `halo` and `snap` are ' + \
-                                 'given, they must have the same root ' + \
-                                 'snapshot to avoid confusion!')
+    def __init__(self, IDs=None, halo=None,
+                 calc=None, root=None,
+                 properties=None, testing=False):
+        if IDs is None:
+            if halo is None:
+                raise ValueError('Halo needs to be defined by either an ID list '
+                                 '(`IDs`) or a sub-snapshot (`halo`)!')
+            IDs = halo['ID']
 
         # the defining property:
-        self._IDs = np.array(halo['ID'])
-
-        # derive some properties
+        self._IDs = np.array(IDs, copy=True)
+        # property dictionary
         self._props = {}
+
+        # add the predefined properties
+        if properties is not None:
+            for prop, val in properties.iteritems():
+                self._props[prop.replace(' ','_')] = val
+
+        # some testing for consistency
+        if testing:
+            IDset = set(self._IDs)
+            if len(IDset) != len(self._IDs):
+                raise ValueError('ID list is not unique!')
+            if halo is None and root is not None:
+                halo = root[IDMask(self._IDs)]
+            if root is None and halo is not None:
+                root = halo.root
+            if root is not halo.root:
+                raise ValueError('`halo` and `root` are inconsistent!')
+            if len(IDset - set(root['ID'])) > 0:
+                print >> sys.stderr, 'WARNING: Not all IDs are in the ' + \
+                                     'root snapshot!'
+        if halo is not None and len(halo) != len(self._IDs):
+            print >> sys.stderr, 'WARNING: The given halo does not ' + \
+                                 'contain all specified IDs!'
+
+        # calculate the properties asked for
+
+        if calc is None:
+            return
+        if halo is None:
+            if root is None:
+                raise ValueError('Need `halo` or `root` to calculate properties!')
+            halo = root[IDMask(self._IDs)]
+            if len(halo) != len(self._IDs):
+                print >> sys.stderr, 'WARNING: The given snapshot does not ' + \
+                                     'contain all specified IDs!'
+        elif root is not None and testing:
+            if root is not halo.root:
+                print >> sys.stderr, 'WARNING: `halo` and `root` are ' + \
+                                     'inconsistent!'
+        if root is None:
+            root = halo.root
+
         if calc == 'all':
             calc = Halo.calculable_props()
-        calc = set(calc) - set(['mass', 'com', 'parts'])
-        self._calc_prop('mass', halo=halo, snap=snap, recompute=False)
-        self._calc_prop('com', halo=halo, snap=snap, recompute=False)
-        self._calc_prop('parts', halo=halo, snap=snap, recompute=False)
         for prop in calc:
-            self._calc_prop(prop, halo=halo, snap=snap, recompute=False)
-
-    def _calc_prop(self, prop, snap=None, halo=None, recompute=True):
-        if not recompute and prop in self._props:
-            return
-
-        if halo is None:
-            halo = snap[self.mask]
-
-        if prop == 'mass':
-            val = halo['mass'].sum()
-        elif prop == 'com':
-            val = center_of_mass(halo)
-        elif prop == 'parts':
-            val = tuple(halo.parts)   # shall not change!
-        elif prop in ['Mstars', 'Mgas', 'Mdm']:
-            sub = getattr(halo, prop[1:], None)
-            if sub is None:
-                val = UnitScalar(0.0, halo['mass'].units)
-            else:
-                val = sub['mass'].sum()
-        elif prop == 'vel':
-            val = mass_weighted_mean(halo, 'vel')
-        elif prop == 'vel_sigma':
-            v0 = mass_weighted_mean(halo, 'vel')
-            val = np.sqrt(np.sum(mass_weighted_mean(halo,'vel**2') - v0**2))
-        elif prop == 'ssc':
-            R_max = np.percentile(periodic_distance_to(halo['pos'],
-                                                       self.com,
-                                                       halo.boxsize),
-                                  90)
-            val = shrinking_sphere(halo, center=self.com,
-                                   R=R_max, verbose=False)
-        elif prop == 'Rmax':
-            val = periodic_distance_to(halo['pos'], self.com,
-                                       halo.boxsize).max()
-        elif prop[0] in ['R','M'] and (prop[1:4]=='vir' or prop[1:4].isdigit()) \
-                and prop[4]=='_':
-            qty = prop[0]
-            odens_n = prop[1:4]
-            scheme = prop[5:]
-            odens = 18.*np.pi**2 if odens_n=='vir' else float(odens_n)
-            if scheme == 'FoF':
-                rho_crit = halo.cosmology.rho_crit( z=halo.redshift )
-                rho_crit.convert_to(halo['mass'].units/halo['pos'].units**3,
-                                    subs=halo)
-                r3 = 3.0 * self.mass / (4.0*np.pi * odens*rho_crit)
-                val = r3 ** Fraction(1,3)
-            else:
-                if snap is None:
-                    raise ValueError('Requested %s, but `snap` is None!' % prop)
-                if scheme == 'com':
-                    center = self.com
-                elif scheme == 'ssc':
-                    if 'ssc' not in self._props:
-                        self._calc_prop('ssc', snap=snap, halo=halo,
-                                        recompute=False)    # TODO: correct?!
-                    center = self.ssc
-                else:
-                    raise ValueError('Unknown scheme for property "%s"!' % prop)
-                Rodens, Modens = virial_info(snap, center=center, odens=odens)
-                val = Rodens if qty=='R' else Modens
-                # don't waste the additional information!
-                for qty in ['R', 'M']:
-                    name = qty+odens_n+'_'+scheme
-                    # if we recompute some property, it might be requested to keep
-                    # old values...
-                    if not recompute and name not in self._props:
-                        self._props[name] = Rodens if qty=='R' else Modens
-        elif prop == 'lowres_part':
-            low = getattr(halo, 'lowres', None)
-            val = 0 if low is None else len(low)
-        elif prop == 'lowres_mass':
-            low = getattr(halo, 'lowres', None)
-            if low is None:
-                val = UnitScalar(0.0, halo['mass'].units)
-            else:
-                val = low['mass'].sum()
-        else:
-            raise ValueError('Unknown property "%s"!' % prop)
-
-        self._props[prop] = val
+            self.calc_prop(prop, halo=halo, root=root, recompute=False)
 
     @property
     def IDs(self):
-        '''
-        The defining IDs.
-        
-        Note:
-            If changed, the halo properties do not getupdated!
-        '''
+        '''The defining IDs.'''
         return self._IDs
 
     @property
@@ -529,15 +477,136 @@ class Halo(object):
         raise AttributeError('%s has no attribute "%s"!' % (self, name))
 
     def __repr__(self):
-        r = '<Halo N = %s' % nice_big_num_str(len(self))
-        r += ' /w M = %.2g %s' % (self.mass, self.mass.units)
-        r += ' @ com = [%.2g, %.2g, %.2g] %s' % (
-                tuple(self.com) + (self.com.units,))
+        r = '<Halo @%s' % hex(id(self))
+        try:
+            r += ', N = %s' % nice_big_num_str(len(self))
+        except:
+            pass
+        try:
+            r += ', M = %.2g %s' % (self.mass, self.mass.units)
+        except:
+            pass
         r += '>'
         return r
 
     def __len__(self):
-        return sum(self._props['parts'])
+        if 'parts' in self._props:
+            return sum(self._props['parts'])
+        else:
+            return None
+
+    def _get(self, prop, halo=None, root=None, recompute=False):
+        if recompute or prop not in self._props:
+            self.calc_prop(prop, halo=halo, root=root)
+        return self._props[prop]
+
+    def calc_prop(self, prop='all', halo=None, root=None, recompute=True):
+        '''
+        Calculate a (defined) property.
+
+        Args:
+            prop (str):         The property's name to compute. If it is 'all',
+                                all properties in `Halo.calculable_props()` are
+                                computed.
+            halo (Snap):        The (sub-)snapshot of this halo, i.e. `root[self]`
+                                where `root` is the root snapshot.
+            root (Snap):        The root snapshot of this halo. Does not need to
+                                be specified, but if `halo` is None, it will be
+                                set by masking this root with the IDMask of this
+                                halo.
+            recompute (bool):   Recompute this quantity even if it already is
+                                stored in the properties dictionary.
+
+        Returns:
+            val (...):      The value of the property calculated (or just taken
+                            from the properties dictionary, if recompute=False).
+                            In case of calc='all', the entire property dictionary
+                            is returned.
+        '''
+        # preparation
+        if not recompute and (prop!='all' and prop in self._props):
+            return self._props[prop]
+        if halo is None:
+            halo = root[self.mask]
+        elif root is None:
+            root = halo.root
+        args = {'halo':halo, 'root':root, 'recompute':recompute}
+
+        # handle special case
+        if prop == 'all':
+            for prop in Halo.calculable_props():
+                self.calc_prop(prop, **args)
+            return self.props
+
+        # compute the requested
+        if prop == 'mass':
+            val = halo['mass'].sum()
+        elif prop == 'com':
+            val = center_of_mass(halo)
+        elif prop == 'parts':
+            val = tuple(halo.parts)   # shall not change!
+        elif prop in ['Mstars', 'Mgas', 'Mdm']:
+            sub = getattr(halo, prop[1:], None)
+            if sub is None:
+                val = UnitScalar(0.0, halo['mass'].units)
+            else:
+                val = sub['mass'].sum()
+        elif prop == 'vel':
+            val = mass_weighted_mean(halo, 'vel')
+        elif prop == 'vel_sigma':
+            v0 = mass_weighted_mean(halo, 'vel')
+            val = np.sqrt(np.sum(mass_weighted_mean(halo,'vel**2') - v0**2))
+        elif prop == 'ssc':
+            com = self._get('com', **args)
+            R_max = np.percentile(periodic_distance_to(halo['pos'],
+                                                       com,
+                                                       halo.boxsize),
+                                  90)
+            val = shrinking_sphere(halo, center=com,
+                                   R=R_max, verbose=False)
+        elif prop == 'Rmax':
+            val = periodic_distance_to(halo['pos'], self._get('com', **args),
+                                       halo.boxsize).max()
+        elif prop[0] in ['R','M'] and (prop[1:4]=='vir' or prop[1:4].isdigit()) \
+                and prop[4]=='_':
+            qty = prop[0]
+            odens_n = prop[1:4]
+            scheme = prop[5:]
+            odens = 18.*np.pi**2 if odens_n=='vir' else float(odens_n)
+            if scheme == 'FoF':
+                rho_crit = halo.cosmology.rho_crit( z=halo.redshift )
+                rho_crit.convert_to(halo['mass'].units/halo['pos'].units**3,
+                                    subs=halo)
+                mass = self._get('mass', **args)
+                r3 = 3.0 * mass / (4.0*np.pi * odens*rho_crit)
+                val = r3 ** Fraction(1,3)
+            else:
+                if scheme not in ['com', 'ssc']:
+                    raise ValueError('Unknown scheme for property "%s"!' % prop)
+                center = self._get(scheme, **args)
+                Rodens, Modens = virial_info(root, center=center, odens=odens)
+                val = Rodens if qty=='R' else Modens
+                # don't waste the additional information!
+                for qty in ['R', 'M']:
+                    name = qty+odens_n+'_'+scheme
+                    # if we recompute some property, it might be requested to keep
+                    # old values...
+                    if not recompute and name not in self._props:
+                        self._props[name] = Rodens if qty=='R' else Modens
+        elif prop == 'lowres_part':
+            low = getattr(halo, 'lowres', None)
+            val = 0 if low is None else len(low)
+        elif prop == 'lowres_mass':
+            low = getattr(halo, 'lowres', None)
+            if low is None:
+                val = UnitScalar(0.0, halo['mass'].units)
+            else:
+                val = low['mass'].sum()
+        else:
+            raise ValueError('Unknown property "%s"!' % prop)
+
+        self._props[prop] = val
+        return val
 
 def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
                            max_halos=None, ret_FoFs=False,
@@ -554,7 +623,7 @@ def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
                             l=None).
         calc (set, list, tuple):
                             A list of the properties to calculate at instantiation
-                            of the Halo instances.
+                            of the Halo instances. (Cf. also `Halo`.)
         FoF (np.array):     An array with group IDs for each particle in the
                             snapshot `s`. If given, `l` is ignored and the FoF
                             groups are not calculated within this function.
@@ -593,7 +662,7 @@ def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
 
     halos = []
     for i in xrange(N_FoF):
-        h = Halo(s[FoF==i], snap=s, calc=calc)
+        h = Halo(halo=s[FoF==i], root=s, calc=calc)
         if exclude is None or not exclude(h,s):
             halos.append( h )
         if len(halos)==max_halos:
