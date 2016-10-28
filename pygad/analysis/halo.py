@@ -709,7 +709,8 @@ class Halo(object):
                             is returned.
         '''
         # preparation
-        if not recompute and (prop!='all' and prop in self._props):
+        if not recompute and (isinstance(prop,(str,unicode)) and prop!='all'
+                                    and prop in self._props):
             return self._props[prop]
         if halo is None:
             halo = root[self.mask]
@@ -717,10 +718,14 @@ class Halo(object):
             root = halo.root
         args = {'halo':halo, 'root':root, 'recompute':recompute}
 
-        # handle special case
+        # handle special cases
         if prop == 'all':
-            for prop in Halo.calculable_props():
-                self.calc_prop(prop, **args)
+            for p in Halo.calculable_props():
+                self.calc_prop(p, **args)
+            return self.props
+        if isinstance(prop, (list,tuple,np.ndarray)):
+            for p in prop:
+                self.calc_prop(p, **args)
             return self.props
 
         # compute the requested
