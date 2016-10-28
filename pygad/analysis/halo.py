@@ -314,16 +314,16 @@ def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True,
     return FoF, N_FoF
 
 _ROCKSTAR_HALO_DTYPES = [
-        ('ID','i'), ('internal ID','i'), ('num particles','i'),
-        ('Mvir','f'), ('Mvir bound','f'), ('Rvir','f'), ('vmax','f'),
-        ('vrmax','f'), ('vrms','f'), ('x','f'), ('y','f'), ('z','f'),
+        ('id','i'), ('internal_id','i'), ('num_p','i'),
+        ('mvir','f'), ('mbound_vir','f'), ('rvir','f'), ('vmax','f'),
+        ('rvmax','f'), ('vrms','f'), ('x','f'), ('y','f'), ('z','f'),
         ('vx','f'), ('vy','f'), ('vz','f'), ('Jx','f'), ('Jy','f'),
         ('Jz','f'), ('energy','f'), ('spin','f')
 ]
 _ROCKSTAR_PART_DTYPES = [
         ('x','f'), ('y','f'), ('z','f'), ('vx','f'), ('vy','f'), ('vz','f'),
-        ('ID','i'), ('assigned internal ID','i'), ('internal ID','i'),
-        ('external ID','i')
+        ('particle_id','i'), ('assigned_internal_haloid','i'),
+        ('internal_haloid','i'), ('external_haloid','i')
 ]
 def Rockstar_halo_field_names():
     return [name for name,t in _ROCKSTAR_HALO_DTYPES]
@@ -395,8 +395,8 @@ def generate_Rockstar_halos(fname, snap, exclude=None, nosubs=True, data=None, *
         exclude (function): Exclude all halos h for which `exclude(h,snap)`
                             returns a true value. Here `h` is the halo information
                             from the Rockstar file, i.e. a np.ndarray with named
-                            fields (for instance: `h['num particles']` is the
-                            number of particles in that halos).
+                            fields (for instance: `h['num_p']` is the number of
+                            particles in that halos).
                             For all fields see `halo.Rockstar_halo_field_names()`.
         nosubs (bool):      TODO
         data (dict):        If a dictionary is passed, it will hold the Rockstar
@@ -405,6 +405,7 @@ def generate_Rockstar_halos(fname, snap, exclude=None, nosubs=True, data=None, *
                             Furthermore, if it already contains these two entries,
                             `fname` is ignored and this data is taken for the
                             generation.
+        **kwargs            Further arguments are passed to `Halo.__init__`.
 
     Returns:
         halos (list):       A list of Halo class instances created from the
@@ -433,9 +434,9 @@ def generate_Rockstar_halos(fname, snap, exclude=None, nosubs=True, data=None, *
     start_time = time.time()
     # exclude non-physical halos and those excluded specifically
     halos = [ h for h in data['halos']
-              if ((h['ID']!=-1) and not (exclude and exclude(h,snap))) ]
+              if ((h['id']!=-1) and not (exclude and exclude(h,snap))) ]
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'preselection from %s down to %s halos' % (
+        print 'pre-selection from %s down to %s halos' % (
                 len(data['halos']), len(halos))
 
     # load blocks needed in order to avoid cluttering the progress bar
@@ -458,33 +459,34 @@ def generate_Rockstar_halos(fname, snap, exclude=None, nosubs=True, data=None, *
             # create mask for the particle data
             # 1st requirement: restrict to chosen halo
             # 2nd requirement: exclude substructures
-            mask = (parts['external ID'] == h['ID'])
+            mask = (parts['external_haloid'] == h['id'])
             if nosubs:
-                mask &= (parts['internal ID'] == parts['assigned internal ID'])
+                mask &= (parts['internal_haloid'] ==
+                            parts['assigned_internal_haloid'])
 
             # enrich the halo properties (e.g. by units)
             prop = { dt[0]:val for dt,val in zip(_ROCKSTAR_HALO_DTYPES,h) }
             for name in ['x','y','z','vx','vy','vz','Jx','Jy','Jz']:
                 del prop[name]
             prop.update( {
-                'Mvir':       UnitArr(h['Mvir'], 'Msol/h_0'),
-                'Mvir bound': UnitArr(h['Mvir bound'], 'Msol/h_0'),
+                'mvir':       UnitArr(h['mvir'], 'Msol/h_0'),
+                'mbound_vir': UnitArr(h['mbound_vir'], 'Msol/h_0'),
                 'center':     UnitArr([h['x'],h['y'],h['z']],'cMpc/h_0'),
                 'vel':        UnitArr([h['vx'],h['vy'],h['vz']],'km/s'),
                 'vmax':       UnitArr(h['vmax'],'km/s'),
-                'vrmax':      UnitArr(h['vrmax'],'km/s'),
+                'rvmax':      UnitArr(h['rvmax'],'km/s'),
                 'vrms':       UnitArr(h['vrms'],'km/s'),
                 'J':          UnitArr([h['Jx'],h['Jy'],h['Jz']],
                                       'Msol/h_0 * Mpc/h_0 * km/s'),
                 'energy':     UnitArr(h['energy'], 'Msol/h_0 * (km/s)**2'),
             } )
             #TODO: are these quantities those?
-            #prop['mass'] = prop['Mvir']
+            #prop['mass'] = prop['mvir']
             #prop['com']  = prop['center']
             # (over-)write specified properties
             prop.update( properties )
 
-            halo = Halo(IDs=parts['ID'][mask], root=snap,
+            halo = Halo(IDs=parts['particle_id'][mask], root=snap,
                         properties=prop, **kwargs)
             halo_classes.append( halo )
     duration = time.time() - start_time
@@ -558,14 +560,13 @@ class Halo(object):
 
     @staticmethod
     def calculable_props():
-        '''A list of the properties that can be calculated (c.f. `calc` of
-        `__init__`).'''
+        '''A list of the properties that can be calculated.'''
         return Halo.__long_name_prop__.keys()
 
     @staticmethod
     def prop_descr(name):
         '''Long description of a property.'''
-        return Halo.__long_name_prop__.get(name, 'unknown')
+        return Halo.__long_name_prop__.get(name, '<unknown>')
 
 
     def __init__(self, IDs=None, halo=None,
