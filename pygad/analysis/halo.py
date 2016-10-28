@@ -84,7 +84,8 @@ Examples:
 __all__ = ['shrinking_sphere', 'virial_info', 'find_FoF_groups',
            'NO_FOF_GROUP_ID', 'Rockstar_halo_field_names',
            'Rockstar_particle_field_names', 'read_Rockstar_file',
-           'Halo', 'generate_FoF_catalogue', 'find_most_massive_progenitor']
+           'generate_Rockstar_halos', 'Halo', 'generate_FoF_catalogue',
+           'find_most_massive_progenitor']
 
 import numpy as np
 from .. import utils
@@ -378,6 +379,121 @@ def read_Rockstar_file(fname):
             dtype=_ROCKSTAR_PART_DTYPES )
 
     return header, halos, particles
+
+def generate_Rockstar_halos(fname, snap, exclude=None, nosubs=True, data=None, **kwargs):
+    '''
+    Create a list of halos from a Rockstar particle file.
+
+    Args:
+        fname (str):        The path to the particle(!) Rockstar output. (Cf. also
+                            `read_Rockstar_file`!)
+                            This argument is ignored, if `data` contains 'halos'
+                            and 'particle'.
+        snap (Snap):        The corresponding snapshot. Can be None, if used in
+                            neither `exclude` nor calculation of the Halo classes
+                            are requested.
+        exclude (function): Exclude all halos h for which `exclude(h,snap)`
+                            returns a true value. Here `h` is the halo information
+                            from the Rockstar file, i.e. a np.ndarray with named
+                            fields (for instance: `h['num particles']` is the
+                            number of particles in that halos).
+                            For all fields see `halo.Rockstar_halo_field_names()`.
+        nosubs (bool):      TODO
+        data (dict):        If a dictionary is passed, it will hold the Rockstar
+                            tables for the halos and particles after the function
+                            call.
+                            Furthermore, if it already contains these two entries,
+                            `fname` is ignored and this data is taken for the
+                            generation.
+
+    Returns:
+        halos (list):       A list of Halo class instances created from the
+                            Rockstar output.
+    '''
+    # get the data / create dictionary to return them
+    if data is not None and 'halos' in data and 'particles' in data:
+        pass
+    else:
+        if data is None:
+            data = {}
+        # read the Rockstar file
+        import time
+        start_time = time.time()
+        data['header'], data['halos'], data['particles'] = read_Rockstar_file(fname)
+        if environment.verbose >= environment.VERBOSE_NORMAL:
+            print 'loaded in %.2f sec' % (time.time()-start_time)
+
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'create halo list from the Rockstar data'
+    halo_classes = []
+    parts = data['particles']
+
+    halos = data['halos']
+    import time
+    start_time = time.time()
+    # exclude non-physical halos and those excluded specifically
+    halos = [ h for h in data['halos']
+              if ((h['ID']!=-1) and not (exclude and exclude(h,snap))) ]
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'preselection from %s down to %s halos' % (
+                len(data['halos']), len(halos))
+
+    # load blocks needed in order to avoid cluttering the progress bar
+    if snap is not None:
+        snap['ID']
+        snap['pos']
+        snap['mass']
+
+    if 'calc' not in kwargs:
+        kwargs['calc'] = None
+    if 'properties' in kwargs:
+        properties = kwargs['properties']
+        del kwargs['properties']
+    else:
+        properties = {}
+    start_time = time.time()
+    with ProgressBar(halos, label='initialize halos', show_eta=False,
+                     show_percent=False) as pbar:
+        for h in pbar:
+            # create mask for the particle data
+            # 1st requirement: restrict to chosen halo
+            # 2nd requirement: exclude substructures
+            mask = (parts['external ID'] == h['ID'])
+            if nosubs:
+                mask &= (parts['internal ID'] == parts['assigned internal ID'])
+
+            # enrich the halo properties (e.g. by units)
+            prop = { dt[0]:val for dt,val in zip(_ROCKSTAR_HALO_DTYPES,h) }
+            for name in ['x','y','z','vx','vy','vz','Jx','Jy','Jz']:
+                del prop[name]
+            prop.update( {
+                'Mvir':       UnitArr(h['Mvir'], 'Msol/h_0'),
+                'Mvir bound': UnitArr(h['Mvir bound'], 'Msol/h_0'),
+                'center':     UnitArr([h['x'],h['y'],h['z']],'cMpc/h_0'),
+                'vel':        UnitArr([h['vx'],h['vy'],h['vz']],'km/s'),
+                'vmax':       UnitArr(h['vmax'],'km/s'),
+                'vrmax':      UnitArr(h['vrmax'],'km/s'),
+                'vrms':       UnitArr(h['vrms'],'km/s'),
+                'J':          UnitArr([h['Jx'],h['Jy'],h['Jz']],
+                                      'Msol/h_0 * Mpc/h_0 * km/s'),
+                'energy':     UnitArr(h['energy'], 'Msol/h_0 * (km/s)**2'),
+            } )
+            #TODO: are these quantities those?
+            #prop['mass'] = prop['Mvir']
+            #prop['com']  = prop['center']
+            # (over-)write specified properties
+            prop.update( properties )
+
+            halo = Halo(IDs=parts['ID'][mask], root=snap,
+                        properties=prop, **kwargs)
+            halo_classes.append( halo )
+    duration = time.time() - start_time
+
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'created a list of %s halos in %s' % (
+                nice_big_num_str(len(halo_classes)), sec_to_nice_str(duration))
+
+    return halo_classes
 
 class Halo(object):
     '''
