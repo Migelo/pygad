@@ -4,7 +4,7 @@ Some general (low-level) functions.
 Also doctest other parts of this sub-module:
     >>> import doctest
     >>> doctest.testmod(utils)
-    TestResults(failed=0, attempted=35)
+    TestResults(failed=0, attempted=44)
     >>> doctest.testmod(safe_eval)
     TestResults(failed=0, attempted=9)
     >>> doctest.testmod(term)

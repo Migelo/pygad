@@ -11,7 +11,7 @@ Examples:
     >>> general
     {'always_cache': set(['Ekin', 'temp', 'age', 'mag*', 'angmom', 'LX', 'jcirc']), 'cache_derived': True}
     >>> iontable
-    {'ions': ['H I', 'He I', 'He II', 'C II', 'C III', 'C IV', 'N V', 'O VI', 'Mg II', 'Si II', 'Si III', 'Si IV', 'P IV', 'S VI'], 'selfshield': True, 'pattern': 'lt<z>f10', 'tabledir': 'pygad//../iontbls/', 'flux_factor': 1.0, 'T_vals': [2.5, 0.05, 150.0], 'nH_vals': [-8.0, 0.05, 160.0]}
+    {'ions': ['H I', 'He I', 'He II', 'C II', 'C III', 'C IV', 'N I', 'N II', 'N V', 'O I', 'O II', 'O III', 'O IV', 'O V', 'O VI', 'Mg II', 'Mg III', 'Si II', 'Si III', 'Si IV', 'P IV', 'S I', 'S II', 'S III', 'S IV', 'S V', 'S VI'], 'selfshield': True, 'pattern': 'lt<z>f10', 'tabledir': 'pygad//../iontbls/', 'flux_factor': 1.0, 'T_vals': [2.5, 0.05, 150.0], 'nH_vals': [-8.0, 0.05, 200.0]}
 
     >>> from snapshot import Snap
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470')
