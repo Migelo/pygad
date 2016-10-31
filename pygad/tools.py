@@ -139,6 +139,8 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
     Returns:
         s (Snap):           The prepared snapshot.
         halo (SubSnap):     The cut halo of the found structure.
+        gal (SubSnap):      The central galaxy of the halo as defined by
+                            `gal_R200`.
     '''
     def get_shrink_on_sub(snap):
         if isinstance(shrink_on, str):
