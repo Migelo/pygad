@@ -44,6 +44,7 @@ __all__ = ['kernel_weighted', 'SPH_qty_at', 'scatter_gas_qty_to_stars']
 
 import numpy as np
 from ..units import *
+from ..utils import dist
 
 def _calc_ys(qty, all_gas_pos, gas_pos, hsml, kernel):
     y = np.empty( (len(gas_pos),)+qty.shape[1:] )
