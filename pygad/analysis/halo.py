@@ -422,7 +422,8 @@ def read_Rockstar_file(fname):
 
     return header, halos, particles
 
-def generate_Rockstar_halos(fname, snap, exclude=None, nosubs=True, data=None, **kwargs):
+def generate_Rockstar_halos(fname, snap, exclude=None, nosubs=True, data=None,
+                            ignore_inconsistency=False, **kwargs):
     '''
     Create a list of halos from a Rockstar particle file.
 
@@ -447,6 +448,9 @@ def generate_Rockstar_halos(fname, snap, exclude=None, nosubs=True, data=None, *
                             Furthermore, if it already contains these two entries,
                             `fname` is ignored and this data is taken for the
                             generation.
+        ignore_inconsistency (bool):
+                            Just warn about inconsistencies between the Rockstar
+                            file and the snapshot and do not raise exceptions.
         **kwargs            Further arguments are passed to `Halo.__init__`.
 
     Returns:
@@ -465,6 +469,36 @@ def generate_Rockstar_halos(fname, snap, exclude=None, nosubs=True, data=None, *
         data['header'], data['halos'], data['particles'] = read_Rockstar_file(fname)
         if environment.verbose >= environment.VERBOSE_NORMAL:
             print 'loaded in %.2f sec' % (time.time()-start_time)
+
+    # check for consistency between Rockstar file and snapshot
+    try:
+        if environment.verbose >= environment.VERBOSE_NORMAL:
+            print 'checking for consistency...'
+        h = data['header']
+        if 'a' in h and abs(float(h['a'])-snap.scale_factor) > 0.01:
+            raise RuntimeError("Scale factors of snapshot and Rockstar file do "
+                               "not match: %s vs. %s" % (
+                                   h['a'],snap.scale_factor))
+        cosmo = snap.cosmology
+        for name, attr in [('Om','Omega_m'), ('Ol','Omega_Lambda'), ('h','h_0')]:
+            if name in h and abs(float(h[name])-getattr(cosmo,attr)) > 0.0001:
+                raise RuntimeError("%s of snapshot and Rockstar file " % (name,attr) +
+                                   "do not match: %s vs. %s" % (
+                                       h[name],getattr(cosmo,attr)))
+        if 'Box size' in h:
+            # it seems Rockstar supresses the information that the units are
+            # comoving fot the box size
+            bz = UnitScalar(str(h['Box size']).replace('h','h_0'),
+                            snap.boxsize.units,
+                            subs={'a':1.0,'z':0.0,'h_0':cosmo.h_0})
+            if abs( float(bz/snap.boxsize) - 1 ) > 0.01:
+                raise RuntimeError("box sizes of snapshot and Rockstar file " +
+                                   "do not match: %s vs. %s" % (bz, snap.boxsize))
+    except RuntimeError as e:
+        if ignore_inconsistency:
+            print 'WARNING:', e.message
+        else:
+            raise
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print 'create halo list from the Rockstar data'
