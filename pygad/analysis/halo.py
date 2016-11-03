@@ -83,9 +83,9 @@ Examples:
 '''
 __all__ = ['shrinking_sphere', 'virial_info', 'find_FoF_groups',
            'NO_FOF_GROUP_ID', 'Rockstar_halo_field_names',
-           'Rockstar_particle_field_names', 'read_Rockstar_file',
-           'generate_Rockstar_halos', 'Halo', 'generate_FoF_catalogue',
-           'find_most_massive_progenitor']
+           'Rockstar_particle_field_names', 'RockstarHeader',
+           'read_Rockstar_file', 'generate_Rockstar_halos', 'Halo',
+           'generate_FoF_catalogue', 'find_most_massive_progenitor']
 
 import numpy as np
 from .. import utils
@@ -329,6 +329,48 @@ def Rockstar_halo_field_names():
     return [name for name,t in _ROCKSTAR_HALO_DTYPES]
 def Rockstar_particle_field_names():
     return [name for name,t in _ROCKSTAR_PART_DTYPES]
+
+class RockstarHeader(object):
+    def __init__(self, txt):
+        self._txt = txt
+
+        props = {}
+        for line in txt.split('\n'):
+            for info in line.split(';'):
+                info = info.split(':' if ':' in info else '=')
+                if len(info) != 2 or not info[-1]:
+                    # not a info with ':' or '=', or with an empty value
+                    continue
+                name, value = info
+                name = name.strip('#')
+                if name == 'Units':
+                    try:
+                        try:
+                            name, value = value.split(' in ')
+                        except:
+                            name, value = value.split(' are ')
+                    except:
+                        continue
+                props[name.strip()] = value.strip()
+        self._props = props
+
+    @property
+    def txt(self):
+        return self._txt
+
+    @property
+    def props(self):
+        return self._props.copy()
+
+    def get(self, key, default=None):
+        return self._props.get(key, default)
+
+    def __getitem__(self, key):
+        return self.get(key)
+
+    def __contains__(self, key):
+        return key in self._props
+
 def read_Rockstar_file(fname):
     '''
     Read in a Rockstar file.
@@ -339,12 +381,12 @@ def read_Rockstar_file(fname):
         also the file which filename needs to be specified.
 
     Args:
-        fname (str):            The path to the particle(!) Rockstar output.
+        fname (str):                The path to the particle(!) Rockstar output.
 
     Returns:
-        header (unicode):       The header from the Rockstar file.
-        halos (np.ndarray):     A numpy array with the halo table.
-        particles (np.ndarray): A numpy array with the particle table.
+        header (RockstarHeader):    The header from the Rockstar file.
+        halos (np.ndarray):         A numpy array with the halo table.
+        particles (np.ndarray):     A numpy array with the particle table.
     '''
     from io import StringIO
     import codecs
@@ -360,7 +402,7 @@ def read_Rockstar_file(fname):
     particle_start = rs_file.find(BEFORE_PART_TBL)
 
     # read the header
-    header = rs_file[:halo_start]
+    header = RockstarHeader(rs_file[:halo_start])
 
     # read the halo table
     if environment.verbose >= environment.VERBOSE_NORMAL:
