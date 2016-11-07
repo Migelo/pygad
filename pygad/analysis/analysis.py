@@ -4,7 +4,7 @@ sub-snapshots (e.g. MaskedSnap).
 '''
 __all__ = ['radial_surface_density_profile']
 
-from units import UnitArr, dist
+from units import UnitArr
 import physics
 import numpy as np
 import sph

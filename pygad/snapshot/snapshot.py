@@ -290,8 +290,9 @@ import os.path
 from .. import gadget
 from ..gadget import write
 from .. import physics
-from ..units import *
 from .. import utils
+from ..units import *
+from ..utils import dist
 from .. import environment
 from ..environment import module_dir
 import numpy as np
