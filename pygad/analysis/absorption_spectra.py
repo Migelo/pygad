@@ -233,7 +233,7 @@ def find_line_contributers(s, los, line, vel_extent, threshold=0.95,
     if EW_space == 'wavelength':
         edges = l_edges
     elif EW_space == 'frequency':
-        edges = c / l_edges
+        edges = -(c / l_edges).in_units_of('Hz')
     elif EW_space == 'redshift':
         edges = z_edges
     elif EW_space == 'velocity':
@@ -241,8 +241,8 @@ def find_line_contributers(s, los, line, vel_extent, threshold=0.95,
     else:
         raise ValueError('Unknown `EW_space`: "%s"!' % EW_space)
     EW_full = EW(taus, edges)
-    if environment.verbose >= environment.VERBOSE_TALKY:
-        print '  EW =', EW_full
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'in %s space EW = %s' % (EW_space, EW_full)
 
     # bisect by percentiles
     if environment.verbose >= environment.VERBOSE_NORMAL:
