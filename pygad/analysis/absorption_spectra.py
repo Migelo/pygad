@@ -321,6 +321,10 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
     Credits to Neal Katz and Romeel Dave, who wrote a code taken as a basis for
     this one, first called 'specexbin' and later 'specexsnap' that did the same
     as in the method 'line', and who helped me with the gist of this one.
+
+    TODO:
+        Check the "redshift correction of the wavelength difference"! Cf.
+        Formular (5) in Churchill+(2015).
     
     Args:
         s (Snap):               The snapshot to shoot the l.o.s. though.
@@ -727,6 +731,9 @@ def EW(taus, edges):
 def velocities_to_redshifts(v_edges, z0=0.0):
     '''
     Convert velocities to redshifts, assuming an additional cosmological redshift.
+
+    Cf. Churchill+ (2015):  z = z_box + (v/c) (1+z_box)
+    TODO: Check if my calculation is consistent with that formula!
     '''
     z_edges = (v_edges / c).in_units_of(1).view(np.ndarray)
     if z0 != 0.0:   # avoid multiplication of 1.
