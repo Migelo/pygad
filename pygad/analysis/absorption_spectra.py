@@ -80,13 +80,14 @@ Doctests:
     >>> environment.verbose = environment.VERBOSE_NORMAL
 """
 __all__ = ['mock_absorption_spectrum_of', 'mock_absorption_spectrum',
-           'EW', 'velocities_to_redshifts',
+           'EW', 'velocities_to_redshifts', 'find_line_contributers',
            'Voigt', 'Gaussian', 'Lorentzian']
 
 from ..units import Unit, UnitArr, UnitQty, UnitScalar
 from ..physics import kB, m_H, c, q_e, m_e, epsilon0
 from ..kernels import *
 from .. import gadget
+from .. import utils
 from .. import C
 from .. import environment
 import numpy as np
@@ -179,6 +180,99 @@ def Voigt(x, sigma, gamma):
     from scipy.special import wofz
     z = (x + 1j*gamma) / (sigma * np.sqrt(2.))
     return np.real(wofz(z)) / ( sigma * np.sqrt(2.*np.pi) )
+
+def find_line_contributers(s, los, line, vel_extent, threshold=0.95,
+                           EW_space='wavelength', **kwargs):
+    '''
+    Find the minimally required particles to generate the specified line without
+    having the equivalent width falling below a threshold.
+
+    Args:
+        s (Snap):               The snapshot to use for the line creation.
+        los (UnitQty):          The position of the l.o.s.. By default understood
+                                as in units of s['pos'], if not explicitly
+                                specified.
+        line (str, dict):       The line to generate. It can either be a name in
+                                `analysis.absorption_spectra.lines` of a
+                                dictionary alike one of these.
+        vel_extent (UnitQty):   The limits of the spectrum in (rest frame)
+                                velocity space for the spectrum to create. Units
+                                default to 'km/s'.
+        threshold (float):      The threshold which the EW must not fall below in
+                                fractions of the EW of the line created by all
+                                particles.
+        EW_space (str):         The space in which to calculate the equivalent
+                                width, i.e. in which space it shall be integrated
+                                over exp(-tau) in order to calculate EW. Possible
+                                choices are:
+                                'wavelength', 'frequency', 'redshift', 'velocity'.
+        kwargs:                 Further arguments are passed to
+                                `mock_absorption_spectrum_of`.
+
+    Returns:
+        contributing (nd.ndarray<bool>):
+                                A booling mask for all the (gas) particles in `s`
+                                that are needed for the EW not falling below the
+                                specified threshold.
+    '''
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'find all necessary particles, beginning with those that have ' + \
+              'the highest column density along the line of sight, that are ' + \
+              'needed for getting %.1f%% of the total EW' % (100.*threshold)
+        if isinstance(line, str):
+            print '  line "%s" at %s' % (line, los)
+
+    if isinstance(line,str):
+        line = lines[line]
+    taus, dens, temp, v_edges, restr_column = mock_absorption_spectrum_of(
+            s.gas, los=los, line=line, vel_extent=vel_extent, **kwargs)
+    N_intersecting = np.sum(restr_column>0)
+
+    z_edges = velocities_to_redshifts(v_edges, z0=s.redshift)
+    l_edges = UnitScalar(line['l']) * (1.0 + z_edges)
+    if EW_space == 'wavelength':
+        edges = l_edges
+    elif EW_space == 'frequency':
+        edges = c / l_edges
+    elif EW_space == 'redshift':
+        edges = z_edges
+    elif EW_space == 'velocity':
+        edges = v_edges
+    else:
+        raise ValueError('Unknown `EW_space`: "%s"!' % EW_space)
+    EW_full = EW(taus, edges)
+    if environment.verbose >= environment.VERBOSE_TALKY:
+        print '  EW =', EW_full
+
+    # bisect by percentiles
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'finding the necessary particles...'
+    low, mid, high = 0.,50.,100.
+    Nlow, Nmid, Nhigh = map( lambda x: np.percentile(restr_column,x),
+                             [low,mid,high] )
+    verbosity = environment.verbose
+    environment.verbose = environment.VERBOSE_QUIET
+    while np.sum(restr_column>Nlow) > np.sum(restr_column>Nhigh) + 1:
+        mid = (low + high) / 2.
+        Nmid = np.percentile(restr_column, mid)
+        taus, _, _, _, _ = mock_absorption_spectrum_of(
+                s.gas[restr_column>Nmid], los=los, line=line,
+                vel_extent=vel_extent, **kwargs)
+        E = EW(taus,edges)
+        if E < threshold*EW_full:
+            high, Nhigh = mid, Nmid
+        else:
+            low, Nlow = mid, Nmid
+    environment.verbose = verbosity
+    contributing = np.array( (restr_column>Nmid), dtype=bool)
+
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print '%s of the %s N_intersecting particles needed ' % (
+                utils.nice_big_num_str(np.sum(contributing)),
+                utils.nice_big_num_str(N_intersecting)) + \
+              'for a line with >= %.1f%% of the EW' % (100.*threshold)
+
+    return contributing
 
 def mock_absorption_spectrum_of(s, los, line, vel_extent, **kwargs):
     '''
