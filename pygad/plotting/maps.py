@@ -234,6 +234,9 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         else:
             field = False
     if surface_dens is None: surface_dens = (reduction is None and not field)
+    if reduction is not None:
+        field = False
+        surface_dens = False
 
     if scaleunits is None:
         scaleunits = s['pos'].units
@@ -259,10 +262,15 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
             print '  colors_av:   ', colors_av
         else:
             print '  colors_av:   ', type(colors_av)
-        print '  field:       ', field
-        print '  surface_dens:', surface_dens
+        if reduction is None:
+            print '  field:       ', 'ignored'
+            print '  surface_dens:', 'ignored'
+        else:
+            print '  field:       ', field
+            print '  surface_dens:', surface_dens
         print '  logscale:    ', logscale
         print '  clogscale:   ', clogscale
+        print '  reduction:   ', reduction
         print '  [...]'
 
     # create luminance map
