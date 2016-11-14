@@ -52,7 +52,7 @@ def profile(s, Rmax, qty, av=None, units=None, dens=True, proj=None,
         fig (Figure):       The figure of the axis plotted on.
         ax (AxesSubplot):   The axis plotted on.
     '''
-    Rmax = UnitScalar(Rmax, s['pos'].units)
+    Rmax = UnitScalar(Rmax, s['pos'].units, subs=s)
     if logbin:
         if minlog is None:
             minlog = Rmax / 100.0
