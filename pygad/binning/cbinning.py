@@ -586,6 +586,8 @@ def SPH_to_2Dgrid_by_particle(s, qty, extent, Npx, reduction, xaxis=0, yaxis=1,
 
     if reduction == 'mean':
         bin_sph_reduction = C.cpygad.bin_sph_proj_mean
+    elif reduction == 'median':
+        bin_sph_reduction = C.cpygad.bin_sph_proj_median
     elif reduction == 'stddev':
         bin_sph_reduction = C.cpygad.bin_sph_proj_stddev
     else:
