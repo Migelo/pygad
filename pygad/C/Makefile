@@ -1,4 +1,4 @@
-GSL_HOME	:= ${GSL_HOME} /opt/local
+GSL_HOME	:= ${GSL_HOME} /opt/local /usr
 
 CC 		= g++
 CFLAGS 	= -Wall -std=c++11
