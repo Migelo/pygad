@@ -12,7 +12,13 @@ image:
 pipelines:
   default:
     - step:
-        script: # Modify the commands below to build your repository.
+        script:
           - git fetch --unshallow --tags
+          - wget https://bitbucket.org/broett/pygad/downloads/bc03.tar.gz
+          - tar -xzf bc03.tar.gz
+          - wget https://bitbucket.org/broett/pygad/downloads/iontbls_HM01.tar.gz
+          - tar -xzf iontbls_HM01.tar.gz iontbls
+          - wget https://bitbucket.org/broett/pygad/downloads/snaps.tar.gz
+          - tar -xzf snaps.tar.gz
           - python setup.py install
-          - python -c "import pygad; print pygad.version"
+          - python -c "import pygad, doctests; doctests.testmod(pygad)"
