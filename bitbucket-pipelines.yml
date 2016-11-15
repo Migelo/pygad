@@ -13,5 +13,6 @@ pipelines:
   default:
     - step:
         script: # Modify the commands below to build your repository.
+          - git fetch --unshallow --tags
           - python setup.py install
           - python -c "import pygad; print pygad.version"
