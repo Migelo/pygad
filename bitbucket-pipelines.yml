@@ -21,4 +21,4 @@ pipelines:
           - wget https://bitbucket.org/broett/pygad/downloads/snaps.tar.gz
           - tar -xzf snaps.tar.gz
           - python setup.py install
-          - python -c "import pygad, doctest; doctest.testmod(pygad)"
+          - python -c "import pygad,doctest,sys; res = doctest.testmod(pygad); sys.exit(res.failed)"
