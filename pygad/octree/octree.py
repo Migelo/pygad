@@ -58,9 +58,9 @@ Example:
     >>> sub = snap[all_indices(tree)]
     >>> sub.parts
     [8573, 9334, 0, 0, 736, 0]
-    >>> apply_on(tree, populate_center_of_mass(snap['pos'], snap['mass']))
+    >>> apply_on(tree, populate_center_of_mass(snap['pos'], snap['mass']))  # doctest:+ELLIPSIS
     load block mass... done.
-    (array([ 34497.34417332,  35431.56577665,  33097.62803619]), 2.9262269136343093)
+    (array([ 34497.3...,  35431.5...,  33097.6...]), 2.926...)
     >>> from .. import analysis
     >>> com = analysis.center_of_mass(sub)
     >>> d = np.sqrt(sum((tree.com - com)**2))

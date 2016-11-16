@@ -42,8 +42,8 @@ Testing:
     >>> px_rel_err = np.abs(map2D-map3D_proj)/map2D
     >>> if np.mean(np.abs(px_rel_err)) > 0.01:
     ...     print np.mean(np.abs(px_rel_err))
-    >>> if np.percentile(np.abs(px_rel_err), [99]) > 0.1:
-    ...     print np.percentile(np.abs(px_rel_err), [99])
+    >>> if np.percentile(np.abs(px_rel_err), 99) > 0.1:
+    ...     print np.percentile(np.abs(px_rel_err), 99)
 
     Quick consistency check of higher resolution
     >>> map2D_high, res = SPH_to_2Dgrid(sub.gas, extent=extent[:2], qty='rho',
@@ -68,8 +68,8 @@ Testing:
     >>> px_rel_err = np.abs(column-line)/column
     >>> if np.mean(np.abs(px_rel_err)) > 0.01:
     ...     print np.mean(np.abs(px_rel_err))
-    >>> if np.percentile(np.abs(px_rel_err), [99]) > 0.05:
-    ...     print np.percentile(np.abs(px_rel_err), [99])
+    >>> if np.percentile(np.abs(px_rel_err), 99) > 0.05:
+    ...     print np.percentile(np.abs(px_rel_err), 99)
 '''
 __all__ = ['SPH_to_3Dgrid', 'SPH_to_2Dgrid', 'SPH_3D_to_line',
            'SPH_to_2Dgrid_by_particle']

@@ -83,7 +83,7 @@ def project_kernel(kernel, N=100, inter_kind='quadratic'):
                                err)
         table.append( w )
     return interp1d(Rs, table, copy=False, bounds_error=False, fill_value=0.0,
-                    assume_sorted=True, kind=inter_kind)
+                    kind=inter_kind)
 
 def integrate_kernel(kernel, N=100, inter_kind='quadratic'):
     '''
