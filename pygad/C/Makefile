@@ -6,7 +6,7 @@ endif
 
 CC 		= g++
 CFLAGS 	= -Wall -std=c++11
-CFLAGS 	+= -Ofast -DNDEBUG -fopenmp
+CFLAGS 	+= -O3 -DNDEBUG -fopenmp
 #CFLAGS 	+= -Wno-unknown-pragmas -O2 -DDEBUG
 IPATH	= $(addprefix -I, $(addsuffix /include, $(GSL_HOME)))
 LPATH	= $(addprefix -L, $(addsuffix /lib, $(GSL_HOME)))
