@@ -1,4 +1,8 @@
-GSL_HOME	:= ${GSL_HOME} /opt/local /usr
+GSL_HOME	:= ${GSL_HOME} /opt/local
+GSL_LIB		:= $(wildcard /usr/lib/libgsl.*)
+ifneq ($(wildcard ${GSL_LIB}),)
+	GSL_HOME	:= ${GSL_HOME} /usr
+endif
 
 CC 		= g++
 CFLAGS 	= -Wall -std=c++11

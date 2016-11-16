@@ -45,7 +45,8 @@ Example:
     A more realistic sample of positions (just every 100th for speed reasons):
     >>> from ..snapshot.snapshot import Snap
     >>> from ..environment import module_dir
-    >>> snap = Snap(module_dir+'../snaps/snap_M1196_4x_470',physical=False)
+    >>> snap = Snap(module_dir+'../snaps/snap_M1196_4x_470', physical=False,
+    ...             load_double_prec=True)
     >>> snap = snap[::100]
     >>> OctNode.MAX_DEPTH = 11  # making the following tree build way faster
     >>> tree = Octree(snap)
@@ -63,10 +64,10 @@ Example:
     (array([ 34497.3...,  35431.5...,  33097.6...]), 2.926...)
     >>> from .. import analysis
     >>> com = analysis.center_of_mass(sub)
-    >>> d = np.sqrt(sum((tree.com - com)**2))
+    >>> d = np.sqrt(np.sum((tree.com - com)**2))
     >>> if not d < 0.5:
-    ...     print 'com      =', tree.com
-    ...     print 'tree.com =', com
+    ...     print 'com      =', com
+    ...     print 'tree.com =', tree.com
     >>> del_quantity(tree, 'com')
     >>> del_quantity(tree, 'mass')
 '''
