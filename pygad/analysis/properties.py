@@ -111,6 +111,7 @@ __all__ = ['mass_weighted_mean', 'center_of_mass', 'reduced_inertia_tensor',
 
 import numpy as np
 from ..units import *
+from ..utils import dist
 from ..transformation import *
 from pygad import physics
 import sys

@@ -64,7 +64,7 @@ def read_info_file(filename):
 def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
                  linking_length=None, linking_vel='200 km/s', ret_FoF=False,
                  sph_overlap_mask=False, gal_R200=0.10, star_form='deduce',
-                 gas_trace='deduce', **kwargs):
+                 gas_trace='deduce', to_physical=True, **kwargs):
     '''
     A convenience function to load a snapshot from a zoomed-in simulation that is
     not yet centered or orienated.
@@ -135,10 +135,23 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
                             length reaches into it).
         gal_R200 (float):   The radius to define the galaxy. Everything within
                             <gal_R200>*R200 will be defined as the galaxy.
+        star_form (str):    Path to the star formation file as written by the
+                            program `gtrace`.
+                            If set to 'deduce', its path is tried to build from
+                            the snapshot filename by taking its directory and
+                            adding '/trace/star_form.ascii'.
+        gas_trace (str):    Path to the tracing file as written by the program
+                            `gtracegas`.
+                            If set to 'deduce', its path is tried to build from
+                            the snapshot filename by taking its directory and
+                            looking for files '/../*gastrace*'.
+        to_physical (bool): Whether to convert the snapshot to physical units.
 
     Returns:
         s (Snap):           The prepared snapshot.
         halo (SubSnap):     The cut halo of the found structure.
+        gal (SubSnap):      The central galaxy of the halo as defined by
+                            `gal_R200`.
     '''
     def get_shrink_on_sub(snap):
         if isinstance(shrink_on, str):
@@ -192,7 +205,8 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
             if mode == 'auto':
                 mode = 'info'
 
-    s.to_physical_units()
+    if to_physical:
+        s.to_physical_units()
 
     # find center
     if mode == 'info':

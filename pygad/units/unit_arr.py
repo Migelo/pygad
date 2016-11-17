@@ -134,7 +134,7 @@ Examples:
     >>> assert v.T._unit_carrier is not v._unit_carrier
     >>> assert (v+v)._unit_carrier is not v._unit_carrier
 '''
-__all__ = ['UnitArr', 'dist', 'UnitQty', 'UnitScalar']
+__all__ = ['UnitArr', 'UnitQty', 'UnitScalar']
 
 import numpy as np
 import numpy.core.umath_tests
@@ -725,43 +725,6 @@ class UnitArr(np.ndarray):
 
     def argsort(self, *args, **kwargs):
         return np.ndarray.argsort(self.view(np.ndarray), *args, **kwargs)
-
-def dist(arr, pos=None, metric='euclidean', p=2, V=None, VI=None, w=None):
-    '''
-    Calculate the distances of the positions in arr to pos.
-
-    This function uses scipy.spatial.distance.cdist and is, hence, faster than
-    sqrt(sum((arr-pos)**2,axis=1)). Also see its documentation for more
-    information. This is only a wrapper that handles the units. The overhead is
-    marginal.
-
-    Args:
-        arr (array-like):   The array of positions (shape: (...,N)).
-        pos (array-like):   The reference position (shape: (N,)).
-                            Default: [0]*N
-        [...]:              See scipy.spatial.distance.cdist.
-
-    Returns:
-        dists (UnitArr):    Basically cdist(arr, [pos], [...]).ravel() with units.
-    '''
-    from scipy.spatial.distance import cdist
-    arr_units = getattr(arr, 'units', None)
-    pos_units = getattr(pos, 'units', None)
-    if pos is None:
-        if not isinstance(arr, np.ndarray): # includes UnitArr
-            arr = np.array(arr)
-        pos = [0]*arr.shape[-1]
-    if arr_units is not None:
-        units = arr_units
-        if pos_units is not None:
-            pos = pos.in_units_of(arr_units)
-    elif pos_units is not None:
-        units = pos_units
-    else:
-        units = None
-    res = cdist(arr, [pos]).ravel().view(UnitArr)
-    res.units = units
-    return res
 
 for f in (np.ndarray.__lt__, np.ndarray.__le__, np.ndarray.__eq__,
           np.ndarray.__ne__, np.ndarray.__gt__, np.ndarray.__ge__):

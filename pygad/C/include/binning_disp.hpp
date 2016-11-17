@@ -18,6 +18,19 @@ void bin_sph_proj_mean(size_t N,
                        double periodic);
 
 extern "C"
+void bin_sph_proj_median(size_t N,
+                         double *pos,
+                         double *hsml,
+                         double *dV,
+                         double *qty,
+                         double *av,
+                         double *extent,
+                         size_t Npx[2],
+                         double *grid,
+                         const char *kernel_,
+                         double periodic);
+
+extern "C"
 void bin_sph_proj_stddev(size_t N,
                          double *pos,
                          double *hsml,

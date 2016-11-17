@@ -13,7 +13,7 @@ doctests:
     >>> print >> sys.stderr, "ATTENTION: full doctest takes a few minutes!!!"
     >>> print >> sys.stderr, 'testing module utils...'
     >>> doctest.testmod(utils)
-    TestResults(failed=0, attempted=4)
+    TestResults(failed=0, attempted=5)
     >>> print >> sys.stderr, 'testing module environment...'
     >>> doctest.testmod(environment)
     TestResults(failed=0, attempted=0)
@@ -95,7 +95,7 @@ if environment.verbose >= environment.VERBOSE_TACITURN:
 
 # make some chosen elements directly visible
 from environment import gc_full_collect
-from units import Unit, Units, UnitArr, UnitQty, UnitScalar, dist, Fraction
+from units import Unit, Units, UnitArr, UnitQty, UnitScalar, Fraction
 from physics import cosmology
 from physics import G, m_p, solar
 from transformation import Translation, Rotation

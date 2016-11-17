@@ -290,8 +290,9 @@ import os.path
 from .. import gadget
 from ..gadget import write
 from .. import physics
-from ..units import *
 from .. import utils
+from ..units import *
+from ..utils import dist
 from .. import environment
 from ..environment import module_dir
 import numpy as np
@@ -1280,7 +1281,7 @@ class _Snap(object):
 
     def IDs_unique(self):
         '''Check whether the IDs (of this (sub-)snapshot) are unique.'''
-        return len(set( self['ID'] )) == len(self['ID'])
+        return len(np.lib.arraysetops.unique(self['ID'])) == len(self)
 
 class _SubSnap(_Snap):
     '''
