@@ -95,27 +95,46 @@ import numpy as np
 lines = {
     'H1215':     {'ion':'HI',     'l':'1215.6701 Angstrom', 'f':0.4164,
                     'atomwt':m_H,       'gamma':'6.06076e-3 km/s'},
-    'H1025':     {'ion':'HI',     'l':'1025.44 Angstrom',   'f':0.079121,
+    'H1025':     {'ion':'HI',     'l':'1025.722 Angstrom',  'f':0.079121,
                     'atomwt':m_H},
+    'H972':      {'ion':'HI',     'l':'972.5368 Angstrom',  'f':2.900e-02,
+                    'atomwt':m_H},
+
     'HeII':      {'ion':'HeII',   'l': '303.918 Angstrom',  'f':0.4173, 
                     'atomwt':'3.971 u'},
+
+    'CII1036':   {'ion':'CII',    'l':'1036.337 Angstrom',  'f':0.1270,
+                    'atomwt':'12.011 u'},
     'CIII977':   {'ion':'CIII',   'l': '977.020 Angstrom',  'f':0.7620,
                     'atomwt':'12.011 u'},
     'CIV1548':   {'ion':'CIV',    'l':'1548.195 Angstrom',  'f':0.1908,
                     'atomwt':'12.011 u'},
+    'CIV1550':   {'ion':'CIV',    'l':'1550.777 Angstrom',  'f':0.09520,
+                    'atomwt':'12.011 u'},
+
     'OIV787':    {'ion':'OIV',    'l': '787.711 Angstrom',  'f':0.110,
                     'atomwt':'15.9994 u'},
     'OVI1031':   {'ion':'OVI',    'l':'1031.927 Angstrom',  'f':0.1329,
                     'atomwt':'15.9994 u'},
+
     'NeVIII770': {'ion':'NeVIII', 'l': '770.409 Angstrom',  'f':0.103,
                     'atomwt':'20.180 u'},
+
     'MgII2796':  {'ion':'MgII',   'l':'2796.352 Angstrom',  'f':0.6123,
                     'atomwt':'24.305 u'},
-    'SiIV1393':  {'ion':'SiIV',   'l':'1393.755 Angstrom',  'f':0.5280,
+
+    'SiII1260':  {'ion':'SiII',  'l':'1260.522 Angstrom',  'f':1.180,
+                    'atomwt':'28.086 u'},
+    'SiIII1206': {'ion':'SiIII',  'l':'1206.500 Angstrom',  'f':1.669,
+                    'atomwt':'28.086 u'},
+    'SiIV1393':  {'ion':'SiIV',   'l':'1393.755 Angstrom',  'f':0.5140,
+                    'atomwt':'28.086 u'},
+    'SiIV1402':  {'ion':'SiIV',   'l':'1402.770 Angstrom',  'f':0.2553,
                     'atomwt':'28.086 u'},
 }
 lines['Lyman_alpha'] = lines['H1215']
-lines['Lyman_beta'] = lines['H1025']
+lines['Lyman_beta']  = lines['H1025']
+lines['Lyman_gamma'] = lines['H972']
 
 def Gaussian(x, sigma):
     '''
