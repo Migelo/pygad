@@ -77,7 +77,7 @@ from ..units import *
 from scipy.stats import binned_statistic_dd
 from scipy.ndimage.filters import convolve
 
-def gridbin2d(x, y, vals=None, bins=50, extent=None, normed=False, stats=None,
+def gridbin2d(x, y, qty=None, bins=50, extent=None, normed=False, stats=None,
               nanval=None):
     '''
     Bin data on a 2-dim. grid.
@@ -85,10 +85,10 @@ def gridbin2d(x, y, vals=None, bins=50, extent=None, normed=False, stats=None,
     This calls gridbin with x and y combined to pnts. See gridbin for more
     information!
     '''
-    return gridbin(np.array([x,y]).T, vals=vals, bins=bins, extent=extent,
+    return gridbin(np.array([x,y]).T, qty=qty, bins=bins, extent=extent,
                    normed=normed, stats=stats, nanval=nanval)
 
-def gridbin(pnts, vals=None, bins=50, extent=None, normed=False, stats=None,
+def gridbin(pnts, qty=None, bins=50, extent=None, normed=False, stats=None,
             nanval=None):
     '''
     Bin data on a grid.
@@ -100,7 +100,7 @@ def gridbin(pnts, vals=None, bins=50, extent=None, normed=False, stats=None,
 
     Args:
         pnts (array-like):  An (N,D)-array of the points to bin.
-        vals (UnitArr):     Values for the points to bin. If None, points are just
+        qty (UnitArr):      Values for the points to bin. If None, points are just
                             counted per bin.
         bins (int, array-like):
                             Number of bins per dimension.
@@ -113,7 +113,7 @@ def gridbin(pnts, vals=None, bins=50, extent=None, normed=False, stats=None,
                             A function to apply at the end. The predefined ones
                             are: 'count', 'sum', 'mean', 'median'. For more
                             information see binned_statistic_dd.
-                            Default: 'count' if vals is None else 'sum'
+                            Default: 'count' if `qty` is None else 'sum'
         nanval (value):     All points where the grid is NaN are set to this
                             value.
 
@@ -127,30 +127,30 @@ def gridbin(pnts, vals=None, bins=50, extent=None, normed=False, stats=None,
     if len(pnts.shape) != 2:
         raise ValueError('The points array has to have shape (N,D)!')
 
-    if vals is None:
+    if qty is None:
         if stats is None or stats=='count':
             stats = 'count'
         else:
-            vals = np.ones(len(pnts),int)
+            qty = np.ones(len(pnts),int)
     else:
         if stats is None:
             stats = 'sum'
-        vals = np.asanyarray(vals)
+        qty = np.asanyarray(qty)
 
     if isinstance(extent,UnitArr) and isinstance(pnts,UnitArr):
         extent = extent.in_units_of(pnts.units)
 
-    gridded, edges, binnum = binned_statistic_dd(pnts, vals, range=extent,
+    gridded, edges, binnum = binned_statistic_dd(pnts, qty, range=extent,
                                                  statistic=stats, bins=bins)
 
     gridded = UnitArr(gridded)
     # if the values to bin have units, the result should as well
-    if isinstance(vals,UnitArr) and not stats=='count':
+    if isinstance(qty,UnitArr) and not stats=='count':
         if isinstance(stats,str):
-            gridded.units = vals.units
+            gridded.units = qty.units
         else:
             if stats in UnitArr._ufunc_registry:
-                gridded.units = UnitArr._ufunc_registry[ufunc](vals)
+                gridded.units = UnitArr._ufunc_registry[ufunc](qty)
             else:
                 warnings.warn('Operation \'%s\' on units is ' % stats.__name__ + \
                               '*not* defined! Return normal numpy array.')
