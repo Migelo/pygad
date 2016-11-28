@@ -15,7 +15,7 @@ Doctests:
     ...     for line in ['H1215', 'OVI1031']:
     ...         print '  ', line
     ...         for method in ['particles', 'line', 'column']:
-    ...             tau, dens, temp, v_edges, kernel_int = mock_absorption_spectrum_of(
+    ...             tau, dens, temp, v_edges, restr_column = mock_absorption_spectrum_of(
     ...                 s, los, line=line,
     ...                 vel_extent=UnitArr([2400.,3100.], 'km/s'),
     ...                 method=method,
@@ -23,12 +23,10 @@ Doctests:
     ...             N = dens.sum()
     ...             print '    N  = %.3e %s' % (N, N.units)
     ...             if method == 'particles':
-    ...                 ion_name = lines[line]['ion']
-    ...                 atomwt = UnitArr(lines[line]['atomwt'])
-    ...                 N2 = np.sum(s.gas[ion_name] * kernel_int) / atomwt
-    ...                 N2.convert_to('cm**-2', subs=s)
-    ...                 if np.abs((N2 - N) / N) > 0.01:
-    ...                     print '    N  = %.3e %s' % (N2, N2.units)
+    ...                 N_restr = np.sum(restr_column)
+    ...                 N_restr.convert_to('cm**-2', subs=s)
+    ...                 if np.abs((N_restr - N) / N) > 0.01:
+    ...                     print '    N  = %.3e %s' % (N_restr, N_restr.units)
     ...             z_edges = velocities_to_redshifts(v_edges, z0=s.redshift)
     ...             l = UnitArr(lines[line]['l'])
     ...             l_edges = l * (1.0 + z_edges)
@@ -82,13 +80,14 @@ Doctests:
     >>> environment.verbose = environment.VERBOSE_NORMAL
 """
 __all__ = ['mock_absorption_spectrum_of', 'mock_absorption_spectrum',
-           'EW', 'velocities_to_redshifts',
+           'EW', 'velocities_to_redshifts', 'find_line_contributers',
            'Voigt', 'Gaussian', 'Lorentzian']
 
 from ..units import Unit, UnitArr, UnitQty, UnitScalar
 from ..physics import kB, m_H, c, q_e, m_e, epsilon0
 from ..kernels import *
 from .. import gadget
+from .. import utils
 from .. import C
 from .. import environment
 import numpy as np
@@ -96,27 +95,46 @@ import numpy as np
 lines = {
     'H1215':     {'ion':'HI',     'l':'1215.6701 Angstrom', 'f':0.4164,
                     'atomwt':m_H,       'gamma':'6.06076e-3 km/s'},
-    'H1025':     {'ion':'HI',     'l':'1025.44 Angstrom',   'f':0.079121,
+    'H1025':     {'ion':'HI',     'l':'1025.722 Angstrom',  'f':0.079121,
                     'atomwt':m_H},
+    'H972':      {'ion':'HI',     'l':'972.5368 Angstrom',  'f':2.900e-02,
+                    'atomwt':m_H},
+
     'HeII':      {'ion':'HeII',   'l': '303.918 Angstrom',  'f':0.4173, 
                     'atomwt':'3.971 u'},
+
+    'CII1036':   {'ion':'CII',    'l':'1036.337 Angstrom',  'f':0.1270,
+                    'atomwt':'12.011 u'},
     'CIII977':   {'ion':'CIII',   'l': '977.020 Angstrom',  'f':0.7620,
                     'atomwt':'12.011 u'},
     'CIV1548':   {'ion':'CIV',    'l':'1548.195 Angstrom',  'f':0.1908,
                     'atomwt':'12.011 u'},
+    'CIV1550':   {'ion':'CIV',    'l':'1550.777 Angstrom',  'f':0.09520,
+                    'atomwt':'12.011 u'},
+
     'OIV787':    {'ion':'OIV',    'l': '787.711 Angstrom',  'f':0.110,
                     'atomwt':'15.9994 u'},
     'OVI1031':   {'ion':'OVI',    'l':'1031.927 Angstrom',  'f':0.1329,
                     'atomwt':'15.9994 u'},
+
     'NeVIII770': {'ion':'NeVIII', 'l': '770.409 Angstrom',  'f':0.103,
                     'atomwt':'20.180 u'},
+
     'MgII2796':  {'ion':'MgII',   'l':'2796.352 Angstrom',  'f':0.6123,
                     'atomwt':'24.305 u'},
-    'SiIV1393':  {'ion':'SiIV',   'l':'1393.755 Angstrom',  'f':0.5280,
+
+    'SiII1260':  {'ion':'SiII',  'l':'1260.522 Angstrom',  'f':1.180,
+                    'atomwt':'28.086 u'},
+    'SiIII1206': {'ion':'SiIII',  'l':'1206.500 Angstrom',  'f':1.669,
+                    'atomwt':'28.086 u'},
+    'SiIV1393':  {'ion':'SiIV',   'l':'1393.755 Angstrom',  'f':0.5140,
+                    'atomwt':'28.086 u'},
+    'SiIV1402':  {'ion':'SiIV',   'l':'1402.770 Angstrom',  'f':0.2553,
                     'atomwt':'28.086 u'},
 }
 lines['Lyman_alpha'] = lines['H1215']
-lines['Lyman_beta'] = lines['H1025']
+lines['Lyman_beta']  = lines['H1025']
+lines['Lyman_gamma'] = lines['H972']
 
 def Gaussian(x, sigma):
     '''
@@ -182,6 +200,99 @@ def Voigt(x, sigma, gamma):
     z = (x + 1j*gamma) / (sigma * np.sqrt(2.))
     return np.real(wofz(z)) / ( sigma * np.sqrt(2.*np.pi) )
 
+def find_line_contributers(s, los, line, vel_extent, threshold=0.95,
+                           EW_space='wavelength', **kwargs):
+    '''
+    Find the minimally required particles to generate the specified line without
+    having the equivalent width falling below a threshold.
+
+    Args:
+        s (Snap):               The snapshot to use for the line creation.
+        los (UnitQty):          The position of the l.o.s.. By default understood
+                                as in units of s['pos'], if not explicitly
+                                specified.
+        line (str, dict):       The line to generate. It can either be a name in
+                                `analysis.absorption_spectra.lines` of a
+                                dictionary alike one of these.
+        vel_extent (UnitQty):   The limits of the spectrum in (rest frame)
+                                velocity space for the spectrum to create. Units
+                                default to 'km/s'.
+        threshold (float):      The threshold which the EW must not fall below in
+                                fractions of the EW of the line created by all
+                                particles.
+        EW_space (str):         The space in which to calculate the equivalent
+                                width, i.e. in which space it shall be integrated
+                                over exp(-tau) in order to calculate EW. Possible
+                                choices are:
+                                'wavelength', 'frequency', 'redshift', 'velocity'.
+        kwargs:                 Further arguments are passed to
+                                `mock_absorption_spectrum_of`.
+
+    Returns:
+        contributing (nd.ndarray<bool>):
+                                A booling mask for all the (gas) particles in `s`
+                                that are needed for the EW not falling below the
+                                specified threshold.
+    '''
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'find all necessary particles, beginning with those that have ' + \
+              'the highest column density along the line of sight, that are ' + \
+              'needed for getting %.1f%% of the total EW' % (100.*threshold)
+        if isinstance(line, str):
+            print '  line "%s" at %s' % (line, los)
+
+    if isinstance(line,str):
+        line = lines[line]
+    taus, dens, temp, v_edges, restr_column = mock_absorption_spectrum_of(
+            s.gas, los=los, line=line, vel_extent=vel_extent, **kwargs)
+    N_intersecting = np.sum(restr_column>0)
+
+    z_edges = velocities_to_redshifts(v_edges, z0=s.redshift)
+    l_edges = UnitScalar(line['l']) * (1.0 + z_edges)
+    if EW_space == 'wavelength':
+        edges = l_edges
+    elif EW_space == 'frequency':
+        edges = -(c / l_edges).in_units_of('Hz')
+    elif EW_space == 'redshift':
+        edges = z_edges
+    elif EW_space == 'velocity':
+        edges = v_edges
+    else:
+        raise ValueError('Unknown `EW_space`: "%s"!' % EW_space)
+    EW_full = EW(taus, edges)
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'in %s space EW = %s' % (EW_space, EW_full)
+
+    # bisect by percentiles
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'finding the necessary particles...'
+    low, mid, high = 0.,50.,100.
+    Nlow, Nmid, Nhigh = map( lambda x: np.percentile(restr_column,x),
+                             [low,mid,high] )
+    verbosity = environment.verbose
+    environment.verbose = environment.VERBOSE_QUIET
+    while np.sum(restr_column>Nlow) > np.sum(restr_column>Nhigh) + 1:
+        mid = (low + high) / 2.
+        Nmid = np.percentile(restr_column, mid)
+        taus, _, _, _, _ = mock_absorption_spectrum_of(
+                s.gas[restr_column>Nmid], los=los, line=line,
+                vel_extent=vel_extent, **kwargs)
+        E = EW(taus,edges)
+        if E < threshold*EW_full:
+            high, Nhigh = mid, Nmid
+        else:
+            low, Nlow = mid, Nmid
+    environment.verbose = verbosity
+    contributing = np.array( (restr_column>Nmid), dtype=bool)
+
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print '%s of the %s N_intersecting particles needed ' % (
+                utils.nice_big_num_str(np.sum(contributing)),
+                utils.nice_big_num_str(N_intersecting)) + \
+              'for a line with >= %.1f%% of the EW' % (100.*threshold)
+
+    return contributing
+
 def mock_absorption_spectrum_of(s, los, line, vel_extent, **kwargs):
     '''
     Create a mock absorption spectrum for the given line of sight (l.o.s.) for the
@@ -219,7 +330,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
                              spatial_extent=None, spatial_res=None,
                              col_width=None, pad=7,
                              hsml='hsml', kernel=None,
-                             kernel_int_lims=None,
+                             restr_column_lims=None,
                              zero_Hubble_flow_at=0,
                              xaxis=0, yaxis=1):
     """
@@ -229,6 +340,10 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
     Credits to Neal Katz and Romeel Dave, who wrote a code taken as a basis for
     this one, first called 'specexbin' and later 'specexsnap' that did the same
     as in the method 'line', and who helped me with the gist of this one.
+
+    TODO:
+        Check the "redshift correction of the wavelength difference"! Cf.
+        Formular (5) in Churchill+(2015).
     
     Args:
         s (Snap):               The snapshot to shoot the l.o.s. though.
@@ -295,13 +410,12 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
                                 volume for all particles.
         kernel (str):           The kernel to use for smoothing. (By default use
                                 the kernel defined in `gadget.cfg`.)
-        kernel_int_lims (UnitQty):
+        restr_column_lims (UnitQty):
                                 The velocity limits for a window of interest. For
-                                each particles the fraction of its line (in
-                                tau-space) is calculated and the kernel integral,
-                                returned as the `kernel_int` array, is weighted by
-                                this fraction.
-                                Only works for method 'particles'.
+                                each particle / cell the column density that
+                                contributes to absorption in this window is
+                                calculated and returned as `restr_column`.
+                                By default the same as `vel_extent`.
         zero_Hubble_flow_at (UnitScalar):
                                 The position along the l.o.s. where there is no
                                 Hubble flow. If not units are given, they are
@@ -317,12 +431,10 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
         los_temp (UnitArr):     The (mass-weighted) particle temperatures
                                 restricted to the velocity bins (in K).
         v_edges (UnitArr):      The velocities at the bin edges.
-        kernel_int (np.ndarray):
-                                The integral of the kernels along the line of
-                                sight, weighted by the fraction of the tau of each
-                                particle that falls into the window of interest
-                                defined by `kernel_int_lims`.
-                                Only reasonable values for method 'particles'.
+        restr_column (np.ndarray):
+                                The column densities of the particles/cells along
+                                the line of sight that contributes to the given
+                                window of interest defined by `restr_column_lims`.
     """
     # internally used units
     v_units = Unit('km/s')
@@ -334,14 +446,10 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
     los = UnitQty(los, s['pos'].units, dtype=np.float64, subs=s)
     zero_Hubble_flow_at = UnitScalar(zero_Hubble_flow_at, s['pos'].units, subs=s)
     vel_extent = UnitQty(vel_extent, 'km/s', dtype=np.float64, subs=s)
-    if kernel_int_lims is None:
-        kernel_int_lims = vel_extent.copy()
+    if restr_column_lims is None:
+        restr_column_lims = vel_extent.copy()
     else:
-        if method != 'particles':
-            import sys
-            print >> sys.stderr, 'WARNING: asked for kernel integral masked,', \
-                                 'but method is "%s"' % method
-        kernel_int_lims = UnitQty(kernel_int_lims, 'km/s', dtype=np.float64, subs=s)
+        restr_column_lims = UnitQty(restr_column_lims, 'km/s', dtype=np.float64, subs=s)
     l = UnitScalar(l, 'Angstrom')
     f = float(f)
     atomwt = UnitScalar(atomwt, 'u')
@@ -378,7 +486,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
     # double precision needed in order not to overflow
     # 1 Msol / 1 u = 1.2e57, float max = 3.4e38, but double max = 1.8e308
     n = (ion.astype(np.float64) / atomwt).in_units_of(1, subs=s)
-    n = n.view(np.ndarray).astype(np.float64)
+    #n = n.view(np.ndarray).astype(np.float64)
 
     if method != 'particles':
         # do SPH smoothing along the l.o.s.
@@ -572,8 +680,8 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
     taus = np.empty(Nbins, dtype=np.float64)
     los_dens = np.empty(Nbins, dtype=np.float64)
     los_temp = np.empty(Nbins, dtype=np.float64)
-    kernel_int_lims = kernel_int_lims.view(np.ndarray).astype(np.float64)
-    kernel_int = np.empty(N, dtype=np.float64)
+    restr_column_lims = restr_column_lims.view(np.ndarray).astype(np.float64)
+    restr_column = np.empty(N, dtype=np.float64)
     C.cpygad.absorption_spectrum(method == 'particles',
                                  C.c_size_t(N),
                                  C.c_void_p(pos.ctypes.data) if pos is not None else None,
@@ -589,15 +697,15 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
                                  C.c_void_p(taus.ctypes.data),
                                  C.c_void_p(los_dens.ctypes.data),
                                  C.c_void_p(los_temp.ctypes.data),
-                                 C.c_void_p(kernel_int_lims.ctypes.data),
-                                 C.c_void_p(kernel_int.ctypes.data),
+                                 C.c_void_p(restr_column_lims.ctypes.data),
+                                 C.c_void_p(restr_column.ctypes.data),
                                  C.create_string_buffer(kernel),
                                  C.c_double(s.boxsize.in_units_of(l_units))
     )
 
     los_dens = UnitArr(los_dens, 'cm**-2')
     los_temp = UnitArr(los_temp, 'K')
-    kernel_int = UnitArr(kernel_int, l_units**(-2))
+    restr_column = UnitArr(restr_column, 'cm**-2')
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
         # if called with bad parameters sum(taus)==0 and, hence, no normation
@@ -619,7 +727,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
         except:
             pass
 
-    return taus, los_dens, los_temp, v_edges, kernel_int
+    return taus, los_dens, los_temp, v_edges, restr_column
 
 def EW(taus, edges):
     '''
@@ -642,6 +750,9 @@ def EW(taus, edges):
 def velocities_to_redshifts(v_edges, z0=0.0):
     '''
     Convert velocities to redshifts, assuming an additional cosmological redshift.
+
+    Cf. Churchill+ (2015):  z = z_box + (v/c) (1+z_box)
+    TODO: Check if my calculation is consistent with that formula!
     '''
     z_edges = (v_edges / c).in_units_of(1).view(np.ndarray)
     if z0 != 0.0:   # avoid multiplication of 1.
