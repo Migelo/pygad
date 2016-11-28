@@ -834,8 +834,8 @@ class Halo(object):
         elif prop == 'Rmax':
             val = periodic_distance_to(halo['pos'], self._get('com', **args),
                                        halo.boxsize).max()
-        elif prop[0] in ['R','M'] and (prop[1:4]=='vir' or prop[1:4].isdigit()) \
-                and prop[4]=='_':
+        elif prop[0] in ['R','M'] and len(prop)>4 and \
+                (prop[1:4]=='vir' or prop[1:4].isdigit()) and prop[4]=='_':
             qty = prop[0]
             odens_n = prop[1:4]
             scheme = prop[5:]
