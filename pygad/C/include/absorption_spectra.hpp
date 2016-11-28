@@ -20,7 +20,7 @@ void absorption_spectrum(bool particles,
                          double *los_dens,
                          double *los_temp,
                          double *v_lims,
-                         double *kernel_int,
+                         double *column,
                          const char *kernel_,
                          double periodic);
 

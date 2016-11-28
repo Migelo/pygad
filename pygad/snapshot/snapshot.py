@@ -1281,7 +1281,7 @@ class _Snap(object):
 
     def IDs_unique(self):
         '''Check whether the IDs (of this (sub-)snapshot) are unique.'''
-        return len(np.lib.arraysetops.unique(self['ID'])) == len(self)
+        return len(np.unique(self['ID'])) == len(self)
 
 class _SubSnap(_Snap):
     '''

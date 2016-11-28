@@ -360,7 +360,7 @@ def flow_history(s, qty='mass', inout='infall', recycles='first/re',
         else:
             sub = g[ (g['cycle_z_max'][:,n] > z_max_min) ]
         binned = gridbin(sub[inout+'_time'][:,n].reshape((len(sub),1)),
-                         vals=sub[qty+'_at_'+inout][:,n],
+                         qty=sub[qty+'_at_'+inout][:,n],
                          bins=kwargs['N'],
                          extent=t_lims.reshape((1,2)))
         binned = binned.reshape((kwargs['N'],))

@@ -20,7 +20,7 @@ void _absorption_spectrum(size_t N,
                           double *los_dens,
                           double *los_temp,
                           double *v_lims,
-                          double *kernel_int,
+                          double *column,
                           const char *kernel_,
                           double periodic) {
     double dv = (vel_extent[1] - vel_extent[0]) / Nbins;
@@ -37,7 +37,7 @@ void _absorption_spectrum(size_t N,
 
 #pragma omp parallel for default(shared) schedule(dynamic,10)
     for (size_t j=0; j<N; j++) {
-        kernel_int[j] = 0.0;    // for proper values when skipping
+        column[j] = 0.0;    // for proper values when skipping
         double Nj = n[j];
 
         if ( particles ) {
@@ -48,10 +48,9 @@ void _absorption_spectrum(size_t N,
             // skip particles that are too far away
             if ( dj > hj )
                 continue;
-            double Wj = kernel.proj_value(dj/hj, hj);
-            Nj *= Wj;
-            kernel_int[j] = Wj;
+            Nj *= kernel.proj_value(dj/hj, hj);
         }
+        column[j] = Nj; // store that quantity
 
         // column density of the particles / cells along the line of sight
         double vj = vel[j];
@@ -64,7 +63,7 @@ void _absorption_spectrum(size_t N,
         double b = b_0 * std::sqrt(Tj);
         constexpr double int_width = 8.0;   // go out to this times the rms
         if ( vj+int_width*b < vel_extent[0] or vj-int_width*b > vel_extent[1] ) {
-            kernel_int[j] = 0.0;
+            column[j] = 0.0;
             continue;   // out of bounds -- don't bin into bin #0 or #Nbins-1
         }
         size_t vi_min = std::max<double>(0.0,     std::floor((vj-int_width*b - vel_extent[0]) / dv));
@@ -80,7 +79,7 @@ void _absorption_spectrum(size_t N,
             los_temp[vi_min] += Tj * Nj;
 
             if( not in_lims(vj,v_lims) )
-                kernel_int[j] = 0.0;
+                column[j] = 0.0;
         } else {
             double contrib_lim = 0.0;
             //double contrib_total = 0.0;
@@ -112,7 +111,7 @@ void _absorption_spectrum(size_t N,
                     contrib_lim += Dtb;
             }
 
-            kernel_int[j] *= contrib_lim; // / contrib_total;
+            column[j] *= contrib_lim; //  / contrib_total;
         }
     }
 
@@ -142,7 +141,7 @@ void absorption_spectrum(bool particles,
                          double *los_dens,
                          double *los_temp,
                          double *v_lims,
-                         double *kernel_int,
+                         double *column,
                          const char *kernel_,
                          double periodic) {
     if ( particles ) {
@@ -150,14 +149,14 @@ void absorption_spectrum(bool particles,
                                           los_pos, vel_extent, Nbins,
                                           b_0, Xsec,
                                           taus, los_dens, los_temp,
-                                          v_lims, kernel_int,
+                                          v_lims, column,
                                           kernel_, periodic);
     } else {
         return _absorption_spectrum<false>(N, pos, vel, hsml, n, temp,
                                            los_pos, vel_extent, Nbins,
                                            b_0, Xsec,
                                            taus, los_dens, los_temp,
-                                           v_lims, kernel_int,
+                                           v_lims, column,
                                            kernel_, periodic);
     }
 }

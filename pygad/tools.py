@@ -64,7 +64,8 @@ def read_info_file(filename):
 def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
                  linking_length=None, linking_vel='200 km/s', ret_FoF=False,
                  sph_overlap_mask=False, gal_R200=0.10, star_form='deduce',
-                 gas_trace='deduce', to_physical=True, **kwargs):
+                 gas_trace='deduce', to_physical=True, fill_undefined_nan=True,
+                 **kwargs):
     '''
     A convenience function to load a snapshot from a zoomed-in simulation that is
     not yet centered or orienated.
@@ -146,6 +147,11 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
                             the snapshot filename by taking its directory and
                             looking for files '/../*gastrace*'.
         to_physical (bool): Whether to convert the snapshot to physical units.
+        fill_undefined_nan (bool):
+                            Fill star formation info for IDs not listed in the
+                            `star_form` file. For more info see
+                            `fill_star_from_info`.
+        kwargs:             Passed to `generate_FoF_catalogue` in `mode='FoF'`.
 
     Returns:
         s (Snap):           The prepared snapshot.
@@ -343,7 +349,8 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
         else:
             if environment.verbose >= environment.VERBOSE_NORMAL:
                 print 'read star formation file from:', star_form
-            fill_star_from_info(s, star_form)
+            fill_star_from_info(s, star_form,
+                                fill_undefined_nan=fill_undefined_nan)
 
     if gas_trace == 'deduce':
         try:
@@ -376,7 +383,8 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
     else:
         return s, halo, gal
 
-def fill_star_from_info(snap, data):
+def fill_star_from_info(snap, fname, fill_undefined_nan=True, dtypes=None,
+                        units=None):
     '''
     Read the formation radius rform and rform/R200(aform) from the star_form.ascii
     file and create the new blocks "rform" and "rR200form".
@@ -388,40 +396,83 @@ def fill_star_from_info(snap, data):
     Args:
         snap (Snap):    The snapshot to fill with the data (has to be the one at
                         z=0 of the simulation used to create the star_form.ascii).
-        data (str, np.ndarray): 
-                        The path to the star_form.ascii file or the already
-                        read-in data.
+        data (str):     The path to the star_form.ascii file.
+        fill_undefined_nan (bool):  
+                        Fill data with NaN for stars that are not listed in the
+                        formation file.
+        dtypes (np.dtypes):
+                        The named(!) fields in the formation file. One of the has
+                        to be a (integer type) field called "ID" for matching the
+                        data to the snapshot.
+        units (dict):   Specifying the units of the fields. Not every field has to
+                        be sopecified here.
+                        Defaults to: `{'aform':'a_form', 'rform':'kpc'}`.
+
+    Raises:
+        RuntimeError:   If the IDs are not unique or they do not match (except the
+                        cases where `fill_undefined_nan` applies).
     '''
     stars = snap.root.stars
 
-    if isinstance(data, str):
-        filename = data
-        if environment.verbose >= environment.VERBOSE_TACITURN:
-            print 'reading the star formation information from %s...' % filename
-        SFI = np.loadtxt(filename, skiprows=1)
-    else:
-        filename = '<data given>'
-        SFI = data
+    if environment.verbose >= environment.VERBOSE_TACITURN:
+        print 'reading the star formation information from %s...' % fname
+    # prepare the type of data
+    if dtypes is None:
+        dtypes = [('ID',np.uint64), ('aform',float), ('rform',float),
+                  ('rR200form',float), ('Zform',float)]
+    dtypes = np.dtype(dtypes)
+    if 'ID' not in dtypes.fields:
+        raise ValueError('The `dtypes` need to have a field "ID"!')
+    if units is None:
+        units = {'aform':'a_form', 'rform':'kpc'}
+    # load the data
+    SFI = np.loadtxt(fname, skiprows=1, dtype=dtypes)
 
     if environment.verbose >= environment.VERBOSE_TALKY:
         print 'testing if the IDs match the (root) snapshot...'
-    SFI_IDs = SFI[:,0].astype(int)
-    if set(stars['ID']) != set(SFI_IDs) or len(SFI_IDs) != len(stars):
-        raise RuntimeError('Stellar IDs do not exactly match those from ' + \
-                           '"%s" (mismatch: %d/%d)!' % (filename,
-                               len(set(stars['ID'])-set(SFI_IDs)),
-                               len(set(SFI_IDs)-set(stars['ID']))))
+    SFI_IDs = SFI['ID']
+    # test uniqueness
+    if not stars.IDs_unique():
+        raise RuntimeError('Stellar IDs in the snapshot are not unique!')
+    if len(np.unique(SFI_IDs)) != len(SFI_IDs):
+        raise RuntimeError('IDs in the star formation file are not unique!')
+    # there might be too many or not enough IDs in the file
+    if len(np.setdiff1d( stars['ID'], SFI_IDs, assume_unique=True )):
+        missing = np.setdiff1d( stars['ID'], SFI_IDs, assume_unique=True )
+        if fill_undefined_nan:
+            print 'WARNING: There are %d stellar IDs missing ' % len(missing) + \
+                  'in the formation file! Fill them with NaN\'s.'
+            add = np.array([(ID,)+(np.NaN,)*(len(dtypes)-1) for ID in missing],
+                           dtype=dtypes)
+            SFI = np.concatenate( (SFI,add) )
+            del add
+            SFI_IDs = SFI['ID']
+        else:
+            raise RuntimeError('Some stars do not have a match in the ' + \
+                               'formation file "%s" (missing: %d)!' % ( fname,
+                                   len(np.setdiff1d( stars['ID'], SFI_IDs,
+                                                     assume_unique=True )) )
+                              )
+    if len(np.setdiff1d( SFI_IDs, stars['ID'], assume_unique=True )):
+        raise RuntimeError('Some formation file IDs do not have a match in ' + \
+                           'the snapshot (missing: %d)!' % ( fname,
+                               len(np.setdiff1d( SFI_IDs, stars['ID'],
+                                                 assume_unique=True )) )
+                          )
 
-    if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'adding the new blocks "rform" and "rR200form"...'
+    # adding the data as blocks
     sfiididx = np.argsort( SFI_IDs )
     sididx = np.argsort( stars['ID'] )
-
-    stars['rform'] = UnitArr( np.empty(len(stars),dtype=float), units='kpc' )
-    stars['rform'][sididx] = SFI[:,2][sfiididx]
-
-    stars['rR200form'] = np.empty(len(stars),dtype=float)
-    stars['rR200form'][sididx] = SFI[:,3][sfiididx]
+    for name in dtypes.names:
+        if name == 'ID':
+            continue
+        if environment.verbose >= environment.VERBOSE_NORMAL:
+            print 'adding the new block "%s" (units:%s, type:%s)...' % (
+                    name,units.get(name,None),dtypes[name])
+        stars[name] = UnitArr( np.empty(len(stars)),
+                               dtype=dtypes[name],
+                               units=units.get(name,None) )
+        stars[name][sididx] = SFI[name][sfiididx]
 
 def read_traced_gas(filename, types=None):
     '''
