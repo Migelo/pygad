@@ -3,6 +3,11 @@
 This module is a light-weighted (though already ~15.000 lines of code) but comprehensive Python module that serves as a framework and basis for analysis of Gadget snapshots.
 
 It supports all Gadget formats and is inspired and influenced by [pynbody].
+[pygad] can read in Rockstar output, plot maps of any quantity, generate mock
+absorption spectra, and much more.
+However, its main power is framework to conveniently analyse gadget snapshot
+without the need to worry about format, reading in, indexing of blocks, units,
+etc.
 
 ---
 
