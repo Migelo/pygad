@@ -85,7 +85,8 @@ __all__ = ['shrinking_sphere', 'virial_info', 'find_FoF_groups',
            'NO_FOF_GROUP_ID', 'Rockstar_halo_field_names',
            'Rockstar_particle_field_names', 'RockstarHeader',
            'read_Rockstar_file', 'generate_Rockstar_halos', 'Halo',
-           'generate_FoF_catalogue', 'find_most_massive_progenitor']
+           'nxt_ngb_dist_perc', 'generate_FoF_catalogue',
+           'find_most_massive_progenitor']
 
 import numpy as np
 from .. import utils
@@ -874,6 +875,46 @@ class Halo(object):
         self._props[prop] = val
         return val
 
+def nxt_ngb_dist_perc(s, q, N=1000, tree=None, ret_sample=False, verbose=environment.verbose):
+    '''
+    Estime the percentile distance to the the next neighbour within the given snapshot.
+
+    Args:
+        s (Snap):           The snapshot to use.
+        q (int,float):      The percentile to ask for.
+        N (int):            The sample size to estimate the distance from.
+        tree (cOctree):     The octree class to use, if already present. Will be
+                            generated on the fly otherwise.
+        ret_sample (bool):  Also return the entire sample drawn.
+        verbose (int):      Verbosity level.
+
+    Returns:
+        d (UnitArr):        The q-percentile distance to the next neighbour.
+       [dists (UnitArr):    The sample drawn.]
+    '''
+    from .. import octree
+    pos = s['pos'].view(np.ndarray)
+    boxsize = s.boxsize.in_units_of(s['pos'].units)
+    if tree is None:
+        if verbose >= environment.VERBOSE_NORMAL:
+            print 'building the octree...'
+        tree = octree.cOctree(pos)
+    if verbose >= environment.VERBOSE_NORMAL:
+        print 'preparing...'
+    d = np.empty(N, dtype=float)
+    cond = np.ones(len(s), dtype=np.int32)
+    with ProgressBar(np.random.randint(len(s),size=N), label='sampling') as pbar:
+        for i in pbar:
+            cond[i] = 0
+            i_next = tree.find_next_ngb(pos[i], pos, periodic=boxsize, cond=cond)
+            cond[i] = 1
+            d[pbar.iteration-1] = dist(pos[i], pos[i_next])
+    if ret_sample:
+        return UnitArr( np.percentile(d,q), s['pos'].units), \
+               UnitArr( d, s['pos'].units )
+    else:
+        return UnitArr( np.percentile(d,q), s['pos'].units)
+
 def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
                            max_halos=None, ret_FoFs=False,
                            verbose=environment.verbose, **kwargs):
@@ -900,7 +941,7 @@ def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
                             most massive halos. If None, all halos are returned.
         ret_FoFs (bool):    Also return the array with the FoF group indices
                             (sorted by mass).
-        verbose (bool):     Verbosity.
+        verbose (bool):     Verbosity level.
         **kwargs:           Other keywords are passed to `find_FoF_groups` (e.g.
                             `dvmax`).
 
