@@ -267,14 +267,12 @@ def half_qty_radius(s, qty, Qtot=None, center=None, proj=None):
 
     if center is None:
         center = UnitQty([0]*3)
-    else:
-        center = UnitQty(center)
-    center = center.in_units_of(s['pos'].units,subs=s)
+    center = UnitQty(center, s['pos'].units, subs=s)
 
     if isinstance(proj,int):
-        proj_mask = tuple([i for i in xrange(3) if i!=proj])
+        proj_mask = [i for i in xrange(3) if i!=proj]
         if len(center)==3:
-            center = center[(proj_mask,)]
+            center = center[proj_mask]
 
     if np.all(center==0):
         if isinstance(proj,int):

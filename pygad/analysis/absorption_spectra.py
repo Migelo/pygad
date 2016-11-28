@@ -568,7 +568,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
             temp[non0n] = temp[non0n] / n[non0n]
             temp      **= 2
             # we actually need the column densities, not the number of particles
-            n          /= np.prod(px[(xaxis,yaxis),])
+            n          /= np.prod(px[[xaxis,yaxis]])
 
             # the z-coordinates for the Hubble flow
             los_pos     = UnitArr(np.linspace(spatial_extent[0],

@@ -1,0 +1,24 @@
+# This is a build configuration.
+# Check our guides at https://confluence.atlassian.com/x/VYk8Lw for more examples.
+# Only use spaces to indent your .yml configuration.
+# -----
+# You can specify a custom docker image from Docker Hub as your build environment.
+image:
+  name: broett/std_programming_env
+  username: broett
+  password: $PWD_SECURE
+  email: broett@mpa-garching.mpg.de
+
+pipelines:
+  default:
+    - step:
+        script:
+          - git fetch --unshallow --tags
+          - wget https://bitbucket.org/broett/pygad/downloads/bc03.tar.gz
+          - tar -xzf bc03.tar.gz
+          - wget https://bitbucket.org/broett/pygad/downloads/iontbls_HM01.tar.gz
+          - tar -xzf iontbls_HM01.tar.gz iontbls
+          - wget https://bitbucket.org/broett/pygad/downloads/snaps.tar.gz
+          - tar -xzf snaps.tar.gz
+          - python setup.py install
+          - python -c "import pygad,doctest,sys; res = doctest.testmod(pygad); sys.exit(res.failed)"

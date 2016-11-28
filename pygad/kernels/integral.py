@@ -83,7 +83,7 @@ def project_kernel(kernel, N=100, inter_kind='quadratic'):
                                err)
         table.append( w )
     return interp1d(Rs, table, copy=False, bounds_error=False, fill_value=0.0,
-                    assume_sorted=True, kind=inter_kind)
+                    kind=inter_kind)
 
 def integrate_kernel(kernel, N=100, inter_kind='quadratic'):
     '''
@@ -124,7 +124,7 @@ def integrate_kernel(kernel, N=100, inter_kind='quadratic'):
                                err)
         table.append( I )
     return interp1d(rs, table, copy=False, bounds_error=False, fill_value=1.0,
-                    assume_sorted=True, kind=inter_kind)
+                    kind=inter_kind)
 
 #old version: needs to use 'intergrate_kernel' now (cache it?!)...
 @static_vars( integs={} )
