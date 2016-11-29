@@ -100,7 +100,7 @@ from .. import environment
 from .. import C
 
 def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
-                     stop_N=10, verbose=environment.verbose):
+                     stop_N=10, verbose=None):
     '''
     Find the densest point by shrinking sphere technique.
 
@@ -115,10 +115,14 @@ def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
         shrink_factor (float):  The factor to shrink the sphere in each step.
         stop_N (int):           If so many or less particles are left in the
                                 sphere, stop.
+        verbose (int):          Verbosity level. Default: the gobal pygad
+                                verbosity level.
 
     Returns:
         center (UnitArr):       The center.
     '''
+    if verbose is None:
+        verbose = environment.verbose
     center0 = UnitQty(center,s['pos'].units,subs=s,dtype=np.float64)
     R = UnitScalar(R,s['pos'].units,subs=s)
 
@@ -230,8 +234,7 @@ def virial_info(s, center=None, odens=200.0, N_min=10):
            UnitArr(info[1],s['mass'].units)
 
 NO_FOF_GROUP_ID = int( np.array(-1, np.uintp) )
-def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True,
-                    verbose=environment.verbose):
+def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True, verbose=None):
     '''
     Perform a friends-of-friends search on a (sub-)snapshot.
 
@@ -247,6 +250,8 @@ def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True,
         sort (bool):        Whether to sort the groups by mass. If True, the group
                             with ID 0 will be the most massive one and the in
                             descending order.
+        verbose (int):      Verbosity level. Default: the gobal pygad verbosity
+                            level.
 
     Returns:
         FoF (np.ndarray):   A block of FoF group IDs for the particles of `s`.
@@ -255,6 +260,8 @@ def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True,
                             np.array(-1,np.uintp).
         N_FoF (int):        The number of FoF groups found.
     '''
+    if verbose is None:
+        verbose = environment.verbose
     l = UnitScalar(l, s['pos'].units, subs=s, dtype=float)
     dvmax = UnitScalar(dvmax, s['vel'].units, subs=s, dtype=float)
     sort = bool(sort)
@@ -875,7 +882,7 @@ class Halo(object):
         self._props[prop] = val
         return val
 
-def nxt_ngb_dist_perc(s, q, N=1000, tree=None, ret_sample=False, verbose=environment.verbose):
+def nxt_ngb_dist_perc(s, q, N=1000, tree=None, ret_sample=False, verbose=None):
     '''
     Estime the percentile distance to the the next neighbour within the given snapshot.
 
@@ -886,12 +893,14 @@ def nxt_ngb_dist_perc(s, q, N=1000, tree=None, ret_sample=False, verbose=environ
         tree (cOctree):     The octree class to use, if already present. Will be
                             generated on the fly otherwise.
         ret_sample (bool):  Also return the entire sample drawn.
-        verbose (int):      Verbosity level.
-
+        verbose (int):      Verbosity level. Default: the gobal pygad verbosity
+                            level.
     Returns:
         d (UnitArr):        The q-percentile distance to the next neighbour.
        [dists (UnitArr):    The sample drawn.]
     '''
+    if verbose is None:
+        verbose = environment.verbose
     from .. import octree
     pos = s['pos'].view(np.ndarray)
     boxsize = s.boxsize.in_units_of(s['pos'].units)
@@ -916,8 +925,8 @@ def nxt_ngb_dist_perc(s, q, N=1000, tree=None, ret_sample=False, verbose=environ
         return UnitArr( np.percentile(d,q), s['pos'].units)
 
 def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
-                           max_halos=None, ret_FoFs=False,
-                           verbose=environment.verbose, **kwargs):
+                           max_halos=None, ret_FoFs=False, verbose=None,
+                           **kwargs):
     '''
     Generate a list of Halos defined by FoF groups.
 
@@ -941,7 +950,8 @@ def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
                             most massive halos. If None, all halos are returned.
         ret_FoFs (bool):    Also return the array with the FoF group indices
                             (sorted by mass).
-        verbose (bool):     Verbosity level.
+        verbose (bool):     Verbosity level. Default: the gobal pygad verbosity
+                            level.
         **kwargs:           Other keywords are passed to `find_FoF_groups` (e.g.
                             `dvmax`).
 
@@ -955,6 +965,8 @@ def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
                             and/or function `find_FoF_groups`).
         N_FoF (int):        The number of FoF groups in `FoF`.
     '''
+    if verbose is None:
+        verbose = environment.verbose
     if FoF is None:
         if l is None:
             l = ( 1500. * s.cosmology.rho_crit(s.redshift)
