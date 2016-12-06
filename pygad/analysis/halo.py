@@ -42,6 +42,7 @@ Examples:
     >>> galaxies = generate_FoF_catalogue(s.baryons,
     ...             min_N=300,
     ...             dvmax='100 km/s', #max_halos=5,
+    ...             progressbar=False,
     ...             exclude=lambda g,s: g.Mgas/g.mass>0.9)  # doctest: +ELLIPSIS
     perform a FoF search on 1,001,472 particles:
       l      = 1.3 [kpc]
@@ -85,13 +86,14 @@ __all__ = ['shrinking_sphere', 'virial_info', 'find_FoF_groups',
            'NO_FOF_GROUP_ID', 'Rockstar_halo_field_names',
            'Rockstar_particle_field_names', 'RockstarHeader',
            'read_Rockstar_file', 'generate_Rockstar_halos', 'Halo',
-           'generate_FoF_catalogue', 'find_most_massive_progenitor']
+           'nxt_ngb_dist_perc', 'generate_FoF_catalogue',
+           'find_most_massive_progenitor']
 
 import numpy as np
 from .. import utils
 from ..units import *
 from ..utils import *
-import sys
+import sys, os
 from ..transformation import *
 from properties import *
 from ..snapshot import *
@@ -99,7 +101,7 @@ from .. import environment
 from .. import C
 
 def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
-                     stop_N=10, verbose=environment.verbose):
+                     stop_N=10, verbose=None):
     '''
     Find the densest point by shrinking sphere technique.
 
@@ -114,10 +116,14 @@ def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
         shrink_factor (float):  The factor to shrink the sphere in each step.
         stop_N (int):           If so many or less particles are left in the
                                 sphere, stop.
+        verbose (int):          Verbosity level. Default: the gobal pygad
+                                verbosity level.
 
     Returns:
         center (UnitArr):       The center.
     '''
+    if verbose is None:
+        verbose = environment.verbose
     center0 = UnitQty(center,s['pos'].units,subs=s,dtype=np.float64)
     R = UnitScalar(R,s['pos'].units,subs=s)
 
@@ -229,8 +235,7 @@ def virial_info(s, center=None, odens=200.0, N_min=10):
            UnitArr(info[1],s['mass'].units)
 
 NO_FOF_GROUP_ID = int( np.array(-1, np.uintp) )
-def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True,
-                    verbose=environment.verbose):
+def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True, verbose=None):
     '''
     Perform a friends-of-friends search on a (sub-)snapshot.
 
@@ -246,6 +251,8 @@ def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True,
         sort (bool):        Whether to sort the groups by mass. If True, the group
                             with ID 0 will be the most massive one and the in
                             descending order.
+        verbose (int):      Verbosity level. Default: the gobal pygad verbosity
+                            level.
 
     Returns:
         FoF (np.ndarray):   A block of FoF group IDs for the particles of `s`.
@@ -254,6 +261,8 @@ def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True,
                             np.array(-1,np.uintp).
         N_FoF (int):        The number of FoF groups found.
     '''
+    if verbose is None:
+        verbose = environment.verbose
     l = UnitScalar(l, s['pos'].units, subs=s, dtype=float)
     dvmax = UnitScalar(dvmax, s['vel'].units, subs=s, dtype=float)
     sort = bool(sort)
@@ -833,8 +842,8 @@ class Halo(object):
         elif prop == 'Rmax':
             val = periodic_distance_to(halo['pos'], self._get('com', **args),
                                        halo.boxsize).max()
-        elif prop[0] in ['R','M'] and (prop[1:4]=='vir' or prop[1:4].isdigit()) \
-                and prop[4]=='_':
+        elif prop[0] in ['R','M'] and len(prop)>4 and \
+                (prop[1:4]=='vir' or prop[1:4].isdigit()) and prop[4]=='_':
             qty = prop[0]
             odens_n = prop[1:4]
             scheme = prop[5:]
@@ -874,9 +883,51 @@ class Halo(object):
         self._props[prop] = val
         return val
 
+def nxt_ngb_dist_perc(s, q, N=1000, tree=None, ret_sample=False, verbose=None):
+    '''
+    Estime the percentile distance to the the next neighbour within the given snapshot.
+
+    Args:
+        s (Snap):           The snapshot to use.
+        q (int,float):      The percentile to ask for.
+        N (int):            The sample size to estimate the distance from.
+        tree (cOctree):     The octree class to use, if already present. Will be
+                            generated on the fly otherwise.
+        ret_sample (bool):  Also return the entire sample drawn.
+        verbose (int):      Verbosity level. Default: the gobal pygad verbosity
+                            level.
+    Returns:
+        d (UnitArr):        The q-percentile distance to the next neighbour.
+       [dists (UnitArr):    The sample drawn.]
+    '''
+    if verbose is None:
+        verbose = environment.verbose
+    from .. import octree
+    pos = s['pos'].view(np.ndarray)
+    boxsize = s.boxsize.in_units_of(s['pos'].units)
+    if tree is None:
+        if verbose >= environment.VERBOSE_NORMAL:
+            print 'building the octree...'
+        tree = octree.cOctree(pos)
+    if verbose >= environment.VERBOSE_NORMAL:
+        print 'preparing...'
+    d = np.empty(N, dtype=float)
+    cond = np.ones(len(s), dtype=np.int32)
+    with ProgressBar(np.random.randint(len(s),size=N), label='sampling') as pbar:
+        for i in pbar:
+            cond[i] = 0
+            i_next = tree.find_next_ngb(pos[i], pos, periodic=boxsize, cond=cond)
+            cond[i] = 1
+            d[pbar.iteration-1] = dist(pos[i], pos[i_next])
+    if ret_sample:
+        return UnitArr( np.percentile(d,q), s['pos'].units), \
+               UnitArr( d, s['pos'].units )
+    else:
+        return UnitArr( np.percentile(d,q), s['pos'].units)
+
 def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
-                           max_halos=None, ret_FoFs=False,
-                           verbose=environment.verbose, **kwargs):
+                           max_halos=None, ret_FoFs=False, verbose=None,
+                           progressbar=True, **kwargs):
     '''
     Generate a list of Halos defined by FoF groups.
 
@@ -900,7 +951,11 @@ def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
                             most massive halos. If None, all halos are returned.
         ret_FoFs (bool):    Also return the array with the FoF group indices
                             (sorted by mass).
-        verbose (bool):     Verbosity.
+        verbose (bool):     Verbosity level. Default: the gobal pygad verbosity
+                            level.
+        progressbar (bool): Whether to show a progress bar for initialising the
+                            halo classes (not for generating the FoF groups,
+                            though!).
         **kwargs:           Other keywords are passed to `find_FoF_groups` (e.g.
                             `dvmax`).
 
@@ -914,6 +969,8 @@ def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
                             and/or function `find_FoF_groups`).
         N_FoF (int):        The number of FoF groups in `FoF`.
     '''
+    if verbose is None:
+        verbose = environment.verbose
     if FoF is None:
         if l is None:
             l = ( 1500. * s.cosmology.rho_crit(s.redshift)
@@ -922,17 +979,29 @@ def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
     else:
         N_FoF = len(set(FoF)) - 1
 
-    if verbose >= environment.VERBOSE_NORMAL:
-        print 'initialize halos from FoF group IDs...'
-        sys.stdout.flush()
 
+    from ..utils import ProgressBar, DevNull
+    if verbose>=environment.VERBOSE_NORMAL and progressbar:
+        outfile = sys.stdout
+    else:
+        outfile = DevNull()
     halos = []
-    for i in xrange(N_FoF):
-        h = Halo(halo=s[FoF==i], root=s, calc=calc)
-        if exclude is None or not exclude(h,s):
-            halos.append( h )
-        if len(halos)==max_halos:
-            break
+    with ProgressBar(
+                xrange( min(N_FoF,max_halos) if exclude is None else N_FoF ),
+                show_eta=False,
+                show_percent=False,
+                label='initialize halos',
+                file=outfile) as pbar:
+        if not progressbar:
+            print 'initialize halos from FoF group IDs...'
+            sys.stdout.flush()
+        for i in pbar:
+            h = Halo(halo=s[FoF==i], root=s, calc=calc)
+            h.linking_length = l
+            if exclude is None or not exclude(h,s):
+                halos.append( h )
+            if len(halos)==max_halos:
+                break
 
     if verbose >= environment.VERBOSE_NORMAL:
         print 'initialized %d halos.' % (len(halos))

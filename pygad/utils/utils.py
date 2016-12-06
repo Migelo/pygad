@@ -3,9 +3,9 @@ A collection of some general (low-level) functions.
 
 Doctests are in the functions themselves.
 '''
-__all__ = ['static_vars', 'nice_big_num_str', 'float_to_nice_latex', 'perm_inv',
-           'periodic_distance_to', 'sane_slice', 'is_consecutive', 'rand_dir',
-           'ProgressBar', 'sec_to_nice_str']
+__all__ = ['DevNull', 'static_vars', 'nice_big_num_str', 'float_to_nice_latex',
+           'perm_inv', 'periodic_distance_to', 'sane_slice', 'is_consecutive',
+           'rand_dir', 'ProgressBar', 'sec_to_nice_str']
 
 import numpy as np
 import re
@@ -14,6 +14,41 @@ import sys
 from term import *
 import time
 import numbers
+
+class DevNull():
+    '''A always open write-only null file object.'''
+    def __init__(self, *args, **kwargs):
+        self.closed = False
+        self.mode = "w"
+        self.name = "<null>"
+        self.encoding = None
+        self.errors = None
+        self.newlines = None
+        self.softspace = 0
+    def close(self):
+        pass
+    def flush(self):
+        pass
+    def next(self):
+        raise IOError("Invalid operation")
+    def read(size = 0):
+        raise IOError("Invalid operation")
+    def readline(self):
+        raise IOError("Invalid operation")
+    def readlines(self):
+        raise IOError("Invalid operation")
+    def xreadlines(self):
+        raise IOError("Invalid operation")
+    def seek(self):
+        raise IOError("Invalid operation")
+    def tell(self):
+        return 0
+    def truncate(self):
+        pass
+    def write(self, *args, **kwargs):
+        pass
+    def writelines(self, *args, **kwargs):
+        pass
 
 def static_vars(**kwargs):
     '''
