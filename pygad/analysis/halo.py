@@ -42,6 +42,7 @@ Examples:
     >>> galaxies = generate_FoF_catalogue(s.baryons,
     ...             min_N=300,
     ...             dvmax='100 km/s', #max_halos=5,
+    ...             progressbar=False,
     ...             exclude=lambda g,s: g.Mgas/g.mass>0.9)  # doctest: +ELLIPSIS
     perform a FoF search on 1,001,472 particles:
       l      = 1.3 [kpc]
@@ -92,7 +93,7 @@ import numpy as np
 from .. import utils
 from ..units import *
 from ..utils import *
-import sys
+import sys, os
 from ..transformation import *
 from properties import *
 from ..snapshot import *
@@ -926,7 +927,7 @@ def nxt_ngb_dist_perc(s, q, N=1000, tree=None, ret_sample=False, verbose=None):
 
 def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
                            max_halos=None, ret_FoFs=False, verbose=None,
-                           **kwargs):
+                           progressbar=True, **kwargs):
     '''
     Generate a list of Halos defined by FoF groups.
 
@@ -952,6 +953,9 @@ def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
                             (sorted by mass).
         verbose (bool):     Verbosity level. Default: the gobal pygad verbosity
                             level.
+        progressbar (bool): Whether to show a progress bar for initialising the
+                            halo classes (not for generating the FoF groups,
+                            though!).
         **kwargs:           Other keywords are passed to `find_FoF_groups` (e.g.
                             `dvmax`).
 
@@ -975,17 +979,29 @@ def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
     else:
         N_FoF = len(set(FoF)) - 1
 
-    if verbose >= environment.VERBOSE_NORMAL:
-        print 'initialize halos from FoF group IDs...'
-        sys.stdout.flush()
 
+    from ..utils import ProgressBar, DevNull
+    if verbose>=environment.VERBOSE_NORMAL and progressbar:
+        outfile = sys.stdout
+    else:
+        outfile = DevNull()
     halos = []
-    for i in xrange(N_FoF):
-        h = Halo(halo=s[FoF==i], root=s, calc=calc)
-        if exclude is None or not exclude(h,s):
-            halos.append( h )
-        if len(halos)==max_halos:
-            break
+    with ProgressBar(
+                xrange( min(N_FoF,max_halos) if exclude is None else N_FoF ),
+                show_eta=False,
+                show_percent=False,
+                label='initialize halos',
+                file=outfile) as pbar:
+        if not progressbar:
+            print 'initialize halos from FoF group IDs...'
+            sys.stdout.flush()
+        for i in pbar:
+            h = Halo(halo=s[FoF==i], root=s, calc=calc)
+            h.linking_length = l
+            if exclude is None or not exclude(h,s):
+                halos.append( h )
+            if len(halos)==max_halos:
+                break
 
     if verbose >= environment.VERBOSE_NORMAL:
         print 'initialized %d halos.' % (len(halos))
