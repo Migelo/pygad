@@ -596,6 +596,20 @@ class _Snap(object):
         '''
         return physics.z2a(self.redshift)
 
+    def write(self, filename, **kwargs):
+        '''
+        Write this (sub-)snapshot to the given file.
+
+        For more information see `gadget.write` as this function just calls it.
+
+        Args:
+            filename (str):     The path to write the snapshot to.
+            **kwargs:           Further (keyword) arguments are simply passed to
+                                `gadget.write` (by default it is
+                                `gad_units=self.root._gad_units`).
+        '''
+        return gadget.write(self, filename, gad_units=self.root._gad_units, **kwargs)
+
     def headers(self, idx=None):
         '''
         A list of the header(s) as dict's. For common features see `properties`.
