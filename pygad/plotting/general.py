@@ -166,12 +166,14 @@ def luminance(colors):
         c = colors[:,:3]
     return np.sqrt( np.dot(c**2, RGB_lum_weight) )
 
-def isolum_cmap(cmap, desat=None):
+def isolum_cmap(cmap, isolum=1.0, desat=None):
     '''
     Return version of the colormap with constant luminance.
 
     Args:
         cmap (str, Colormap):   The colormap to norm in luminance.
+        isolum (float):         The grade to which the colormap shall be converted
+                                to a iso-luminosity one.
         desat (float):          If not None, a factor of how much to desatureate
                                 the colormap first. This allows higher luminance.
 
@@ -191,7 +193,9 @@ def isolum_cmap(cmap, desat=None):
     
     # convert RGBA to perceived greyscale luminance
     # cf. http://alienryderflex.com/hsp.html
-    lum = luminance(colors)
+    if not (0.0 <= isolum <= 1.0):
+        raise ValueError('`isolum` needs to be in [0,1], but is %s!' % isolum)
+    lum = (isolum * luminance(colors)) + (1.-isolum)
     for i in xrange(3):
         colors[:, i] /= lum
     # if rgb=(1,1,1), then lum=sqrt(3)>1
