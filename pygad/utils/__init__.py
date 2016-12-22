@@ -6,7 +6,7 @@ Also doctest other parts of this sub-module:
     >>> doctest.testmod(utils)
     TestResults(failed=0, attempted=44)
     >>> doctest.testmod(safe_eval)
-    TestResults(failed=0, attempted=9)
+    TestResults(failed=0, attempted=11)
     >>> doctest.testmod(term)
     TestResults(failed=0, attempted=0)
     >>> doctest.testmod(geo)
