@@ -74,8 +74,19 @@ Examples:
     >>> assert not bool( set(antisub['ID']).intersection(sub['ID']) )
     >>> assert len(antisub) + len(sub) == len(gal)
     >>> assert set(sub['ID']) == set(gal[IDMask(set(IDs))]['ID'])
+
+    >>> expr_mask = ExprMask("abs(vel[:,2]) < '100 km/s'")
+    >>> sub = gal[expr_mask]
+    >>> sub
+    <Snap "snap_M1196_4x_470":masked:ExprMask("abs(vel[:,2]) < '100 km/s'"); N=145,157; z=0.000>
+    >>> assert np.all(sub['ID']
+    ...                 == gal['ID'][np.abs(gal['vel'][:,2]) < '100 km/s'])
+    >>> assert len(sub) + len(gal[~expr_mask]) == len(gal)
+    >>> sub = gal[ExprMask("(abs(vel[:,2]) < '100 km/s') & (r < '30 kpc')")]
+    >>> assert np.all(sub['ID'] == gal['ID'][
+    ...     (np.abs(gal['vel'][:,2]) < '100 km/s') & (gal['r'] < '30 kpc')])
 '''
-__all__ = ['SnapMask', 'BallMask', 'BoxMask', 'DiscMask', 'IDMask']
+__all__ = ['SnapMask', 'BallMask', 'BoxMask', 'DiscMask', 'IDMask', 'ExprMask']
 
 import numpy as np
 from ..units import *
@@ -392,4 +403,43 @@ class IDMask(SnapMask):
     def _get_mask_for(self, s):
         IDs = self._IDs
         return np.in1d(s['ID'], IDs)
+
+class ExprMask(SnapMask):
+    '''
+    Mask a snapshot by a given expression.
+
+    The expression defines a simple snapshot mask and shall be used in similar way
+    as `Snap.get()`.
+
+    Args:
+        expr (str):     TODO
+    '''
+
+    def __init__(self, expr):
+        super(ExprMask,self).__init__()
+        self.expr = expr
+
+    @property
+    def expr(self):
+        return self._expr
+
+    @expr.setter
+    def expr(self, expr):
+        if not isinstance(expr, str):
+            raise ValueError('`expr` must be a string')
+        self._expr = expr
+
+    def inverted(self):
+        inv = ExprMask(self._expr)
+        inv._inverse = not self._inverse
+        return inv
+
+    def __str__(self):
+        s = '~' if self._inverse else ''
+        s += 'ExprMask("%s")' % self._expr
+        return s
+
+    def _get_mask_for(self, s):
+        mask = s.get(self._expr)
+        return mask.view(np.ndarray)
 
