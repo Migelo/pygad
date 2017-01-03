@@ -30,7 +30,7 @@ Examples:
     derive block r... done.
     load block hsml... done.
     >>> sub
-    <Snap "snap_M1196_4x_470":ball(r=60.0 [kpc]); N=198,250; z=0.000>
+    <Snap "snap_M1196_4x_470":Ball(r=60.0 [kpc]); N=198,250; z=0.000>
     >>> if abs(sub['r'].max().in_units_of('Mpc',subs=s) - 9.905) > 0.01:
     ...     print sub['r'].max().in_units_of('Mpc',subs=s)
     >>> no_gas_max_r = SubSnap(sub,list(set(range(6))-set(gadget.families['gas'])))['r'].max()
@@ -39,7 +39,7 @@ Examples:
     >>> s.to_physical_units()
     >>> sub = s[BoxMask('120 kpc',sph_overlap=False)]
     >>> sub # doctest:+ELLIPSIS
-    <Snap "snap_M1196_4x_470":box([[-60,60],[-60,60],[-60,60]] [kpc],strict); N=218,98...; z=0.000>
+    <Snap "snap_M1196_4x_470":Box([[-60,60],[-60,60],[-60,60]] [kpc],strict); N=218,98...; z=0.000>
     >>> if np.linalg.norm( np.abs(sub['pos']).max(axis=0) - [120/2]*3 ) > 0.1:
     ...     print np.abs(sub['pos']).max(axis=0)
 
@@ -52,14 +52,14 @@ Examples:
     derive block jzjc... done.
     derive block rcyl... done.
     >>> disc
-    <Snap "snap_M1196_4x_470":disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc]); N=36,419; z=0.000>
+    <Snap "snap_M1196_4x_470":Disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc]); N=36,419; z=0.000>
     >>> gal = s[s['r']<'60 kpc']
     >>> np.array(disc.parts,float) / np.array(gal.parts)
     array([ 0.78431754,  0.02731191,         nan,         nan,  0.26441513,
                    nan])
     >>> bulge = gal[discmask.inverted()]
     >>> bulge
-    <Snap "snap_M1196_4x_470":masked:~disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc]); N=159,918; z=0.000>
+    <Snap "snap_M1196_4x_470":masked:~Disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc]); N=159,918; z=0.000>
     >>> float(len(disc)) / len(bulge)
     0.2277354644255181
 
@@ -74,8 +74,19 @@ Examples:
     >>> assert not bool( set(antisub['ID']).intersection(sub['ID']) )
     >>> assert len(antisub) + len(sub) == len(gal)
     >>> assert set(sub['ID']) == set(gal[IDMask(set(IDs))]['ID'])
+
+    >>> expr_mask = ExprMask("abs(vel[:,2]) < '100 km/s'")
+    >>> sub = gal[expr_mask]
+    >>> sub
+    <Snap "snap_M1196_4x_470":masked:ExprMask("abs(vel[:,2]) < '100 km/s'"); N=145,157; z=0.000>
+    >>> assert np.all(sub['ID']
+    ...                 == gal['ID'][np.abs(gal['vel'][:,2]) < '100 km/s'])
+    >>> assert len(sub) + len(gal[~expr_mask]) == len(gal)
+    >>> sub = gal[ExprMask("(abs(vel[:,2]) < '100 km/s') & (r < '30 kpc')")]
+    >>> assert np.all(sub['ID'] == gal['ID'][
+    ...     (np.abs(gal['vel'][:,2]) < '100 km/s') & (gal['r'] < '30 kpc')])
 '''
-__all__ = ['SnapMask', 'BallMask', 'BoxMask', 'DiscMask', 'IDMask']
+__all__ = ['SnapMask', 'BallMask', 'BoxMask', 'DiscMask', 'IDMask', 'ExprMask']
 
 import numpy as np
 from ..units import *
@@ -99,7 +110,7 @@ class SnapMask(object):
 
     def __str__(self):
         s = '~' if self._inverse else ''
-        s += 'SnapMask'
+        s += self.__class__.__name__
         return s
 
     def _get_mask_for(self, s):
@@ -165,7 +176,7 @@ class BallMask(SnapMask):
 
     def __str__(self):
         s = '~' if self._inverse else ''
-        s += 'ball('
+        s += 'Ball('
         if not np.all(self._center==0):
             s += 'center=%s,' % self._center
         s += 'r=%s' % self._R
@@ -258,7 +269,7 @@ class BoxMask(SnapMask):
 
     def __str__(self):
         s = '~' if self._inverse else ''
-        s += 'box(['
+        s += 'Box(['
         for i in xrange(3):
             s += '[%.4g,%.4g]%s' % (tuple(self._extent[i]) +
                                         ('' if i==2 else ',',))
@@ -343,7 +354,7 @@ class DiscMask(SnapMask):
 
     def __str__(self):
         s = '~' if self._inverse else ''
-        s += 'disc(jzjc<%.2f' % self.jzjc_min
+        s += 'Disc(jzjc<%.2f' % self.jzjc_min
         if self._rmax is not None:
             s += ',rcyl<%s' % self._rmax
         if self._zmax is not None:
@@ -389,12 +400,46 @@ class IDMask(SnapMask):
     def IDs(self):
         return set(self._IDs)
         
-    def __str__(self):
-        s = '~' if self._inverse else ''
-        s += 'IDMask'
-        return s        
-        
     def _get_mask_for(self, s):
         IDs = self._IDs
         return np.in1d(s['ID'], IDs)
+
+class ExprMask(SnapMask):
+    '''
+    Mask a snapshot by a given expression.
+
+    The expression defines a simple snapshot mask and shall be used in similar way
+    as `Snap.get()`.
+
+    Args:
+        expr (str):     TODO
+    '''
+
+    def __init__(self, expr):
+        super(ExprMask,self).__init__()
+        self.expr = expr
+
+    @property
+    def expr(self):
+        return self._expr
+
+    @expr.setter
+    def expr(self, expr):
+        if not isinstance(expr, str):
+            raise ValueError('`expr` must be a string')
+        self._expr = expr
+
+    def inverted(self):
+        inv = ExprMask(self._expr)
+        inv._inverse = not self._inverse
+        return inv
+
+    def __str__(self):
+        s = '~' if self._inverse else ''
+        s += 'ExprMask("%s")' % self._expr
+        return s
+
+    def _get_mask_for(self, s):
+        mask = s.get(self._expr)
+        return mask.view(np.ndarray)
 

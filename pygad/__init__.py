@@ -99,7 +99,7 @@ from units import Unit, Units, UnitArr, UnitQty, UnitScalar, Fraction
 from physics import cosmology
 from physics import G, m_p, solar
 from transformation import Translation, Rotation
-from snapshot import Snap, BallMask, BoxMask, DiscMask, IDMask
+from snapshot import Snap, BallMask, BoxMask, DiscMask, IDMask, ExprMask
 from binning import gridbin2d, gridbin, smooth
 from plotting import show_image
 from tools import prepare_zoom, read_info_file
