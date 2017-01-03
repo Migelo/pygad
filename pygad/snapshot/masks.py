@@ -85,6 +85,16 @@ Examples:
     >>> sub = gal[ExprMask("(abs(vel[:,2]) < '100 km/s') & (r < '30 kpc')")]
     >>> assert np.all(sub['ID'] == gal['ID'][
     ...     (np.abs(gal['vel'][:,2]) < '100 km/s') & (gal['r'] < '30 kpc')])
+
+    Combining masks with (bitwise) logical operators:
+    >>> s[expr_mask & discmask]
+    <Snap "snap_M1196_4x_470":CompoundMask(ExprMask("abs(vel[:,2]) < '100 km/s'") & Disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc])); N=36,072; z=0.000>
+    >>> s[expr_mask | discmask]
+    <Snap "snap_M1196_4x_470":CompoundMask(ExprMask("abs(vel[:,2]) < '100 km/s'") | Disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc])); N=1,901,758; z=0.000>
+    >>> s[expr_mask ^ discmask]
+    <Snap "snap_M1196_4x_470":CompoundMask(ExprMask("abs(vel[:,2]) < '100 km/s'") ^ Disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc])); N=1,865,686; z=0.000>
+    >>> s[expr_mask & discmask & BallMask('30 kpc')]
+    <Snap "snap_M1196_4x_470":CompoundMask(CompoundMask(ExprMask("abs(vel[:,2]) < '100 km/s'") & Disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc])) & Ball(r=30.0 [kpc],strict)); N=34,177; z=0.000>
 '''
 __all__ = ['SnapMask', 'BallMask', 'BoxMask', 'DiscMask', 'IDMask', 'ExprMask']
 
@@ -92,6 +102,7 @@ import numpy as np
 from ..units import *
 from .. import gadget
 from snapshot import SubSnap
+import operator
 
 class SnapMask(object):
     '''The base class for more complicated masks.'''
@@ -114,7 +125,10 @@ class SnapMask(object):
         return s
 
     def _get_mask_for(self, s):
-        '''The actual implementation for getting the mask for this class.'''
+        '''
+        The actual implementation for getting the mask for this class, not
+        accounting for the _inverse flag.
+        '''
         raise NotImplementedError('This is just the interface!')
 
     def get_mask_for(self, s):
@@ -129,6 +143,13 @@ class SnapMask(object):
         '''
         mask = self._get_mask_for(s)
         return ~mask if self._inverse else mask
+
+    def __and__(self, other):
+        return CompoundMask(self, operator.and_, other)
+    def __or__(self, other):
+        return CompoundMask(self, operator.or_, other)
+    def __xor__(self, other):
+        return CompoundMask(self, operator.xor, other)
 
 class BallMask(SnapMask):
     '''
@@ -412,7 +433,8 @@ class ExprMask(SnapMask):
     as `Snap.get()`.
 
     Args:
-        expr (str):     TODO
+        expr (str):     A python expression as it can be used in Snap.get()
+                        returning a boolean array.
     '''
 
     def __init__(self, expr):
@@ -442,4 +464,52 @@ class ExprMask(SnapMask):
     def _get_mask_for(self, s):
         mask = s.get(self._expr)
         return mask.view(np.ndarray)
+
+class CompoundMask(SnapMask):
+    '''
+    A snapshot mask built from combining two others. Normally this class is not
+    isinstantiated by the constructur, but by an operation of two others.
+
+    Args:
+        m1 (SnapMask):  The first operand.
+        op (operator.and_, operand.or_, operand.xor):
+                        Operation to combine the two masks.
+        m2 (SnapMask):  The second operand.
+    '''
+
+    def __init__(self, m1, op, m2):
+        super(CompoundMask,self).__init__()
+        for m in (m1,m2):
+            if not isinstance(m, SnapMask):
+                raise ValueError('"%s" is not a SnapMask!' % m)
+        if op not in (operator.and_, operator.or_, operator.xor):
+            raise ValueError('Operator "%s" is not supported' % op)
+
+        self._masks = [m1, m2]
+        self._op = op
+
+    @property
+    def operator(self):
+        return self._op
+
+    def inverted(self):
+        inv = CompoundMask(self._masks[0], self._op, self._masks[1])
+        inv._inverse = not self._inverse
+        return inv
+
+    def __str__(self):
+        s = '~' if self._inverse else ''
+        s += 'CompoundMask(%s %s %s)' % (
+                self._masks[0],
+                {   operator.and_:  '&',
+                    operator.or_:   '|',
+                    operator.xor:   '^',
+                }.get(self._op, str(self._op)),
+                self._masks[1],
+        )
+        return s
+
+    def _get_mask_for(self, s):
+        m1, m2 = map(lambda m:m._get_mask_for(s), self._masks)
+        return self._op(m1,m2)
 
