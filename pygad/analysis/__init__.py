@@ -12,7 +12,7 @@ Also doctest other parts of this sub-module:
     >>> doctest.testmod(profiles)
     TestResults(failed=0, attempted=19)
     >>> doctest.testmod(absorption_spectra)
-    TestResults(failed=0, attempted=7)
+    TestResults(failed=0, attempted=11)
 
     #>>> doctest.testmod(analysis)
     #TestResults(failed=0, attempted=20)

@@ -5,6 +5,19 @@ Doctests:
     >>> from ..environment import module_dir
     >>> from ..snapshot import Snap
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=False)
+
+    >>> vs = UnitArr([1,1e3,1e5], 'km/s')
+    >>> print velocities_to_redshifts(vs, 0.1)
+    [ 0.10000367  0.10366921  0.4669205 ]
+    >>> print redshifts_to_velocities(velocities_to_redshifts(vs,0.1), 0.1)
+    [  1.00000000e+03   1.00000000e+06   1.00000000e+08] [m s**-1]
+    >>> for z0 in (0.0, 0.123, 1.0, 2.34, 10.0):
+    ...     zs = velocities_to_redshifts(vs, z0=z0)
+    ...     vs_back = redshifts_to_velocities(zs, z0=z0)
+    ...     if np.max(np.abs( ((vs-vs_back)/vs).in_units_of(1) )) > 1e-10:
+    ...         print vs
+    ...         print vs_back
+    ...         print np.max(np.abs( ((vs-vs_back)/vs).in_units_of(1) ))
     
     >>> los_arr = UnitArr([[ 34700.,  35600.],
     ...                    [ 34550.,  35500.],
@@ -80,8 +93,9 @@ Doctests:
     >>> environment.verbose = environment.VERBOSE_NORMAL
 """
 __all__ = ['mock_absorption_spectrum_of', 'mock_absorption_spectrum',
-           'EW', 'velocities_to_redshifts', 'find_line_contributers',
-           'Voigt', 'Gaussian', 'Lorentzian']
+           'EW', 'Voigt', 'Gaussian', 'Lorentzian', 'find_line_contributers',
+           'velocities_to_redshifts', 'redshifts_to_velocities',
+           ]
 
 from ..units import Unit, UnitArr, UnitQty, UnitScalar
 from ..physics import kB, m_H, c, q_e, m_e, epsilon0
@@ -105,6 +119,10 @@ lines = {
 
     'CII1036':   {'ion':'CII',    'l':'1036.337 Angstrom',  'f':0.1270,
                     'atomwt':'12.011 u'},
+    'CII1334':   {'ion':'CII',    'l':'1334.532 Angstrom',  'f':0.1270,
+                    'atomwt':'12.011 u'},
+    'CII1335':   {'ion':'CII',    'l':'1335.708 Angstrom',  'f':0.1140,
+                    'atomwt':'12.011 u'},
     'CIII977':   {'ion':'CIII',   'l': '977.020 Angstrom',  'f':0.7620,
                     'atomwt':'12.011 u'},
     'CIV1548':   {'ion':'CIV',    'l':'1548.195 Angstrom',  'f':0.1908,
@@ -112,9 +130,30 @@ lines = {
     'CIV1550':   {'ion':'CIV',    'l':'1550.777 Angstrom',  'f':0.09520,
                     'atomwt':'12.011 u'},
 
+    'NI1199':    {'ion':'NI',     'l': '1199.550 Angstrom', 'f':0.1300,
+                    'atomwt':'14.0067 u'},
+    'NI1200':    {'ion':'NI',     'l': '1200.223 Angstrom', 'f':0.0862,
+                    'atomwt':'14.0067 u'},
+    'NI1201':    {'ion':'NI',     'l': '1200.710 Angstrom', 'f':0.043,
+                    'atomwt':'14.0067 u'},
+    'NII1083':   {'ion':'NII',    'l': '1083.994 Angstrom', 'f':0.1150,
+                    'atomwt':'14.0067 u'},
+    'NV1238':    {'ion':'NV',     'l': '1238.821 Angstrom', 'f':0.1560,
+                    'atomwt':'14.0067 u'},
+    'NV1242':    {'ion':'NV',     'l': '1242.804 Angstrom', 'f':0.0780,
+                    'atomwt':'14.0067 u'},
+
+    'OI1302':    {'ion':'OI',    'l': '1302.168 Angstrom',  'f':0.05190,
+                    'atomwt':'15.9994 u'},
+    'OI1304':    {'ion':'OI',    'l': '1304.858 Angstrom',  'f':0.04877,
+                    'atomwt':'15.9994 u'},
+    'OI1306':    {'ion':'OI',    'l': '1306.029 Angstrom',  'f':0.04873,
+                    'atomwt':'15.9994 u'},
     'OIV787':    {'ion':'OIV',    'l': '787.711 Angstrom',  'f':0.110,
                     'atomwt':'15.9994 u'},
     'OVI1031':   {'ion':'OVI',    'l':'1031.927 Angstrom',  'f':0.1329,
+                    'atomwt':'15.9994 u'},
+    'OVI1037':   {'ion':'OVI',    'l':'1037.617 Angstrom',  'f':0.06590,
                     'atomwt':'15.9994 u'},
 
     'NeVIII770': {'ion':'NeVIII', 'l': '770.409 Angstrom',  'f':0.103,
@@ -123,7 +162,11 @@ lines = {
     'MgII2796':  {'ion':'MgII',   'l':'2796.352 Angstrom',  'f':0.6123,
                     'atomwt':'24.305 u'},
 
-    'SiII1260':  {'ion':'SiII',  'l':'1260.522 Angstrom',  'f':1.180,
+    'SiII1190':  {'ion':'SiII',   'l':'1190.416 Angstrom',  'f':0.2930,
+                    'atomwt':'28.086 u'},
+    'SiII1193':  {'ion':'SiII',   'l':'1193.290 Angstrom',  'f':0.5850,
+                    'atomwt':'28.086 u'},
+    'SiII1260':  {'ion':'SiII',   'l':'1260.522 Angstrom',  'f':1.180,
                     'atomwt':'28.086 u'},
     'SiIII1206': {'ion':'SiIII',  'l':'1206.500 Angstrom',  'f':1.669,
                     'atomwt':'28.086 u'},
@@ -131,6 +174,21 @@ lines = {
                     'atomwt':'28.086 u'},
     'SiIV1402':  {'ion':'SiIV',   'l':'1402.770 Angstrom',  'f':0.2553,
                     'atomwt':'28.086 u'},
+
+    'SI1295':    {'ion':'SI',     'l':'1295.653 Angstrom',  'f':0.08700,
+                    'atomwt':'32.065 u'},
+    'SI1425':    {'ion':'SI',     'l':'1425.030 Angstrom',  'f':0.1250,
+                    'atomwt':'32.065 u'},
+    'SI1473':    {'ion':'SI',     'l':'1473.994 Angstrom',  'f':0.08280,
+                    'atomwt':'32.065 u'},
+    'SII1250':   {'ion':'SII',    'l':'1250.584 Angstrom',  'f':0.00543,
+                    'atomwt':'32.065 u'},
+    'SII1253':   {'ion':'SII',    'l':'1253.811 Angstrom',  'f':0.01090,
+                    'atomwt':'32.065 u'},
+    'SII1259':   {'ion':'SII',    'l':'1259.519 Angstrom',  'f':0.01660,
+                    'atomwt':'32.065 u'},
+    'SIII1190':  {'ion':'SIII',   'l':'1190.203 Angstrom',  'f':0.02310,
+                    'atomwt':'32.065 u'},
 }
 lines['Lyman_alpha'] = lines['H1215']
 lines['Lyman_beta']  = lines['H1025']
@@ -316,8 +374,8 @@ def mock_absorption_spectrum_of(s, los, line, vel_extent, **kwargs):
             raise ValueError('`line` needs to be a string or a dictionary, ' +
                              'not %s!' % type(line))
     except KeyError:
-        raise KeyError("unkown line '%s' -- " +
-                       "see `analysis.absorption_spectra.lines.keys()`" % line)
+        raise KeyError("unkown line '%s' -- " % line +
+                       "see `analysis.absorption_spectra.lines.keys()`")
     return mock_absorption_spectrum(s, los, line['ion'],
                                     l=line['l'], f=line['f'],
                                     atomwt=line['atomwt'],
@@ -747,15 +805,45 @@ def EW(taus, edges):
     EW = np.sum( (1.0 - np.exp(-np.asarray(taus))) * (edges[1:]-edges[:-1]) )
     return EW
 
-def velocities_to_redshifts(v_edges, z0=0.0):
+def velocities_to_redshifts(vs, z0=0.0):
     '''
     Convert velocities to redshifts, assuming an additional cosmological redshift.
 
-    Cf. Churchill+ (2015):  z = z_box + (v/c) (1+z_box)
-    TODO: Check if my calculation is consistent with that formula!
+    Note:
+        The inverse is `redshifts_to_velocities`.
+
+    Args:
+        vs (UnitQty):       The velocities to convert to redshifts.
+        z0 (float):         The cosmological redshift of the restframe in which
+                            the velocities were measured.
+
+    Returns:
+        zs (np.ndarray):    The redshifts corresponding to the given velocities.
     '''
-    z_edges = (v_edges / c).in_units_of(1).view(np.ndarray)
+    vs = UnitQty(vs, 'km/s', dtype=float)
+    zs = (vs / c).in_units_of(1).view(np.ndarray)
     if z0 != 0.0:   # avoid multiplication of 1.
-        z_edges = (1.+z_edges)*(1.+z0) - 1.
-    return z_edges
+        zs = (1.+zs)*(1.+z0) - 1.
+    return zs
+
+def redshifts_to_velocities(zs, z0=0.0):
+    '''
+    Convert redshifts to velocities, assuming an additional cosmological redshift.
+
+    Note:
+        This is the inverse to `velocities_to_redshifts`.
+
+    Args:
+        zs (array-like):    The redshifts to convert to velocities.
+        z0 (float):         The cosmological redshift of the restframe in which
+                            the velocities were measured.
+
+    Returns:
+        vs (UnitQty):       The velocities corresponding to the given redshifts.
+    '''
+    zs = np.array(zs, dtype=float)
+    if z0 != 0.0:   # avoid division by 1.
+        zs = (zs+1.) / (1.+z0) - 1.
+    vs = c * zs
+    return vs
 
