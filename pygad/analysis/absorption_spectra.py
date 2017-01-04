@@ -5,6 +5,16 @@ Doctests:
     >>> from ..environment import module_dir
     >>> from ..snapshot import Snap
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=False)
+
+    >>> vs = UnitArr([1,1e3,1e6], 'km/s')
+    >>> print velocities_to_redshifts(vs, z0=0.123)
+    [ 0.12300375  0.12674592  3.86892479]
+    >>> for z0 in (0.0, 0.123, 1.0, 2.34):
+    ...     zs = velocities_to_redshifts(vs, z0=z0)
+    ...     vs_back = redshifts_to_velocities(zs, z0=z0)
+    ...     if np.max(np.abs( (vs-vs_back)/vs-1 ))>1e-4:
+    ...         print vs
+    ...         print redshifts_to_velocities(zs, z0=0.123)
     
     >>> los_arr = UnitArr([[ 34700.,  35600.],
     ...                    [ 34550.,  35500.],
@@ -80,8 +90,9 @@ Doctests:
     >>> environment.verbose = environment.VERBOSE_NORMAL
 """
 __all__ = ['mock_absorption_spectrum_of', 'mock_absorption_spectrum',
-           'EW', 'velocities_to_redshifts', 'find_line_contributers',
-           'Voigt', 'Gaussian', 'Lorentzian']
+           'EW', 'Voigt', 'Gaussian', 'Lorentzian', 'find_line_contributers',
+           'velocities_to_redshifts', 'redshifts_to_velocities',
+           ]
 
 from ..units import Unit, UnitArr, UnitQty, UnitScalar
 from ..physics import kB, m_H, c, q_e, m_e, epsilon0
@@ -316,8 +327,8 @@ def mock_absorption_spectrum_of(s, los, line, vel_extent, **kwargs):
             raise ValueError('`line` needs to be a string or a dictionary, ' +
                              'not %s!' % type(line))
     except KeyError:
-        raise KeyError("unkown line '%s' -- " +
-                       "see `analysis.absorption_spectra.lines.keys()`" % line)
+        raise KeyError("unkown line '%s' -- " % line +
+                       "see `analysis.absorption_spectra.lines.keys()`")
     return mock_absorption_spectrum(s, los, line['ion'],
                                     l=line['l'], f=line['f'],
                                     atomwt=line['atomwt'],
@@ -747,15 +758,45 @@ def EW(taus, edges):
     EW = np.sum( (1.0 - np.exp(-np.asarray(taus))) * (edges[1:]-edges[:-1]) )
     return EW
 
-def velocities_to_redshifts(v_edges, z0=0.0):
+def velocities_to_redshifts(vs, z0=0.0):
     '''
     Convert velocities to redshifts, assuming an additional cosmological redshift.
 
-    Cf. Churchill+ (2015):  z = z_box + (v/c) (1+z_box)
-    TODO: Check if my calculation is consistent with that formula!
+    Note:
+        The inverse is `redshifts_to_velocities`.
+
+    Args:
+        vs (UnitQty):       The velocities to convert to redshifts.
+        z0 (float):         The cosmological redshift of the restframe in which
+                            the velocities were measured.
+
+    Returns:
+        zs (np.ndarray):    The redshifts corresponding to the given velocities.
     '''
-    z_edges = (v_edges / c).in_units_of(1).view(np.ndarray)
+    vs = UnitQty(vs, 'km/s', dtype=float)
+    zs = (vs / c).in_units_of(1).view(np.ndarray)
     if z0 != 0.0:   # avoid multiplication of 1.
-        z_edges = (1.+z_edges)*(1.+z0) - 1.
-    return z_edges
+        zs = (1.+zs)*(1.+z0) - 1.
+    return zs
+
+def redshifts_to_velocities(zs, z0=0.0):
+    '''
+    Convert redshifts to velocities, assuming an additional cosmological redshift.
+
+    Note:
+        This is the inverse to `velocities_to_redshifts`.
+
+    Args:
+        zs (UnitQty):       The redshifts to convert to velocities.
+        z0 (float):         The cosmological redshift of the restframe in which
+                            the velocities were measured.
+
+    Returns:
+        vs (np.ndarray):    The velocities corresponding to the given redshifts.
+    '''
+    zs = np.array(zs, dtype=float)
+    if z0 != 0.0:   # avoid division by 1.
+        zs = (zs+1.) / (1.+z0) - 1.
+    vs = zs * c
+    return zs
 
