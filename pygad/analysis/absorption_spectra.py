@@ -6,15 +6,18 @@ Doctests:
     >>> from ..snapshot import Snap
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=False)
 
-    >>> vs = UnitArr([1,1e3,1e6], 'km/s')
-    >>> print velocities_to_redshifts(vs, z0=0.123)
-    [ 0.12300375  0.12674592  3.86892479]
-    >>> for z0 in (0.0, 0.123, 1.0, 2.34):
+    >>> vs = UnitArr([1,1e3,1e5], 'km/s')
+    >>> print velocities_to_redshifts(vs, 0.1)
+    [ 0.10000367  0.10366921  0.4669205 ]
+    >>> print redshifts_to_velocities(velocities_to_redshifts(vs,0.1), 0.1)
+    [  1.00000000e+03   1.00000000e+06   1.00000000e+08] [m s**-1]
+    >>> for z0 in (0.0, 0.123, 1.0, 2.34, 10.0):
     ...     zs = velocities_to_redshifts(vs, z0=z0)
     ...     vs_back = redshifts_to_velocities(zs, z0=z0)
-    ...     if np.max(np.abs( (vs-vs_back)/vs-1 ))>1e-4:
+    ...     if np.max(np.abs( ((vs-vs_back)/vs).in_units_of(1) )) > 1e-10:
     ...         print vs
-    ...         print redshifts_to_velocities(zs, z0=0.123)
+    ...         print vs_back
+    ...         print np.max(np.abs( ((vs-vs_back)/vs).in_units_of(1) ))
     
     >>> los_arr = UnitArr([[ 34700.,  35600.],
     ...                    [ 34550.,  35500.],
@@ -831,16 +834,16 @@ def redshifts_to_velocities(zs, z0=0.0):
         This is the inverse to `velocities_to_redshifts`.
 
     Args:
-        zs (UnitQty):       The redshifts to convert to velocities.
+        zs (array-like):    The redshifts to convert to velocities.
         z0 (float):         The cosmological redshift of the restframe in which
                             the velocities were measured.
 
     Returns:
-        vs (np.ndarray):    The velocities corresponding to the given redshifts.
+        vs (UnitQty):       The velocities corresponding to the given redshifts.
     '''
     zs = np.array(zs, dtype=float)
     if z0 != 0.0:   # avoid division by 1.
         zs = (zs+1.) / (1.+z0) - 1.
-    vs = zs * c
-    return zs
+    vs = c * zs
+    return vs
 
