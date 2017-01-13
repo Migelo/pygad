@@ -77,7 +77,7 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
         mode (str):         The mode in which to prepare the snapshot. You can
                             choose from:
                                 * 'auto':   try 'info', if it does not work
-                                            fallback to 'ssc'
+                                            fallback to 'FoF'
                                 * 'info':   read the info file (from `info`) and
                                             take the center and the reduced
                                             inertia tensor (for orientation) with
@@ -204,7 +204,7 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
                 info = read_info_file(info)
         if info is None:
             if mode == 'auto':
-                mode = 'ssc'
+                mode = 'FoF'
             else:
                 raise IOError('Could not read/find the info file!')
         else:
