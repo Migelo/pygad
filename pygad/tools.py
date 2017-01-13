@@ -159,7 +159,7 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
         gal (SubSnap):      The central galaxy of the halo as defined by
                             `gal_R200`.
     '''
-    def get_shrink_on_sub(snap):
+    def get_shrink_on_sub(snap, shrink_on):
         if isinstance(shrink_on, (str,unicode)):
             shrink_on = str(shrink_on)
             if shrink_on == 'all':
@@ -231,7 +231,7 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
             )
             if shrink_on not in ['all', 'highres']:
                 galaxies = generate_FoF_catalogue(
-                        get_shrink_on_sub(s),
+                        get_shrink_on_sub(s,shrink_on),
                         l = linking_length,
                         dvmax = linking_vel,
                         calc = ['mass', 'com'],
@@ -262,7 +262,7 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
             else:
                 shrink_on = s[halos[0]]
         elif mode == 'ssc':
-            shrink_on = get_shrink_on_sub(s)
+            shrink_on = get_shrink_on_sub(s,shrink_on)
         if shrink_on is not None and len(shrink_on)>0:
             com = center_of_mass(s)
             R = np.max(periodic_distance_to(s['pos'], com, s.boxsize))
@@ -458,7 +458,7 @@ def fill_star_from_info(snap, fname, fill_undefined_nan=True, dtypes=None,
                               )
     if len(np.setdiff1d( SFI_IDs, stars['ID'], assume_unique=True )):
         raise RuntimeError('Some formation file IDs do not have a match in ' + \
-                           'the snapshot (missing: %d)!' % ( fname,
+                           'the snapshot (missing: %d)!' % (
                                len(np.setdiff1d( SFI_IDs, stars['ID'],
                                                  assume_unique=True )) )
                           )
