@@ -132,7 +132,7 @@ def mass_weighted_mean(s, qty):
     Returns:
         mean (UnitArr):     The mass weighted mean.
     '''
-    if isinstance(qty, str):
+    if isinstance(qty, (str,unicode)):
         qty = s.get(qty)
     else:
         qty = UnitArr(qty)
@@ -284,7 +284,7 @@ def half_qty_radius(s, qty, Qtot=None, center=None, proj=None):
                 else dist(s['pos'],center)
     r_ind = r.argsort()
 
-    if isinstance(qty,str):
+    if isinstance(qty,(str,unicode)):
         qty = s.get(qty)
     else:
         qty = UnitQty(qty)

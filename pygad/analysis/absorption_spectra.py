@@ -292,11 +292,13 @@ def find_line_contributers(s, los, line, vel_extent, threshold=0.95,
                                 that are needed for the EW not falling below the
                                 specified threshold.
     '''
+    if isinstance(line, unicode):
+        line = str(line)
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print 'find all necessary particles, beginning with those that have ' + \
               'the highest column density along the line of sight, that are ' + \
               'needed for getting %.1f%% of the total EW' % (100.*threshold)
-        if isinstance(line, str):
+        if isinstance(line,str):
             print '  line "%s" at %s' % (line, los)
 
     if isinstance(line,str):
@@ -359,7 +361,7 @@ def mock_absorption_spectrum_of(s, los, line, vel_extent, **kwargs):
     This function basically just calls `mock_absorption_spectrum` for the given
     line:
 
-        if isinstance(line,str):
+        if isinstance(line, str):
             line = lines[line]
         return mock_absorption_spectrum(s, los, line['ion'],
                                         l=line['l'], f=line['f'],
@@ -367,6 +369,8 @@ def mock_absorption_spectrum_of(s, los, line, vel_extent, **kwargs):
                                         vel_extent=vel_extent,
                                         **kwargs)
     '''
+    if isinstance(line, unicode):
+        line = str(line)
     try:
         if isinstance(line,str):
             line = lines[line]
@@ -498,6 +502,8 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
     v_units = Unit('km/s')
     l_units = Unit('cm')
 
+    if isinstance(ion, unicode):
+        ion = str(ion)
     zaxis = (set([0,1,2]) - set([xaxis,yaxis])).pop()
     if set([xaxis,yaxis,zaxis]) != set([0,1,2]):
         raise ValueError("x- and y-axis must be in [0,1,2] and different!")

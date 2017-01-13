@@ -52,7 +52,7 @@ def show_FoF_groups(s, groups, colors='rand', plot_center=True, plot_parts=False
 
     xaxis = plotargs.get('xaxis', 0)
     yaxis = plotargs.get('yaxis', 1)
-    if not isinstance(colors, str):
+    if not isinstance(colors, (str,unicode)):
         colors = np.asarray(colors)
 
     fig, ax, im, cbar = image(s, **plotargs)
@@ -62,7 +62,7 @@ def show_FoF_groups(s, groups, colors='rand', plot_center=True, plot_parts=False
     for i, group in enumerate(groups):
         if colors == 'rand':
             color = mpl.colors.hsv_to_rgb( [np.random.rand(), 1, 1] )
-        elif isinstance(colors,str) or colors.dtype==str \
+        elif isinstance(colors,(str,unicode)) or colors.dtype in (str,unicode) \
                 or colors.shape==(3,):
             color = colors
         else:

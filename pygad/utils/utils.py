@@ -184,7 +184,7 @@ def periodic_distance_to(pos, center, boxsize):
     '''
     from ..units import UnitArr
 
-    if isinstance(boxsize, str):
+    if isinstance(boxsize, (str,unicode)):
         from ..units import Unit
         boxsize = Unit(boxsize)
 

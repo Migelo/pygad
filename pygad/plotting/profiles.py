@@ -90,15 +90,15 @@ def profile(s, Rmax, qty, av=None, units=None, dens=True, proj=None,
                   fontsize=labelsize)
     if ylabel is None:
         name = ''
-        if isinstance(av,str):
-            name += av + '-weighted '
+        if isinstance(av,(str,unicode)):
+            name += str(av) + '-weighted '
         if dens:
-            if isinstance(qty,str) and qty!='mass':
-                name += r'$\Sigma_\mathrm{%s}$' % qty
+            if isinstance(qty,(str,unicode)) and qty!='mass':
+                name += r'$\Sigma_\mathrm{%s}$' % str(qty)
             else:
                 name += r'$\Sigma$'
         else:
-            name += qty if isinstance(qty,str) else ''
+            name += str(qty) if isinstance(qty,(str,unicode)) else ''
         ylabel = r'%s [$%s$]' % (name, prof.units.latex())
     ax.set_ylabel(ylabel, fontsize=labelsize)
 
@@ -150,7 +150,7 @@ def history(s, qty, time=None, av=None, units=None, diff=False, N=50,
         ax (AxesSubplot):       The axis plotted on.
     '''
     now = s.cosmic_time()
-    if isinstance(qty, str):
+    if isinstance(qty, (str,unicode)):
         Q = s.get(qty)
     else:
         Q = qty
@@ -160,7 +160,7 @@ def history(s, qty, time=None, av=None, units=None, diff=False, N=50,
                          'does not match the length of the stellar ' +
                          '(sub-)snapshot (%s)!' % utils.nice_big_num_str(len(s)))
     if av is not None:
-        if isinstance(av, str):
+        if isinstance(av, (str,unicode)):
             AV = s.get(av)
         if len(s) != len(AV):
             raise ValueError('The length of the averaging quantity array ' +
@@ -173,7 +173,7 @@ def history(s, qty, time=None, av=None, units=None, diff=False, N=50,
             time = 'cosmic_time()-age'
         else:
             raise ValueError('Time quantity is not defined!')
-    if isinstance(time,str):
+    if isinstance(time, (str,unicode)):
         time = s.get(time)
     if str(time.units).endswith('_form]'):
         from ..snapshot import age_from_form
@@ -251,9 +251,9 @@ def history(s, qty, time=None, av=None, units=None, diff=False, N=50,
                   fontsize=labelsize)
     if ylabel is None:
         name = ''
-        if isinstance(av,str):
-            name += av + '-weighted '
-        name += qty if isinstance(qty,str) else ''
+        if isinstance(av, (str,unicode)):
+            name += str(av) + '-weighted '
+        name += str(qty) if isinstance(qty,(str,unicode)) else ''
         ylabel = r'%s [$%s$]' % (name, Q_hist.units.latex())
     ax.set_ylabel(ylabel, fontsize=labelsize)
 

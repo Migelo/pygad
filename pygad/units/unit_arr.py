@@ -272,7 +272,7 @@ class UnitArr(np.ndarray):
 
     def __new__(subtype, data, units=None, subs=None, **kwargs):
         # handle cases where `obj` is a string of a unit:
-        if isinstance(data, str):
+        if isinstance(data, (str,unicode)):
             data = Unit(data)
         if isinstance(data, _UnitClass):
             if units is None:
@@ -507,7 +507,7 @@ class UnitArr(np.ndarray):
             UnitError:          In case the current units and the target units are
                                 not convertable.
         '''
-        if not isinstance(units, (_UnitClass,str,numbers.Number)):
+        if not isinstance(units, (_UnitClass,str,unicode,numbers.Number)):
             raise TypeError('Cannot convert type %s to units!' % \
                             type(units).__name__)
         units = Unit(units)

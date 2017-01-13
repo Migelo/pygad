@@ -186,8 +186,8 @@ def get_block_units(block, gad_units=None):
 
     u = block_units[block]
     for dimension, unit in gad_units.iteritems():
-        if isinstance(unit, str):
-            u = u.replace(dimension, '('+unit+')')
+        if isinstance(unit, (str,unicode)):
+            u = u.replace(dimension, '('+str(unit)+')')
         else:
             u = u.replace(dimension, '('+str(Unit(unit))[1:-1]+')')
     return Unit(u).gather()

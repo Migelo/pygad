@@ -632,7 +632,7 @@ def Unit(x, allow_undefined=False):
         return _UnitClass(float(x), [])
     elif isinstance(x, _UnitClass):
         return x
-    elif not isinstance(x, str):
+    elif not isinstance(x, (str,unicode)):
         raise TypeError(x.__class__.__name__ + ' cannot be converted into ' +
                         'a unit.')
     # x is a string...!
@@ -687,8 +687,8 @@ def Units(l, allow_undefined=False):
     Returns:
         units (list):           A list of the construct units.
     '''
-    if isinstance(l, str):
-        l = l.replace(';',',')
+    if isinstance(l, (str,unicode)):
+        l = str(l).replace(';',',')
         if ',' in l:
             return Units(map(str.strip,l.split(',')), allow_undefined)
         return [Unit(l, allow_undefined)]

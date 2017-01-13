@@ -372,16 +372,16 @@ def scatter_map(x, y, s=None, qty=None, av=None, bins=150, extent=None,
     yname = ''
     qtyname = ''
     cname = ''
-    if isinstance(x,str):
+    if isinstance(x,(str,unicode)):
         xname = x
         x = s.get(x)
-    if isinstance(y,str):
+    if isinstance(y,(str,unicode)):
         yname = y
         y = s.get(y)
-    if isinstance(qty,str):
+    if isinstance(qty,(str,unicode)):
         qtyname = qty
         qty = s.get(qty)
-    if isinstance(av,str):
+    if isinstance(av,(str,unicode)):
         av = s.get(av)
     if cmap is None:
         cmap = 'cubehelix' if colors is None else 'Bright'
@@ -391,10 +391,10 @@ def scatter_map(x, y, s=None, qty=None, av=None, bins=150, extent=None,
             fontcolor = 'k' if zero_is_white else 'w'
     if isinstance(cmap,str):
         cmap = mpl.cm.get_cmap(cmap)
-    if isinstance(colors,str):
+    if isinstance(colors,(str,unicode)):
         cname = colors
         colors = s.get(colors)
-    if isinstance(colors_av,str):
+    if isinstance(colors_av,(str,unicode)):
         colors_av = s.get(colors_av)
     if fontcolor is None:
         fontcolor = 'k' if zero_is_white else 'w'

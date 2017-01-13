@@ -160,7 +160,8 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
                             `gal_R200`.
     '''
     def get_shrink_on_sub(snap):
-        if isinstance(shrink_on, str):
+        if isinstance(shrink_on, (str,unicode)):
+            shrink_on = str(shrink_on)
             if shrink_on == 'all':
                 return snap
             else:
@@ -176,7 +177,7 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
         return M_lowres/M > threshold
             
 
-    if isinstance(s,str):
+    if isinstance(s, (str,unicode)):
         s = Snap(s)
     gal_R200 = float(gal_R200)
     if environment.verbose >= environment.VERBOSE_TACITURN:
@@ -192,7 +193,7 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
                 print >> sys.stderr, 'WARNING: could not deduce the path to ' + \
                                      'the trace file!'
                 info = None
-        if isinstance(info, str):
+        if isinstance(info, (str,unicode)):
             info = os.path.expanduser(info)
             if not os.path.exists(info):
                 print >> sys.stderr, 'WARNING: There is no info file named ' + \
@@ -342,7 +343,7 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
             print >> sys.stderr, 'WARNING: could not deduce the path to the ' + \
                                  'star formation file!'
             star_form = None
-    if isinstance(star_form, str):
+    if isinstance(star_form, (str,unicode)):
         star_form = os.path.expanduser(star_form)
         if not os.path.exists(star_form):
             print >> sys.stderr, 'WARNING: There is no star formation file ' + \
@@ -369,7 +370,7 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
             print >> sys.stderr, 'WARNING: could not deduce the path to the ' + \
                                  'gas tracing file!'
             gas_trace = None
-    if isinstance(gas_trace, str):
+    if isinstance(gas_trace, (str,unicode)):
         gas_trace = os.path.expanduser(gas_trace)
         if not os.path.exists(gas_trace):
             print >> sys.stderr, 'WARNING: There is no gas trace file named ' + \
@@ -618,7 +619,7 @@ def fill_gas_from_traced(snap, data, add_derived=True,
     '''
     gas = snap.root.gas
 
-    if isinstance(data,str):
+    if isinstance(data, (str,unicode)):
         filename = data
         if environment.verbose >= environment.VERBOSE_TACITURN:
             print 'reading the gas trace information from %s...' % filename

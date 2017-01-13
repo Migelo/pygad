@@ -246,19 +246,19 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print 'plot a map - paramters:'
-        if isinstance(qty,str) or qty is None:
+        if isinstance(qty,(str,unicode)) or qty is None:
             print '  qty:         ', qty
         else:
             print '  qty:         ', type(qty)
-        if isinstance(av,str) or av is None:
+        if isinstance(av,(str,unicode)) or av is None:
             print '  av:          ', av
         else:
             print '  av:          ', type(av)
-        if isinstance(colors,str) or colors is None:
+        if isinstance(colors,(str,unicode)) or colors is None:
             print '  colors:      ', colors
         else:
             print '  colors:      ', type(colors)
-        if isinstance(colors_av,str) or colors_av is None:
+        if isinstance(colors_av,(str,unicode)) or colors_av is None:
             print '  colors_av:   ', colors_av
         else:
             print '  colors_av:   ', type(colors_av)
@@ -275,7 +275,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
 
     # create luminance map
     if len(s) == 0:
-        if isinstance(qty,str) and units is None:
+        if isinstance(qty,(str,unicode)) and units is None:
             raise RuntimeError('Snapshot is empty and no units for the image are '
                                'given -- cannot create an empty map of correct '
                                'units!')
@@ -293,7 +293,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         if units is not None:
             im_lum.convert_to(units, subs=s)
     if logscale:
-        if isinstance(qty,str) and 'log' in qty:
+        if isinstance(qty,(str,unicode)) and 'log' in qty:
             import sys
             print >> sys.stderr, 'WARNING: in log-scale, but "qty" already ' + \
                                  'contains "log"!'
@@ -345,7 +345,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     if showcbar:
         if cbartitle is None:
             cqty = colors if colors is not None else qty
-            if isinstance(cqty,str):
+            if isinstance(cqty,(str,unicode)):
                 cname = cqty
                 if reduction is not None:
                     cname = '%s(%s)' % (reduction, cname)
