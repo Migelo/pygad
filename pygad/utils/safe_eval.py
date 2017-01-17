@@ -143,7 +143,7 @@ class Evaluator(object):
         for ns in [my_math.__dict__, namespace if namespace is not None else {}]:
             self.namespace.update( { name:val for name,val in ns.iteritems()
                     if hasattr(val,'__call__')
-                    or isinstance(val,(numbers.Number,str,np.ndarray)) } )
+                    or isinstance(val,(numbers.Number,str,unicode,np.ndarray)) } )
 
     def _eval(self, node):
         if hasattr(node,'ctx') and not isinstance(node.ctx, ast.Load):

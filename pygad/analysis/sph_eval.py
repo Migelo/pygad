@@ -80,7 +80,7 @@ def kernel_weighted(s, qty, units=None, kernel=None, parallel=None):
     '''
     # TODO: find ways to speed it up! -- parallelisation very inefficient
     gas = s.gas
-    if isinstance(qty, str):
+    if isinstance(qty, (str,unicode)):
         qty = gas.get(qty)
     else:
         if len(qty) != len(gas):
@@ -152,7 +152,7 @@ def SPH_qty_at(s, qty, r, units=None, kernel=None, dV='dV'):
     r = UnitQty(r, s['pos'].units, subs=s)
     if not (r.shape==(3,) or (r.shape[1:]==(3,) and len(r.shape)==2)):
         raise ValueError('Position `r` needs to have shape (3,) or (N,3)!')
-    if isinstance(qty, str):
+    if isinstance(qty, (str,unicode)):
         qty = s.gas.get(qty)
     else:
         if len(qty) != len(s.gas):
@@ -292,7 +292,7 @@ def scatter_gas_qty_to_stars(s, qty, name=None, units=None, kernel=None, dV='dV'
         KeyError:           If there already exists a block of that name.
     '''
     if name is None:
-        if isinstance(qty, str):
+        if isinstance(qty, (str,unicode)):
             name = qty
         else:
             raise RuntimeError('No name for the quantity is given!')

@@ -447,7 +447,7 @@ class ExprMask(SnapMask):
 
     @expr.setter
     def expr(self, expr):
-        if not isinstance(expr, str):
+        if not isinstance(expr, (str,unicode)):
             raise ValueError('`expr` must be a string')
         self._expr = expr
 

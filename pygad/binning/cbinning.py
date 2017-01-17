@@ -145,7 +145,7 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml',
         print '%s)...' % extent.units
 
     # prepare (sub-)snapshot
-    if isinstance(qty, str):
+    if isinstance(qty, (str,unicode)):
         qty = s.get(qty)
     qty_units = getattr(qty,'units',None)
     if qty_units is not None:
@@ -160,14 +160,14 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml',
     sub = s[BoxMask(extent, sph_overlap=True)]
 
     pos = sub['pos'].view(np.ndarray).astype(np.float64)
-    if isinstance(hsml, str):
+    if isinstance(hsml, (str,unicode)):
         hsml = sub[hsml].in_units_of(s['pos'].units)
     elif isinstance(hsml, (Number,Unit)):
         hsml = UnitScalar(hsml,s['pos'].units)*np.ones(len(sub), dtype=np.float64)
     else:   # should be some array
         hsml = UnitQty(hsml,s['pos'].units,subs=s)[sub._mask]
     hsml = hsml.view(np.ndarray).astype(np.float64)
-    if isinstance(dV, str):
+    if isinstance(dV, (str,unicode)):
         dV = sub[dV].in_units_of(s['pos'].units**3)
     elif dV is None:
         dV = (hsml/2.0)**3
@@ -278,7 +278,7 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
         print '%s)...' % extent.units
 
     # prepare (sub-)snapshot
-    if isinstance(qty, str):
+    if isinstance(qty, (str,unicode)):
         qty = s.get(qty)
     qty_units = getattr(qty,'units',None)
     if qty_units is None:
@@ -300,14 +300,14 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
 
     # TODO: why always need a copy? C vs Fortran alignment...!?
     pos = sub['pos'].view(np.ndarray)[:,(xaxis,yaxis)].astype(np.float64).copy()
-    if isinstance(hsml, str):
+    if isinstance(hsml, (str,unicode)):
         hsml = sub[hsml].in_units_of(s['pos'].units)
     elif isinstance(hsml, (Number,Unit)):
         hsml = UnitScalar(hsml,s['pos'].units)*np.ones(len(sub), dtype=np.float64)
     else:   # should be some array
         hsml = UnitQty(hsml,s['pos'].units,subs=s)[sub._mask]
     hsml = hsml.view(np.ndarray).astype(np.float64)
-    if isinstance(dV, str):
+    if isinstance(dV, (str,unicode)):
         dV = sub[dV].in_units_of(s['pos'].units**3)
     elif dV is None:
         dV = (hsml/2.0)**3
@@ -405,7 +405,7 @@ def SPH_3D_to_line(s, qty, los, extent, Npx, xaxis=0, yaxis=1, kernel=None,
         print '(length %.4g %s)...' % (extent[1]-extent[0], extent.units)
 
     # prepare (sub-)snapshot
-    if isinstance(qty, str):
+    if isinstance(qty, (str,unicode)):
         qty = s.get(qty)
     qty_units = getattr(qty,'units',None)
     if qty_units is None:
@@ -424,14 +424,14 @@ def SPH_3D_to_line(s, qty, los, extent, Npx, xaxis=0, yaxis=1, kernel=None,
 
     # TODO: why always need a copy? C vs Fortran alignment...!?
     pos = sub['pos'].view(np.ndarray)[:,(xaxis,yaxis,zaxis)].astype(np.float64).copy()
-    if isinstance(hsml, str):
+    if isinstance(hsml, (str,unicode)):
         hsml = sub[hsml].in_units_of(s['pos'].units)
     elif isinstance(hsml, (Number,Unit)):
         hsml = UnitScalar(hsml,s['pos'].units)*np.ones(len(sub), dtype=np.float64)
     else:   # should be some array
         hsml = UnitQty(hsml,s['pos'].units,subs=s)[sub._mask]
     hsml = hsml.view(np.ndarray).astype(np.float64)
-    if isinstance(dV, str):
+    if isinstance(dV, (str,unicode)):
         dV = sub[dV].in_units_of(s['pos'].units**3)
     elif dV is None:
         dV = (hsml/2.0)**3
@@ -530,12 +530,12 @@ def SPH_to_2Dgrid_by_particle(s, qty, extent, Npx, reduction, xaxis=0, yaxis=1,
         print '%s) (reduction="%s")...' % (extent.units, reduction)
 
     # prepare (sub-)snapshot
-    if isinstance(qty, str):
+    if isinstance(qty, (str,unicode)):
         qty = s.get(qty)
     qty_units = getattr(qty,'units',None)
     if qty.shape!=(len(s),):
         raise ValueError('Quantity has to have shape (N,)!')
-    if isinstance(av, str):
+    if isinstance(av, (str,unicode)):
         av = s.get(av)
     if av is not None and av.shape!=(len(s),):
         raise ValueError('Weights quantity (`av`) has to have shape (N,)!')
@@ -552,14 +552,14 @@ def SPH_to_2Dgrid_by_particle(s, qty, extent, Npx, reduction, xaxis=0, yaxis=1,
 
     # TODO: why always need a copy? C vs Fortran alignment...!?
     pos = sub['pos'].view(np.ndarray)[:,(xaxis,yaxis)].astype(np.float64).copy()
-    if isinstance(hsml, str):
+    if isinstance(hsml, (str,unicode)):
         hsml = sub[hsml].in_units_of(s['pos'].units)
     elif isinstance(hsml, (Number,Unit)):
         hsml = UnitScalar(hsml,s['pos'].units)*np.ones(len(sub), dtype=np.float64)
     else:   # should be some array
         hsml = UnitQty(hsml,s['pos'].units,subs=s)[sub._mask]
     hsml = hsml.view(np.ndarray).astype(np.float64)
-    if isinstance(dV, str):
+    if isinstance(dV, (str,unicode)):
         dV = sub[dV].in_units_of(s['pos'].units**3)
     elif dV is None:
         dV = (hsml/2.0)**3

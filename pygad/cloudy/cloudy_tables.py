@@ -175,8 +175,8 @@ class IonisationTable(object):
         if len(nH) != len(T):
             raise ValueError('Lengths of nH (%d) and T (%d) do not match!' % (
                                 len(nH),len(T)))
-        if isinstance(ion,str):
-            ion = self._ions.index(ion)
+        if isinstance(ion,(str,unicode)):
+            ion = self._ions.index(str(ion))
         if ion<0 or self._table.shape[-1]<=ion:
             raise ValueError('Ion index (%d) out of bounds!' % ion)
         # units of table
@@ -354,7 +354,8 @@ class IonisationTable(object):
                 plts.append( self.show_table(ion, cmap=cmap) )
             return plts
         ionname = 'ion'
-        if isinstance(ion, str):
+        if isinstance(ion, (str,unicode)):
+            ion = str(ion)
             ionname = ion
             ion = self._ions.index(ion)
 

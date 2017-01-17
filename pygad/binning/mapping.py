@@ -97,11 +97,11 @@ def map_qty(s, extent, field, qty, av=None, reduction=None, Npx=256,
     if kernel is None:
         kernel = general['kernel']
 
-    if isinstance(qty, str):
+    if isinstance(qty, (str,unicode)):
         qty = s.get(qty)
 
     if av is not None:
-        if isinstance(av, str):
+        if isinstance(av, (str,unicode)):
             av = s.get(av)
         if reduction is None:
             grid, px2 = map_qty(s, extent, field, av*qty, av=None, Npx=Npx,
@@ -139,7 +139,7 @@ def map_qty(s, extent, field, qty, av=None, reduction=None, Npx=256,
         sph = s.gas
         sph_qty = qty[s.gas._mask]
         if len(sph) != 0:
-            if isinstance(dV, str):
+            if isinstance(dV, (str,unicode)):
                 dV = s.gas.get(dV)
             dV = UnitQty(dV, sph['pos'].units**3)
             if reduction is not None:

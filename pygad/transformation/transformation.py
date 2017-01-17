@@ -408,7 +408,7 @@ def rot_from_axis_angle(u, angle):
         >>> np.sqrt(1**2+2**2+3**2)*R.axis(), R.angle()
         (array([ 1.,  2.,  3.]), 1.234)
     '''
-    if isinstance(angle, (str,UnitArr)):
+    if isinstance(angle, (str,unicode,UnitArr)):
         angle = UnitScalar(angle, 'rad')
     angle = float(angle)
     u = np.array(u, dtype=float)

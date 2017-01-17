@@ -70,12 +70,12 @@ def radially_binned(s, qty, av=None, r_edges=None, proj=None, center=None):
     Returns:
         Q (UnitArr):            The binned quantity.
     '''
-    if isinstance(qty, str):
+    if isinstance(qty, (str,unicode)):
         qty = s.get(qty)
     else:
         qty = UnitQty(qty)
     if av is not None:
-        if isinstance(av, str):
+        if isinstance(av, (str,unicode)):
             av = s.get(av)
         else:
             av = UnitQty(av)
