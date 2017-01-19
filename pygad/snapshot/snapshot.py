@@ -952,7 +952,7 @@ class _Snap(object):
                 read = reader.read_block(block_name, gad_units=root._gad_units)
                 units = read.units
                 if first:
-                    blocks = [read[np.sum(reader.header['N_part'][:pt])
+                    blocks = [read[int(np.sum(reader.header['N_part'][:pt]))
                                     :np.sum(reader.header['N_part'][:pt+1])] \
                                 for pt in xrange(6)]
                     first = False
@@ -960,7 +960,7 @@ class _Snap(object):
                     for pt in xrange(6):
                         if not reader.header['N_part'][pt]:
                             continue
-                        read_pt = read[np.sum(reader.header['N_part'][:pt])
+                        read_pt = read[int(np.sum(reader.header['N_part'][:pt]))
                                        :np.sum(reader.header['N_part'][:pt+1])]
                         blocks[pt] = np.concatenate((blocks[pt], read_pt),
                                                     axis=0).view(UnitArr)
