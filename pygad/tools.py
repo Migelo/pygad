@@ -12,7 +12,6 @@ from units import *
 from utils import *
 from analysis import *
 from transformation import *
-import gadget
 import environment
 import re
 import sys
@@ -22,7 +21,7 @@ def read_info_file(filename):
     '''
     Read in the contents of an info file as produced by gtrace into a dictionary.
 
-    It is assumed, that there is excatly one colon per line, which seperates the
+    It is assumed, that there is exactly one colon per line, which separates the
     name (the part before the colon) and the value (the part after the colon). For
     the value part the following is assumed: if there are no brackets ('[') it is
     a float; if there is one pair of brackets, it is a float with units, which are
@@ -54,7 +53,7 @@ def read_info_file(filename):
                 if name in info:
                     print >> sys.stderr, 'WARNING: "%s" occures ' % name + \
                                          'multiple times in info file ' + \
-                                         '"%s"! First one used.' & filename
+                                         '"%s"! First one used.' % filename
                 info[name] = value
             except ValueError as e:
                 if e.message[-6:] != 'unpack':
@@ -69,7 +68,7 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
                  **kwargs):
     '''
     A convenience function to load a snapshot from a zoomed-in simulation that is
-    not yet centered or orienated.
+    not yet centered or oriented.
 
     Args:
         s (str, Snap):      The snapshot of a zoomed-in simulation to prepare.
@@ -264,7 +263,8 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
                 del galaxies
                 if galaxy is None:
                     shrink_on = None
-                shrink_on = s[galaxy]
+                else:
+                    shrink_on = s[galaxy]
             else:
                 shrink_on = s[halos[0]]
         elif mode == 'ssc':
@@ -371,7 +371,7 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
             if len(candidates) == 1:
                 gas_trace = directory + candidates[0]
             else:
-                raise RuntimeError
+                raise RuntimeError('too many candidates!')
         except:
             print >> sys.stderr, 'WARNING: could not deduce the path to the ' + \
                                  'gas tracing file!'
@@ -409,7 +409,7 @@ def fill_star_from_info(snap, fname, fill_undefined_nan=True, dtypes=None,
     Args:
         snap (Snap):    The snapshot to fill with the data (has to be the one at
                         z=0 of the simulation used to create the star_form.ascii).
-        data (str):     The path to the star_form.ascii file.
+        fname (str):    The path to the star_form.ascii file.
         fill_undefined_nan (bool):  
                         Fill data with NaN for stars that are not listed in the
                         formation file.
@@ -540,7 +540,7 @@ def read_traced_gas(filename, types=None):
 
     #sort type
     if types is None or types=='all':
-        types = set([1,2,3,4])
+        types = {1, 2, 3, 4}
     else:
         if isinstance(types,int):
             types = [types]
@@ -592,11 +592,9 @@ def read_traced_gas(filename, types=None):
 
     return tr
 
+
 def fill_gas_from_traced(snap, data, add_blocks='all', add_derived=True,
-                         #TODO: angmom units
-                         units=dict(TIME='a_form', MASS='Msol', TEMP='K',
-                                    ANGMOM=None, POS='kpc'),
-                         invalid=0.0):
+                         units=None, invalid=0.0):
     '''
     Fill some information from the gas trace file into the snapshot as blocks.
 
@@ -648,6 +646,10 @@ def fill_gas_from_traced(snap, data, add_blocks='all', add_derived=True,
         ]
     if isinstance(add_blocks, (str,unicode)):
         add_blocks = (add_blocks,)
+    if units is None:
+        # TODO: angmom units
+        units = dict(TIME='a_form', MASS='Msol', TEMP='K',
+                     ANGMOM=None, POS='kpc')
     gas = snap.root.gas
     environment.gc_full_collect()
 
@@ -660,7 +662,7 @@ def fill_gas_from_traced(snap, data, add_blocks='all', add_derived=True,
         filename = '<given data>'
 
     # filter to gas only
-    gas_type = set([1,2])
+    gas_type = {1, 2}
     data = dict( filter(lambda i:i[1][0][0] in gas_type,
                         data.iteritems() ) )
 
@@ -855,6 +857,10 @@ def fill_derived_gas_trace_qty(snap, units=None, invalid=0.0):
                             are properties of cycles that did not happen for a
                             given particle.
     """
+    if units is None:
+        # TODO: angmom units
+        units = dict(TIME='a_form', MASS='Msol', TEMP='K',
+                     ANGMOM=None, POS='kpc')
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print 'adding blocks that can be derived from the gas trace blocks:'
 
