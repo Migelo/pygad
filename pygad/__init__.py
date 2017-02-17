@@ -22,7 +22,7 @@ doctests:
     TestResults(failed=0, attempted=3)
     >>> print >> sys.stderr, 'testing module physics...'
     >>> doctest.testmod(physics)
-    TestResults(failed=0, attempted=3)
+    TestResults(failed=0, attempted=4)
     >>> print >> sys.stderr, 'testing module kernels...'
     >>> doctest.testmod(kernels)
     TestResults(failed=0, attempted=3)
