@@ -17,7 +17,7 @@ from .. import environment
 
 def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
           field=None, reduction=None, extent=None, Npx=256, xaxis=0, yaxis=1,
-          vlim=None, cmap=None, normcmaplum=True, desat=0.1, colors=None,
+          vlim=None, cmap=None, normcmaplum=True, desat=None, colors=None,
           colors_av=None, cunits=None, clogscale=None, csurf_dens=None, clim=None,
           ax=None, showcbar=True, cbartitle=None, scaleind='line',
           scaleunits=None, fontcolor='white', fontsize=14,
@@ -25,11 +25,11 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     '''
     Show an image of the snapshot.
 
-    By default the mass is plotted with the colormap 'cubehelix' if `colors` is
-    None or 'Bright' if `colors` is set. For stars only, however, the (V-band
+    By default the mass is plotted with the colormap `CM_DEF` if `colors` is
+    None or 'isolum' if `colors` is set. For stars only, however, the (V-band
     weighted) stellar ages are plotted with the colormap 'Age' and image luminance
     is the visual stellar luminosity (V-band); for gas only the mass-weighted
-    log10(temperature) is colorcoded with 'Bright' and the image luminance is the
+    log10(temperature) is colorcoded with 'isolum' and the image luminance is the
     surface density; and for dark matter only the colormap 'BlackGreen' is used.
 
     The defaults -- if `qty` and `av` are None -- are:
@@ -40,10 +40,10 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     if additionally `colors` and `colors_av` are None as well, the following
     defautls apply:
         for stars only:
-            colors='age.in_units_of("Gyr")', colors_av='lum_v', cmap='Age',
+            colors='age.in_units_of("Gyr")', colors_av='lum_v', cmap='age',
             clim=[0,13], cbartitle = '(V-band weighted) age $[\mathrm{Gyr}]$'
         for gas only:
-            colors='temp.in_units_of("K")', colors_av='rho', cmap='Bright',
+            colors='temp.in_units_of("K")', colors_av='rho', cmap='isolum',
             clogscale=True, cbartitle=r'$\log_{10}(T\,[\mathrm{K}])$'
         for otherwise:
             cmap=('BlackGreen' if len(s.baryons)==0 else 'BlackPurple'),
@@ -79,8 +79,8 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         yaxis (int):        The coordinate for the y-axis. (0:'x', 1:'y', 2:'z')
         vlim (sequence):    The limits of the quantity for the plot.
         cmap (str,Colormap):The colormap to use. If colors==None it is applied to
-                            qty, otherwise to colors. Default: 'cubehelix' if
-                            `colors` is not set, else 'Bright'.
+                            qty, otherwise to colors. Default: `CM_DEF` if
+                            `colors` is not set, else 'isolum'.
         normcmaplum (bool): If there are colors and luminance information,
                             norm the colormap's luminance.
         desat (float):      If there are colors and luminance information,
@@ -208,7 +208,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                     or (s.descriptor.endswith('stars') and len(s)==0):
                 # stars only
                 colors, colors_av = 'age.in_units_of("Gyr")', 'lum_v'
-                if cmap is None:        cmap = 'Age'
+                if cmap is None:        cmap = 'age'
                 if clim is None:        clim = [0,13]
                 if cbartitle is None:   cbartitle = '(V-band weighted) age ' + \
                                                     '$[\mathrm{Gyr}]$'
@@ -217,7 +217,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                 # gas only
                 colors, colors_av = 'temp.in_units_of("K")', 'rho'
                 if clogscale is None:   clogscale = True
-                if cmap is None:        cmap = 'Bright'
+                if cmap is None:        cmap = 'isolum'
                 if cbartitle is None:   cbartitle = r'$\log_{10}(T\,[\mathrm{K}])$'
                 if field is None:       field = False
             else:
@@ -226,7 +226,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                 if cbartitle is None:   cbartitle = r'$\log_{10}(\Sigma\,[%s])$' % (
                                                         units.latex() )
     if logscale is None: logscale = True
-    if cmap is None: cmap = 'cubehelix' if colors is None else 'Bright'
+    if cmap is None: cmap = CM_DEF if colors is None else 'isolum'
     if csurf_dens is None: csurf_dens = False
     if field is None:
         if reduction is None:

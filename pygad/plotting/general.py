@@ -3,9 +3,9 @@ Module for general convenience routines for plotting.
 
 Only very little doctests are possible, since it is mostly visual inspection
 required...
-    # 'plasma' and 'viridis' are not always available
+    # 'plasma' and 'viridis' are not always available (they are from mpl v2.0 on)
     >>> for cmap in ['jet', 'rainbow', #'plasma', 'viridis',
-    ...              'Age', 'NoBlue', 'NoBlue_r', 'Bright']:
+    ...              'age', 'isolum']:
     ...     if isinstance(cmap, str):
     ...         cmap = plt.cm.get_cmap(cmap)
     ...     normed_cmap = isolum_cmap(cmap)
@@ -14,10 +14,8 @@ required...
     ...     if np.any( np.abs(lum - np.mean(lum)) > 1e-6 ):
     ...         print '%s:'%cmap.name, np.mean(lum), np.percentile(lum,[0,100])
 '''
-__all__ = ['cm_k_b', 'cm_k_y', 'cm_age', 'cm_k_g', 'cm_k_p', 'cm_nobl',
-           'cm_nobl_r', 'cm_temp',
-           'luminance', 'isolum_cmap', 'color_code', 'show_image', 'scatter_map',
-           'make_scale_indicators', 'add_cbar']
+__all__ = ['CM_DEF', 'luminance', 'isolum_cmap', 'color_code', 'show_image',
+           'scatter_map', 'make_scale_indicators', 'add_cbar']
 
 import numpy as np
 import matplotlib as mpl
@@ -26,124 +24,8 @@ from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from ..units import *
 from ..binning import *
 
-# used 'http://colormap.org' for creation
-cm_k_b = LinearSegmentedColormap('BlackBlue',
-        {'red':   ((0.0, 0.0, 0.0),
-                   (0.25, 0.0, 0.0),
-                   (1.0, 0.3, 0.3)),
-         'green': ((0.0, 0.0, 0.0),
-                   (0.25, 0.0, 0.0),
-                   (1.0, 0.75, 0.75)),
-         'blue':  ((0.0, 0.0, 0.0),
-                   (0.25, 0.5, 0.5),
-                   (1.0, 1.0, 1.0))
-        })
-cm_k_b.set_bad('black')
-
-cm_k_y = LinearSegmentedColormap('BlackYellow',
-        {'red':   ((0.0, 0.0, 0.0),
-                   (1.0, 1.0, 1.0)),
-         'green': ((0.0, 0.0, 0.0),
-                   (1.0, 1.0, 1.0)),
-         'blue':  ((0.0, 0.0, 0.0),
-                   (0.5, 0.0, 0.0),
-                   (0.75, 0.2, 0.2),
-                   (1.0, 0.55, 0.55))
-        })
-cm_k_y.set_bad('black')
-
-cm_k_g = LinearSegmentedColormap('BlackGreen',
-        {'red':   ((0.0, 0.0, 0.0),
-                   (0.25, 0.0, 0.0),
-                   (1.0, 0.3, 0.3)),
-         'green': ((0.0, 0.0, 0.0),
-                   (1.0, 1.0, 1.0)),
-         'blue':  ((0.0, 0.0, 0.0),
-                   (0.25, 0.0, 0.0),
-                   (1.0, 0.3, 0.3))
-        })
-cm_k_g.set_bad('black')
-
-cm_k_p = LinearSegmentedColormap('BlackPurple',
-        {'red':   ((0.0, 0.0, 0.0),
-                   (1.0, 0.4, 0.4)),
-         'green': ((0.0, 0.0, 0.0),
-                   (1.0, 0.1, 0.1)),
-         'blue':  ((0.0, 0.0, 0.0),
-                   (1.0, 1.0, 1.0))
-        })
-cm_k_p.set_bad('black')
-
-cm_age = LinearSegmentedColormap('Age',
-        {'red':   ((0.0,  0.45, 0.45),
-                   (0.1,  0.80, 0.80),
-                   (0.15, 0.90, 0.90),
-                   (0.25, 1.00, 1.00),
-                   (1.0,  1.00, 1.00)),
-         'green': ((0.0,  0.50, 0.50),
-                   (0.1,  0.82, 0.82),
-                   (0.15, 0.85, 0.85),
-                   (0.30, 0.60, 0.60),
-                   (1.0,  0.25, 0.25)),
-         'blue':  ((0.0,  0.95, 0.95),
-                   (0.1,  0.90, 0.90),
-                   (0.15, 0.85, 0.85),
-                   (0.30, 0.15, 0.15),
-                   (1.0,  0.05, 0.05))
-        })
-
-cm_nobl = LinearSegmentedColormap('NoBlue',
-        {'red':   ((0.0,  1.00, 1.00),
-                   (0.5,  1.00, 1.00),
-                   (0.75, 0.00, 0.00),
-                   (1.0,  0.00, 0.00)),
-         'green': ((0.0,  0.00, 0.00),
-                   (0.25, 0.00, 0.00),
-                   (0.5,  1.00, 1.00),
-                   (1.0,  1.00, 1.00)),
-         'blue':  ((0.0,  1.00, 1.00),
-                   (0.25, 0.00, 0.00),
-                   (0.75, 0.00, 0.00),
-                   (1.0,  1.00, 1.00))
-        })
-cm_nobl.set_bad('black')
-cm_nobl_r = LinearSegmentedColormap('NoBlue_r',
-        {'red':   ((0.0,  0.00, 0.00),
-                   (0.25, 0.00, 0.00),
-                   (0.5,  1.00, 1.00),
-                   (1.0,  1.00, 1.00)),
-         'green': ((0.0,  1.00, 1.00),
-                   (0.5,  1.00, 1.00),
-                   (0.75, 0.00, 0.00),
-                   (1.0,  0.00, 0.00)),
-         'blue':  ((0.0,  1.00, 1.00),
-                   (0.25, 0.00, 0.00),
-                   (0.75, 0.00, 0.00),
-                   (1.0,  1.00, 1.00))
-        })
-cm_nobl_r.set_bad('black')
-
-cm_temp = LinearSegmentedColormap('Bright',
-        {'red':   ((0.0,  0.50, 0.50),
-                   (0.2,  0.00, 0.00),
-                   (0.37, 0.00, 0.00),
-                   (0.62, 1.00, 1.00),
-                   (1.0,  1.00, 1.00)),
-         'green': ((0.0,  0.50, 0.50),
-                   (0.2,  1.00, 1.00),
-                   (0.62, 1.00, 1.00),
-                   (0.87, 0.00, 0.00),
-                   (1.0,  0.15, 0.15)),
-         'blue':  ((0.0,  1.00, 1.00),
-                   (0.35, 1.00, 1.00),
-                   (0.6,  0.00, 0.00),
-                   (0.87, 0.00, 0.00),
-                   (1.0,  0.15, 0.15))
-        })
-cm_temp.set_bad('black')
-
-for cmap in [cm_k_b, cm_k_g, cm_k_p, cm_k_y, cm_age, cm_nobl, cm_nobl_r, cm_temp]:
-    mpl.cm.register_cmap(name=cmap.name, cmap=cmap)
+# 'jet' is bad -- the new default in matplotlib v2.0 ('viridis') is much better
+CM_DEF = 'viridis'
 
 # cf. http://alienryderflex.com/hsp.html
 RGB_lum_weight = np.array([0.299, 0.587, 0.114])
@@ -205,7 +87,7 @@ def isolum_cmap(cmap, isolum=1.0, desat=None):
     return mpl.colors.LinearSegmentedColormap.from_list(cmap.name + '_lumnormed',
                                                         colors, cmap.N)        
 
-def color_code(im_lum, im_col, cmap='Bright', vlim=None, clim=None,
+def color_code(im_lum, im_col, cmap=CM_DEF, vlim=None, clim=None,
                zero_is_white=False):
     '''
     Colorcode a mono-chrome image with onother one.
@@ -252,7 +134,7 @@ def color_code(im_lum, im_col, cmap='Bright', vlim=None, clim=None,
 
     return im
 
-def show_image(im, extent=None, cmap='Bright', vlim=None, aspect=None,
+def show_image(im, extent=None, cmap=CM_DEF, vlim=None, aspect=None,
                interpolation='nearest', ax=None, **kwargs):
     '''
     Show an image with the 'physicsit's orientation'.
@@ -384,7 +266,7 @@ def scatter_map(x, y, s=None, qty=None, av=None, bins=150, extent=None,
     if isinstance(av,(str,unicode)):
         av = s.get(av)
     if cmap is None:
-        cmap = 'cubehelix' if colors is None else 'Bright'
+        cmap = CM_DEF if colors is None else 'isolum'
         cmap = mpl.cm.get_cmap(cmap)
         cmap.set_bad('w' if zero_is_white else 'k')
         if fontcolor is None:
