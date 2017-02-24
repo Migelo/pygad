@@ -7,6 +7,7 @@ Also doctest other parts of this sub-module:
     TestResults(failed=0, attempted=1)
 '''
 
+from colormaps import *
 from general import *
 from maps import *
 from profiles import *

@@ -20,6 +20,7 @@ from fractions import Fraction
 from multiprocessing import Pool, cpu_count
 import warnings
 import gc
+import sys
 
 def calc_temps(u, XH=0.76, ne=0.0, XZ=None, f=3, subs=None):
     '''
@@ -72,10 +73,10 @@ def calc_temps(u, XH=0.76, ne=0.0, XZ=None, f=3, subs=None):
     try:
         T.convert_to('K', subs=subs)
     except UnitError as ue:
-        import sys
         print >> sys.stderr, 'WARNING: in "calc_temps":\n%s' % ue
     gc.collect()
     return T
+# (additional) dependencies
 calc_temps._deps = set()
 
 def _z2Gyr_vec(arr, cosmo):
