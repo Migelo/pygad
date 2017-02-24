@@ -7,6 +7,7 @@ __all__ = ['cm_age', 'cm_k_g', 'cm_k_p',
            'cm_isolum', 'cm_my_viridis']
 
 import matplotlib as mpl
+import matplotlib.cm
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 
 def _create_new_listed_cm(name, data, bad='black'):
