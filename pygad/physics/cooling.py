@@ -178,6 +178,10 @@ class Wiersma_CoolingTable(object):
         Get the cooling rate(s) of a given species / element in units of
         [erg cm^3 s^-1]: Lambda / n_H^2
 
+        Note:
+            These cooling rates do take the heating from the UV/X-ray background
+            into account!
+
         Args:
             species (str):      The element to get the cooling rate(s) for. It can
                                 either be one of the species listed in
@@ -216,7 +220,7 @@ class Wiersma_CoolingTable(object):
     def get_cooling(self, s, Compton_cooling=True, verbose=None):
         '''
         Calculate the cooling rates for all gas elements in a given
-        (sub-)snapshot.
+        (sub-)snapshot: Lambda / n_H^2 [erg cm^3 s^-1]
 
         Note:
             These cooling rates do take the heating from the UV/X-ray background
@@ -244,9 +248,9 @@ class Wiersma_CoolingTable(object):
         if verbose >= environment.VERBOSE_NORMAL:
             print 'calculate cooling rates for\n  %s' % g
 
-        T = g['temp'].in_units_of('K').view(np.ndarray)
-        nH = (g['rho'] * g['H']/g['mass']).in_units_of('u/cm**3').view(np.ndarray)
-        fHe = ( g['He'] / (g['He'] + g['H']) ).view(np.ndarray)
+        T = g['temp'].in_units_of('K',subs=s).view(np.ndarray)
+        nH = (g['rho'] * g['H']/g['mass']).in_units_of('u/cm**3',subs=s).view(np.ndarray)
+        fHe = ( g['He'] / (g['He'] + g['H']) ).in_units_of(1,subs=s).view(np.ndarray)
 
         T[T<self.T_range[0]] = self.T_range[0]
         T[T>self.T_range[1]] = self.T_range[1]
