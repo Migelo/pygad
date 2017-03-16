@@ -13,7 +13,6 @@ pipelines:
   default:
     - step:
         script:
-          - git fetch --unshallow --tags
           - wget https://bitbucket.org/broett/pygad/downloads/bc03.tar.gz
           - tar -xzf bc03.tar.gz
           - wget https://bitbucket.org/broett/pygad/downloads/iontbls_HM01.tar.gz
