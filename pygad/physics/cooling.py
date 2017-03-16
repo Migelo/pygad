@@ -6,7 +6,7 @@ Doctests:
     >>> from ..environment import module_dir
     >>> from ..snapshot import Snap
     >>> from ..tools import prepare_zoom
-    >>> s,h,g = prepare_zoom('snaps/snap_M1196_4x_470', physical=True,
+    >>> s,h,g = prepare_zoom('snaps/snap_M1196_4x_470',
     ...                      star_form=None,
     ...                      gas_trace=None) # doctest: +ELLIPSIS
     prepare zoomed-in <Snap "snap_M1196_4x_470"; N=2,079,055; z=0.000>
