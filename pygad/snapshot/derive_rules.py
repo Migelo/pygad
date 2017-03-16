@@ -7,7 +7,7 @@ direct dependencies, i.e. the blocks it needs directly to calculate the derived
 one from.
 '''
 __all__ = ['calc_temps', 'age_from_form', 'calc_x_ray_lum', 'calc_HI_mass',
-           'calc_ion_mass']
+           'calc_ion_mass', 'calc_cooling_rates']
 
 from .. import environment
 from ..units import UnitArr, UnitScalar, UnitError
@@ -21,6 +21,16 @@ from multiprocessing import Pool, cpu_count
 import warnings
 import gc
 import sys
+
+def calc_cooling_rates(s, tbl='CoolingTables/z_0.000.hdf5'):
+    '''
+    Calculate the total cooling rates for the given snapshot.
+    '''
+    tbl = physics.cooling.Wiersma_CoolingTable(tbl)
+    Lambda = tbl.get_cooling(s, units='erg cm**3 s**-1')
+    return Lambda
+# TODO: add the elements individually (not just 'elements')
+calc_cooling_rates._deps = set(['elements', 'mass', 'Z', 'temp', 'rho'])
 
 def calc_temps(u, XH=0.76, ne=0.0, XZ=None, f=3, subs=None):
     '''

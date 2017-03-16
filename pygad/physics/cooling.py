@@ -217,10 +217,11 @@ class Wiersma_CoolingTable(object):
 
         return UnitArr(Lambda, 'erg cm**3 s**-1')
 
-    def get_cooling(self, s, Compton_cooling=True, verbose=None):
+    def get_cooling(self, s, Compton_cooling=True, units='erg cm^3 s^-1',
+                    verbose=None):
         '''
         Calculate the cooling rates for all gas elements in a given
-        (sub-)snapshot: Lambda / n_H^2 [erg cm^3 s^-1]
+        (sub-)snapshot: Lambda / n_H^2
 
         Note:
             These cooling rates do take the heating from the UV/X-ray background
@@ -231,6 +232,8 @@ class Wiersma_CoolingTable(object):
                                     cooling rates.
             Compton_cooling (bool): Whether to also include the Compton cooling
                                     from the cosmic microwave background (CMB).
+            units (Unit, str):      The units in which the result shall be
+                                    returned.
             verbose (int):          The verbosity level. Defaults to
                                     `environment.verbose`.
 
@@ -313,6 +316,8 @@ class Wiersma_CoolingTable(object):
             #        np.percentile((Compton_cool/net_cool).in_units_of(1), [0,50,100] )
 
             net_cool += Compton_cool
+
+        net_cool.convert_to(units)
 
         return net_cool
 
