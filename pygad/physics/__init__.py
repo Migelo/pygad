@@ -8,7 +8,7 @@ Also doctest other parts of this sub-module:
     >>> doctest.testmod(cosmology)
     TestResults(failed=0, attempted=42)
     >>> doctest.testmod(cooling)
-    TestResults(failed=0, attempted=0)
+    TestResults(failed=0, attempted=14)
 '''
 
 from quantities import *

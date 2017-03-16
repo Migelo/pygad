@@ -1,5 +1,72 @@
 '''
-TODO
+Calculating the cooling rates for gas particles using the Wiersma cooling table as
+can be obtained from their website (http://www.strw.leidenuniv.nl/WSS08/).
+
+Doctests:
+    >>> from ..environment import module_dir
+    >>> from ..snapshot import Snap
+    >>> from ..tools import prepare_zoom
+    >>> s,h,g = prepare_zoom('snaps/snap_M1196_4x_470', physical=True,
+    ...                      star_form=None,
+    ...                      gas_trace=None) # doctest: +ELLIPSIS
+    prepare zoomed-in <Snap "snap_M1196_4x_470"; N=2,079,055; z=0.000>
+    read info file from: /Users/bernhard/programming/pygad/snaps/trace/info_470.txt
+    ...
+    R200: 207.996427803 [kpc]
+    M200: 1.084302e+12 [Msol]
+    orientate at the galactic red. inertia tensor from info file
+    ...
+    M*:   2.937788e+10 [Msol]
+
+    Get the cooling tables of not present:
+    >>> import os
+    >>> if not os.path.exists('CoolingTables/z_0.000.hdf5'):
+    ...     url = 'http://www.strw.leidenuniv.nl/WSS08/'
+    ...     zipf = 'z_0.000_highres.tar.gz'
+    ...     assert not os.system('wget %s%s' % (url,zipf))
+    ...     assert not os.system('tar zxvf %s' % zipf)
+    ...     assert not os.system('rm -f %s' % zipf)
+
+    Calculate the cooling rates for just every 100th particle for reasons of
+    runtime.
+    >>> tbl = Wiersma_CoolingTable('CoolingTables/z_0.000.hdf5')
+    reading cooling tables from "CoolingTables/z_0.000.hdf5"
+    >>> Lambda = tbl.get_cooling(s.gas[::100],
+    ...                 units='erg cm**3 s**-1') # doctest: +ELLIPSIS
+    calculate cooling rates for
+      <Snap "snap_M1196_4x_470":gas[::100]; N=9,218; z=0.000>
+    ...
+    interpolate cooling rates for...
+      Carbon...
+    derive block C... done.
+    ...
+    interpolate ne/nH and solar metallicity ne/nH...
+    combine to netto cooling rates...
+    add the Compton cooling rates...
+    >>> assert Lambda.units == 'erg cm**3 s**-1'
+
+    The percentiles are still close to the overall ones, though
+    >>> perc = np.percentile(Lambda, [10,25,50,75,90])
+    >>> np.round(perc, decimals=25)
+    array([ -1.31000000e-23,  -6.40000000e-24,  -7.00000000e-25,
+             1.58000000e-23,   4.33000000e-23])
+
+    The cooling rates of the galaxy are much smaller than they are overall:
+    >>> Lambda_gal = tbl.get_cooling(g.gas,
+    ...                 units='erg cm**3 s**-1') # doctest: +ELLIPSIS
+    calculate cooling rates for
+      <Snap "snap_M1196_4x_470":Ball(... z=0.000>
+    interpolate cooling rates for...
+      Carbon...
+      ...
+      Iron...
+      H+He...
+    interpolate ne/nH and solar metallicity ne/nH...
+    combine to netto cooling rates...
+    add the Compton cooling rates...
+    >>> perc_gal = np.percentile(Lambda_gal, [10,25,50,75,90])
+    >>> np.round(perc_gal/perc, decimals=5)
+    array([ 0.03941,  0.05754,  0.31656, -0.0059 ,  0.00071])
 '''
 __all__ = ['Wiersma_CoolingTable']
 
