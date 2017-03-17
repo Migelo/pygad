@@ -367,6 +367,7 @@ def mock_absorption_spectrum_of(s, los, line, vel_extent, **kwargs):
                                         l=line['l'], f=line['f'],
                                         atomwt=line['atomwt'],
                                         vel_extent=vel_extent,
+                                        Gamma=line.get('gamma',0.0),
                                         **kwargs)
     '''
     if isinstance(line, unicode):
@@ -384,10 +385,12 @@ def mock_absorption_spectrum_of(s, los, line, vel_extent, **kwargs):
                                     l=line['l'], f=line['f'],
                                     atomwt=line['atomwt'],
                                     vel_extent=vel_extent,
+                                    Gamma=line.get('gamma',0.0),
                                     **kwargs)
 
 def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
                              vel_extent, Nbins=1000,
+                             Gamma='0.0 km/s',
                              method='particles',
                              spatial_extent=None, spatial_res=None,
                              col_width=None, pad=7,
@@ -425,6 +428,9 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
         vel_extent (UnitQty):   The limits of the spectrum in (rest frame)
                                 velocity space. Units default to 'km/s'.
         Nbins (int):            The number of bins for the spectrum.
+        Gamma (UnitScalar):     The intrinsic line width (when the spectrum is
+                                converted to velocity space; units default to
+                                'km/s').
         method (str):           How to do the binning into velocity space. The
                                 available choices are:
                                 * 'particles':  Create a line for each particle
@@ -515,6 +521,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
     else:
         restr_column_lims = UnitQty(restr_column_lims, 'km/s', dtype=np.float64, subs=s)
     l = UnitScalar(l, 'Angstrom')
+    Gamma = UnitScalar(Gamma, 'km/s')
     f = float(f)
     atomwt = UnitScalar(atomwt, 'u')
     if kernel is None:
@@ -537,6 +544,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
         print '  => Xsec =', Xsec
         print '  and atomic weight', atomwt
         print '  => b(T=1e4K) =', b_0*np.sqrt(1e4)
+        print '  and natural line width Gamma =', Gamma
         print '  using kernel "%s"' % kernel
 
     v_edges = UnitArr(np.linspace(vel_extent[0], vel_extent[1], Nbins+1),
@@ -740,6 +748,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
 
     b_0 = float(b_0.in_units_of(v_units, subs=s))
     Xsec = float(Xsec.in_units_of(l_units**2 * v_units, subs=s))
+    Gamma = float(Gamma.in_units_of(v_units))
 
     taus = np.empty(Nbins, dtype=np.float64)
     los_dens = np.empty(Nbins, dtype=np.float64)
@@ -758,6 +767,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
                                  C.c_size_t(Nbins),
                                  C.c_double(b_0),
                                  C.c_double(Xsec),
+                                 C.c_double(Gamma),
                                  C.c_void_p(taus.ctypes.data),
                                  C.c_void_p(los_dens.ctypes.data),
                                  C.c_void_p(los_temp.ctypes.data),
