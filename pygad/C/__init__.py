@@ -19,3 +19,6 @@ cpygad.Wendland_C4.argtypes = [c_double, c_double]
 cpygad.Wendland_C6.restype = c_double
 cpygad.Wendland_C6.argtypes = [c_double, c_double]
 
+cpygad.Voigt.restype = c_double
+cpygad.Voigt.argtypes = [c_double, c_double, c_double]
+
