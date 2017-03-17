@@ -10,7 +10,7 @@ Doctests:
     ...                      star_form=None,
     ...                      gas_trace=None) # doctest: +ELLIPSIS
     prepare zoomed-in <Snap "snap_M1196_4x_470"; N=2,079,055; z=0.000>
-    read info file from: /Users/bernhard/programming/pygad/snaps/trace/info_470.txt
+    read info file from: .../snaps/trace/info_470.txt
     ...
     R200: 207.996427803 [kpc]
     M200: 1.084302e+12 [Msol]
@@ -20,16 +20,16 @@ Doctests:
 
     Get the cooling tables of not present:
     >>> import os
-    >>> if not os.path.exists(module_dir+'CoolingTables/z_0.000.hdf5'):
+    >>> if not os.path.exists(module_dir+'../CoolingTables/z_0.000.hdf5'):
     ...     url = 'http://www.strw.leidenuniv.nl/WSS08/'
     ...     zipf = 'z_0.000_highres.tar.gz'
     ...     assert not os.system('wget %s%s' % (url,zipf))
-    ...     assert not os.system('tar zxvf %s -C %s' % (zipf,module_dir))
+    ...     assert not os.system('tar zxvf %s -C %s/../' % (zipf,module_dir))
     ...     assert not os.system('rm -f %s' % zipf)
 
     Calculate the cooling rates for just every 100th particle for reasons of
     runtime.
-    >>> tbl = Wiersma_CoolingTable(module_dir+'CoolingTables/z_0.000.hdf5') # doctest: +ELLIPSIS
+    >>> tbl = Wiersma_CoolingTable(module_dir+'../CoolingTables/z_0.000.hdf5') # doctest: +ELLIPSIS
     reading cooling tables from "...CoolingTables/z_0.000.hdf5"
     >>> Lambda = tbl.get_cooling(s.gas[::100],
     ...                 units='erg cm**3 s**-1') # doctest: +ELLIPSIS
