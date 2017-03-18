@@ -34,62 +34,44 @@ Doctests:
     ...                 method=method,
     ...             )
     ...             N = dens.sum()
-    ...             print '    N  = %.3e %s' % (N, N.units)
+    ...             print '    N = %.3e %s' % (N, N.units),
     ...             if method == 'particles':
     ...                 N_restr = np.sum(restr_column)
     ...                 N_restr.convert_to('cm**-2', subs=s)
     ...                 if np.abs((N_restr - N) / N) > 0.01:
-    ...                     print '    N  = %.3e %s' % (N_restr, N_restr.units)
+    ...                     print '; N = %.3e %s' % (N_restr, N_restr.units),
     ...             z_edges = velocities_to_redshifts(v_edges, z0=s.redshift)
     ...             l = UnitArr(lines[line]['l'])
     ...             l_edges = l * (1.0 + z_edges)
     ...             EW_l = EW(tau, l_edges)
-    ...             print '    EW = %.3f %s' % (EW_l, EW_l.units)
+    ...             print '; EW = %.3f %s' % (EW_l, EW_l.units)
     l.o.s.: [ 34700.  35600.] [ckpc h_0**-1]
        H1215
-        N  = 2.301e+15 [cm**-2]
-        EW = 1.401 [Angstrom]
-        N  = 2.299e+15 [cm**-2]
-        EW = 1.129 [Angstrom]
-        N  = 2.304e+15 [cm**-2]
-        EW = 1.111 [Angstrom]
+        N = 2.301e+15 [cm**-2] ; EW = 1.402 [Angstrom]
+        N = 2.299e+15 [cm**-2] ; EW = 1.129 [Angstrom]
+        N = 2.304e+15 [cm**-2] ; EW = 1.112 [Angstrom]
        OVI1031
-        N  = 7.455e+14 [cm**-2]
-        EW = 0.673 [Angstrom]
-        N  = 7.447e+14 [cm**-2]
-        EW = 0.547 [Angstrom]
-        N  = 7.462e+14 [cm**-2]
-        EW = 0.539 [Angstrom]
+        N = 7.455e+14 [cm**-2] ; EW = 0.673 [Angstrom]
+        N = 7.447e+14 [cm**-2] ; EW = 0.547 [Angstrom]
+        N = 7.462e+14 [cm**-2] ; EW = 0.539 [Angstrom]
     l.o.s.: [ 34550.  35500.] [ckpc h_0**-1]
        H1215
-        N  = 5.303e+14 [cm**-2]
-        EW = 0.628 [Angstrom]
-        N  = 5.297e+14 [cm**-2]
-        EW = 0.565 [Angstrom]
-        N  = 5.309e+14 [cm**-2]
-        EW = 0.559 [Angstrom]
+        N = 5.303e+14 [cm**-2] ; EW = 0.628 [Angstrom]
+        N = 5.297e+14 [cm**-2] ; EW = 0.566 [Angstrom]
+        N = 5.309e+14 [cm**-2] ; EW = 0.559 [Angstrom]
        OVI1031
-        N  = 2.252e+14 [cm**-2]
-        EW = 0.281 [Angstrom]
-        N  = 2.250e+14 [cm**-2]
-        EW = 0.256 [Angstrom]
-        N  = 2.254e+14 [cm**-2]
-        EW = 0.253 [Angstrom]
+        N = 2.252e+14 [cm**-2] ; EW = 0.281 [Angstrom]
+        N = 2.250e+14 [cm**-2] ; EW = 0.256 [Angstrom]
+        N = 2.254e+14 [cm**-2] ; EW = 0.253 [Angstrom]
     l.o.s.: [ 35000.  35600.] [ckpc h_0**-1]
        H1215
-        N  = 4.382e+13 [cm**-2]
-        EW = 0.289 [Angstrom]
-        N  = 4.377e+13 [cm**-2]
-        EW = 0.284 [Angstrom]
-        N  = 4.386e+13 [cm**-2]
-        EW = 0.284 [Angstrom]
+        N = 4.382e+13 [cm**-2] ; EW = 0.289 [Angstrom]
+        N = 4.377e+13 [cm**-2] ; EW = 0.284 [Angstrom]
+        N = 4.386e+13 [cm**-2] ; EW = 0.284 [Angstrom]
        OVI1031
-        N  = 1.210e+14 [cm**-2]
-        EW = 0.186 [Angstrom]
-        N  = 1.209e+14 [cm**-2]
-        EW = 0.182 [Angstrom]
-        N  = 1.211e+14 [cm**-2]
-        EW = 0.182 [Angstrom]
+        N = 1.210e+14 [cm**-2] ; EW = 0.186 [Angstrom]
+        N = 1.209e+14 [cm**-2] ; EW = 0.182 [Angstrom]
+        N = 1.211e+14 [cm**-2] ; EW = 0.182 [Angstrom]
     >>> environment.verbose = environment.VERBOSE_NORMAL
 """
 __all__ = ['mock_absorption_spectrum_of', 'mock_absorption_spectrum',

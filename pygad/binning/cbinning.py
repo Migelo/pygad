@@ -184,12 +184,6 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml',
     if qty.base is not None:
         qty.copy()
 
-    if np.percentile(hsml, 30) > np.min(Npx*res.in_units_of(s['pos'].units)):
-        import sys
-        print >> sys.stderr, 'WARNING: the 30-percentile (relevant) ' + \
-                             'smoothing length is smaller than the smallest ' + \
-                             'sidelength of the grid!'
-
     extent = extent.view(np.ndarray).astype(np.float64).copy()
     grid = np.empty(np.prod(Npx), dtype=np.float64)
     Npx = Npx.astype(np.intp)
