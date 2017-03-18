@@ -19,8 +19,8 @@ Doctests:
     ...         print vs_back
     ...         print np.max(np.abs( ((vs-vs_back)/vs).in_units_of(1) ))
     
-    >>> los_arr = UnitArr([[ 34700.,  35600.],
-    ...                    [ 34550.,  35500.],
+    >>> los_arr = UnitArr([[ 34800.,  35566.],
+    ...                    [ 34700.,  35600.],
     ...                    [ 35000.,  35600.]], 'ckpc/h_0')
     >>> environment.verbose = environment.VERBOSE_QUIET
     >>> for los in los_arr:
@@ -30,7 +30,7 @@ Doctests:
     ...         for method in ['particles', 'line', 'column']:
     ...             tau, dens, temp, v_edges, restr_column = mock_absorption_spectrum_of(
     ...                 s, los, line=line,
-    ...                 vel_extent=UnitArr([2400.,3100.], 'km/s'),
+    ...                 vel_extent=UnitArr([2000.,3500.], 'km/s'),
     ...                 method=method,
     ...             )
     ...             N = dens.sum()
@@ -45,6 +45,15 @@ Doctests:
     ...             l_edges = l * (1.0 + z_edges)
     ...             EW_l = EW(tau, l_edges)
     ...             print '; EW = %.3f %s' % (EW_l, EW_l.units)
+    l.o.s.: [ 34800.  35566.] [ckpc h_0**-1]
+       H1215
+        N = 4.439e+17 [cm**-2] ; EW = 1.818 [Angstrom]
+        N = 4.436e+17 [cm**-2] ; EW = 1.396 [Angstrom]
+        N = 4.441e+17 [cm**-2] ; EW = 1.368 [Angstrom]
+       OVI1031
+        N = 8.272e+14 [cm**-2] ; EW = 0.723 [Angstrom]
+        N = 8.265e+14 [cm**-2] ; EW = 0.646 [Angstrom]
+        N = 8.279e+14 [cm**-2] ; EW = 0.640 [Angstrom]
     l.o.s.: [ 34700.  35600.] [ckpc h_0**-1]
        H1215
         N = 2.301e+15 [cm**-2] ; EW = 1.402 [Angstrom]
@@ -54,15 +63,6 @@ Doctests:
         N = 7.455e+14 [cm**-2] ; EW = 0.673 [Angstrom]
         N = 7.447e+14 [cm**-2] ; EW = 0.547 [Angstrom]
         N = 7.462e+14 [cm**-2] ; EW = 0.539 [Angstrom]
-    l.o.s.: [ 34550.  35500.] [ckpc h_0**-1]
-       H1215
-        N = 5.303e+14 [cm**-2] ; EW = 0.628 [Angstrom]
-        N = 5.297e+14 [cm**-2] ; EW = 0.566 [Angstrom]
-        N = 5.309e+14 [cm**-2] ; EW = 0.559 [Angstrom]
-       OVI1031
-        N = 2.252e+14 [cm**-2] ; EW = 0.281 [Angstrom]
-        N = 2.250e+14 [cm**-2] ; EW = 0.256 [Angstrom]
-        N = 2.254e+14 [cm**-2] ; EW = 0.253 [Angstrom]
     l.o.s.: [ 35000.  35600.] [ckpc h_0**-1]
        H1215
         N = 4.382e+13 [cm**-2] ; EW = 0.289 [Angstrom]
