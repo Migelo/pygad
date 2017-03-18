@@ -558,11 +558,12 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
             spatial_extent = UnitQty( spatial_extent, s['pos'].units, subs=s )
 
         if spatial_res is None:
-            spatial_res = UnitArr(np.percentile(s.gas['hsml'], .1),
+            spatial_res = UnitArr(np.percentile(s.gas['hsml'], 1),
                                   s.gas['hsml'].units)
         spatial_res = UnitScalar(spatial_res, s['pos'].units, subs=s)
         N = int(max( 1e3,
-                     2.*(spatial_extent.ptp()/spatial_res).in_units_of(1,subs=s) ))
+                     (spatial_extent.ptp()/spatial_res).in_units_of(1,subs=s) ))
+        spatial_res == spatial_extent.ptp() / N
 
         if method == 'column':
             # do some padding in the 3D binning in order to use the the normation
