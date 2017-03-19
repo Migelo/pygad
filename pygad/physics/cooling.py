@@ -12,11 +12,11 @@ Doctests:
     prepare zoomed-in <Snap "snap_M1196_4x_470"; N=2,079,055; z=0.000>
     read info file from: .../snaps/trace/info_470.txt
     ...
-    R200: 207.996427803 [kpc]
-    M200: 1.084302e+12 [Msol]
+    R200: 207.996... [kpc]
+    M200: 1.08...e+12 [Msol]
     orientate at the galactic red. inertia tensor from info file
     ...
-    M*:   2.937788e+10 [Msol]
+    M*:   2.93...e+10 [Msol]
 
     Get the cooling tables of not present:
     >>> import os
@@ -202,15 +202,15 @@ class Wiersma_CoolingTable(object):
 
     @property
     def nH_range(self):
-        return tuple(self._nH_bins[(0,-1),])
+        return self._nH_bins[0], self._nH_bins[-1]
 
     @property
     def T_range(self):
-        return tuple(self._T_bins[(0,-1),])
+        return self._T_bins[0], self._T_bins[-1]
 
     @property
     def fHe_range(self):
-        return tuple(self._fHe_bins[(0,-1),])
+        return self._fHe_bins[0], self._fHe_bins[-1]
 
     def _interpolate_fHe(self, interpolations, T, nH, fHe):
         '''
