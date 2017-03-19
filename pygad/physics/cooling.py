@@ -65,7 +65,7 @@ Doctests:
     combine to netto cooling rates...
     add the Compton cooling rates...
     >>> perc_gal = np.percentile(Lambda_gal, [10,25,50,75,90])
-    >>> np.round(perc_gal/perc, decimals=5)
+    >>> np.round(np.array(perc_gal)/np.array(perc), decimals=5)
     array([ 0.03941,  0.05754,  0.31656, -0.0059 ,  0.00071])
 '''
 __all__ = ['Wiersma_CoolingTable']
