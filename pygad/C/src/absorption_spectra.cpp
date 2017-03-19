@@ -119,18 +119,20 @@ void _absorption_spectrum(size_t N,
                     if ( Gamma > 0.0 ) {
                         // Antiderivative of the Voigt function requires the
                         // generalized hypergeometric function 2F2, which I
-                        // do not have. Hence, the numeric integration by the
-                        // trapezoidal rule:
-                        // TODO: improve!
-                        int K = std::min<int>( 100 * 10 * dv / FWHM_V, 2500 );
-                        double dv_K = dv/K;
-                        Dtb = 0.5 * (Voigt(v0, sigma, Gamma)
-                                + Voigt(v1, sigma, Gamma));
-                        for ( int k=1; k<K; k++ ) {
-                            Dtb += Voigt(v0 + k * dv_K,
-                                        sigma, Gamma);
+                        // do not have. Hence, the numeric integration by
+                        // Simpson's method:
+                        int K = std::min<int>( 10*dv/FWHM_V, 1000 );
+                        K = std::max( 2*(K/2), 10 );
+                        double h = dv/K;
+                        Dtb = 2. * Voigt(v0+h, sigma, Gamma);
+                        for ( int k=2; k<K; k+=2 ) {
+                            Dtb +=      Voigt(v0+ k   *h, sigma, Gamma)
+                                 + 2. * Voigt(v0+(k+1)*h, sigma, Gamma);
                         }
-                        Dtb *= dv_K;
+                        Dtb *= 2;
+                        Dtb += Voigt(v0, sigma, Gamma)
+                                + Voigt(v1, sigma, Gamma);
+                        Dtb *= h/3.;
                     } else {
                         // antiderivative of tb_b:
                         // int_0_v dv' tb_b(v') = 1/2 * erf(v/b)
