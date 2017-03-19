@@ -16,6 +16,7 @@ void _absorption_spectrum(size_t N,
                           double *vel_extent,
                           size_t Nbins,
                           double b_0,
+                          double v_turb,
                           double Xsec,
                           double Gamma,
                           double *taus,
@@ -69,7 +70,8 @@ void _absorption_spectrum(size_t N,
         // thermal broadening tb_b(v) = 1/(b*sqrt(pi)) * exp( -(v/b)^2 )
         // natural line width L(v) = ????
         // convolution: the Voigt function
-        double b = b_0 * std::sqrt(Tj);
+        double b; // = b_0 * std::sqrt(Tj);
+        b = std::sqrt(b_0*b_0*Tj + v_turb*v_turb);
         double sigma = b / std::sqrt(2);
         // FWHM are (FWHM for Voigt is approx., but with accuracy of ~0.02%):
         double FWHM_b = 2 * std::sqrt(2 * std::log(2)) * sigma;
@@ -182,6 +184,7 @@ void absorption_spectrum(bool particles,
                          double *vel_extent,
                          size_t Nbins,
                          double b_0,
+                         double v_turb,
                          double Xsec,
                          double Gamma,
                          double *taus,
@@ -194,14 +197,14 @@ void absorption_spectrum(bool particles,
     if ( particles ) {
         return _absorption_spectrum<true>(N, pos, vel, hsml, n, temp,
                                           los_pos, vel_extent, Nbins,
-                                          b_0, Xsec, Gamma,
+                                          b_0, v_turb, Xsec, Gamma,
                                           taus, los_dens, los_temp,
                                           v_lims, column,
                                           kernel_, periodic);
     } else {
         return _absorption_spectrum<false>(N, pos, vel, hsml, n, temp,
                                            los_pos, vel_extent, Nbins,
-                                           b_0, Xsec, Gamma,
+                                           b_0, v_turb, Xsec, Gamma,
                                            taus, los_dens, los_temp,
                                            v_lims, column,
                                            kernel_, periodic);

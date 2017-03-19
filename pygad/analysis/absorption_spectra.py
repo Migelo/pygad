@@ -373,6 +373,7 @@ def mock_absorption_spectrum_of(s, los, line, vel_extent, **kwargs):
 def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
                              vel_extent, Nbins=1000,
                              Gamma='0.0 km/s',
+                             v_turb='0 km/s',
                              method='particles',
                              spatial_extent=None, spatial_res=None,
                              col_width=None, pad=7,
@@ -413,6 +414,10 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
         Gamma (UnitScalar):     The intrinsic line width (when the spectrum is
                                 converted to velocity space; units default to
                                 'km/s').
+        v_turb (UnitScalar):    A (constant) turbulent velocity per gas particle
+                                (this argument only is used for the 'particles'
+                                method) for which the atomic spectra (i.e. Voigt
+                                profiles) are generated.
         method (str):           How to do the binning into velocity space. The
                                 available choices are:
                                 * 'particles':  Create a line for each particle
@@ -503,6 +508,9 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
     else:
         restr_column_lims = UnitQty(restr_column_lims, 'km/s', dtype=np.float64, subs=s)
     l = UnitScalar(l, 'Angstrom')
+    v_turb = UnitScalar(v_turb, 'km/s')
+    if method != 'particles':
+        v_turb = UnitScalar(0.0, 'km/s')
     Gamma = UnitScalar(Gamma, 'km/s')
     f = float(f)
     atomwt = UnitScalar(atomwt, 'u')
@@ -527,6 +535,8 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
         print '  and atomic weight', atomwt
         print '  => b(T=1e4K) =', b_0*np.sqrt(1e4)
         print '  and natural line width Gamma =', Gamma
+        if method == 'particles' and v_turb != 0:
+            print '  and a turbulent motion per particle of v_turb =', v_turb
         print '  using kernel "%s"' % kernel
 
     v_edges = UnitArr(np.linspace(vel_extent[0], vel_extent[1], Nbins+1),
@@ -730,6 +740,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
                            .view(np.ndarray).astype(np.float64).copy()
 
     b_0 = float(b_0.in_units_of(v_units, subs=s))
+    v_turb = float(v_turb.in_units_of(v_units, subs=s))
     Xsec = float(Xsec.in_units_of(l_units**2 * v_units, subs=s))
     Gamma = float(Gamma.in_units_of(v_units))
 
@@ -749,6 +760,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
                                  C.c_void_p(vel_extent.ctypes.data),
                                  C.c_size_t(Nbins),
                                  C.c_double(b_0),
+                                 C.c_double(v_turb),
                                  C.c_double(Xsec),
                                  C.c_double(Gamma),
                                  C.c_void_p(taus.ctypes.data),
