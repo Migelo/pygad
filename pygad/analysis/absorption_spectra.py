@@ -19,8 +19,8 @@ Doctests:
     ...         print vs_back
     ...         print np.max(np.abs( ((vs-vs_back)/vs).in_units_of(1) ))
     
-    >>> los_arr = UnitArr([[ 34700.,  35600.],
-    ...                    [ 34550.,  35500.],
+    >>> los_arr = UnitArr([[ 34800.,  35566.],
+    ...                    [ 34700.,  35600.],
     ...                    [ 35000.,  35600.]], 'ckpc/h_0')
     >>> environment.verbose = environment.VERBOSE_QUIET
     >>> for los in los_arr:
@@ -30,66 +30,48 @@ Doctests:
     ...         for method in ['particles', 'line', 'column']:
     ...             tau, dens, temp, v_edges, restr_column = mock_absorption_spectrum_of(
     ...                 s, los, line=line,
-    ...                 vel_extent=UnitArr([2400.,3100.], 'km/s'),
+    ...                 vel_extent=UnitArr([2000.,3500.], 'km/s'),
     ...                 method=method,
     ...             )
     ...             N = dens.sum()
-    ...             print '    N  = %.3e %s' % (N, N.units)
+    ...             print '    N = %.3e %s' % (N, N.units),
     ...             if method == 'particles':
     ...                 N_restr = np.sum(restr_column)
     ...                 N_restr.convert_to('cm**-2', subs=s)
     ...                 if np.abs((N_restr - N) / N) > 0.01:
-    ...                     print '    N  = %.3e %s' % (N_restr, N_restr.units)
+    ...                     print '; N = %.3e %s' % (N_restr, N_restr.units),
     ...             z_edges = velocities_to_redshifts(v_edges, z0=s.redshift)
     ...             l = UnitArr(lines[line]['l'])
     ...             l_edges = l * (1.0 + z_edges)
     ...             EW_l = EW(tau, l_edges)
-    ...             print '    EW = %.3f %s' % (EW_l, EW_l.units)
+    ...             print '; EW = %.3f %s' % (EW_l, EW_l.units)
+    l.o.s.: [ 34800.  35566.] [ckpc h_0**-1]
+       H1215
+        N = 4.439e+17 [cm**-2] ; EW = 1.818 [Angstrom]
+        N = 4.436e+17 [cm**-2] ; EW = 1.396 [Angstrom]
+        N = 4.441e+17 [cm**-2] ; EW = 1.368 [Angstrom]
+       OVI1031
+        N = 8.272e+14 [cm**-2] ; EW = 0.723 [Angstrom]
+        N = 8.265e+14 [cm**-2] ; EW = 0.646 [Angstrom]
+        N = 8.279e+14 [cm**-2] ; EW = 0.640 [Angstrom]
     l.o.s.: [ 34700.  35600.] [ckpc h_0**-1]
        H1215
-        N  = 2.301e+15 [cm**-2]
-        EW = 1.401 [Angstrom]
-        N  = 2.299e+15 [cm**-2]
-        EW = 1.129 [Angstrom]
-        N  = 2.304e+15 [cm**-2]
-        EW = 1.111 [Angstrom]
+        N = 2.301e+15 [cm**-2] ; EW = 1.402 [Angstrom]
+        N = 2.299e+15 [cm**-2] ; EW = 1.129 [Angstrom]
+        N = 2.304e+15 [cm**-2] ; EW = 1.112 [Angstrom]
        OVI1031
-        N  = 7.455e+14 [cm**-2]
-        EW = 0.673 [Angstrom]
-        N  = 7.447e+14 [cm**-2]
-        EW = 0.547 [Angstrom]
-        N  = 7.462e+14 [cm**-2]
-        EW = 0.539 [Angstrom]
-    l.o.s.: [ 34550.  35500.] [ckpc h_0**-1]
-       H1215
-        N  = 5.303e+14 [cm**-2]
-        EW = 0.628 [Angstrom]
-        N  = 5.297e+14 [cm**-2]
-        EW = 0.565 [Angstrom]
-        N  = 5.309e+14 [cm**-2]
-        EW = 0.559 [Angstrom]
-       OVI1031
-        N  = 2.252e+14 [cm**-2]
-        EW = 0.281 [Angstrom]
-        N  = 2.250e+14 [cm**-2]
-        EW = 0.256 [Angstrom]
-        N  = 2.254e+14 [cm**-2]
-        EW = 0.253 [Angstrom]
+        N = 7.455e+14 [cm**-2] ; EW = 0.673 [Angstrom]
+        N = 7.447e+14 [cm**-2] ; EW = 0.547 [Angstrom]
+        N = 7.462e+14 [cm**-2] ; EW = 0.539 [Angstrom]
     l.o.s.: [ 35000.  35600.] [ckpc h_0**-1]
        H1215
-        N  = 4.382e+13 [cm**-2]
-        EW = 0.289 [Angstrom]
-        N  = 4.377e+13 [cm**-2]
-        EW = 0.284 [Angstrom]
-        N  = 4.386e+13 [cm**-2]
-        EW = 0.284 [Angstrom]
+        N = 4.382e+13 [cm**-2] ; EW = 0.289 [Angstrom]
+        N = 4.377e+13 [cm**-2] ; EW = 0.284 [Angstrom]
+        N = 4.386e+13 [cm**-2] ; EW = 0.284 [Angstrom]
        OVI1031
-        N  = 1.210e+14 [cm**-2]
-        EW = 0.186 [Angstrom]
-        N  = 1.209e+14 [cm**-2]
-        EW = 0.182 [Angstrom]
-        N  = 1.211e+14 [cm**-2]
-        EW = 0.182 [Angstrom]
+        N = 1.210e+14 [cm**-2] ; EW = 0.186 [Angstrom]
+        N = 1.209e+14 [cm**-2] ; EW = 0.182 [Angstrom]
+        N = 1.211e+14 [cm**-2] ; EW = 0.182 [Angstrom]
     >>> environment.verbose = environment.VERBOSE_NORMAL
 """
 __all__ = ['mock_absorption_spectrum_of', 'mock_absorption_spectrum',
@@ -367,6 +349,7 @@ def mock_absorption_spectrum_of(s, los, line, vel_extent, **kwargs):
                                         l=line['l'], f=line['f'],
                                         atomwt=line['atomwt'],
                                         vel_extent=vel_extent,
+                                        Gamma=line.get('gamma',0.0),
                                         **kwargs)
     '''
     if isinstance(line, unicode):
@@ -384,10 +367,13 @@ def mock_absorption_spectrum_of(s, los, line, vel_extent, **kwargs):
                                     l=line['l'], f=line['f'],
                                     atomwt=line['atomwt'],
                                     vel_extent=vel_extent,
+                                    Gamma=line.get('gamma',0.0),
                                     **kwargs)
 
 def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
                              vel_extent, Nbins=1000,
+                             Gamma='0.0 km/s',
+                             v_turb='0 km/s',
                              method='particles',
                              spatial_extent=None, spatial_res=None,
                              col_width=None, pad=7,
@@ -425,6 +411,13 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
         vel_extent (UnitQty):   The limits of the spectrum in (rest frame)
                                 velocity space. Units default to 'km/s'.
         Nbins (int):            The number of bins for the spectrum.
+        Gamma (UnitScalar):     The intrinsic line width (when the spectrum is
+                                converted to velocity space; units default to
+                                'km/s').
+        v_turb (UnitScalar):    A (constant) turbulent velocity per gas particle
+                                (this argument only is used for the 'particles'
+                                method) for which the atomic spectra (i.e. Voigt
+                                profiles) are generated.
         method (str):           How to do the binning into velocity space. The
                                 available choices are:
                                 * 'particles':  Create a line for each particle
@@ -515,6 +508,10 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
     else:
         restr_column_lims = UnitQty(restr_column_lims, 'km/s', dtype=np.float64, subs=s)
     l = UnitScalar(l, 'Angstrom')
+    v_turb = UnitScalar(v_turb, 'km/s')
+    if method != 'particles':
+        v_turb = UnitScalar(0.0, 'km/s')
+    Gamma = UnitScalar(Gamma, 'km/s')
     f = float(f)
     atomwt = UnitScalar(atomwt, 'u')
     if kernel is None:
@@ -537,6 +534,9 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
         print '  => Xsec =', Xsec
         print '  and atomic weight', atomwt
         print '  => b(T=1e4K) =', b_0*np.sqrt(1e4)
+        print '  and natural line width Gamma =', Gamma
+        if method == 'particles' and v_turb != 0:
+            print '  and a turbulent motion per particle of v_turb =', v_turb
         print '  using kernel "%s"' % kernel
 
     v_edges = UnitArr(np.linspace(vel_extent[0], vel_extent[1], Nbins+1),
@@ -568,11 +568,12 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
             spatial_extent = UnitQty( spatial_extent, s['pos'].units, subs=s )
 
         if spatial_res is None:
-            spatial_res = UnitArr(np.percentile(s.gas['hsml'], .1),
+            spatial_res = UnitArr(np.percentile(s.gas['hsml'], 1),
                                   s.gas['hsml'].units)
         spatial_res = UnitScalar(spatial_res, s['pos'].units, subs=s)
         N = int(max( 1e3,
-                     2.*(spatial_extent.ptp()/spatial_res).in_units_of(1,subs=s) ))
+                     (spatial_extent.ptp()/spatial_res).in_units_of(1,subs=s) ))
+        spatial_res == spatial_extent.ptp() / N
 
         if method == 'column':
             # do some padding in the 3D binning in order to use the the normation
@@ -739,7 +740,9 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
                            .view(np.ndarray).astype(np.float64).copy()
 
     b_0 = float(b_0.in_units_of(v_units, subs=s))
+    v_turb = float(v_turb.in_units_of(v_units, subs=s))
     Xsec = float(Xsec.in_units_of(l_units**2 * v_units, subs=s))
+    Gamma = float(Gamma.in_units_of(v_units))
 
     taus = np.empty(Nbins, dtype=np.float64)
     los_dens = np.empty(Nbins, dtype=np.float64)
@@ -757,7 +760,9 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
                                  C.c_void_p(vel_extent.ctypes.data),
                                  C.c_size_t(Nbins),
                                  C.c_double(b_0),
+                                 C.c_double(v_turb),
                                  C.c_double(Xsec),
+                                 C.c_double(Gamma),
                                  C.c_void_p(taus.ctypes.data),
                                  C.c_void_p(los_dens.ctypes.data),
                                  C.c_void_p(los_temp.ctypes.data),

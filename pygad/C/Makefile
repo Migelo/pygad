@@ -5,7 +5,8 @@ ifneq ($(wildcard ${GSL_LIB}),)
 endif
 
 CC 		= g++
-CFLAGS 	= -Wall -std=c++11
+CFLAGS 	= -std=c++11 -fext-numeric-literals
+CFLAGS  += -pedantic -Wall -Wextra -Wno-unused-parameter
 CFLAGS 	+= -O3 -DNDEBUG -fopenmp
 #CFLAGS 	+= -Wno-unknown-pragmas -O2 -DDEBUG
 IPATH	= $(addprefix -I, $(addsuffix /include, $(GSL_HOME)))
