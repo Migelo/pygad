@@ -284,7 +284,7 @@ class Wiersma_CoolingTable(object):
 
         return UnitArr(Lambda, 'erg cm**3 s**-1')
 
-    def get_cooling(self, s, Compton_cooling=True, units='erg cm^3 s^-1',
+    def get_cooling(self, s, Compton_cooling=True, units='erg cm**3 s**-1',
                     verbose=None):
         '''
         Calculate the cooling rates for all gas elements in a given
