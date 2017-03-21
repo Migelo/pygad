@@ -68,7 +68,7 @@ void _absorption_spectrum(size_t N,
         double vi = (vj - vel_extent[0]) / dv;
 
         // thermal broadening tb_b(v) = 1/(b*sqrt(pi)) * exp( -(v/b)^2 )
-        // natural line width L(v) = ????
+        // natural line width L(v) = 1/pi * (Gamma / (v**2 + Gamma**2))
         // convolution: the Voigt function
         double b; // = b_0 * std::sqrt(Tj);
         b = std::sqrt(b_0*b_0*Tj + v_turb*v_turb);

@@ -47,9 +47,9 @@ Doctests:
     ...             print '; EW = %.3f %s' % (EW_l, EW_l.units)
     l.o.s.: [ 34800.  35566.] [ckpc h_0**-1]
        H1215
-        N = 4.439e+17 [cm**-2] ; EW = 1.818 [Angstrom]
-        N = 4.436e+17 [cm**-2] ; EW = 1.396 [Angstrom]
-        N = 4.441e+17 [cm**-2] ; EW = 1.368 [Angstrom]
+        N = 4.439e+17 [cm**-2] ; EW = 1.799 [Angstrom]
+        N = 4.436e+17 [cm**-2] ; EW = 1.370 [Angstrom]
+        N = 4.441e+17 [cm**-2] ; EW = 1.341 [Angstrom]
        OVI1031
         N = 8.272e+14 [cm**-2] ; EW = 0.723 [Angstrom]
         N = 8.265e+14 [cm**-2] ; EW = 0.646 [Angstrom]
@@ -58,7 +58,7 @@ Doctests:
        H1215
         N = 2.301e+15 [cm**-2] ; EW = 1.402 [Angstrom]
         N = 2.299e+15 [cm**-2] ; EW = 1.129 [Angstrom]
-        N = 2.304e+15 [cm**-2] ; EW = 1.112 [Angstrom]
+        N = 2.304e+15 [cm**-2] ; EW = 1.111 [Angstrom]
        OVI1031
         N = 7.455e+14 [cm**-2] ; EW = 0.673 [Angstrom]
         N = 7.447e+14 [cm**-2] ; EW = 0.547 [Angstrom]
@@ -90,11 +90,11 @@ import numpy as np
 
 lines = {
     'H1215':     {'ion':'HI',     'l':'1215.6701 Angstrom', 'f':0.4164,
-                    'atomwt':m_H,       'gamma':'6.06076e-3 km/s'},
+                    'atomwt':m_H,       'A_ki':'4.6986e+08 s**-1'},
     'H1025':     {'ion':'HI',     'l':'1025.722 Angstrom',  'f':0.079121,
-                    'atomwt':m_H},
+                    'atomwt':m_H,       'A_ki':'5.5751e+07 s**-1'},
     'H972':      {'ion':'HI',     'l':'972.5368 Angstrom',  'f':2.900e-02,
-                    'atomwt':m_H},
+                    'atomwt':m_H,       'A_ki':'1.2785e+07 s**-1'},
 
     'HeII':      {'ion':'HeII',   'l': '303.918 Angstrom',  'f':0.4173, 
                     'atomwt':'3.971 u'},
@@ -349,7 +349,7 @@ def mock_absorption_spectrum_of(s, los, line, vel_extent, **kwargs):
                                         l=line['l'], f=line['f'],
                                         atomwt=line['atomwt'],
                                         vel_extent=vel_extent,
-                                        Gamma=line.get('gamma',0.0),
+                                        A_ki=line.get('A_ki',0.0),
                                         **kwargs)
     '''
     if isinstance(line, unicode):
@@ -367,12 +367,12 @@ def mock_absorption_spectrum_of(s, los, line, vel_extent, **kwargs):
                                     l=line['l'], f=line['f'],
                                     atomwt=line['atomwt'],
                                     vel_extent=vel_extent,
-                                    Gamma=line.get('gamma',0.0),
+                                    A_ki=line.get('A_ki',0.0),
                                     **kwargs)
 
 def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
                              vel_extent, Nbins=1000,
-                             Gamma='0.0 km/s',
+                             A_ki='0 s**-1',
                              v_turb='0 km/s',
                              method='particles',
                              spatial_extent=None, spatial_res=None,
@@ -411,9 +411,8 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
         vel_extent (UnitQty):   The limits of the spectrum in (rest frame)
                                 velocity space. Units default to 'km/s'.
         Nbins (int):            The number of bins for the spectrum.
-        Gamma (UnitScalar):     The intrinsic line width (when the spectrum is
-                                converted to velocity space; units default to
-                                'km/s').
+        A_ki (UnitScalar):      The transition probability / Einstein coefficient.
+                                The units default to 's**-1'.
         v_turb (UnitScalar):    A (constant) turbulent velocity per gas particle
                                 (this argument only is used for the 'particles'
                                 method) for which the atomic spectra (i.e. Voigt
@@ -508,14 +507,22 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
     else:
         restr_column_lims = UnitQty(restr_column_lims, 'km/s', dtype=np.float64, subs=s)
     l = UnitScalar(l, 'Angstrom')
-    v_turb = UnitScalar(v_turb, 'km/s')
+    v_turb = UnitScalar(v_turb, 'km/s', dtype=float)
     if method != 'particles':
         v_turb = UnitScalar(0.0, 'km/s')
-    Gamma = UnitScalar(Gamma, 'km/s')
+    A_ki = UnitScalar(A_ki, 's**-1', dtype=float)
     f = float(f)
     atomwt = UnitScalar(atomwt, 'u')
     if kernel is None:
         kernel = gadget.general['kernel']
+
+    # natural line width in frequency space, when using a Lorentzian
+    # defined as: L(f) = 1/pi * (Gamma / (f**2 + Gamma**2))
+    Gamma = A_ki / ( 4. * np.pi )
+    # ...and the velocity needed for an appropiate redshift
+    # (i.e. a conversion of the width to velocity space)
+    #Gamma = (Gamma / (c/l)) * c   # c/l = f
+    Gamma = ( Gamma * l ).in_units_of(v_units, subs=s)
 
     b_0 = np.sqrt(2.0 * kB * UnitScalar('1 K') / atomwt)
     b_0.convert_to(v_units)
@@ -534,7 +541,8 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
         print '  => Xsec =', Xsec
         print '  and atomic weight', atomwt
         print '  => b(T=1e4K) =', b_0*np.sqrt(1e4)
-        print '  and natural line width Gamma =', Gamma
+        print '  and a lifetime of 1/A_ki =', (1./A_ki)
+        print '  => Gamma =', Gamma
         if method == 'particles' and v_turb != 0:
             print '  and a turbulent motion per particle of v_turb =', v_turb
         print '  using kernel "%s"' % kernel
