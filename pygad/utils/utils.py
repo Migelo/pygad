@@ -5,7 +5,7 @@ Doctests are in the functions themselves.
 '''
 __all__ = ['DevNull', 'static_vars', 'nice_big_num_str', 'float_to_nice_latex',
            'perm_inv', 'periodic_distance_to', 'sane_slice', 'is_consecutive',
-           'rand_dir', 'ProgressBar', 'sec_to_nice_str']
+           'rand_dir', 'ProgressBar', 'sec_to_nice_str', 'weighted_percentile']
 
 import numpy as np
 import re
@@ -722,4 +722,73 @@ def sec_to_nice_str(secs, prec=None, days=None):
         string = tformat % (h, m, s)
 
     return string
+
+def weighted_percentile(qty, perc, weights=None, values_sorted=False,
+                        ignore_nan=False, new_style=False):
+    '''
+    Very close to np.percentile, but supports weights.
+
+    Args:
+        qty (array-like):       The data to calculate the percentiles for.
+        perc (array-like):      The percentiles to calculate. Must be in the range
+                                [0,100], of course.
+        weights (array-like):   The weights (or counts) for the values in `qty`.
+                                Needs to be the same length as `qty`, with a
+                                one-to-one correspondence to the values.
+        values_sorted (bool):   If True, it will be assumed that `qty` already is
+                                a sorted array.
+        ignore_nan (bool):      Whether to ignore values of NaN in both `qty` and
+                                `weights`, i.e. to cut them out in advance.
+        new_style (bool):       If False, the output will be consistent with
+                                np.percentile; if True, the interpolation is
+                                slightly different: the 33-percentile of [0,0.5,1]
+                                no longer is 0.333..., but 0.25 (simply the mean
+                                of the two first elements).
+
+    Returns:
+        perc (array-like):      The percentiles.
+
+    Examples:
+        >>> weighted_percentile( [0,0.5,1], [100./3], new_style=False)
+        array([ 0.33333333])
+        >>> np.percentile( [0,0.5,1], [100./3] )[0] # doctest: +ELLIPSIS
+        0.333333...
+        >>> weighted_percentile( [0,0.5,1], [100./3], new_style=True)
+        array([ 0.25])
+        >>> weighted_percentile( [4,5,1,10,6,2,3], [25,50,75],
+        ...                      weights=[12,8,7,10,9,3,4])
+        array([ 3.328125  ,  4.575     ,  5.80882353])
+        >>> weighted_percentile( [3,4,2,7,4,1], [0,54.21,100],
+        ...                      weights=[1,2,1,2,1,2])
+        array([ 1.        ,  3.86313333,  7.        ])
+    '''
+    if not isinstance(qty, np.ndarray):
+        qty = np.array(qty)
+    perc = np.array(perc,dtype=float) / 100.
+    if np.any(perc < 0) or np.any(perc > 100):
+        raise ValueError('Percentiles need to be be in [0,100]!')
+    if weights is None:
+        weights = np.ones(len(qty))
+    weights = np.array(weights,dtype=float)
+    if len(weights) != len(qty):
+        raise ValueError('Weights need to be the same length as `qty`!')
+
+    if ignore_nan:
+        not_nan = ~( np.isnan(qty) | np.isnan(weights) )
+        qty = qty[not_nan]
+        weights = weights[not_nan]
+
+    if not values_sorted:
+        sorter = np.argsort(qty)
+        qty = qty[sorter]
+        weights = weights[sorter]
+
+    weighted_quantiles = np.cumsum(weights) - 0.5 * weights
+    if new_style:
+        weighted_quantiles /= np.sum(weights)
+    else:
+        # consistent with np.percentile
+        weighted_quantiles -= weighted_quantiles[0]
+        weighted_quantiles /= weighted_quantiles[-1]
+    return np.interp(perc, weighted_quantiles, qty)
 
