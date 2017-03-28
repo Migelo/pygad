@@ -751,8 +751,8 @@ def weighted_percentile(qty, perc, weights=None, values_sorted=False,
     Examples:
         >>> weighted_percentile( [0,0.5,1], [100./3], new_style=False)
         array([ 0.33333333])
-        >>> np.percentile( [0,0.5,1], [100./3] )
-        array([ 0.33333333])
+        >>> np.percentile( [0,0.5,1], [100./3] )[0] # doctest: +ELLIPSIS
+        0.333333...
         >>> weighted_percentile( [0,0.5,1], [100./3], new_style=True)
         array([ 0.25])
         >>> weighted_percentile( [4,5,1,10,6,2,3], [25,50,75],
