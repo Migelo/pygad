@@ -95,6 +95,9 @@ Examples:
     <Snap "snap_M1196_4x_470":CompoundMask(ExprMask("abs(vel[:,2]) < '100 km/s'") ^ Disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc])); N=1,865,686; z=0.000>
     >>> s[expr_mask & discmask & BallMask('30 kpc')]
     <Snap "snap_M1196_4x_470":CompoundMask(CompoundMask(ExprMask("abs(vel[:,2]) < '100 km/s'") & Disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc])) & Ball(r=30.0 [kpc],strict)); N=34,177; z=0.000>
+    >>> np.round( np.percentile(
+    ...     s[ BallMask('100 kpc') & ~BallMask('30 kpc') ]['r'], [0,100]) )
+    array([  30.,  100.])
 '''
 __all__ = ['SnapMask', 'BallMask', 'BoxMask', 'DiscMask', 'IDMask', 'ExprMask']
 
@@ -510,6 +513,6 @@ class CompoundMask(SnapMask):
         return s
 
     def _get_mask_for(self, s):
-        m1, m2 = map(lambda m:m._get_mask_for(s), self._masks)
+        m1, m2 = map(lambda m:m.get_mask_for(s), self._masks)
         return self._op(m1,m2)
 
