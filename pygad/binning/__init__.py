@@ -10,7 +10,7 @@ Also doctest other parts of this sub-module:
     >>> doctest.testmod(mapping)
     TestResults(failed=0, attempted=12)
     >>> doctest.testmod(oneDbinning)
-    TestResults(failed=0, attempted=0)
+    TestResults(failed=0, attempted=12)
 '''
 
 from core import *
