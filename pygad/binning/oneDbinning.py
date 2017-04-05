@@ -2,7 +2,6 @@
 Binning into some 1D grid (e.g. profiles).
 
 Doctests:
-    >>> from ..analysis import *
     >>> from ..transformation import *
     >>> from ..snapshot import *
     >>> from mapping import *
@@ -10,26 +9,21 @@ Doctests:
     >>> Translation(UnitArr([-48087.1,-49337.1,-46084.3],'kpc')).apply(s)
     >>> s['vel'] -= UnitArr([-42.75,-15.60,-112.20],'km s**-1')
     load block vel... done.
-    >>> orientate_at(s[s['r'] < '10 kpc'].baryons, 'L', total=True) # doctest: +ELLIPSIS
-    load block ... done.
     >>> ext = UnitArr( [[-200,200],[-200,200]], 'kpc' )
-    >>> m, px2 = map_qty(s.gas, ext, True, 'rho', Npx=128)
+    >>> m, px2 = map_qty(s.gas, ext, True, 'rho', Npx=128) # doctest: +ELLIPSIS
     load block rho... done.
-    create a 128 x 128 map (400 x 400 [kpc])...
-    derive block dV... done.
-    create a 128 x 128 SPH-grid (400 x 400 [kpc])...
-    load block hsml... done.
+    ...
     done with SPH grid
     >>> prof, r_edges = profile_from_map(m, ext, reduction='mean', Nbins=40)
     >>> np.log10(prof) # doctest: +ELLIPSIS
-    UnitArr([ 6.335...,  6.935...,  7.022...,  6.953...,  6.695...,
-              6.190...,  6.009...,  5.945...,  5.934...,  5.924...,
-              5.900...,  5.844...,  5.805...,  5.783...,  5.765...,
-              5.740...,  5.716...,  5.689...,  5.670...,  5.663...,
-              5.653...,  5.635...,  5.609...,  5.592...,  5.576...,
-              5.563...,  5.553...,  5.545...,  5.535...,  5.524...,
-              5.514...,  5.500...,  5.490...,  5.484...,  5.479...,
-              5.470...,  5.463...,  5.456...,  5.450...,  5.438...])
+    UnitArr([ 6.529...,  6.696...,  6.721...,  6.704...,  6.654...,
+              6.646...,  6.421...,  5.934...,  5.857...,  5.885...,
+              5.876...,  5.810...,  5.770...,  5.750...,  5.714...,
+              5.689...,  5.668...,  5.652...,  5.638...,  5.628...,
+              5.612...,  5.593...,  5.575...,  5.567...,  5.558...,
+              5.549...,  5.539...,  5.529...,  5.519...,  5.516...,
+              5.512...,  5.504...,  5.498...,  5.486...,  5.479...,
+              5.465...,  5.455...,  5.448...,  5.442...,  5.430...])
 """
 __all__ = ['profile_from_map']
 
@@ -101,7 +95,7 @@ def profile_from_map(m, extent, av=None, Nbins=None, reduction='sum',
     r_edges = np.linspace( 0, np.min(extent[:,1]-extent[:,0])/2., Nbins+1 )
     r_edges = UnitArr(r_edges, extent.units)
     #dr = UnitScalar(r_edges[1] - r_edges[0], r_edges.units)
-    idx = np.digitize(r_px, r_edges)
+    idx = np.digitize(r_px.flatten(), r_edges).reshape(r_px.shape)
 
     # reduce map into bins:
     if av is None:
