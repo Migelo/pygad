@@ -3,10 +3,11 @@ Module for convenience routines for plotting maps.
 
 Doctests impossible, since they would require visual inspection...
 '''
-__all__ = ['image', 'phase_diagram']
+__all__ = ['image', 'phase_diagram', 'vec_field']
 
 import numpy as np
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 from general import *
 from ..units import *
 from ..binning import *
@@ -460,4 +461,81 @@ def phase_diagram(s, rho_units='Msol/pc**3', T_units='K',
         return fig, ax, im, cbar
     else:
         return fig, ax, im
+
+def vec_field(s, qty, extent, field=False, av=None, reduction=None,
+              xaxis=0, yaxis=1, Npx=30, ax=None, color='k', pivot='mid',
+              **kwargs):
+    """
+    Plot a vector field (e.g. on an existing plot) using `plt.quiver`.
+
+    Args:
+        s (Snap):           The (sub-)snapshot to use.
+        qty (UnitQty, str): The quantity to map. It can be a UnitArr of length
+                            L=len(s) and dimension 1 (i.e. shape (L,)) or a string
+                            that can be passed to s.get and returns such an array.
+                            It has to be a vector quantity, of course.
+        extent (UnitQty):   The extent of the plot. It can be a scalar and then
+                            is taken to be the total side length of a square
+                            around the origin or a sequence of the minima and
+                            maxima of the directions: [[xmin,xmax],[ymin,ymax]]
+        field (bool):       If no `reduction` is given, this determines whether
+                            the SPH-quantity is interpreted as a density-field or
+                            its integral quantity.
+                            For instance: rho would be the density-field of the
+                            integral quantity mass.
+                            Here it default to False, as typically you would pass
+                            'vel', which is not a density.
+        av (UnitQty, str):  The quantity to average over. Otherwise as 'qty'.
+        reduction (str):    If not None, interpret the SPH quantity not as a SPH
+                            field, but as a particle property and reduce with this
+                            given method along the third axis / line of sight.
+        xaxis (int):        The coordinate for the x-axis. (0:'x', 1:'y', 2:'z')
+        yaxis (int):        The coordinate for the y-axis. (0:'x', 1:'y', 2:'z')
+        Npx (int, sequence):The number of pixel per side. Either an integer that
+                            is taken for both sides or a pair of such, the first
+                            for the x-direction, the second for the y-direction.
+                            This determines the number of plotted arrows.
+        ax (AxesSubplot):   The axis object to plot on. If None, a new one is
+                            created by plt.subplots().
+        color (str, color, color sequence):
+                            The color of the arrows in the vector plot.
+        pivot (str):        Where to align the arrows. See `plt.quiver` for more
+                            information. Possible choices are: 'tail', 'mid', and
+                            'tip'.
+        **kwargs:           Further keyword arguments will be passed to `quiver`.
+
+    Returns:
+        fig (Figure):       The figure of the axis plotted on.
+        ax (AxesSubplot):   The axis plotted on.
+    """
+    extent, Npx, res = grid_props(extent=extent, Npx=Npx, dim=2)
+    extent = extent.in_units_of(s['pos'].units, subs=s)
+    if reduction is not None:
+        field = False
+
+    if isinstance(qty,(str,unicode)):
+        qty_x = s.get('%s[:,%d]' % (qty,xaxis))
+        qty_y = s.get('%s[:,%d]' % (qty,yaxis))
+    else:
+        qty_x = qty[:,xaxis]
+        qty_y = qty[:,yaxis]
+
+    map_x, px2 = map_qty(s, extent=extent, field=field,
+                         qty=qty_x, av=av, reduction=reduction, Npx=Npx,
+                         xaxis=xaxis, yaxis=yaxis)
+    map_y, px2 = map_qty(s, extent=extent, field=field,
+                         qty=qty_y, av=av, reduction=reduction, Npx=Npx,
+                         xaxis=xaxis, yaxis=yaxis)
+
+    X, Y = np.meshgrid(np.linspace(extent[0,0],extent[0,1],Npx[0]),
+                       np.linspace(extent[1,0],extent[1,1],Npx[1]))
+    mx, my = map_x.view(np.ndarray).T, map_y.view(np.ndarray).T
+
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        fig = ax.get_figure()
+    ax.quiver(X, Y, mx, my, color=color, pivot=pivot, **kwargs)
+
+    return fig, ax
 
