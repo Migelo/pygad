@@ -464,7 +464,7 @@ def phase_diagram(s, rho_units='Msol/pc**3', T_units='K',
 
 def vec_field(s, qty, extent, field=False, av=None, reduction=None,
               xaxis=0, yaxis=1, Npx=30, ax=None, color='k', pivot='mid',
-              **kwargs):
+              streamlines=False, **kwargs):
     """
     Plot a vector field (e.g. on an existing plot) using `plt.quiver`.
 
@@ -502,6 +502,9 @@ def vec_field(s, qty, extent, field=False, av=None, reduction=None,
         pivot (str):        Where to align the arrows. See `plt.quiver` for more
                             information. Possible choices are: 'tail', 'mid', and
                             'tip'.
+        streamlines (bool): Plot streamlines, not individual arrows (using
+                            `streamplot`, not `quiver`). The `pivot` argument then
+                            is ignored.
         **kwargs:           Further keyword arguments will be passed to `quiver`.
 
     Returns:
@@ -535,7 +538,10 @@ def vec_field(s, qty, extent, field=False, av=None, reduction=None,
         fig, ax = plt.subplots()
     else:
         fig = ax.get_figure()
-    ax.quiver(X, Y, mx, my, color=color, pivot=pivot, **kwargs)
+    if streamlines:
+        ax.streamplot(X, Y, mx, my, color=color, **kwargs)
+    else:
+        ax.quiver(X, Y, mx, my, color=color, pivot=pivot, **kwargs)
 
     return fig, ax
 
