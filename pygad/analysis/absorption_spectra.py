@@ -32,6 +32,7 @@ Doctests:
     ...                 s, los, line=line,
     ...                 vel_extent=UnitArr([2000.,3500.], 'km/s'),
     ...                 method=method,
+    ...                 v_turb='200 km/s' if line=='OVI1031' else '0 km/s',
     ...             )
     ...             N = dens.sum()
     ...             print '    N = %.3e %s' % (N, N.units),
@@ -51,7 +52,7 @@ Doctests:
         N = 4.436e+17 [cm**-2] ; EW = 1.370 [Angstrom]
         N = 4.441e+17 [cm**-2] ; EW = 1.341 [Angstrom]
        OVI1031
-        N = 8.272e+14 [cm**-2] ; EW = 0.723 [Angstrom]
+        N = 8.272e+14 [cm**-2] ; EW = 1.138 [Angstrom]
         N = 8.265e+14 [cm**-2] ; EW = 0.646 [Angstrom]
         N = 8.279e+14 [cm**-2] ; EW = 0.640 [Angstrom]
     l.o.s.: [ 34700.  35600.] [ckpc h_0**-1]
@@ -60,7 +61,7 @@ Doctests:
         N = 2.299e+15 [cm**-2] ; EW = 1.129 [Angstrom]
         N = 2.304e+15 [cm**-2] ; EW = 1.111 [Angstrom]
        OVI1031
-        N = 7.455e+14 [cm**-2] ; EW = 0.673 [Angstrom]
+        N = 7.455e+14 [cm**-2] ; EW = 1.053 [Angstrom]
         N = 7.447e+14 [cm**-2] ; EW = 0.547 [Angstrom]
         N = 7.462e+14 [cm**-2] ; EW = 0.539 [Angstrom]
     l.o.s.: [ 35000.  35600.] [ckpc h_0**-1]
@@ -69,7 +70,7 @@ Doctests:
         N = 4.377e+13 [cm**-2] ; EW = 0.284 [Angstrom]
         N = 4.386e+13 [cm**-2] ; EW = 0.284 [Angstrom]
        OVI1031
-        N = 1.210e+14 [cm**-2] ; EW = 0.186 [Angstrom]
+        N = 1.210e+14 [cm**-2] ; EW = 0.208 [Angstrom]
         N = 1.209e+14 [cm**-2] ; EW = 0.182 [Angstrom]
         N = 1.211e+14 [cm**-2] ; EW = 0.182 [Angstrom]
     >>> environment.verbose = environment.VERBOSE_NORMAL
