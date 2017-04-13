@@ -23,6 +23,12 @@ Doctests:
     ...                    [ 34700.,  35600.],
     ...                    [ 35000.,  35600.]], 'ckpc/h_0')
     >>> environment.verbose = environment.VERBOSE_QUIET
+
+    Broadly following Oppenheimer & Dave (2009) for the OVI turbulent broadening
+    (adding the minimum of 100 km/s):
+    >>> nH = s.gas.get('rho * H/mass / m_H').in_units_of('cm**-3')
+    >>> b_turb = UnitArr( np.sqrt( np.maximum(1405.*np.log10(nH**2) +
+    ...                     15674.*np.log10(nH) + 43610., 100.**2 ) ), 'km/s')
     >>> for los in los_arr:
     ...     print 'l.o.s.:', los
     ...     for line in ['H1215', 'OVI1031']:
@@ -32,7 +38,7 @@ Doctests:
     ...                 s, los, line=line,
     ...                 vel_extent=UnitArr([2000.,3500.], 'km/s'),
     ...                 method=method,
-    ...                 v_turb='200 km/s' if line=='OVI1031' else '0 km/s',
+    ...                 v_turb=b_turb if line=='OVI1031' else '0 km/s',
     ...             )
     ...             N = dens.sum()
     ...             print '    N = %.3e %s' % (N, N.units),
@@ -52,7 +58,7 @@ Doctests:
         N = 4.436e+17 [cm**-2] ; EW = 1.370 [Angstrom]
         N = 4.441e+17 [cm**-2] ; EW = 1.341 [Angstrom]
        OVI1031
-        N = 8.272e+14 [cm**-2] ; EW = 1.138 [Angstrom]
+        N = 8.272e+14 [cm**-2] ; EW = 0.960 [Angstrom]
         N = 8.265e+14 [cm**-2] ; EW = 0.646 [Angstrom]
         N = 8.279e+14 [cm**-2] ; EW = 0.640 [Angstrom]
     l.o.s.: [ 34700.  35600.] [ckpc h_0**-1]
@@ -61,7 +67,7 @@ Doctests:
         N = 2.299e+15 [cm**-2] ; EW = 1.129 [Angstrom]
         N = 2.304e+15 [cm**-2] ; EW = 1.111 [Angstrom]
        OVI1031
-        N = 7.455e+14 [cm**-2] ; EW = 1.053 [Angstrom]
+        N = 7.455e+14 [cm**-2] ; EW = 0.905 [Angstrom]
         N = 7.447e+14 [cm**-2] ; EW = 0.547 [Angstrom]
         N = 7.462e+14 [cm**-2] ; EW = 0.539 [Angstrom]
     l.o.s.: [ 35000.  35600.] [ckpc h_0**-1]
@@ -70,7 +76,7 @@ Doctests:
         N = 4.377e+13 [cm**-2] ; EW = 0.284 [Angstrom]
         N = 4.386e+13 [cm**-2] ; EW = 0.284 [Angstrom]
        OVI1031
-        N = 1.210e+14 [cm**-2] ; EW = 0.208 [Angstrom]
+        N = 1.210e+14 [cm**-2] ; EW = 0.201 [Angstrom]
         N = 1.209e+14 [cm**-2] ; EW = 0.182 [Angstrom]
         N = 1.211e+14 [cm**-2] ; EW = 0.182 [Angstrom]
     >>> environment.verbose = environment.VERBOSE_NORMAL
@@ -374,7 +380,7 @@ def mock_absorption_spectrum_of(s, los, line, vel_extent, **kwargs):
 def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
                              vel_extent, Nbins=1000,
                              A_ki='0 s**-1',
-                             v_turb='0 km/s',
+                             v_turb=None,
                              method='particles',
                              spatial_extent=None, spatial_res=None,
                              col_width=None, pad=7,
@@ -414,10 +420,14 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
         Nbins (int):            The number of bins for the spectrum.
         A_ki (UnitScalar):      The transition probability / Einstein coefficient.
                                 The units default to 's**-1'.
-        v_turb (UnitScalar):    A (constant) turbulent velocity per gas particle
-                                (this argument only is used for the 'particles'
-                                method) for which the atomic spectra (i.e. Voigt
-                                profiles) are generated.
+        v_turb (UnitScalar, str, UnitQty):
+                                A turbulent velocity (constant or individiual per
+                                particle) which adds to the thermal broadening. If
+                                it is not a scalar (or None) it has to be
+                                block-like (array-like of appropiate size or a
+                                string) for the particles.
+                                This argument only is used for the 'particles'
+                                method and is ignored otherwise.
         method (str):           How to do the binning into velocity space. The
                                 available choices are:
                                 * 'particles':  Create a line for each particle
@@ -508,9 +518,23 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
     else:
         restr_column_lims = UnitQty(restr_column_lims, 'km/s', dtype=np.float64, subs=s)
     l = UnitScalar(l, 'Angstrom')
-    v_turb = UnitScalar(v_turb, 'km/s', dtype=float)
+    if v_turb is not None:
+        if isinstance(v_turb,(str,unicode)):
+            try:
+                v_turb = UnitScalar(v_turb)
+            except:
+                v_turb = s.gas.get(v_turb)
+        v_turb = UnitQty(v_turb, 'km/s', dtype=np.float64)
+        if v_turb.shape == tuple():
+            v_turb = UnitQty(float(v_turb) * np.ones(len(s.gas), dtype=np.float64),
+                             units=getattr(v_turb,'units','km/s'))
+        assert v_turb.shape == (len(s.gas),)
+        assert v_turb.units == 'km/s'
+        if np.all(v_turb == 0):
+            v_turb = None
     if method != 'particles':
-        v_turb = UnitScalar(0.0, 'km/s')
+        if v_turb is not None:
+            v_turb = None
     A_ki = UnitScalar(A_ki, 's**-1', dtype=float)
     f = float(f)
     atomwt = UnitScalar(atomwt, 'u')
@@ -544,8 +568,10 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
         print '  => b(T=1e4K) =', b_0*np.sqrt(1e4)
         print '  and a lifetime of 1/A_ki =', (1./A_ki)
         print '  => Gamma =', Gamma
-        if method == 'particles' and v_turb != 0:
-            print '  and a turbulent motion per particle of v_turb =', v_turb
+        if v_turb is not None:
+            v_perc = np.percentile(v_turb, [10,90])
+            print '  and a turbulent motion per particle of v_turb ~(%.1f - %.1f) %s' % (
+                    v_perc[0], v_perc[-1], v_turb.units)
         print '  using kernel "%s"' % kernel
 
     v_edges = UnitArr(np.linspace(vel_extent[0], vel_extent[1], Nbins+1),
@@ -747,9 +773,11 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
              .view(np.ndarray).astype(np.float64).copy()
     vel_extent = vel_extent.in_units_of(v_units,subs=s) \
                            .view(np.ndarray).astype(np.float64).copy()
+    if v_turb is not None:
+        v_turb = v_turb.in_units_of(v_units,subs=s) \
+                               .view(np.ndarray).astype(np.float64).copy()
 
     b_0 = float(b_0.in_units_of(v_units, subs=s))
-    v_turb = float(v_turb.in_units_of(v_units, subs=s))
     Xsec = float(Xsec.in_units_of(l_units**2 * v_units, subs=s))
     Gamma = float(Gamma.in_units_of(v_units))
 
@@ -769,7 +797,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
                                  C.c_void_p(vel_extent.ctypes.data),
                                  C.c_size_t(Nbins),
                                  C.c_double(b_0),
-                                 C.c_double(v_turb),
+                                 C.c_void_p(v_turb.ctypes.data) if v_turb is not None else None,
                                  C.c_double(Xsec),
                                  C.c_double(Gamma),
                                  C.c_void_p(taus.ctypes.data),

@@ -16,7 +16,7 @@ void _absorption_spectrum(size_t N,
                           double *vel_extent,
                           size_t Nbins,
                           double b_0,
-                          double v_turb,
+                          double *v_turb,
                           double Xsec,
                           double Gamma,
                           double *taus,
@@ -71,7 +71,12 @@ void _absorption_spectrum(size_t N,
         // natural line width L(v) = 1/pi * (Gamma / (v**2 + Gamma**2))
         // convolution: the Voigt function
         double b; // = b_0 * std::sqrt(Tj);
-        b = std::sqrt(b_0*b_0*Tj + v_turb*v_turb);
+        if (v_turb==nullptr) {
+            b = std::sqrt(Tj) * b_0;
+        } else {
+            register double b_turb = v_turb[j];
+            b = std::sqrt(b_0*b_0*Tj + b_turb*b_turb);
+        }
         double sigma = b / std::sqrt(2);
         // FWHM are (FWHM for Voigt is approx., but with accuracy of ~0.02%):
         double FWHM_b = 2 * std::sqrt(2 * std::log(2)) * sigma;
@@ -186,7 +191,7 @@ void absorption_spectrum(bool particles,
                          double *vel_extent,
                          size_t Nbins,
                          double b_0,
-                         double v_turb,
+                         double *v_turb,
                          double Xsec,
                          double Gamma,
                          double *taus,
