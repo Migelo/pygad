@@ -400,7 +400,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     else:
         return fig, ax, im
 
-def phase_diagram(s, rho_units='Msol/pc**3', T_units='K',
+def phase_diagram(s, rho_units='g/cm**3', T_units='K',
                   T_threshold=None, rho_threshold=None,
                   threshold_col='black', **kwargs):
     '''
@@ -464,7 +464,7 @@ def phase_diagram(s, rho_units='Msol/pc**3', T_units='K',
 
 def over_plot_species_phases(s, species=None, extent=None, enclose=0.8,
                              frac_rel_to='phase', species_labels=None,
-                             rho_units='Msol/pc**3', T_units='K', ax=None,
+                             rho_units='g/cm**3', T_units='K', ax=None,
                              colors=None, linestyles=None, phase_kwargs=None):
     '''
     Plot the contours of specified species over the overall phase diagram.
@@ -480,7 +480,7 @@ def over_plot_species_phases(s, species=None, extent=None, enclose=0.8,
                                     ['HI', 'MgII', 'SiIII', 'CIV', 'OVI'].
         extent (array-like):        The extent of the phase diagram in the form
                                     [[rho_min,rho_max],[T_min,T_max]].
-                                    Default: [[-8,0],[2,7.5]].
+                                    Default: [[-31,-22],[2,7.5]].
         enclose (float, iterable):  Plot the contour lines such that they enclose
                                     this fraction of the total species quantity.
         frac_rel_to (str):          Whether to relate the enclosed fraction to the
@@ -516,7 +516,7 @@ def over_plot_species_phases(s, species=None, extent=None, enclose=0.8,
     if len(species) != len(species_labels):
         raise ValueError('`species_labels` must be as long as `species`!')
     if extent is None:
-        extent = [[-8,0],[2,7.5]]
+        extent = [[-31,-22],[2,7.5]]
     extent = np.array(extent)
     if isinstance(enclose, Number):
         enclose = [enclose]
@@ -539,7 +539,9 @@ def over_plot_species_phases(s, species=None, extent=None, enclose=0.8,
         if 'showcbar' not in phase_kwargs:  phase_kwargs['showcbar'] = True
         if 'cmap' not in phase_kwargs:      phase_kwargs['cmap'] = 'gray_r'
         if 'fontcolor' not in phase_kwargs: phase_kwargs['fontcolor'] = 'k'
-        fig, ax, im, cbar = phase_diagram(s.gas, extent=extent, **phase_kwargs)
+        fig, ax, im, cbar = phase_diagram(s.gas, extent=extent,
+                                          rho_units=rho_units, T_units=T_units,
+                                          **phase_kwargs)
     else:
         fig = ax.get_figure()
     try:
