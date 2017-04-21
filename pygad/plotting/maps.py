@@ -463,7 +463,7 @@ def phase_diagram(s, rho_units='Msol/pc**3', T_units='K',
         return fig, ax, im
 
 def over_plot_species_phases(s, species=None, extent=None, enclose=0.8,
-                             frac_rel_to='phase',
+                             frac_rel_to='phase', species_labels=None,
                              rho_units='Msol/pc**3', T_units='K', ax=None,
                              colors=None, linestyles=None, phase_kwargs=None):
     '''
@@ -487,6 +487,8 @@ def over_plot_species_phases(s, species=None, extent=None, enclose=0.8,
                                     entire snapshot passed ('snap') or just the
                                     part that ends up in the phase diagram
                                     ('phase').
+        species_labels (iterable):  The labels for the different species. Defaults
+                                    to `species`.
         rho_units, T_units (Unit):  The units to plot in.
         ax (AxesSubplot):           The axis object containing a phase diagram to
                                     plot on. If None, a new one is created by
@@ -509,6 +511,10 @@ def over_plot_species_phases(s, species=None, extent=None, enclose=0.8,
     from scipy.optimize import brentq
     if species is None:
         species = ['HI', 'MgII', 'SiIII', 'CIV', 'OVI']
+    if species_labels is None:
+        species_labels = species
+    if len(species) != len(species_labels):
+        raise ValueError('`species_labels` must be as long as `species`!')
     if extent is None:
         extent = [[-8,0],[2,7.5]]
     extent = np.array(extent)
@@ -547,6 +553,7 @@ def over_plot_species_phases(s, species=None, extent=None, enclose=0.8,
     for n,spec in enumerate(species):
         c = colors[n%len(colors)]
         ls = linestyles[n%len(linestyles)]
+        label = species_labels[n]
         sub = s.gas.get(spec)
         if np.any(sub<0):
             raise ValueError('"%s" is not positive semi-definite!' % spec)
@@ -558,7 +565,7 @@ def over_plot_species_phases(s, species=None, extent=None, enclose=0.8,
         ax.contour(sub_phase.view(np.ndarray).T, extent=extent.flatten(),
                    levels=sorted(levels), colors=[c]*len(levels),
                    linewidths=3.*np.array(enclose), linestyles=[ls]*len(levels))
-        txt = ax.text(txt_pos, 0.04, spec,
+        txt = ax.text(txt_pos, 0.04, label,
                       transform=ax.transAxes, verticalalignment='bottom',
                       fontdict=dict(color=c, fontsize=14),
                       bbox=dict(edgecolor=c, facecolor='none', linewidth=2.5,
