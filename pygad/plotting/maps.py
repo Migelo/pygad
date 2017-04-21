@@ -465,7 +465,8 @@ def phase_diagram(s, rho_units='g/cm**3', T_units='K',
 def over_plot_species_phases(s, species=None, extent=None, enclose=0.8,
                              frac_rel_to='phase', species_labels=None,
                              rho_units='g/cm**3', T_units='K', ax=None,
-                             colors=None, linestyles=None, phase_kwargs=None):
+                             linewidths=2.5, colors=None, linestyles=None,
+                             phase_kwargs=None):
     '''
     Plot the contours of specified species over the overall phase diagram.
 
@@ -493,6 +494,9 @@ def over_plot_species_phases(s, species=None, extent=None, enclose=0.8,
         ax (AxesSubplot):           The axis object containing a phase diagram to
                                     plot on. If None, a new one is created by
                                     `phase_diagram`.
+        linewidths (float, iterable):
+                                    The linewidths for the levels defined by
+                                    `enclose`.
         colors (iterable, ...):     Color(s) for the contours of the different
                                     species distributions.
         linestyles (iterable, ...): The linestyle(s) for the contours of the
@@ -520,6 +524,11 @@ def over_plot_species_phases(s, species=None, extent=None, enclose=0.8,
     extent = np.array(extent)
     if isinstance(enclose, Number):
         enclose = [enclose]
+    if isinstance(linewidths, Number):
+        linewidths = [linewidths]
+    argsort = np.argsort( enclose )
+    linewidths = np.array(linewidths)[argsort[::-1]]
+    enclose = np.array(enclose)[argsort[::-1]]
     if frac_rel_to not in ['phase', 'snap']:
         raise ValueError('Unkown mode frac_rel_to="%s"' % frac_rel_to)
     if colors is None:
@@ -565,8 +574,8 @@ def over_plot_species_phases(s, species=None, extent=None, enclose=0.8,
                           0, np.max(sub_phase), maxiter=10000 )
                    for x in enclose ]
         ax.contour(sub_phase.view(np.ndarray).T, extent=extent.flatten(),
-                   levels=sorted(levels), colors=[c]*len(levels),
-                   linewidths=3.*np.array(enclose), linestyles=[ls]*len(levels))
+                   levels=levels, colors=[c]*len(levels),
+                   linewidths=linewidths, linestyles=[ls]*len(levels))
         txt = ax.text(txt_pos, 0.04, label,
                       transform=ax.transAxes, verticalalignment='bottom',
                       fontdict=dict(color=c, fontsize=14),
