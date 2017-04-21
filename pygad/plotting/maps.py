@@ -525,7 +525,9 @@ def over_plot_species_phases(s, species=None, extent=None, enclose=0.8,
     if isinstance(enclose, Number):
         enclose = [enclose]
     if isinstance(linewidths, Number):
-        linewidths = [linewidths]
+        linewidths = [linewidths] * len(enclose)
+    if len(enclose) != len(linewidths):
+        raise ValueError("Need as many linewidths as `enclose` levels!")
     argsort = np.argsort( enclose )
     linewidths = np.array(linewidths)[argsort[::-1]]
     enclose = np.array(enclose)[argsort[::-1]]
@@ -543,7 +545,14 @@ def over_plot_species_phases(s, species=None, extent=None, enclose=0.8,
     if phase_kwargs is None:
         phase_kwargs = dict()
 
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'plot temperature-density distribution of:'
+        print '  ', species
+        print '...'
+
     if ax is None:
+        if environment.verbose >= environment.VERBOSE_NORMAL:
+            print 'plot underlying overall phase-diagram...'
         if 'qty' not in phase_kwargs:       phase_kwargs['qty'] = 'mass'
         if 'showcbar' not in phase_kwargs:  phase_kwargs['showcbar'] = True
         if 'cmap' not in phase_kwargs:      phase_kwargs['cmap'] = 'gray_r'
@@ -562,9 +571,11 @@ def over_plot_species_phases(s, species=None, extent=None, enclose=0.8,
     log_T = np.log10( s.gas['temp'].in_units_of(T_units) )
     txt_pos = 0.04
     for n,spec in enumerate(species):
+        label = species_labels[n]
+        if environment.verbose >= environment.VERBOSE_NORMAL:
+            print 'plot distribution of %s...' % label
         c = colors[n%len(colors)]
         ls = linestyles[n%len(linestyles)]
-        label = species_labels[n]
         sub = s.gas.get(spec)
         if np.any(sub<0):
             raise ValueError('"%s" is not positive semi-definite!' % spec)
@@ -587,6 +598,9 @@ def over_plot_species_phases(s, species=None, extent=None, enclose=0.8,
             txt_pos += bb.width + 0.05
         except:
             txt_pos += 0.12
+
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'all done'
     return fig, ax
 
 def vec_field(s, qty, extent, field=False, av=None, reduction=None,
