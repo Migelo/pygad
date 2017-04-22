@@ -264,11 +264,11 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         else:
             print '  colors_av:   ', type(colors_av)
         if reduction is None:
-            print '  field:       ', 'ignored'
-            print '  surface_dens:', 'ignored'
-        else:
             print '  field:       ', field
             print '  surface_dens:', surface_dens
+        else:
+            print '  field:       ', 'ignored'
+            print '  surface_dens:', 'ignored'
         print '  logscale:    ', logscale
         print '  clogscale:   ', clogscale
         print '  reduction:   ', reduction
