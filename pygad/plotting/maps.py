@@ -3,7 +3,7 @@ Module for convenience routines for plotting maps.
 
 Doctests impossible, since they would require visual inspection...
 '''
-__all__ = ['image', 'phase_diagram', 'vec_field']
+__all__ = ['image', 'phase_diagram', 'over_plot_species_phases', 'vec_field']
 
 import numpy as np
 import matplotlib as mpl
@@ -264,11 +264,11 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         else:
             print '  colors_av:   ', type(colors_av)
         if reduction is None:
-            print '  field:       ', 'ignored'
-            print '  surface_dens:', 'ignored'
-        else:
             print '  field:       ', field
             print '  surface_dens:', surface_dens
+        else:
+            print '  field:       ', 'ignored'
+            print '  surface_dens:', 'ignored'
         print '  logscale:    ', logscale
         print '  clogscale:   ', clogscale
         print '  reduction:   ', reduction
@@ -400,7 +400,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     else:
         return fig, ax, im
 
-def phase_diagram(s, rho_units='Msol/pc**3', T_units='K',
+def phase_diagram(s, rho_units='g/cm**3', T_units='K',
                   T_threshold=None, rho_threshold=None,
                   threshold_col='black', **kwargs):
     '''
@@ -461,6 +461,147 @@ def phase_diagram(s, rho_units='Msol/pc**3', T_units='K',
         return fig, ax, im, cbar
     else:
         return fig, ax, im
+
+def over_plot_species_phases(s, species=None, extent=None, enclose=0.8,
+                             frac_rel_to='phase', species_labels=None,
+                             rho_units='g/cm**3', T_units='K', ax=None,
+                             linewidths=2.5, colors=None, linestyles=None,
+                             phase_kwargs=None):
+    '''
+    Plot the contours of specified species over the overall phase diagram.
+
+    Args:
+        s (Snap):                   The (sub-)snapshot from which to use the gas
+                                    of.
+        species (iterable):         The names (as in the block names) of species
+                                    to plot. This needs to be a positive
+                                    semi-definite quantity (like mass,
+                                    luminosities, or volume).
+                                    Default:
+                                    ['HI', 'MgII', 'SiIII', 'CIV', 'OVI'].
+        extent (array-like):        The extent of the phase diagram in the form
+                                    [[rho_min,rho_max],[T_min,T_max]].
+                                    Default: [[-31,-22],[2,7.5]].
+        enclose (float, iterable):  Plot the contour lines such that they enclose
+                                    this fraction of the total species quantity.
+        frac_rel_to (str):          Whether to relate the enclosed fraction to the
+                                    entire snapshot passed ('snap') or just the
+                                    part that ends up in the phase diagram
+                                    ('phase').
+        species_labels (iterable):  The labels for the different species. Defaults
+                                    to `species`.
+        rho_units, T_units (Unit):  The units to plot in.
+        ax (AxesSubplot):           The axis object containing a phase diagram to
+                                    plot on. If None, a new one is created by
+                                    `phase_diagram`.
+        linewidths (float, iterable):
+                                    The linewidths for the levels defined by
+                                    `enclose`.
+        colors (iterable, ...):     Color(s) for the contours of the different
+                                    species distributions.
+        linestyles (iterable, ...): The linestyle(s) for the contours of the
+                                    different species distributions.
+        phase_kwargs (dict):        Keyword arguments that are passed to
+                                    `phase_diagram`, if `ax` is None. Default
+                                    values are:
+                                    qty='mass', showcbar=True, cmap='gray_r',
+                                    fontcolor='k', and extent=extent.
+
+    Returns:
+        fig (Figure):               The figure of the axis plotted on.
+        ax (AxesSubplot):           The axis plotted on.
+    '''
+    from numbers import Number
+    from scipy.optimize import brentq
+    if species is None:
+        species = ['HI', 'MgII', 'SiIII', 'CIV', 'OVI']
+    if species_labels is None:
+        species_labels = species
+    if len(species) != len(species_labels):
+        raise ValueError('`species_labels` must be as long as `species`!')
+    if extent is None:
+        extent = [[-31,-22],[2,7.5]]
+    extent = np.array(extent)
+    if isinstance(enclose, Number):
+        enclose = [enclose]
+    if isinstance(linewidths, Number):
+        linewidths = [linewidths] * len(enclose)
+    if len(enclose) != len(linewidths):
+        raise ValueError("Need as many linewidths as `enclose` levels!")
+    argsort = np.argsort( enclose )
+    linewidths = np.array(linewidths)[argsort[::-1]]
+    enclose = np.array(enclose)[argsort[::-1]]
+    if frac_rel_to not in ['phase', 'snap']:
+        raise ValueError('Unkown mode frac_rel_to="%s"' % frac_rel_to)
+    if colors is None:
+        colors = [ str(c['color']) for c in mpl.rcParams['axes.prop_cycle'] ]
+    if not hasattr(colors,'__getitem__'):
+        colors = [colors]
+    if linestyles is None:
+        linestyles = [ ls for ls in mpl.lines.lineStyles.keys()
+                        if ls not in ['',' ','None'] ]
+    if isinstance(linestyles, str):
+        linestyles = [linestyles]
+    if phase_kwargs is None:
+        phase_kwargs = dict()
+
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'plot temperature-density distribution of:'
+        print '  ', species
+        print '...'
+
+    if ax is None:
+        if environment.verbose >= environment.VERBOSE_NORMAL:
+            print 'plot underlying overall phase-diagram...'
+        if 'qty' not in phase_kwargs:       phase_kwargs['qty'] = 'mass'
+        if 'showcbar' not in phase_kwargs:  phase_kwargs['showcbar'] = True
+        if 'cmap' not in phase_kwargs:      phase_kwargs['cmap'] = 'gray_r'
+        if 'fontcolor' not in phase_kwargs: phase_kwargs['fontcolor'] = 'k'
+        fig, ax, im, cbar = phase_diagram(s.gas, extent=extent,
+                                          rho_units=rho_units, T_units=T_units,
+                                          **phase_kwargs)
+    else:
+        fig = ax.get_figure()
+    try:
+        renderer = fig.canvas.get_renderer()
+    except:
+        renderer = None
+
+    log_rho = np.log10( s.gas['rho'].in_units_of(rho_units) )
+    log_T = np.log10( s.gas['temp'].in_units_of(T_units) )
+    txt_pos = 0.04
+    for n,spec in enumerate(species):
+        label = species_labels[n]
+        if environment.verbose >= environment.VERBOSE_NORMAL:
+            print 'plot distribution of %s...' % label
+        c = colors[n%len(colors)]
+        ls = linestyles[n%len(linestyles)]
+        sub = s.gas.get(spec)
+        if np.any(sub<0):
+            raise ValueError('"%s" is not positive semi-definite!' % spec)
+        sub_phase = gridbin2d(log_rho, log_T, qty=sub, extent=extent)
+        M_sub = sub_phase.sum() if (frac_rel_to=='phase') else sub.sum()
+        levels = [ brentq(lambda l: sub_phase[sub_phase>l].sum()-x*M_sub,
+                          0, np.max(sub_phase), maxiter=10000 )
+                   for x in enclose ]
+        ax.contour(sub_phase.view(np.ndarray).T, extent=extent.flatten(),
+                   levels=levels, colors=[c]*len(levels),
+                   linewidths=linewidths, linestyles=[ls]*len(levels))
+        txt = ax.text(txt_pos, 0.04, label,
+                      transform=ax.transAxes, verticalalignment='bottom',
+                      fontdict=dict(color=c, fontsize=14),
+                      bbox=dict(edgecolor=c, facecolor='none', linewidth=2.5,
+                                linestyle=ls))
+        try:
+            inv_trans = ax.transAxes.inverted()
+            bb = inv_trans.transform_bbox(txt.get_window_extent(renderer=renderer))
+            txt_pos += bb.width + 0.05
+        except:
+            txt_pos += 0.12
+
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'all done'
+    return fig, ax
 
 def vec_field(s, qty, extent, field=False, av=None, reduction=None,
               xaxis=0, yaxis=1, Npx=30, ax=None, color='k', pivot='mid',
