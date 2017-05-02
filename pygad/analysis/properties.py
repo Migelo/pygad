@@ -116,7 +116,7 @@ from ..transformation import *
 from pygad import physics
 import sys
 
-def mass_weighted_mean(s, qty):
+def mass_weighted_mean(s, qty, mass='mass'):
     '''
     Calculate the mass weighted mean of some quantity, i.e.
     sum(mass[i]*qty[i])/sum(mass).
@@ -128,6 +128,7 @@ def mass_weighted_mean(s, qty):
                             itself (make shure it already has the appropiate
                             shape), or a expression that can be passed to Snap.get
                             (e.g. simply a name of a block).
+        mass (str, UnitArr):The mass block.
 
     Returns:
         mean (UnitArr):     The mass weighted mean.
@@ -138,11 +139,14 @@ def mass_weighted_mean(s, qty):
         qty = UnitArr(qty)
     if len(s) == 0:
         return UnitArr([0]*qty.shape[-1], units=qty.units, dtype=qty.dtype)
+    if isinstance(mass, (str,unicode)):
+        mass = s.get(mass)
+    else:
+        mass = UnitArr(mass)
     # only using the np.ndarray views does not speed up
-    mwgt = np.tensordot(s['mass'], qty, axes=1).view(UnitArr)
-    mwgt.units = s['mass'].units * qty.units
-    normalized_mwgt = mwgt / s['mass'].sum()
-    return normalized_mwgt
+    mwgt = np.tensordot(mass, qty, axes=1)
+    normalized_mwgt = mwgt / float(mass.sum())
+    return UnitArr(normalized_mwgt, qty.units)
 
 def center_of_mass(snap):
     '''Calculate and return the center of mass of this snapshot.'''
