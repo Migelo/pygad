@@ -1,13 +1,12 @@
 # pygad README
 
-This module is a light-weighted (though already ~15.000 lines of code) but comprehensive Python module that serves as a framework and basis for analysis of Gadget snapshots.
+This module is a light-weighted (despite having ~25.000 lines of code and documentation) but comprehensive Python module that serves as a framework and basis for analysis of Gadget snapshots.
 
 It supports all Gadget formats and is inspired and influenced by [pynbody].
 [pygad] can read in Rockstar output, plot maps of any quantity, generate mock
 absorption spectra, and much more.
-However, its main power is framework to conveniently analyse gadget snapshot
-without the need to worry about format, reading in, indexing of blocks, units,
-etc.
+However, its main power is its framework to conveniently analyse gadget snapshots
+without the need to worry about format, read-in, indexing of blocks, units, etc.
 
 ---
 
@@ -33,26 +32,33 @@ for version >=4.7).
 
 ### Get and Install pygad
 
-Simply clone and install the git repository:
+Clone and install the git repository:
 
 ```
 $ git clone https://bitbucket.org/broett/pygad
 $ cd pygad
-$ wget https://bitbucket.org/broett/pygad/downloads/bc03.tar.gz
-$ tar -xzf bc03.tar.gz
 $ sudo python setup.py install
 ```
+I the `setuptools` module is installed, I would actually recommend `sudo python setup.py develop` (see the [wiki entry][WikiInstallation] for more).
 
-The third step of downloading the [Bruzual & Charlot (2003) SSP models][BC03] is optional but recommended (since required for standard star plotting routines).
-You probably need to adjust the path to it in the `gadget.cfg`.
+For full functionality, you need to download the tables for [Bruzual & Charlot (2003)][BC03] SSP model and ionisation Cloudy tables (here for [Haardt & Madau, 2001][HM01]):
+```
+$ wget https://bitbucket.org/broett/pygad/downloads/bc03.tar.gz
+$ tar -xzf bc03.tar.gz
+$ wget https://bitbucket.org/broett/pygad/downloads/iontbls_HM01.tar.gz
+$ tar -xzf iontbls_HM01.tar.gz
+```
+The [Bruzual & Charlot (2003)][BC03] tables are optional but recommended, since required for standard star plotting routines.
+For absorption line generation, you need the ionisation tables.
+(You might need to adjust the path to it in the `gadget.cfg`.)
 
-If you have problems or want a more detailed explanation, see the [wiki][WikiInstallation]. In particular, we want to point to the [FAQ section][FAQ] there.
+If you have problems or want a more detailed explanation, see the [wiki][WikiInstallation].
+We also want to point out the [FAQ section][FAQ].
 
 ### Configure
 
 You probably need to customise [pygad]'s config files for your specific type of snapshots (even HDF5 block names can differ!).
-This goes a beyond the scope of a README.
-Be referred to the [wiki][WikiConfig].
+This goes a beyond the scope of a README; be referred to the [wiki][WikiConfig].
 
 ### Use pygad
 
@@ -60,8 +66,9 @@ For a starter you could try something like the following in iPython:
 
 ```
 #!python
-import pygad
 import matplotlib.pyplot as plt
+import pygad
+import pygad.plotting   # needs to be imported explicitly
 s = pygad.Snap('path/to/snap')
 snap, halo = pygad.tools.prepare_zoom(s)
 R200, M200 = pygad.analysis.virial_info(snap)
@@ -89,6 +96,7 @@ contact me:
 
 [pygad]: https://bitbucket.org/broett/pygad
 [pynbody]: https://pynbody.github.io
+[HM01]: https://ui.adsabs.harvard.edu/#abs/2001cghr.confE..64H/abstract
 [BC03]: http://www.bruzual.org
 [Downloads]: https://bitbucket.org/broett/pygad/downloads
 [WikiHome]: https://bitbucket.org/broett/pygad/wiki/Home
