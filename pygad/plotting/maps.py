@@ -21,7 +21,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
           vlim=None, cmap=None, normcmaplum=True, desat=None, colors=None,
           colors_av=None, cunits=None, clogscale=None, csurf_dens=None, clim=None,
           ax=None, showcbar=True, cbartitle=None, scaleind='line',
-          scaleunits=None, fontcolor='white', fontsize=14,
+          scaleunits=None, fontcolor='white', fontsize=14, im_alpha=None,
           interpolation='nearest', maps=None, zero_is_white=False, **kwargs):
     '''
     Show an image of the snapshot.
@@ -116,6 +116,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                             well as for the scale bar.
         fontsize (int):     The size of the labels and other font sizes are scaled
                             accordingly.
+        im_alpha (float):   Make the plotted image transparent with this alpha-value.
         interpolation (str):The interpolation to use between pixels. See imshow
                             for more details.
         softening (UnitQty):A list of te softening lengthes that are taken for
@@ -341,7 +342,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                         zero_is_white=zero_is_white)
 
     fig, ax, im = show_image(im, extent=extent, ax=ax, cmap=cmap, vlim=vlim,
-                             interpolation=interpolation)
+                             interpolation=interpolation, alpha=im_alpha)
 
     if showcbar:
         if cbartitle is None:
