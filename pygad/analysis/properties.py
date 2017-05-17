@@ -71,10 +71,12 @@ Example:
     ...     print ifr, ofr
     >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc')) - '-4.6 Msol/yr') > '0.2 Msol/yr':
     ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'))
-    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'in') - '-12.2 Msol/yr') > '0.2 Msol/yr':
-    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'in')
-    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'out') - '7.6 Msol/yr') > '0.2 Msol/yr':
-    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'out')
+    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), qty='metals') - '-0.014 Msol/yr') > '0.002 Msol/yr':
+    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), qty='metals')
+    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), direction='in') - '-12.2 Msol/yr') > '0.2 Msol/yr':
+    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), direction='in')
+    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), direction='out') - '7.6 Msol/yr') > '0.2 Msol/yr':
+    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), direction='out')
     >>> ifr, ofr = flow_rates(s.gas, '50 kpc')
 
     >>> if abs(ifr - '13.0 Msol/yr') > '1.0 Msol/yr' or abs(ofr - '9.1 Msol/yr') > '0.1 Msol/yr':
@@ -116,7 +118,7 @@ from ..transformation import *
 from pygad import physics
 import sys
 
-def mass_weighted_mean(s, qty):
+def mass_weighted_mean(s, qty, mass='mass'):
     '''
     Calculate the mass weighted mean of some quantity, i.e.
     sum(mass[i]*qty[i])/sum(mass).
@@ -128,6 +130,7 @@ def mass_weighted_mean(s, qty):
                             itself (make shure it already has the appropiate
                             shape), or a expression that can be passed to Snap.get
                             (e.g. simply a name of a block).
+        mass (str, UnitArr):The mass block.
 
     Returns:
         mean (UnitArr):     The mass weighted mean.
@@ -138,11 +141,14 @@ def mass_weighted_mean(s, qty):
         qty = UnitArr(qty)
     if len(s) == 0:
         return UnitArr([0]*qty.shape[-1], units=qty.units, dtype=qty.dtype)
+    if isinstance(mass, (str,unicode)):
+        mass = s.get(mass)
+    else:
+        mass = UnitArr(mass)
     # only using the np.ndarray views does not speed up
-    mwgt = np.tensordot(s['mass'], qty, axes=1).view(UnitArr)
-    mwgt.units = s['mass'].units * qty.units
-    normalized_mwgt = mwgt / s['mass'].sum()
-    return normalized_mwgt
+    mwgt = np.tensordot(mass, qty, axes=1)
+    normalized_mwgt = mwgt / float(mass.sum())
+    return UnitArr(normalized_mwgt, qty.units)
 
 def center_of_mass(snap):
     '''Calculate and return the center of mass of this snapshot.'''
@@ -346,7 +352,7 @@ def eff_radius(s, band=None, L=None, center=None, proj=2):
         qty += '_' + band.lower()
     return half_qty_radius(s.stars, qty=qty, Qtot=L, center=center, proj=proj)
 
-def shell_flow_rates(s, Rlim, direction='both', units='Msol/yr'):
+def shell_flow_rates(s, Rlim, qty='mass', direction='both', units='Msol/yr'):
     '''
     Estimate flow rate in spherical shell.
     
@@ -356,6 +362,7 @@ def shell_flow_rates(s, Rlim, direction='both', units='Msol/yr'):
     Args:
         s (Snap):               The (sub-)snapshot to use.
         Rlim (UnitQty):         The inner and outer radius of the shell.
+        qty (str, UnitQty):     The (mass) quantity to calculate the flow rates of.
         direction ('in', 'out', 'both'):
                                 The direction to take into account. If 'in', only
                                 take onflowing gas particles into the calculation;
@@ -380,12 +387,16 @@ def shell_flow_rates(s, Rlim, direction='both', units='Msol/yr'):
     else:
         raise RuntimeError('unknown direction %s!' % direction)
 
-    flow = np.sum(shell['mass'] * shell['vrad'] / UnitArr(Rlim[1]-Rlim[0], Rlim.units))
-    flow.convert_to(units)
+    if isinstance(qty, (str,unicode)):
+        qty = shell.get(qty)
+    else:
+        qty = UnitArr(qty, 'Msol', subs=s)
+
+    flow = np.sum(qty * shell['vrad'] / UnitArr(Rlim[1]-Rlim[0], Rlim.units))
+    flow.convert_to(units, subs=s)
     return flow
 
 def flow_rates(s, R, qty='mass', dt='3 Myr'):
-    #TODO: extend to discs!
     '''
     Estimate in- and outflow rates of a given quantity (default: mass) 
     through a given radius.

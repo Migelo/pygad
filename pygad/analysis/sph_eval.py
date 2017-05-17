@@ -125,7 +125,7 @@ def kernel_weighted(s, qty, units=None, kernel=None, parallel=None):
         for i in xrange(N_threads):
             y[chunk[i][0]:chunk[i][1]] = res[i].get()
     else:
-        y = _calc_ys(qty, gas_pos, hsml, kernel)
+        y = _calc_ys(qty, gas_pos, gas_pos, hsml, kernel)
 
     return UnitArr(y, units)
 
