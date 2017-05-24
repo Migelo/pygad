@@ -4,7 +4,7 @@ Some (convenience) functions for binning.
 Also doctest other parts of this sub-module:
     >>> import doctest
     >>> doctest.testmod(core)
-    TestResults(failed=0, attempted=25)
+    TestResults(failed=0, attempted=26)
     >>> doctest.testmod(cbinning)
     TestResults(failed=0, attempted=34)
     >>> doctest.testmod(mapping)

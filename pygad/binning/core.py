@@ -59,9 +59,12 @@ Examples:
     derive block angmom... done.
     apply Rotation to "vel" of "snap_M1196_4x_470"... done.
     apply Rotation to "pos" of "snap_M1196_4x_470"... done.
+    >>> assert np.all(gridbin1d(s['pos'][:,0], qty=s['mass'], extent= [-100,100] )
+    ...             == gridbin( s['pos'][:,0].reshape((len(s),1)),
+    ...                                        qty=s['mass'], extent=[[-100,100]]))
     >>> sub = s[BoxMask('100 kpc',sph_overlap=False)]
     >>> assert np.all(gridbin2d(sub['pos'][:,0],sub['pos'][:,1])
-    ...             ==gridbin(sub['pos'][:,(0,1)]))
+    ...             == gridbin(sub['pos'][:,(0,1)]))
     >>> m1 = gridbin2d(sub['pos'][:,0], sub['pos'][:,1], sub['mass'], bins=100)
     >>> m2 = gridbin(sub['pos'][:,(0,1)], sub['mass'], bins=100)
     >>> assert np.all(m1==m2)
@@ -70,7 +73,7 @@ Examples:
     >>> m1 = scale01(m1, np.percentile(m1, [5,95]))
     >>> assert m1.min() >= 0 and m1.max() <= 1
 '''
-__all__ = ['gridbin2d', 'gridbin', 'grid_props', 'scale01', 'smooth']
+__all__ = ['gridbin2d', 'gridbin1d', 'gridbin', 'grid_props', 'scale01', 'smooth']
 
 import numpy as np
 from ..units import *
@@ -86,6 +89,19 @@ def gridbin2d(x, y, qty=None, bins=50, extent=None, normed=False, stats=None,
     information!
     '''
     return gridbin(np.array([x,y]).T, qty=qty, bins=bins, extent=extent,
+                   normed=normed, stats=stats, nanval=nanval)
+
+def gridbin1d(x, qty=None, bins=50, extent=None, normed=False, stats=None,
+              nanval=None):
+    '''
+    Bin data 1-dimensional.
+
+    This calls gridbin. See gridbin for more information!
+    '''
+    extent = np.asarray(extent)
+    if extent.shape == (2,):
+        extent = extent.reshape((1,2))
+    return gridbin(np.array(x).reshape((len(x),1)), qty=qty, bins=bins, extent=extent,
                    normed=normed, stats=stats, nanval=nanval)
 
 def gridbin(pnts, qty=None, bins=50, extent=None, normed=False, stats=None,
@@ -152,6 +168,7 @@ def gridbin(pnts, qty=None, bins=50, extent=None, normed=False, stats=None,
             if stats in UnitArr._ufunc_registry:
                 gridded.units = UnitArr._ufunc_registry[ufunc](qty)
             else:
+                import warnings
                 warnings.warn('Operation \'%s\' on units is ' % stats.__name__ + \
                               '*not* defined! Return normal numpy array.')
                 gridded = gridded.view(np.ndarray)
