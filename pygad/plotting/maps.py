@@ -285,13 +285,13 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         im_lum = UnitArr(vlim[0]*np.zeros(Npx),
                          units if units is not None else
                              getattr(qty,'units',None))
-        px2 = np.prod(res)
+        im_lum = Map(im_lum, extent)
     else:
-        im_lum, px2 = map_qty(s, extent=extent, field=field, qty=qty, av=av,
-                              reduction=reduction, Npx=Npx,
-                              xaxis=xaxis, yaxis=yaxis, **kwargs)
+        im_lum = map_qty(s, extent=extent, field=field, qty=qty, av=av,
+                         reduction=reduction, Npx=Npx,
+                         xaxis=xaxis, yaxis=yaxis, **kwargs)
         if surface_dens:
-            im_lum /= px2
+            im_lum /= im_lum.vol_voxel()
         if units is not None:
             im_lum.convert_to(units, subs=s)
     if logscale:
@@ -299,7 +299,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
             import sys
             print >> sys.stderr, 'WARNING: in log-scale, but "qty" already ' + \
                                  'contains "log"!'
-        im_lum = np.log10(im_lum)
+        im_lum = Map(np.log10(im_lum), im_lum.extent)
         if vlim is not None:
             vlim = map(np.log10, vlim)
     if maps is not None:
@@ -318,16 +318,19 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     # create color map
     if colors is None:
         im = im_lum
+        cpx2 = im_lum.vol_voxel()
         clim = vlim
     elif len(s)==0:
         im = np.zeros(tuple(Npx)+(3,))  # at vlim[0] -> black with any color coding
+        cpx2 = np.prod(res)
     else:
-        im_col, px2 = map_qty(s, extent=extent, field=field, qty=colors,
-                              av=colors_av, reduction=reduction, Npx=Npx,
-                              xaxis=xaxis, yaxis=yaxis,
-                              **kwargs)
+        im_col = map_qty(s, extent=extent, field=field, qty=colors,
+                         av=colors_av, reduction=reduction, Npx=Npx,
+                         xaxis=xaxis, yaxis=yaxis,
+                         **kwargs)
+        cpx2 = im_col.vol_voxel()
         if csurf_dens:
-            im_col /= px2
+            im_col /= cpx2
         if cunits is not None:
             im_col.convert_to(cunits, subs=s)
         if clogscale:
@@ -357,7 +360,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                         if field:
                             cunits = (cunits * s['pos'].units).gather()
                         if csurf_dens:
-                            cunits = (cunits * px2.units).gather()
+                            cunits = (cunits * cpx2.units).gather()
                     if csurf_dens:
                         cname = 'surface-density of ' + cname
                 else:
@@ -665,12 +668,12 @@ def vec_field(s, qty, extent, field=False, av=None, reduction=None,
         qty_x = qty[:,xaxis]
         qty_y = qty[:,yaxis]
 
-    map_x, px2 = map_qty(s, extent=extent, field=field,
-                         qty=qty_x, av=av, reduction=reduction, Npx=Npx,
-                         xaxis=xaxis, yaxis=yaxis)
-    map_y, px2 = map_qty(s, extent=extent, field=field,
-                         qty=qty_y, av=av, reduction=reduction, Npx=Npx,
-                         xaxis=xaxis, yaxis=yaxis)
+    map_x = map_qty(s, extent=extent, field=field,
+                    qty=qty_x, av=av, reduction=reduction, Npx=Npx,
+                    xaxis=xaxis, yaxis=yaxis)
+    map_y = map_qty(s, extent=extent, field=field,
+                    qty=qty_y, av=av, reduction=reduction, Npx=Npx,
+                    xaxis=xaxis, yaxis=yaxis)
 
     X, Y = np.meshgrid(np.linspace(extent[0,0],extent[0,1],Npx[0]),
                        np.linspace(extent[1,0],extent[1,1],Npx[1]))

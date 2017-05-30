@@ -70,10 +70,23 @@ Examples:
     >>> assert np.all(m1==m2)
     >>> mcube = gridbin(sub['pos'], sub['mass'], bins=100)
     >>> assert np.all(m2 == mcube.sum(axis=2))
+    >>> m1  # doctest: +ELLIPSIS
+    <Map at 0x...; units="1e+10 Msol h_0**-1", Npx=(100, 100)>
+    >>> m1.extent
+    UnitArr([[-35.99917603,  35.99324417],
+             [-35.99769974,  35.9996376 ]])
+    >>> m1.Npx
+    (100, 100)
+    >>> m1.res()
+    UnitArr([ 0.7199242 ,  0.71997337])
+    >>> m1.vol_voxel()
+    UnitArr(0.518326256291)
+    >>> m1.vol_tot()
+    UnitArr(5.183263e+03)
     >>> m1 = scale01(m1, np.percentile(m1, [5,95]))
     >>> assert m1.min() >= 0 and m1.max() <= 1
 '''
-__all__ = ['gridbin2d', 'gridbin1d', 'gridbin', 'grid_props', 'scale01', 'smooth']
+__all__ = ['gridbin2d', 'gridbin1d', 'gridbin', 'grid_props', 'Map', 'scale01', 'smooth']
 
 import numpy as np
 from ..units import *
@@ -134,7 +147,7 @@ def gridbin(pnts, qty=None, bins=50, extent=None, normed=False, stats=None,
                             value.
 
     Returns:
-        gridded (UnitArr):  The (N,...,N)-array of the binned data.
+        gridded (Map):      The (N,...,N)-array of the binned data.
     '''
     known_stats = ['count', 'sum', 'mean', 'median']
     if isinstance(stats,str) and stats not in known_stats:
@@ -158,6 +171,8 @@ def gridbin(pnts, qty=None, bins=50, extent=None, normed=False, stats=None,
 
     gridded, edges, binnum = binned_statistic_dd(pnts, qty, range=extent,
                                                  statistic=stats, bins=bins)
+    if extent is None:
+        extent = np.array( [e[(0,-1),] for e in edges] )
 
     gridded = UnitArr(gridded)
     # if the values to bin have units, the result should as well
@@ -179,7 +194,7 @@ def gridbin(pnts, qty=None, bins=50, extent=None, normed=False, stats=None,
     if nanval is not None:
         gridded[np.isnan(gridded)] = nanval
 
-    return gridded
+    return Map(gridded, extent=extent)
 
 def grid_props(extent, Npx=256, dim=None):
     '''
@@ -239,6 +254,101 @@ def grid_props(extent, Npx=256, dim=None):
     res = widths / Npx
 
     return extent, Npx, res
+
+class Map(UnitArr):
+    """
+    An object of a grid with extent and resolution. It inherits from `UnitArr`.
+
+    Args:
+        grid (UnitQty):     The grid itself. Does not need to have the correct
+                            shape yet.
+        extent (UnitQty):   This can either be a scalar, it then defines the
+                            (total) with of the grid, a list of widths for each
+                            dimension, or a full extent of a sequence of maximim
+                            and minimum for all coordinates:
+                            [[x1min,x1max],[x2min,x2max],...].
+        Npx (int, array-like):
+                            If not None, the passed `grid` will be reshaped
+                            accordingly. `extent` and `Npx` will be passed to
+                            `grid_props`.
+        keyword arguments:  Passed on to the array factory function of numpy
+                            (np.array). By default this includes `copy=False`.
+    """
+
+    def __new__(cls, grid, extent, Npx=None, **kwargs):
+        if 'copy' not in kwargs:
+            kwargs['copy'] = False
+        m = UnitArr(grid, **kwargs).view(cls)
+        m._extent, Npx, res = grid_props(extent=extent,
+                Npx=m.shape if Npx is None else Npx)
+
+        Npx = tuple(Npx)
+        if m.shape != Npx:
+            m = m.reshape(Npx)
+
+        return m
+
+    def __array_finalize__(self, obj):
+        UnitArr.__array_finalize__(self, obj)
+        self._extent = getattr(obj, '_extent', [[0,0]]*len(self.shape))
+
+    def __array_wrap__(self, array, context=None):
+        return UnitArr.__array_wrap__(self, array, context)
+
+    def __repr__(self):
+        r = self.view(UnitArr).__repr__(val='')
+        r = r.replace('UnitArr(,', '<Map at 0x%x;' % id(self))
+        r = r[:-1] + ', Npx=%s>' % (self.Npx,)
+        #V = self.vol_tot()
+        #r = r[:-1] + ', V=%g %s>' % (V, V.units)
+        return r
+
+    @property
+    def grid(self):
+        """Just the underlying `UnitArr`."""
+        return self.view(UnitArr)
+
+    @property
+    def Npx(self):
+        """The side lengths in pixels in all dimensions."""
+        return self.shape
+
+    @property
+    def extent(self):
+        """The grid's extent in all dimensions."""
+        return self._extent
+
+    def res(self, axis=None, units=None, subs=None):
+        """Resolution: pixels size in all the dimensions."""
+        extent, Npx, res = grid_props(extent=self.extent, Npx=self.Npx)
+        if units:
+            res.convert_to(units, subs=subs)
+        if axis is None:
+            return res
+        else:
+            return UnitArr(res[axis], res.units)
+
+    def vol_voxel(self):
+        """The voxel volume."""
+        return np.prod( self.res() )
+
+    def vol_tot(self):
+        """The total grid volume."""
+        return np.prod( self.extent.ptp(axis=1) )
+
+    def __copy__(self, *a):
+        if a:
+            duplicate = UnitArr.__copy__(self, *a).view(Map)
+        else:
+            duplicate = UnitArr.__copy__(self).view(Map)
+        duplicate._extent = self._extent
+        return duplicate
+
+    def __deepcopy__(self, *a):
+        duplicate = UnitArr.__deepcopy__(self).view(Map)
+        duplicate._extent = self._extent
+        return duplicate
+
 
 def scale01(arr, lims):
     '''

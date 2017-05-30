@@ -652,8 +652,8 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
 
             from ..binning import SPH_to_3Dgrid
             def bin_func(s, qty, **args):
-                Q, px = SPH_to_3Dgrid(sub, qty, **args)
-                Q     = Q[m].reshape(N) * np.prod(px)
+                Q = SPH_to_3Dgrid(sub, qty, **args)
+                Q, px = Q[m].reshape(N) * Q.vol_voxel(), Q.res()
                 return Q, px
 
             n_parts = n[sub._mask]
@@ -701,8 +701,8 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
             from ..binning import SPH_3D_to_line
             bin_func = SPH_3D_to_line
             def bin_func(s, qty, **args):
-                Q, px = SPH_3D_to_line(sub, qty, **args)
-                Q    /= px
+                Q = SPH_3D_to_line(sub, qty, **args)
+                Q, px = Q/Q.vol_voxel(), Q.res()
                 Q.units = Q.units.gather()
                 return Q, px
 
