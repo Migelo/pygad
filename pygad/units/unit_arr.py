@@ -284,8 +284,9 @@ class UnitArr(np.ndarray):
                     data = data.in_units_of(units, subs=subs)
 
         # actually create the new object
-        if isinstance(data, UnitArr):   # avoid interference of different
-            kwargs['copy'] = True       # `_unit_carrier`s and units
+        if isinstance(data, UnitArr) and 'copy' not in kwargs:
+            # avoid interference of different `_unit_carrier`s and units
+            kwargs['copy'] = True
         obj = np.array(data, **kwargs).view(subtype)
         # bool needed in some situations (such as np.median(UnitArr))
         if obj.dtype.kind not in 'uifb':
@@ -384,17 +385,24 @@ class UnitArr(np.ndarray):
         else:
             return self.__copy__()
 
-    def __repr__(self):
+    def __repr__(self, val=None):
         if not self.shape and self.dtype.kind == 'f':
             r = 'UnitArr('
-            f = float(self.view(np.ndarray)) # avoid conversion of units!
-            r += str(f) if (1e-3<=f<=1e3) else ('%e' % f)
+            if val is None:
+                f = float(self.view(np.ndarray)) # avoid conversion of units!
+                r += str(f) if (1e-3<=f<=1e3) else ('%e' % f)
+            else:
+                r += str(val)
             if self.dtype not in ['int', 'float']:
                 r += ', dtype=' + str(self.dtype)
             r += ')'
         else:
-            r = np.ndarray.__repr__(self)
-            r = 'UnitArr' + r[r.find('('):].replace('\n', '\n  ')
+            if val is None:
+                r = np.ndarray.__repr__(self)
+                r = r[r.find('('):].replace('\n', '\n  ')
+            else:
+                r = '(' + str(val) + ')'
+            r = 'UnitArr' + r
         if hasattr(self,'units'):
             if self.units is not None and self.units != 1:
                 r = r[:-1] + (', units="%s")' % str(self.units)[1:-1])

@@ -13,7 +13,7 @@ Testing:
     apply stored Translation to block pos... done.
     load block hsml... done.
     >>> Npx = np.array([ 30,  75, 100])
-    >>> map2D, res = SPH_to_2Dgrid(sub.gas, extent=extent[:2], qty='rho', Npx=Npx[:2])
+    >>> map2D = SPH_to_2Dgrid(sub.gas, extent=extent[:2], qty='rho', Npx=Npx[:2])
     create a 30 x 75 SPH-grid (1200 x 3000 [kpc])...
     load block rho... done.
     load block mass... done.
@@ -28,14 +28,14 @@ Testing:
     >>> lower = sub.gas[mask]['mass'].sum()
     >>> upper = sub.gas['mass'].sum()
     >>> del mask
-    >>> if not (lower <= map2D.sum()*np.prod(res) <= upper):
+    >>> if not (lower <= map2D.sum()*map2D.vol_voxel() <= upper):
     ...     print lower, map2D.sum(), upper
 
     Consistency check between 3D and 2D:
-    >>> map3D, res = SPH_to_3Dgrid(sub.gas, extent=extent, qty='rho', Npx=Npx)
+    >>> map3D  = SPH_to_3Dgrid(sub.gas, extent=extent, qty='rho', Npx=Npx)
     create a 30 x 75 x 100 SPH-grid (1200 x 3000 x 4000 [kpc])...
     done with SPH grid
-    >>> map3D_proj = map3D.sum(axis=-1) * res.in_units_of('kpc')[2]*Unit('kpc')
+    >>> map3D_proj = map3D.sum(axis=-1) * map3D.res(2,units='kpc')
     >>> tot_rel_err = (map3D_proj.sum() - map2D.sum()) / map2D.sum()
     >>> if tot_rel_err > 1e-3:
     ...     print tot_rel_err
@@ -46,8 +46,8 @@ Testing:
     ...     print np.percentile(np.abs(px_rel_err), 99)
 
     Quick consistency check of higher resolution
-    >>> map2D_high, res = SPH_to_2Dgrid(sub.gas, extent=extent[:2], qty='rho',
-    ...                                 Npx=Npx[:2]*4)
+    >>> map2D_high = SPH_to_2Dgrid(sub.gas, extent=extent[:2], qty='rho',
+    ...                            Npx=Npx[:2]*4)
     create a 120 x 300 SPH-grid (1200 x 3000 [kpc])...
     done with SPH grid
     >>> tot_rel_err = np.sum(map3D_proj - map2D) / map2D.sum()
@@ -57,12 +57,12 @@ Testing:
     Consistency check between 3D-map and the line integral:
     >>> extent = UnitArr([[-0.1,0.1],[-0.1,0.1],[-1e2,1e2]], 'kpc')
     >>> Npx = [11,11,1100]
-    >>> map3D, res = SPH_to_3Dgrid(sub.gas, extent=extent, qty='rho', Npx=Npx)
+    >>> map3D = SPH_to_3Dgrid(sub.gas, extent=extent, qty='rho', Npx=Npx)
     create a 11 x 11 x 1100 SPH-grid (0.2 x 0.2 x 200 [kpc])...
     done with SPH grid
-    >>> column = map3D[5,5,:].ravel() * UnitArr(res[2],res.units)
-    >>> line, res = SPH_3D_to_line(sub.gas, qty='rho', los=[0,0],
-    ...                            extent=extent[2], Npx=Npx[2])
+    >>> column = map3D[5,5,:].ravel() * map3D.res(2)
+    >>> line = SPH_3D_to_line(sub.gas, qty='rho', los=[0,0],
+    ...                       extent=extent[2], Npx=Npx[2])
     create a SPH-line with 1100 bins (length 200 [kpc])...
     done with SPH line
     >>> px_rel_err = np.abs(column-line)/column
@@ -123,8 +123,7 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml',
                                 normed to one, of course.
 
     Returns:
-        grid (UnitArr):     The binned SPH quantity.
-        px_area (UnitArr):  The area of a pixel.
+        grid (Map):             The binned SPH quantity.
     '''
     # prepare arguments
     extent, Npx, res = grid_props(extent=extent, Npx=Npx, dim=3)
@@ -184,7 +183,7 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml',
     if qty.base is not None:
         qty.copy()
 
-    extent = extent.view(np.ndarray).astype(np.float64).copy()
+    ext = extent.view(np.ndarray).astype(np.float64).copy()
     grid = np.empty(np.prod(Npx), dtype=np.float64)
     Npx = Npx.astype(np.intp)
     if normed:
@@ -196,7 +195,7 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml',
             C.c_void_p(hsml.ctypes.data),
             C.c_void_p(dV.ctypes.data),
             C.c_void_p(qty.ctypes.data),
-            C.c_void_p(extent.ctypes.data),
+            C.c_void_p(ext.ctypes.data),
             C.c_void_p(Npx.ctypes.data),
             C.c_void_p(grid.ctypes.data),
             C.create_string_buffer(kernel),
@@ -207,7 +206,7 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml',
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print 'done with SPH grid'
 
-    return grid, res
+    return Map(grid, extent)
 
 def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
                   hsml='hsml', normed=True):
@@ -247,8 +246,7 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
                                 normed to one, of course.
 
     Returns:
-        grid (UnitArr):     The binned SPH quantity.
-        px_area (UnitArr):  The area of a pixel.
+        grid (Map):             The binned SPH quantity.
     '''
     # prepare arguments
     zaxis = (set([0,1,2]) - set([xaxis, yaxis])).pop()
@@ -316,7 +314,7 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
     if qty.base is not None:
         qty.copy()
 
-    extent = extent.view(np.ndarray).astype(np.float64).copy()
+    ext = extent.view(np.ndarray).astype(np.float64).copy()
     grid = np.empty(np.prod(Npx), dtype=np.float64)
     Npx = Npx.astype(np.intp)
     if normed:
@@ -328,7 +326,7 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
             C.c_void_p(hsml.ctypes.data),
             C.c_void_p(dV.ctypes.data),
             C.c_void_p(qty.ctypes.data),
-            C.c_void_p(extent.ctypes.data),
+            C.c_void_p(ext.ctypes.data),
             C.c_void_p(Npx.ctypes.data),
             C.c_void_p(grid.ctypes.data),
             C.create_string_buffer(kernel),
@@ -339,7 +337,7 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print 'done with SPH grid'
 
-    return grid, res
+    return Map(grid, extent)
 
 def SPH_3D_to_line(s, qty, los, extent, Npx, xaxis=0, yaxis=1, kernel=None,
                    dV='dV', hsml='hsml'):
@@ -376,8 +374,7 @@ def SPH_3D_to_line(s, qty, los, extent, Npx, xaxis=0, yaxis=1, kernel=None,
                                 to dV.
 
     Returns:
-        line (UnitArr):     The binned SPH quantity.
-        res (UnitArr):      The length of a bin.
+        line (Map):             The binned SPH quantity.
     '''
     # prepare arguments
     zaxis = (set([0,1,2]) - set([xaxis, yaxis])).pop()
@@ -385,7 +382,7 @@ def SPH_3D_to_line(s, qty, los, extent, Npx, xaxis=0, yaxis=1, kernel=None,
         raise ValueError('Illdefined axes (x=%s, y=%s)!' % (xaxis, yaxis))
     extent = UnitQty(extent, s['pos'].units, subs=s).reshape([1,2])
     extent, Npx, res = grid_props(extent=extent, Npx=Npx, dim=1)
-    extent = UnitQty(extent.reshape([2]), s['pos'].units, subs=s)
+    extent = UnitQty(extent, s['pos'].units, subs=s)
     Npx = int(Npx)
     res = UnitScalar(res.reshape([]), s['pos'].units, subs=s)
     los = UnitQty(los, s['pos'].units, dtype=np.float64, subs=s)
@@ -396,7 +393,7 @@ def SPH_3D_to_line(s, qty, los, extent, Npx, xaxis=0, yaxis=1, kernel=None,
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print 'create a SPH-line with %d bins' % Npx,
-        print '(length %.4g %s)...' % (extent[1]-extent[0], extent.units)
+        print '(length %.4g %s)...' % (extent[0,1]-extent[0,0], extent.units)
 
     # prepare (sub-)snapshot
     if isinstance(qty, (str,unicode)):
@@ -440,7 +437,7 @@ def SPH_3D_to_line(s, qty, los, extent, Npx, xaxis=0, yaxis=1, kernel=None,
     if qty.base is not None:
         qty.copy()
 
-    extent = extent.view(np.ndarray).astype(np.float64).copy()
+    ext = extent.view(np.ndarray).reshape((2,)).astype(np.float64).copy()
     line = np.empty(Npx, dtype=np.float64)
     C.cpygad.bin_sph_along_line(C.c_size_t(len(sub)),
                                 C.c_void_p(pos.ctypes.data),
@@ -448,7 +445,7 @@ def SPH_3D_to_line(s, qty, los, extent, Npx, xaxis=0, yaxis=1, kernel=None,
                                 C.c_void_p(dV.ctypes.data),
                                 C.c_void_p(qty.ctypes.data),
                                 C.c_void_p(los.ctypes.data),
-                                C.c_void_p(extent.ctypes.data),
+                                C.c_void_p(ext.ctypes.data),
                                 C.c_size_t(Npx),
                                 C.c_void_p(line.ctypes.data),
                                 C.create_string_buffer(kernel),
@@ -458,7 +455,7 @@ def SPH_3D_to_line(s, qty, los, extent, Npx, xaxis=0, yaxis=1, kernel=None,
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print 'done with SPH line'
 
-    return line, res
+    return Map(line, extent, Npx=Npx)
 
 def SPH_to_2Dgrid_by_particle(s, qty, extent, Npx, reduction, xaxis=0, yaxis=1,
                               kernel=None, av=None, dV='dV', hsml='hsml'):
@@ -499,8 +496,7 @@ def SPH_to_2Dgrid_by_particle(s, qty, extent, Npx, reduction, xaxis=0, yaxis=1,
                                 to dV.
 
     Returns:
-        grid (UnitArr):     The binned SPH quantity.
-        px_area (UnitArr):  The area of a pixel.
+        grid (Map):             The binned SPH quantity.
     '''
     # prepare arguments
     zaxis = (set([0,1,2]) - set([xaxis, yaxis])).pop()
@@ -574,7 +570,7 @@ def SPH_to_2Dgrid_by_particle(s, qty, extent, Npx, reduction, xaxis=0, yaxis=1,
     else:
         av = np.ones(len(sub), dtype=np.float64)
 
-    extent = extent.view(np.ndarray).astype(np.float64).copy()
+    ext = extent.view(np.ndarray).astype(np.float64).copy()
     grid = np.empty(np.prod(Npx), dtype=np.float64)
     Npx = Npx.astype(np.intp)
 
@@ -593,7 +589,7 @@ def SPH_to_2Dgrid_by_particle(s, qty, extent, Npx, reduction, xaxis=0, yaxis=1,
                       C.c_void_p(dV.ctypes.data),
                       C.c_void_p(qty.ctypes.data),
                       C.c_void_p(av.ctypes.data),
-                      C.c_void_p(extent.ctypes.data),
+                      C.c_void_p(ext.ctypes.data),
                       C.c_void_p(Npx.ctypes.data),
                       C.c_void_p(grid.ctypes.data),
                       C.create_string_buffer(kernel),
@@ -604,5 +600,5 @@ def SPH_to_2Dgrid_by_particle(s, qty, extent, Npx, reduction, xaxis=0, yaxis=1,
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print 'done with particle SPH grid'
 
-    return grid, res
+    return Map(grid, extent)
 
