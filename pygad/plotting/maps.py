@@ -3,7 +3,7 @@ Module for convenience routines for plotting maps.
 
 Doctests impossible, since they would require visual inspection...
 '''
-__all__ = ['image', 'phase_diagram', 'over_plot_species_phases', 'vec_field']
+__all__ = ['plot_map', 'image', 'phase_diagram', 'over_plot_species_phases', 'vec_field']
 
 import numpy as np
 import matplotlib as mpl
@@ -15,6 +15,187 @@ from ..gadget import config
 from ..snapshot import BoxMask
 import warnings
 from .. import environment
+
+def plot_map(m, colors=None, extent=None, vlim=None, clim=None,
+             logscale=True, clogscale=False, units=None, cunits=None,
+             surface_dens=False, csurf_dens=False,
+             cmap=None, normcmaplum=True, desat=None,
+             ax=None, showcbar=True, cbartitle=None, scaleind='line',
+             scaleunits=None, fontcolor='white', fontsize=14, im_alpha=None,
+             xaxis=None, yaxis=None, subs=None,
+             interpolation='nearest', maps=None, zero_is_white=False):
+    '''
+    Plot a map (color-code with a second one).
+
+    By default the mass is plotted with the colormap `CM_DEF` if `colors` is
+    None or 'isolum' if `colors` is set. For stars only, however, the (V-band
+    weighted) stellar ages are plotted with the colormap 'Age' and image luminance
+    is the visual stellar luminosity (V-band); for gas only the mass-weighted
+    log10(temperature) is colorcoded with 'isolum' and the image luminance is the
+    surface density; and for dark matter only the colormap 'BlackGreen' is used.
+
+    Args:
+        m (Map, UnitArr, np.ndarray):
+                            The map to display. If is not a `Map` instance (and
+                            neither is `colors`) `extent` has to be passed.
+        colors (Map, UnitArr, np.ndarray):
+                            The array for color coding (`m` is just luminance
+                            unless `colors` is None).
+        logscale (bool):    Whether to plot the image (luminance) in log-scale.
+        clogscale (bool):   Whether to use `colors` in log-scale.
+        surface_dens (bool):Whether to plot the surface density of qty rather than
+                            just sum it up along the line of sight per pixel.
+        units (str, Unit):  The units to plot in (qty respectively qty/area).
+        cunits (str, Unit): Same as units, but for colors.
+        extent (UnitQty):   The extent of the image. It can be a scalar and then
+                            is taken to be the total side length of a square
+                            around the origin or a sequence of the minima and
+                            maxima of the directions: [[xmin,xmax],[ymin,ymax]]
+        vlim (sequence):    The limits of the quantity for the plot.
+        cmap (str,Colormap):The colormap to use. If colors==None it is applied to
+                            qty, otherwise to colors. Default: `CM_DEF` if
+                            `colors` is not set, else 'isolum'.
+        normcmaplum (bool): If there are colors and luminance information,
+                            norm the colormap's luminance.
+        desat (float):      If there are colors and luminance information,
+                            desaturate the colormap by this factor before norming
+                            its luminance. (See `plotting.general.isolum_cmap` for
+                            more information!)
+        clogscale (bool):   Whether color-code in log-scale.
+        csurf_dens (bool):  Same as surface_dens, but for colors.
+        clim (sequence):    Same as vlim, but for colors.
+        ax (AxesSubplot):   The axis object to plot on. If None, a new one is
+                            created by plt.subplots().
+        showcbar (cool):    Whether to add a colorbar (in the upper left corner
+                            within the axis).
+        cbartitle (str):    The title for the colorbar. In certain cases it can be
+                            created automatically.
+        scaleind (str):     Can be:
+                                'labels':   ticks and labels are drawn on the axes
+                                'line':     a bar is drawn in the lower left
+                                            corner indicating the scale
+                                'none':     neither nor is done -- make the
+                                            axes unvisible
+        scaleunits (str, Unit):
+                            If scaleind=='line', these units are used for
+                            indication.
+        xaxis/yaxis (int):  The coordinate for the x-/y-axis. (0:'x', 1:'y', 2:'z')
+                            Needed when `scaleind='labels'`.
+        subs (dict, Snap):  For unit conversions.
+        fontcolor (str):    The color to use for the colorbar ticks and labels as
+                            well as for the scale bar.
+        fontsize (int):     The size of the labels and other font sizes are scaled
+                            accordingly.
+        im_alpha (float):   Make the plotted image transparent with this alpha-value.
+        interpolation (str):The interpolation to use between pixels. See imshow
+                            for more details.
+        zero_is_white (bool):
+                            Instead of scaling the image luminance by `qty` if
+                            there is a color given, desaturate the colors to white
+                            for `qty` values approaching the lower limit of vlim
+                            (or zero if this is None).
+
+    Returns:
+        fig (Figure):       The figure of the axis plotted on.
+        ax (AxesSubplot):   The axis plotted on.
+        im (AxesImage):     The image instance created.
+       [cbar (Colorbar):    The colorbar, if showcbar is True.]
+    '''
+    # prepare the arguments
+    if extent is None:
+        extent = getattr(m,'extent',getattr(colors,'extent',None))
+        if extent is None:
+            raise ValueError('No `extent` is given and the grids are no Maps!')
+    for ext in [getattr(m,'extent',None), getattr(colors,'extent',None)]:
+        if ext is not None:
+            if hasattr(ext,'units') and hasattr(extent,'units'):
+                    ext = ext.in_units_of(extent.units)
+            if np.any(extent != ext):
+                raise ValueError('`extent`s do not match!')
+    if m.ndim != 2:
+        raise ValueError('Map has to be 2-dim.!')
+    if colors is not None and colors.shape != m.shape:
+        raise ValueError('Color map shape does not match!')
+    extent, Npx, res = grid_props(extent=extent, Npx=m.shape, dim=2)
+
+    if cmap is None:
+        cmap = CM_DEF if colors is None else 'isolum'
+    if scaleunits is None:
+        scaleunits = getattr(extent,'units',None)
+    else:
+        scaleunits = Unit(scaleunits)
+        extent.convert_to(scaleunits, subs=subs)
+
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'plot a map - paramters:'
+        print '  Npx:           ', m.Npx
+        print '  colors:        ', (colors is not None)
+        print '  extent:        ', repr(extent).replace('\n        ', '')
+        print '  surface_dens:  ', surface_dens
+        print '  csurf_dens:    ', csurf_dens
+        print '  logscale:      ', logscale
+        print '  clogscale:     ', clogscale
+        print '  [...]'
+
+    if surface_dens:
+        m = m / np.prod(res)
+    if units:
+        m = m.in_units_of(units, subs=subs)
+        if hasattr(vlim,'units'):
+            vlim = vlim.in_units_of(units)
+    if logscale:
+        m = np.log10(m)
+        if vlim is not None:
+            vlim = map(np.log10, vlim)
+    if vlim is None:
+        tmp = m[np.isfinite(m)]
+        if len(tmp)==0:
+            raise RuntimeError('The luminance array has no finite values!')
+        if colors is None:
+            vlim = np.percentile(tmp, [0.1, 99.9])
+        else:
+            vlim = np.percentile(tmp, [1  , 98.5])
+        del tmp
+
+    if colors is not None:
+        if csurf_dens:
+            colors = colors / np.prod(res)
+        if cunits:
+            colors = colors.in_units_of(cunits, subs=subs)
+            if hasattr(clim,'units'):
+                clim = clim.in_units_of(cunits)
+        if clim is None:
+            clim = np.percentile(colors[np.isfinite(colors)], [0.1,99.99])
+        if clogscale:
+            colors = np.log10(colors)
+            clim = map(np.log10, clim)
+        if normcmaplum:
+            cmap = isolum_cmap(cmap, desat=desat)
+        im = color_code(m, colors, cmap=cmap, vlim=vlim, clim=clim,
+                        zero_is_white=zero_is_white)
+    else:
+        clim = vlim
+        im = m
+
+    fig, ax, im = show_image(im, extent=extent, ax=ax, cmap=cmap, vlim=vlim,
+                             interpolation=interpolation, alpha=im_alpha)
+
+    if showcbar:
+        if cbartitle is None:
+            cbartitle = ''
+        cbar = add_cbar(ax, cbartitle, clim=clim, cmap=cmap,
+                        fontcolor=fontcolor, fontsize=fontsize,
+                        nticks=7)
+
+    make_scale_indicators(ax, extent, scaleind=scaleind, scaleunits=scaleunits,
+                          xaxis=xaxis, yaxis=yaxis, fontsize=fontsize,
+                          fontcolor=fontcolor)
+
+    if showcbar:
+        return fig, ax, im, cbar
+    else:
+        return fig, ax, im
+
 
 def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
           field=None, reduction=None, extent=None, Npx=256, xaxis=0, yaxis=1,
@@ -149,10 +330,8 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     # setting default values for arguments
     if units is not None:
         units = Unit(units)
-    
     if cunits is not None:
         cunits = Unit(cunits)
-
     if extent is None:
         extent = UnitArr([np.percentile(s['pos'][:,xaxis], [1,99]),
                           np.percentile(s['pos'][:,yaxis], [1,99])],
@@ -244,7 +423,6 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         scaleunits = s['pos'].units
     else:
         scaleunits = Unit(scaleunits)
-        extent.convert_to(scaleunits, subs=s)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print 'plot a map - paramters:'
@@ -290,119 +468,80 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         im_lum = map_qty(s, extent=extent, field=field, qty=qty, av=av,
                          reduction=reduction, Npx=Npx,
                          xaxis=xaxis, yaxis=yaxis, **kwargs)
-        if surface_dens:
-            im_lum /= im_lum.vol_voxel()
-        if units is not None:
-            im_lum.convert_to(units, subs=s)
-    if logscale:
-        if isinstance(qty,(str,unicode)) and 'log' in qty:
-            import sys
-            print >> sys.stderr, 'WARNING: in log-scale, but "qty" already ' + \
-                                 'contains "log"!'
-        im_lum = Map(np.log10(im_lum), im_lum.extent)
-        if vlim is not None:
-            vlim = map(np.log10, vlim)
+    if logscale and isinstance(qty,(str,unicode)) and 'log' in qty:
+        import sys
+        print >> sys.stderr, 'WARNING: in log-scale, but "qty" already ' + \
+                             'contains "log"!'
     if maps is not None:
         maps['qty'] = im_lum
 
-    if vlim is None:
-        tmp = im_lum[np.isfinite(im_lum)]
-        if len(tmp)==0:
-            raise RuntimeError('The luminance array has no finite values!')
-        if colors is None:
-            vlim = np.percentile(tmp, [0.1, 99.9])
-        else:
-            vlim = np.percentile(tmp, [1, 98.5])
-        del tmp
-
     # create color map
     if colors is None:
-        im = im_lum
-        cpx2 = im_lum.vol_voxel()
-        clim = vlim
+        im_col = None
     elif len(s)==0:
-        im = np.zeros(tuple(Npx)+(3,))  # at vlim[0] -> black with any color coding
-        cpx2 = np.prod(res)
+        im_col = np.zeros(tuple(Npx)+(3,))  # at vlim[0] -> black with any color coding
     else:
         im_col = map_qty(s, extent=extent, field=field, qty=colors,
                          av=colors_av, reduction=reduction, Npx=Npx,
                          xaxis=xaxis, yaxis=yaxis,
                          **kwargs)
-        cpx2 = im_col.vol_voxel()
-        if csurf_dens:
-            im_col /= cpx2
-        if cunits is not None:
-            im_col.convert_to(cunits, subs=s)
-        if clogscale:
-            im_col = np.log10(im_col)
         if maps is not None:
             maps['colors'] = im_col
-        if clim is None:
-            clim = np.percentile(im_col[np.isfinite(im_col)], [0.1,99.99])
-        if normcmaplum:
-            cmap = isolum_cmap(cmap, desat=desat)
-        im = color_code(im_lum, im_col, cmap=cmap, vlim=vlim, clim=clim,
-                        zero_is_white=zero_is_white)
 
-    fig, ax, im = show_image(im, extent=extent, ax=ax, cmap=cmap, vlim=vlim,
-                             interpolation=interpolation, alpha=im_alpha)
-
-    if showcbar:
-        if cbartitle is None:
-            cqty = colors if colors is not None else qty
-            if isinstance(cqty,(str,unicode)):
-                cname = cqty
-                if reduction is not None:
-                    cname = '%s(%s)' % (reduction, cname)
-                if colors is not None:
-                    if cunits is None and len(s)>0:
-                        cunits = s.get(cqty).units
-                        if field:
-                            cunits = (cunits * s['pos'].units).gather()
-                        if csurf_dens:
-                            cunits = (cunits * cpx2.units).gather()
+    if showcbar and cbartitle is None:
+        cqty = colors if colors is not None else qty
+        if isinstance(cqty,(str,unicode)):
+            cname = cqty
+            if reduction is not None:
+                cname = '%s(%s)' % (reduction, cname)
+            if colors is not None:
+                if cunits is None and len(s)>0:
+                    cunits = s.get(cqty).units
+                    if field:
+                        cunits = (cunits * s['pos'].units).gather()
                     if csurf_dens:
-                        cname = 'surface-density of ' + cname
-                else:
-                    if cunits is None:
-                        if units is None:
-                            if len(s) == 0:
-                                cunits = None
-                            else:
-                                cunits = s.get(cqty).units
-                                if field:
-                                    cunits = (cunits * s['pos'].units).gather()
-                        else:
-                            cunits = units
+                        cunits = (cunits * im_col.units).gather()
+                if csurf_dens:
+                    cname = 'surface-density of ' + cname
             else:
-                cname = ''
                 if cunits is None:
-                    cunits = units if units is not None else getattr(cqty,'units',None)
-            if surface_dens and colors is None:
-                if units is None and cunits is not None:
-                    cunits = cunits/s['pos'].units**2
-                cname = r'$\Sigma$ of ' + cname
-            if cunits is None or cunits == 1:
-                cunits = ''
-            else:
-                cunits = r'[$%s$]' % cunits.latex()
-            cbartitle = cname + (' ' if (cname!='' and cunits!='') else '') + cunits
-            if (logscale and colors is None) or \
-                    (clogscale and colors is not None):
-                cbartitle = r'$\log_{10}$(' + cbartitle + ')'
+                    if units is None:
+                        if len(s) == 0:
+                            cunits = None
+                        else:
+                            cunits = s.get(cqty).units
+                            if field:
+                                cunits = (cunits * s['pos'].units).gather()
+                    else:
+                        cunits = units
+        else:
+            cname = ''
+            if cunits is None:
+                cunits = units if units is not None else getattr(cqty,'units',None)
+        if surface_dens and colors is None:
+            if units is None and cunits is not None:
+                cunits = cunits/s['pos'].units**2
+            cname = r'$\Sigma$ of ' + cname
+        if cunits is None or cunits == 1:
+            cunits = ''
+        else:
+            cunits = r'[$%s$]' % cunits.latex()
+        cbartitle = cname + (' ' if (cname!='' and cunits!='') else '') + cunits
+        if (logscale and colors is None) or \
+                (clogscale and colors is not None):
+            cbartitle = r'$\log_{10}$(' + cbartitle + ')'
 
-        cbar = add_cbar(ax, cbartitle, clim=clim, cmap=cmap,
-                        fontcolor=fontcolor, fontsize=fontsize,
-                        nticks=7)
-
-    make_scale_indicators(ax, extent, scaleind=scaleind, scaleunits=scaleunits,
-                          xaxis=xaxis, yaxis=yaxis, fontsize=fontsize,
-                          fontcolor=fontcolor)
-
-    if showcbar:
-        return fig, ax, im, cbar
-    else:
-        return fig, ax, im
+    return plot_map(im_lum, colors=im_col,
+                    extent=extent, vlim=vlim, clim=clim,
+                    logscale=logscale, clogscale=clogscale,
+                    units=units, cunits=cunits,
+                    surface_dens=surface_dens, csurf_dens=csurf_dens,
+                    cmap=cmap, normcmaplum=normcmaplum, desat=desat,
+                    ax=ax, showcbar=showcbar, cbartitle=cbartitle,
+                    scaleind=scaleind, scaleunits=scaleunits,
+                    fontcolor=fontcolor, fontsize=fontsize, im_alpha=im_alpha,
+                    xaxis=xaxis, yaxis=yaxis, subs=s,
+                    interpolation=interpolation, zero_is_white=zero_is_white)
 
 def phase_diagram(s, rho_units='g/cm**3', T_units='K',
                   T_threshold=None, rho_threshold=None,
