@@ -172,7 +172,7 @@ def gridbin(pnts, qty=None, bins=50, extent=None, normed=False, stats=None,
     gridded, edges, binnum = binned_statistic_dd(pnts, qty, range=extent,
                                                  statistic=stats, bins=bins)
     if extent is None:
-        extent = np.array( [e[(0,-1),] for e in edges] )
+        extent = np.array( [[e[0],e[-1]] for e in edges] )
 
     gridded = UnitArr(gridded)
     # if the values to bin have units, the result should as well
