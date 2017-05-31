@@ -10,7 +10,7 @@ Doctests:
     >>> s['vel'] -= UnitArr([-42.75,-15.60,-112.20],'km s**-1')
     load block vel... done.
     >>> ext = UnitArr( [[-200,200],[-200,200]], 'kpc' )
-    >>> m, px2 = map_qty(s.gas, ext, True, 'rho', Npx=128) # doctest: +ELLIPSIS
+    >>> m = map_qty(s.gas, ext, True, 'rho', Npx=128) # doctest: +ELLIPSIS
     load block rho... done.
     ...
     done with SPH grid

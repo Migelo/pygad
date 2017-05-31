@@ -134,21 +134,22 @@ def color_code(im_lum, im_col, cmap=CM_DEF, vlim=None, clim=None,
 
     return im
 
-def show_image(im, extent=None, cmap=CM_DEF, vlim=None, aspect=None,
+def show_image(m, extent=None, cmap=CM_DEF, vlim=None, aspect=None,
                interpolation='nearest', ax=None, **kwargs):
     '''
-    Show an image with the 'physicsit's orientation'.
+    Show a map or an image with the 'physicsit's orientation'.
 
-    The first axis of im is the x-direction and the second one the y-direction,
+    The first axis of `m` is the x-direction and the second one the y-direction,
     contrary to the default behaviour of plt.imshow.
 
     Args:
-        im (array-like):    The image to show. It can be a luminance image (shape
-                            (w,h)), a rgb-image (shape (w,h,3)) or a rgba-image
-                            (shape (w,h,4)).
-        extent (array-like):The ranges of the image. It can either be a sequence
-                            of four values (xmin,xmax,ymin,ymax) or an array-like,
-                            of the structure [[xmin,xmax],[ymin,ymax]].
+        m (Map, array-like):    The map/image to show. It can be a luminance image
+                                (shape (w,h)), a rgb-image (shape (w,h,3)) or a
+                                rgba-image (shape (w,h,4)).
+        extent (array-like):    The ranges of the image. It can either be a sequence
+                                of four values (xmin,xmax,ymin,ymax) or an
+                                array-like, of the structure
+                                [[xmin,xmax],[ymin,ymax]].
         cmap (str, Colormap):
                             The colormap to use, it a luminance image was passed.
                             Ignored otherwise.
@@ -169,8 +170,12 @@ def show_image(im, extent=None, cmap=CM_DEF, vlim=None, aspect=None,
         ax (AxesSubplot):   The axis plotted on.
         im (AxesImage):     The image instance created.
     '''
-    if len(im.shape)!=2 and not (len(im.shape)==3 and im.shape[-1] in [3,4]):
+    if len(m.shape)!=2 and not (len(m.shape)==3 and m.shape[-1] in [3,4]):
         raise ValueError('Image has to have shape (w,h), (w,h,3) or (w,h,4)!')
+    if extent is None:
+        extent = getattr(m,'extent',None)
+        if extent is None:
+            raise ValueError('No extent given and `m` is not a `Map`!')
 
     if ax is None:
         fig, ax = plt.subplots()
@@ -180,12 +185,12 @@ def show_image(im, extent=None, cmap=CM_DEF, vlim=None, aspect=None,
     if extent is not None:
         extent = np.asarray(extent).ravel()
 
-    if len(im.shape) == 2:
-        im = im.T
+    if len(m.shape) == 2:
+        m = m.T
     else:
-        im = np.dstack( [im[:,:,i].T for i in range(im.shape[-1])] )
+        m = np.dstack( [m[:,:,i].T for i in range(m.shape[-1])] )
 
-    im = ax.imshow(im, origin='lower', extent=extent,
+    im = ax.imshow(m, origin='lower', extent=extent,
                    cmap=cmap, vmin=vmin, vmax=vmax,
                    aspect=aspect, interpolation=interpolation, **kwargs)
 
