@@ -124,7 +124,7 @@ def plot_map(m, colors=None, extent=None, vlim=None, clim=None,
         scaleunits = getattr(extent,'units',None)
     else:
         scaleunits = Unit(scaleunits)
-        extent.convert_to(scaleunits, subs=subs)
+    extent.convert_to(scaleunits, subs=subs)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print 'plot a map - paramters:'
@@ -420,7 +420,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         surface_dens = False
 
     if scaleunits is None:
-        scaleunits = s['pos'].units
+        scaleunits = getattr(extent,'units',s['pos'].units)
     else:
         scaleunits = Unit(scaleunits)
 

@@ -406,9 +406,9 @@ def make_scale_indicators(ax, extent, scaleind='line', scaleunits=None,
         ax.get_yaxis().set_visible(False)
     elif scaleind == 'labels':
         if scaleunits is None:
-            units_txt = r' [$%s$]' % scaleunits.latex()
-        else:
             units_txt = ''
+        else:
+            units_txt = r' [$%s$]' % scaleunits.latex()
         x_label = r'$%s$%s' % ({0:'x',1:'y',2:'z'}[xaxis], units_txt)
         ax.set_xlabel(x_label, fontsize=fontsize)
         y_label = r'$%s$%s' % ({0:'x',1:'y',2:'z'}[yaxis], units_txt)
@@ -435,6 +435,7 @@ def make_scale_indicators(ax, extent, scaleind='line', scaleunits=None,
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
     else:
+        import warnings
         warnings.warn('Unknown scaling indicator scaleind="%s"!' % scaleind)
 
 def add_cbar(ax, cbartitle, clim, cmap=None, fontcolor='black', fontsize=14,
