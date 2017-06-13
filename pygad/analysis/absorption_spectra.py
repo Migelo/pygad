@@ -24,6 +24,12 @@ Doctests:
     ...                    [ 35000.,  35600.]], 'ckpc/h_0')
     >>> environment.verbose = environment.VERBOSE_QUIET
 
+    >>> l, tau = line_profile('H1215', '1e16 cm**-2', '1e4 K')
+    >>> tau[543]    # doctest: +ELLIPSIS
+    0.00172...
+    >>> EW(tau, l[1]-l[0])  # doctest: +ELLIPSIS
+    UnitArr(0.2787..., units="Angstrom")
+
     Broadly following Oppenheimer & Dave (2009) for the OVI turbulent broadening
     (adding the minimum of 100 km/s):
     >>> nH = s.gas.get('rho * H/mass / m_H').in_units_of('cm**-3')
@@ -82,8 +88,9 @@ Doctests:
     >>> environment.verbose = environment.VERBOSE_NORMAL
 """
 __all__ = ['mock_absorption_spectrum_of', 'mock_absorption_spectrum',
-           'EW', 'Voigt', 'Gaussian', 'Lorentzian', 'find_line_contributers',
-           'velocities_to_redshifts', 'redshifts_to_velocities',
+           'EW', 'Voigt', 'Gaussian', 'Lorentzian', 'line_profile',
+           'find_line_contributers', 'velocities_to_redshifts',
+           'redshifts_to_velocities',
            ]
 
 from ..units import Unit, UnitArr, UnitQty, UnitScalar
@@ -246,6 +253,80 @@ def Voigt(x, sigma, gamma):
     from scipy.special import wofz
     z = (x + 1j*gamma) / (sigma * np.sqrt(2.))
     return np.real(wofz(z)) / ( sigma * np.sqrt(2.*np.pi) )
+
+def line_profile(line, N, T, lim=None, bins=1000, mode='Voigt'):
+    '''
+    Calculate the theoretical line profile of a non-moving slice of
+    homogenous gas with constant temperature and given column density.
+
+    Args:
+        line (str):     The line name as listed in
+                        `analysis.absorption_spectra.lines`.
+        N (UnitScalar): The column density of the slice. Can either bin in
+                        particles per area (e.g. 'cm**-2') or in mass per
+                        area (e.g. 'g cm**-2').
+        T (UnitScalar): The temperature of the slice.
+        lim (UnitQty):  The limits of the spectrum in wavelength. If one of
+                        the values is negative, they are taken to be realtive
+                        to the line center.
+                        Defaults to +-5 Angstrom around the line center.
+        bins (int):     The number of evenly spread points in the
+                        spectrum.
+        mode (str):     What profile to use:
+                        'Gaussian', 'thermal', 'Doppler':
+                            Take just the thermal broadening into account,
+                            which produces a Gaussian profile of the optical
+                            depths.
+                        'Lorentzian', 'natural', 'intrinsic':
+                            Take just the natural/instrinsic line width into
+                            account, which produces a Lorentzian profile of
+                            the optical depth.
+                        'Voigt', 'full':
+                            Generate the full Voigt profile of the convolution
+                            of the above two profiles.
+
+    Returns:
+        l (UnitArr):        The wavelengths of the sprectrum.
+        tau (np.ndarray):   The optical depth at the given wavelengths.
+    '''
+    from pygad.physics import q_e, epsilon0, m_e, c, kB
+    if isinstance(line,str):
+        line = lines[line]
+    atomwt, f, l0 = map(UnitScalar,
+            [line['atomwt'], line['f'], line['l']])
+    A_ki = UnitScalar(line.get('A_ki',0.0), 'Hz')
+    l0.convert_to('Angstrom')
+    lim = UnitQty([-5,5] if lim is None else lim, 'Angstrom', dtype=float)
+    if np.any(lim < 0):
+        lim += l0
+    N, T = map(UnitScalar, [N,T])
+    try:
+        N = N.in_units_of('cm**-2')
+    except:
+        N = (N / atomwt).in_units_of('cm**-2')
+    sigma0 = f * q_e**2 / (4. * epsilon0 * m_e * c )
+    sigma0.convert_to('cm**2 / s')
+    b = np.sqrt( 2. * kB * T / atomwt ).in_units_of('km/s')
+
+    l = UnitArr( np.linspace( lim[0], lim[1], bins ), lim.units )
+    nu = (c/l).in_units_of('Hz')
+    nu0 = (c/l0).in_units_of('Hz')
+    x = (nu-nu0).view(np.ndarray)
+    sigma = (b/l0/np.sqrt(2)).in_units_of('Hz').view(np.ndarray)
+    gamma = (A_ki/(4.*np.pi)).in_units_of('Hz').view(np.ndarray)
+    if mode in ['Voigt','full']:
+        phi = Voigt(x, sigma, gamma)
+    elif mode in ['Gaussian','thermal','Doppler']:
+        phi = Gaussian(x, sigma)
+    elif mode in ['Lorentzian','natural','intrinsic']:
+        phi = Lorentzian(x, gamma)
+    else:
+        raise ValueError('Unknown mode "%s"' % mode)
+    phi = UnitArr(phi, '1/Hz')
+    tau = sigma0 * phi * N
+    tau.convert_to(1)
+
+    return l, tau.view(np.ndarray)
 
 def find_line_contributers(s, los, line, vel_extent, threshold=0.95,
                            EW_space='wavelength', **kwargs):
@@ -841,16 +922,25 @@ def EW(taus, edges):
     
     Args:
         taus (array-like):  The optical depths in the bins.
-        edges (UnitQty):    The edges of the bins. May (/should) have units.
+        edges (UnitQty):    The edges of the bins. May and should have units,
+                            otherwise it is assumed to be in units of Angstrom.
+                            If it is a scalar, it is assumed to be the constant
+                            width of the bins.
 
     Returns:
         EW (float, UnitScalar):     The equivalent width in the given space (i.e.
                                     the units of the edges).
     '''
-    if len(taus)+1 != len(edges):
+    edges = UnitQty(edges)
+    if edges.units in [1,None]:
+        edges = UnitArr(edges, 'Angstrom')
+    if edges.shape!=tuple() and len(taus)+1 != len(edges):
         raise ValueError("The length of the edges does not match the length of " +
                          "the optical depths!")
-    EW = np.sum( (1.0 - np.exp(-np.asarray(taus))) * (edges[1:]-edges[:-1]) )
+    if edges.shape == tuple():
+        EW = edges * np.sum( (1.0 - np.exp(-np.asarray(taus))) )
+    else:
+        EW = np.sum( (1.0 - np.exp(-np.asarray(taus))) * (edges[1:]-edges[:-1]) )
     return EW
 
 def velocities_to_redshifts(vs, z0=0.0):
