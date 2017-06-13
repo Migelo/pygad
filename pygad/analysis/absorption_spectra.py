@@ -24,6 +24,8 @@ Doctests:
     ...                    [ 35000.,  35600.]], 'ckpc/h_0')
     >>> environment.verbose = environment.VERBOSE_QUIET
 
+    >>> b_param('H1215', '1e4 K')   # doctest: +ELLIPSIS
+    UnitArr(12.8444..., units="km s**-1")
     >>> l, tau = line_profile('H1215', '1e16 cm**-2', '1e4 K')
     >>> tau[543]    # doctest: +ELLIPSIS
     0.00172...
@@ -88,7 +90,7 @@ Doctests:
     >>> environment.verbose = environment.VERBOSE_NORMAL
 """
 __all__ = ['mock_absorption_spectrum_of', 'mock_absorption_spectrum',
-           'EW', 'Voigt', 'Gaussian', 'Lorentzian', 'line_profile',
+           'EW', 'Voigt', 'Gaussian', 'Lorentzian', 'b_param', 'line_profile',
            'find_line_contributers', 'velocities_to_redshifts',
            'redshifts_to_velocities',
            ]
@@ -254,6 +256,14 @@ def Voigt(x, sigma, gamma):
     z = (x + 1j*gamma) / (sigma * np.sqrt(2.))
     return np.real(wofz(z)) / ( sigma * np.sqrt(2.*np.pi) )
 
+def b_param(line, T, units='km/s'):
+    '''Calculate the thermal Doppler b-parameter for given line and temperature.'''
+    if isinstance(line,str):
+        line = lines[line]
+    atomwt = UnitScalar(line['atomwt'])
+    b = np.sqrt( 2. * kB * T / atomwt ).in_units_of(units)
+    return b
+
 def line_profile(line, N, T, lim=None, bins=1000, mode='Voigt'):
     '''
     Calculate the theoretical line profile of a non-moving slice of
@@ -289,7 +299,6 @@ def line_profile(line, N, T, lim=None, bins=1000, mode='Voigt'):
         l (UnitArr):        The wavelengths of the sprectrum.
         tau (np.ndarray):   The optical depth at the given wavelengths.
     '''
-    from pygad.physics import q_e, epsilon0, m_e, c, kB
     if isinstance(line,str):
         line = lines[line]
     atomwt, f, l0 = map(UnitScalar,
