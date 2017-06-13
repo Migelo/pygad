@@ -398,7 +398,7 @@ class UnitArr(np.ndarray):
             r += ')'
         else:
             if val is None:
-                r = np.ndarray.__repr__(self)
+                r = repr(self.view(np.ndarray))
                 r = r[r.find('('):].replace('\n', '\n  ')
             else:
                 r = '(' + str(val) + ')'
