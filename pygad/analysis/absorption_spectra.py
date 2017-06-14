@@ -24,9 +24,9 @@ Doctests:
     ...                    [ 35000.,  35600.]], 'ckpc/h_0')
     >>> environment.verbose = environment.VERBOSE_QUIET
 
-    >>> b_param('H1215', '1e4 K')   # doctest: +ELLIPSIS
+    >>> thermal_b_param('H1215', '1e4 K')   # doctest: +ELLIPSIS
     UnitArr(12.8444..., units="km s**-1")
-    >>> l, tau = line_profile('H1215', '1e16 cm**-2', '1e4 K')
+    >>> l, tau = line_profile(line='H1215', N='1e16 cm**-2', T='1e4 K')
     >>> tau[543]    # doctest: +ELLIPSIS
     0.00172...
     >>> EW(tau, l[1]-l[0])  # doctest: +ELLIPSIS
@@ -90,7 +90,8 @@ Doctests:
     >>> environment.verbose = environment.VERBOSE_NORMAL
 """
 __all__ = ['mock_absorption_spectrum_of', 'mock_absorption_spectrum',
-           'EW', 'Voigt', 'Gaussian', 'Lorentzian', 'b_param', 'line_profile',
+           'EW', 'Voigt', 'Gaussian', 'Lorentzian', 'thermal_b_param',
+           'line_profile',
            'find_line_contributers', 'velocities_to_redshifts',
            'redshifts_to_velocities',
            ]
@@ -256,7 +257,7 @@ def Voigt(x, sigma, gamma):
     z = (x + 1j*gamma) / (sigma * np.sqrt(2.))
     return np.real(wofz(z)) / ( sigma * np.sqrt(2.*np.pi) )
 
-def b_param(line, T, units='km/s'):
+def thermal_b_param(line, T, units='km/s'):
     '''Calculate the thermal Doppler b-parameter for given line and temperature.'''
     if isinstance(line,str):
         line = lines[line]
@@ -264,7 +265,7 @@ def b_param(line, T, units='km/s'):
     b = np.sqrt( 2. * kB * T / atomwt ).in_units_of(units)
     return b
 
-def line_profile(line, N, T, lim=None, bins=1000, mode='Voigt'):
+def line_profile(line, N, T, b=None, lim=None, bins=1000, mode='Voigt'):
     '''
     Calculate the theoretical line profile of a non-moving slice of
     homogenous gas with constant temperature and given column density.
@@ -276,6 +277,9 @@ def line_profile(line, N, T, lim=None, bins=1000, mode='Voigt'):
                         particles per area (e.g. 'cm**-2') or in mass per
                         area (e.g. 'g cm**-2').
         T (UnitScalar): The temperature of the slice.
+        b (UnitScalar): The b-parameter. If give, `T` is ignore, which
+                        otherwise would translate into a thermal b-parameter.
+                        (Units default to 'km/s'.)
         lim (UnitQty):  The limits of the spectrum in wavelength. If one of
                         the values is negative, they are taken to be realtive
                         to the line center.
@@ -308,14 +312,18 @@ def line_profile(line, N, T, lim=None, bins=1000, mode='Voigt'):
     lim = UnitQty([-5,5] if lim is None else lim, 'Angstrom', dtype=float)
     if np.any(lim < 0):
         lim += l0
-    N, T = map(UnitScalar, [N,T])
+    N = UnitScalar(N)
     try:
         N = N.in_units_of('cm**-2')
     except:
         N = (N / atomwt).in_units_of('cm**-2')
     sigma0 = f * q_e**2 / (4. * epsilon0 * m_e * c )
     sigma0.convert_to('cm**2 / s')
-    b = np.sqrt( 2. * kB * T / atomwt ).in_units_of('km/s')
+    if b is None:
+        T = UnitScalar(T, 'K')
+        b = thermal_b_param(line, T, 'km/s')
+    else:
+        b = UnitScalar(b, 'km/s')
 
     l = UnitArr( np.linspace( lim[0], lim[1], bins ), lim.units )
     nu = (c/l).in_units_of('Hz')
