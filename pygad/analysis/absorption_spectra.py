@@ -24,9 +24,9 @@ Doctests:
     ...                    [ 35000.,  35600.]], 'ckpc/h_0')
     >>> environment.verbose = environment.VERBOSE_QUIET
 
-    >>> b_param('H1215', '1e4 K')   # doctest: +ELLIPSIS
+    >>> thermal_b_param('H1215', '1e4 K')   # doctest: +ELLIPSIS
     UnitArr(12.8444..., units="km s**-1")
-    >>> l, tau = line_profile('H1215', '1e16 cm**-2', '1e4 K')
+    >>> l, tau = line_profile(line='H1215', N='1e16 cm**-2', T='1e4 K')
     >>> tau[543]    # doctest: +ELLIPSIS
     0.00172...
     >>> EW(tau, l[1]-l[0])  # doctest: +ELLIPSIS
@@ -90,7 +90,8 @@ Doctests:
     >>> environment.verbose = environment.VERBOSE_NORMAL
 """
 __all__ = ['mock_absorption_spectrum_of', 'mock_absorption_spectrum',
-           'EW', 'Voigt', 'Gaussian', 'Lorentzian', 'b_param', 'line_profile',
+           'EW', 'Voigt', 'Gaussian', 'Lorentzian', 'thermal_b_param',
+           'line_profile', 'curve_of_growth', 'fit_Voigt',
            'find_line_contributers', 'velocities_to_redshifts',
            'redshifts_to_velocities',
            ]
@@ -256,7 +257,7 @@ def Voigt(x, sigma, gamma):
     z = (x + 1j*gamma) / (sigma * np.sqrt(2.))
     return np.real(wofz(z)) / ( sigma * np.sqrt(2.*np.pi) )
 
-def b_param(line, T, units='km/s'):
+def thermal_b_param(line, T, units='km/s'):
     '''Calculate the thermal Doppler b-parameter for given line and temperature.'''
     if isinstance(line,str):
         line = lines[line]
@@ -264,7 +265,7 @@ def b_param(line, T, units='km/s'):
     b = np.sqrt( 2. * kB * T / atomwt ).in_units_of(units)
     return b
 
-def line_profile(line, N, T, lim=None, bins=1000, mode='Voigt'):
+def line_profile(line, N, T, b=None, lim=None, bins=1000, mode='Voigt'):
     '''
     Calculate the theoretical line profile of a non-moving slice of
     homogenous gas with constant temperature and given column density.
@@ -276,6 +277,9 @@ def line_profile(line, N, T, lim=None, bins=1000, mode='Voigt'):
                         particles per area (e.g. 'cm**-2') or in mass per
                         area (e.g. 'g cm**-2').
         T (UnitScalar): The temperature of the slice.
+        b (UnitScalar): The b-parameter. If give, `T` is ignore, which
+                        otherwise would translate into a thermal b-parameter.
+                        (Units default to 'km/s'.)
         lim (UnitQty):  The limits of the spectrum in wavelength. If one of
                         the values is negative, they are taken to be realtive
                         to the line center.
@@ -308,14 +312,18 @@ def line_profile(line, N, T, lim=None, bins=1000, mode='Voigt'):
     lim = UnitQty([-5,5] if lim is None else lim, 'Angstrom', dtype=float)
     if np.any(lim < 0):
         lim += l0
-    N, T = map(UnitScalar, [N,T])
+    N = UnitScalar(N)
     try:
         N = N.in_units_of('cm**-2')
     except:
         N = (N / atomwt).in_units_of('cm**-2')
     sigma0 = f * q_e**2 / (4. * epsilon0 * m_e * c )
     sigma0.convert_to('cm**2 / s')
-    b = np.sqrt( 2. * kB * T / atomwt ).in_units_of('km/s')
+    if b is None:
+        T = UnitScalar(T, 'K')
+        b = thermal_b_param(line, T, 'km/s')
+    else:
+        b = UnitScalar(b, 'km/s')
 
     l = UnitArr( np.linspace( lim[0], lim[1], bins ), lim.units )
     nu = (c/l).in_units_of('Hz')
@@ -336,6 +344,104 @@ def line_profile(line, N, T, lim=None, bins=1000, mode='Voigt'):
     tau.convert_to(1)
 
     return l, tau.view(np.ndarray)
+
+def curve_of_growth(line, b, Nlim=(10,21), bins=30):
+    '''
+    Calculate the curve of growth for homogeneous gas.
+
+    Args:
+        line (str):         The line to calculate the curve of growth for
+                            as listed in `analysis.absorption_spectra.lines`.
+        b (UnitScalar):     The b-parameter which is relevant in the flat part.
+                            You might want to use `thermal_b_param` here.
+        Nlim (arraly-like): The limits in logarithmic column density in units of
+                            particles per cm**2.
+        bins (int):         The number of evaltuation points in the given range
+                            of column densities (equi-distant in log-space).
+
+    Returns:
+        N (UnitQty):        The (linear) column densities at which the EW were
+                            evaluated.
+        EW (UnitQty):       The equivalent widths at the given column densities.
+    '''
+    if isinstance(line,str):
+        line = lines[line]
+    l0 = UnitScalar( line['l'] )
+    N = UnitArr( np.logspace(Nlim[0], Nlim[1], int(bins)), 'cm**-2')
+    ew = UnitArr( np.empty(len(N)), 'Angstrom' )
+    for i,N_ in enumerate(N):
+        lim, bins = [-0.5,0.5], 300
+        tau = [1,1]
+        while tau[0] > 1e-3 or tau[-1] > 1e-3:
+            lim_ = l0 + np.array(lim)
+            l, tau = line_profile(line,
+                    '%g cm**-2' % N_, None, b, lim=lim_, bins=bins)
+            lim, bins = [2*lim[0], 2*lim[1]], 2*bins
+        dl = UnitArr(l[1]-l[0], l.units)
+        l_edges = UnitArr(np.empty(len(l)+1), l.units)
+        l_edges[:-1] = l-dl/2.
+        l_edges[-1] = l_edges[-2]+dl
+        ew[i] = EW(tau, l_edges)
+    return N, ew
+
+def fit_Voigt(l, flux, line, Nlim=(8,22), blim=(0,200), bins=(57,41)):
+    '''
+    Fit a single Voigt profile to the given line.
+
+    Args:
+        l (UnitQty):        The wavelengths of the given relative fluxes.
+                            Shall be equi-distant positions.
+        flux (array-like):  The relative flux at the given wavelengths, i.e.
+                            the spectrum to fit.
+        line (str):         The line to fit as listed in
+                            `analysis.absorption_spectra.lines`.
+        Nlim (array-like):  The limits in logarithmic column density to test
+                            in units of log10(cm**-2).
+        blim (UnitQty):     The b-parameter limits to test.
+        bins (int, tuple):  The number of bins in column density (log-spaced)
+                            and b-parameter (lin-spaced).
+
+    Returns:
+        N (UnitScalar):     The best fit column density.
+        b (UnitScalar):     The best fit b-parameter (of the Voigt profile).
+        dl (UnitScalar):    The shift from the rest-frame wavelength of the fit.
+        errs (UnitQty):     The integrateed squared differences of fit
+                            and given spectrum.
+    '''
+    if isinstance(line,str):
+        line = lines[line]
+    Nlim = np.array(Nlim)
+    blim = UnitQty(blim, 'km/s')
+    l = UnitQty(l, 'Angstrom')
+    flux = np.array(flux, dtype=float)
+    if isinstance(bins,int):
+        bins = [bins,bins]
+    bins = np.array(bins, dtype=int)
+    if not bins.shape == (2,):
+        raise ValueError('`bins` needs to be scalar or 2-tuple.')
+
+    l0_line = UnitArr( line['l'], l.units )
+    l0 = np.average( l, weights=1.-flux )
+    dl = l0_line - l0
+    l_lim = UnitArr( [l[0]+dl,l[-1]+dl], l.units)
+    def err(N,b):
+        _, tau = line_profile(line, N, None, b=b,
+                              lim=l_lim, bins=len(flux))
+        return np.sum( (np.exp(-tau) - flux)**2 )
+
+    errs = np.empty( tuple(bins), dtype=float )
+    Ns = np.logspace(Nlim[0], Nlim[1], bins[0])
+    bs = np.linspace(blim[0], blim[1], bins[1])
+    for i,N in enumerate(Ns):
+        for j,b in enumerate(bs):
+            errs[i,j] = err(N,b)
+    finite = np.isfinite(errs)
+    errs[ ~finite ] = np.inf
+
+    i = np.unravel_index( np.argmin(errs), errs.shape )
+    N, b = Ns[i[0]], bs[i[1]]
+
+    return UnitArr(N,'cm**-2'), UnitArr(b,'km/s'), dl, errs * dl
 
 def find_line_contributers(s, los, line, vel_extent, threshold=0.95,
                            EW_space='wavelength', **kwargs):
