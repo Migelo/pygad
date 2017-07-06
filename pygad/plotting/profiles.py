@@ -93,10 +93,11 @@ def profile(s, Rmax, qty, av=None, units=None, dens=True, proj=None,
         if isinstance(av,(str,unicode)):
             name += str(av) + '-weighted '
         if dens:
+            name = r'$\Sigma' if proj else r'$\rho'
             if isinstance(qty,(str,unicode)) and qty!='mass':
-                name += r'$\Sigma_\mathrm{%s}$' % str(qty)
+                name += r'_\mathrm{%s}$' % str(qty)
             else:
-                name += r'$\Sigma$'
+                name += r'$'
         else:
             name += str(qty) if isinstance(qty,(str,unicode)) else ''
         ylabel = r'%s [$%s$]' % (name, prof.units.latex())

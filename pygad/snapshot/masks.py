@@ -452,7 +452,7 @@ class ExprMask(SnapMask):
     def expr(self, expr):
         if not isinstance(expr, (str,unicode)):
             raise ValueError('`expr` must be a string')
-        self._expr = expr
+        self._expr = expr.strip()
 
     def inverted(self):
         inv = ExprMask(self._expr)
