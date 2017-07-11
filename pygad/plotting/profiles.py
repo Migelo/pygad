@@ -16,8 +16,8 @@ from .. import physics
 import sys
 
 def profile(s, Rmax, qty, av=None, units=None, dens=True, proj=None,
-            N=50, logbin=False, minlog=None, ylabel=None, labelsize=14, ax=None,
-            **kwargs):
+            N=50, logbin=False, minlog=None, logscale=True, ylabel=None,
+            labelsize=14, ax=None, **kwargs):
     '''
     Plot a profile.
 
@@ -40,6 +40,7 @@ def profile(s, Rmax, qty, av=None, units=None, dens=True, proj=None,
         minlog (UnitScalar):If logbin==True, this is the smallest bin edge (there
                             is one between 0 and this value, though).
                             Default: Rmax/100.
+        logscale (bool):    Whether to plot y-values in log-scale.
         ylabel (str):       A custom y-axis label.
         labelsize (int):    The font size of the labels. The tick size will get
                             adjusted accordingly.
@@ -83,7 +84,8 @@ def profile(s, Rmax, qty, av=None, units=None, dens=True, proj=None,
 
     if logbin:
         ax.set_xscale('log')
-    ax.set_yscale('log')
+    if logscale:
+        ax.set_yscale('log')
 
     ax.set_xlabel(r'$%s$ [$%s$]' % ('r' if proj is None else 'R',
                                     s['pos'].units.latex()),

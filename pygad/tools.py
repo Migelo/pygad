@@ -630,7 +630,8 @@ def fill_gas_from_traced(snap, data, add_blocks='all', add_derived=True,
                             the trace data stored in blocks. The function
                             `fill_derived_gas_trace_qty` is used for that.
         units (dict):       The units to use for masses, lengths, etc..
-        invalid (bool):     The value to fill invalid entries with. Such entries
+        invalid (float/NaN/inf):
+                            The value to fill invalid entries with. Such entries
                             are properties of cycles that did not happen for a
                             given particle.
     '''
@@ -853,7 +854,8 @@ def fill_derived_gas_trace_qty(snap, units=None, invalid=0.0):
                             at z=0 of the simulation used to create the trace
                             file).
         units (dict):       The units to use for masses, lengths, etc..
-        invalid (bool):     The value to fill invalid entries with. Such entries
+        invalid (float/NaN/inf):
+                            The value to fill invalid entries with. Such entries
                             are properties of cycles that did not happen for a
                             given particle.
     """
