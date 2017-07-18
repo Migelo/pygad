@@ -608,7 +608,7 @@ def fill_gas_from_traced(snap, data, add_blocks='all', add_derived=True,
       "mass_at_infall", "metals_at_infall", "jz_at_infall", "T_at_infall",
       "ejection_a", "ejection_time",
       "mass_at_ejection", "metals_at_ejection", "jz_at_ejection", "T_at_ejection",
-      "cycle_r_max", "cycle_z_max",
+      "cycle_r_max_at", "cycle_r_max", "cycle_z_max_at", "cycle_z_max",
     For the addtional derived blocks see `fill_derived_gas_trace_qty`.
 
     Note:
@@ -630,6 +630,8 @@ def fill_gas_from_traced(snap, data, add_blocks='all', add_derived=True,
                             the trace data stored in blocks. The function
                             `fill_derived_gas_trace_qty` is used for that.
         units (dict):       The units to use for masses, lengths, etc..
+                            Defaults to: {'TIME':'a_form', 'MASS':'Msol',
+                                          'TEMP':'K', 'ANGMOM':None, 'POS':'kpc'}
         invalid (float/NaN/inf):
                             The value to fill invalid entries with. Such entries
                             are properties of cycles that did not happen for a
@@ -643,7 +645,7 @@ def fill_gas_from_traced(snap, data, add_blocks='all', add_derived=True,
                       "mass_at_infall", "metals_at_infall", "jz_at_infall", "T_at_infall",
                       "ejection_a", "ejection_time",
                       "mass_at_ejection", "metals_at_ejection", "jz_at_ejection", "T_at_ejection",
-                      "cycle_r_max", "cycle_z_max",
+                      "cycle_r_max_at", "cycle_r_max", "cycle_z_max_at", "cycle_z_max",
         ]
     if isinstance(add_blocks, (str,unicode)):
         add_blocks = (add_blocks,)
@@ -811,8 +813,10 @@ def fill_gas_from_traced(snap, data, add_blocks='all', add_derived=True,
 
     # for each cycle ther is a maximum travel distance, plus one more for those
     # particles that are outside the region: store them
-    for name,idx,unit in [('cycle_r_max', 1, units['POS']),
-                          ('cycle_z_max', 3, units['POS'])]:
+    for name,idx,unit in [('cycle_r_max_at', 0, units['TIME']),
+                          ('cycle_r_max',    1, units['POS']),
+                          ('cycle_z_max_at', 2, units['TIME']),
+                          ('cycle_z_max',    3, units['POS'])]:
         if name not in add_blocks:
             continue
         pos = np.array( [[e[idx] for e in i[3:3+3*n:3]] +
