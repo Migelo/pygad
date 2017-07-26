@@ -428,7 +428,10 @@ def make_scale_indicators(ax, extent, scaleind='line', scaleunits=None,
         from matplotlib.font_manager import FontProperties
         fp = FontProperties(size=0.9*fontsize)
         asb =  AnchoredSizeBar(ax.transData, scale,
-                               r'%g $%s$' % (scale, width.units.latex()),
+                               r'%g%s' % (scale,
+                                   ' $%s$'%width.units.latex()
+                                        if getattr(width,'units',None) is not None
+                                        else ''),
                                loc=3, pad=0.1, borderpad=0.7, sep=12,
                                frameon=False, color=fontcolor, fontproperties=fp)
         ax.add_artist(asb)
