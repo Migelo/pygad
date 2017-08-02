@@ -7,6 +7,7 @@ __all__ = ['config_ion_table', 'IonisationTable']
 from .. import environment
 from ..units import Unit, UnitQty
 from .. import gadget
+from .. import physics
 import numpy as np
 import copy
 import re
@@ -26,6 +27,8 @@ def config_ion_table(redshift):
     from ..snapshot.derived import iontable
     if iontable['tabledir'] is None:
         raise RuntimeError('No Cloudy table directory defined in `derived.cfg`!')
+
+    #for old style Oppenheimer tables:
     nH_vals = iontable['nH_vals']
     nH_vals = np.linspace(nH_vals[0],
                           nH_vals[0] + nH_vals[1]*(nH_vals[2]-1),
@@ -34,13 +37,15 @@ def config_ion_table(redshift):
     T_vals = np.linspace(T_vals[0],
                          T_vals[0] + T_vals[1]*(T_vals[2]-1),
                          T_vals[2])
+
     iontbl = IonisationTable(redshift,
-                             nH=nH_vals,
-                             T=T_vals,
-                             ions=iontable['ions'],
                              tabledir=iontable['tabledir'],
                              table_pattern=iontable['pattern'],
-                             flux_factor=iontable['flux_factor'])
+                             flux_factor=iontable['flux_factor'],
+                             style=iontable['style'],
+                             nH=nH_vals,
+                             T=T_vals,
+                             ions=iontable.get('ions',[]))
     return iontbl
 
 class IonisationTable(object):
@@ -55,11 +60,6 @@ class IonisationTable(object):
         redshift (float):       The redshift to create the table for. The two
                                 tables inbetween which the redshift is are loaded
                                 and linearly interpolated.
-        nH (array-like):        The Hydrogen number densities of the grid points
-                                in units of log10(cm^-3).
-        T (array-like):         The temperatures for the grid points in units of
-                                log10(K).
-        ions (iterable):        The names of the ions in the table.
         tabledir (str):         The directory where all the tables are located.
         table_pattern (str):    The pattern of the table file names. It is their
                                 filename with '<z>' where the redshift is encoded.
@@ -70,14 +70,33 @@ class IonisationTable(object):
                                 (Note: `sigHI` used in the Rahmati fitting formula
                                 needed for an approximation of self-shielding is
                                 not adjusted!)
+        style (str):            Either 'Oppenheimer old' or 'Oppenheimer new'.
+        nH (array-like):        The Hydrogen number densities of the grid points
+                                in units of log10(cm^-3).
+        T (array-like):         The temperatures for the grid points in units of
+                                log10(K).
+        ions (iterable):        The names of the ions in the table.
     '''
 
-    def __init__(self, redshift, nH, T, ions, tabledir,
-                 table_pattern='lt<z>f10', flux_factor=1.0):
-        nH = np.asarray(nH)
-        T = np.asarray(T)
-        if nH.ndim!=1 or T.ndim!=1:
-            raise ValueError('`nH` and `T` need 1-dim., see docs!')
+    def __init__(self, redshift, tabledir,
+                 table_pattern='lt<z>f10', flux_factor=1.0,
+                 style='Oppenheimer new', nH=None, T=None, ions=None):
+        if style not in ['Oppenheimer old', 'Oppenheimer new']:
+            raise ValueError('Unknown style "%s"!' % style)
+        self._style = style
+
+        if style == 'Oppenheimer old':
+            nH = np.asarray(nH)
+            T = np.asarray(T)
+            if nH.ndim!=1 or T.ndim!=1:
+                raise ValueError('`nH` and `T` need 1-dim., see docs!')
+            self._nH_vals = nH.copy()
+            self._T_vals = T.copy()
+            self._ions = list(ions)
+        else:
+            self._nH_vals = None
+            self._T_vals = None
+            self._ions = None
         if table_pattern.count('<z>') != 1:
             raise ValueError('The table pattern has to have exactly one ' +
                              'occurrence of "<z>"!')
@@ -85,9 +104,6 @@ class IonisationTable(object):
         self._redshift = float(redshift)
         self._tabledir = tabledir
         self._pattern = table_pattern
-        self._nH_vals = nH.copy()
-        self._T_vals = T.copy()
-        self._ions = list(ions)
         self._table = self._get_table()
         self.flux_factor = flux_factor
 
@@ -274,17 +290,55 @@ class IonisationTable(object):
         return f
 
     def _read_cloudy_table(self, filename):
-        table = np.loadtxt(filename)
-        if len(self._nH_vals) * len(self._T_vals) != table.shape[0]:
-            raise ValueError("table size (%d) " % table.shape[0] +
-                             "does not match the grid given " +
-                             "(%dx%d)!" % (len(self._nH_vals),len(self._T_vals)))
-        if len(self._ions) != table.shape[1]:
-            raise ValueError("table column size (%d) " % table.shape[1] +
-                             "does not match the number of ions " +
-                             "(%d)!" % len(self._ions))
-        return table.reshape( (len(self._nH_vals), len(self._T_vals),
-                               table.shape[1]) )
+        if self._style == 'Oppenheimer old':
+            tbl = np.loadtxt(filename)
+            if len(self._nH_vals) * len(self._T_vals) != tbl.shape[0]:
+                raise ValueError("table size (%d) " % tbl.shape[0] +
+                                 "does not match the grid given " +
+                                 "(%dx%d)!" % (len(self._nH_vals),len(self._T_vals)))
+            if len(self._ions) != tbl.shape[1]:
+                raise ValueError("table column size (%d) " % tbl.shape[1] +
+                                 "does not match the number of ions " +
+                                 "(%d)!" % len(self._ions))
+            tbl = tbl.reshape( (len(self._nH_vals), len(self._T_vals),
+                                tbl.shape[1]) )
+            redshift    = None
+            nH_vals     = self._nH_vals
+            T_vals      = self._T_vals
+            short_ions  = self._ions
+        elif self._style == 'Oppenheimer new':
+            tbl = np.loadtxt(filename, skiprows=1)
+            with open(filename, 'r') as f:
+                head = f.readline().strip().strip('#')
+            head = head.split()
+            if len(head)-2!=tbl.shape[1] or head[-2]!='redshift=' or \
+                    head[:2]!=['Hdens', 'Temp']:
+                raise ValueError('Head of table "%s" of unexpected format!' % filename)
+
+            redshift = float(head[-1])
+            ions = head[2:-2]
+            short_ions = []
+            for ion in ions:
+                i = [n for n,c in enumerate(ion) if c.isupper()][1]
+                abb_el, state = ion[:i], ion[i:]
+                # element name might be abbreviated, if ion name is to long otherwise
+                el = None
+                for full_el, short in physics.cooling.SHORT_ELEMENT_NAME.iteritems():
+                    if full_el[:len(abb_el)] == abb_el:
+                        el = short
+                        break
+                if el is None:
+                    raise RuntimeError('Short name of "%s[...]" not found!' % abb_el)
+                short_ions.append(el+' '+state)
+
+            nH_vals, cnts = np.unique(tbl[:,0], return_counts=True)
+            if np.any( cnts != cnts[0]) or np.any(tbl[:cnts[0],0]!=tbl[0,0]):
+                raise RuntimeError('Table "%s" of unexpected format!' % filename)
+            T_vals,  cnts = np.unique(tbl[:,1], return_counts=True)
+            if np.any(cnts!=cnts[0]) or cnts[0]!=len(nH_vals) or len(cnts)!=len(T_vals):
+                raise RuntimeError('Table "%s" of unexpected format!' % filename)
+            tbl = tbl[:,2:].reshape((len(nH_vals),len(T_vals),len(ions)))
+        return redshift, nH_vals, T_vals, short_ions, tbl
 
     def _get_table(self):
         # find all the available tables
@@ -316,14 +370,34 @@ class IonisationTable(object):
             if environment.verbose >= environment.VERBOSE_NORMAL:
                 print 'load table:'
                 print '  "%s" (z=%.3f)' % (tables[z], z)
-            table = self._read_cloudy_table(tables[z])
+            redshift, nH_vals, T_vals, ions, table = \
+                    self._read_cloudy_table(tables[z])
+            if self._style == 'Oppenheimer new':
+                assert np.isclose(redshift, z)
+                self._nH_vals = nH_vals
+                self._T_vals = T_vals
+                self._ions = ions
         else:
             if environment.verbose >= environment.VERBOSE_NORMAL:
                 print 'load tables:'
                 print '  "%s" (z=%.3f)' % (tables[z1], z1)
                 print '  "%s" (z=%.3f)' % (tables[z2], z2)
-            table1 = self._read_cloudy_table(tables[z1])
-            table2 = self._read_cloudy_table(tables[z2])
+            redshift1, nH_vals1, T_vals1, ions1, table1 = \
+                    self._read_cloudy_table(tables[z1])
+            redshift2, nH_vals2, T_vals2, ions2, table2 = \
+                    self._read_cloudy_table(tables[z2])
+            if self._style == 'Oppenheimer new':
+                assert np.isclose(redshift1, z1)
+                assert np.isclose(redshift2, z2)
+                if not np.allclose( nH_vals1 == nH_vals2 ):
+                    raise RuntimeError('nH values in tables do not match!')
+                if not np.allclose( T_vals1 == T_vals2 ):
+                    raise RuntimeError('T values in tables do not match!')
+                if not np.all( ions1 == ions2 ):
+                    raise RuntimeError('Ions in tables do not match!')
+                self._nH_vals = nH_vals1
+                self._T_vals  = T_vals1
+                self._ions    = ions1
             a = (self._redshift - z1) / (z2 - z1)
             table = (1.-a) * table1 + a * table2
 

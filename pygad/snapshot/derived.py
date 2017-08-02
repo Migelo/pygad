@@ -56,12 +56,13 @@ general = {
 }
 iontable = {
         'tabledir':     None,
-        'pattern':      'lt<z>f10',
+        'pattern':      'lt<z>f100_i31',
+        'style':        'Oppenheimer new',
+        'flux_factor':  1.0,
+        'selfshield':   False,
         'ions':         [],
         'nH_vals':      [-8  , 0.05, 160],
         'T_vals':       [ 2.5, 0.05, 140],
-        'selfshield':   True,
-        'flux_factor':  1.0
 }
 
 def ptypes_and_deps(defi, snap):
@@ -162,25 +163,29 @@ def read_derived_rules(config, delete_old=False):
         general['always_cache'] = set()
         iontable.clear()
         iontable['tabledir'] = None
-        iontable['pattern'] = 'lt<z>f10'
+        iontable['pattern'] = 'lt<z>f100_i31'
+        iontable['style'] = 'Oppenheimer new'
+        iontable['flux_factor'] = 1.0
+        iontable['selfshield'] = False
         iontable['ions'] = []
         iontable['nH_vals'] = [-8  , 0.05, 160]
         iontable['T_vals']  = [ 2.5, 0.05, 140]
-        iontable['selfshield'] = True
-        iontable['flux_factor'] = 1.0
 
     if cfg.has_section('iontable'):
-        test_section(cfg, 'iontable', ['tabledir', 'ions', 'nH_vals', 'T_vals'])
+        #test_section(cfg, 'iontable', ['tabledir', 'ions', 'nH_vals', 'T_vals'])
+        test_section(cfg, 'iontable', ['tabledir', 'pattern', 'style'])
         iontable['tabledir'] = cfg.get('iontable', 'tabledir',
                                        vars={'PYGAD_DIR':environment.module_dir})
-        if cfg.has_option('iontable', 'pattern'):
-            iontable['pattern'] = cfg.get('iontable', 'pattern',
-                                          vars={'PYGAD_DIR':environment.module_dir})
-        iontable['ions'] = [ion.strip()
-                for ion in cfg.get('iontable','ions').split(',')]
+        iontable['pattern'] = cfg.get('iontable', 'pattern',
+                                      vars={'PYGAD_DIR':environment.module_dir})
+        iontable['style'] = cfg.get('iontable', 'style')
+        if cfg.has_option('iontable', 'ions'):
+            iontable['ions'] = [ion.strip()
+                    for ion in cfg.get('iontable','ions').split(',')]
         for vals in ['nH_vals', 'T_vals']:
-            iontable[vals] = [float(v.strip())
-                    for v in cfg.get('iontable',vals).split(',')]
+            if cfg.has_option('iontable', vals):
+                iontable[vals] = [float(v.strip())
+                        for v in cfg.get('iontable',vals).split(',')]
         if cfg.has_option('iontable', 'selfshield'):
             iontable['selfshield'] = cfg.getboolean('iontable', 'selfshield')
         if cfg.has_option('iontable', 'flux_factor'):
@@ -200,7 +205,15 @@ def read_derived_rules(config, delete_old=False):
         _rules[lum] = "UnitQty(10**(-0.4*(%s-solar.abs_mag)),'Lsol')" % mag
 
     # add the ions from the Cloudy table as derived blocks
-    for ion in iontable['ions']:
+    if iontable['style'] == 'Oppenheimer new':
+        from ..cloudy.cloudy_tables import config_ion_table
+        verbose = environment.verbose
+        environment.verbose = environment.VERBOSE_QUIET
+        ions = config_ion_table(0.0).ions
+        environment.verbose = verbose
+    else:
+        ions = iontable['ions']
+    for ion in ions:
         el, ionisation = ion.split()
         ion = el + ionisation   # getting rid of the white space
         if ion in _rules:

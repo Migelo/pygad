@@ -79,6 +79,7 @@ FULL_ELEMENT_NAME = {
         'H':    'Hydrogen',
         'He':   'Helium',
         'Mg':   'Magnesium',
+        'Al':   'Aluminium',
         'C':    'Carbon',
         'O':    'Oxygen',
         'Fe':   'Iron',
@@ -89,6 +90,8 @@ FULL_ELEMENT_NAME = {
         'Ca':   'Calcium',
 }
 SHORT_ELEMENT_NAME = { v:k for k,v in FULL_ELEMENT_NAME.iteritems() }
+# US and Canada do not know English...
+SHORT_ELEMENT_NAME['Aluminum'] = 'Al'
 
 class Wiersma_CoolingTable(object):
     '''
