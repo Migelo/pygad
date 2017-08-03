@@ -108,8 +108,9 @@ def plot_map(m, colors=None, extent=None, vlim=None, clim=None,
             raise ValueError('No `extent` is given and the grids are no Maps!')
     for ext in [getattr(m,'extent',None), getattr(colors,'extent',None)]:
         if ext is not None:
-            if hasattr(ext,'units') and hasattr(extent,'units'):
-                    ext = ext.in_units_of(extent.units)
+            if getattr(ext,'units',None) is not None \
+                    and getattr(extent,'units',None) is not None:
+                ext = ext.in_units_of(extent.units)
             if np.any(extent != ext):
                 raise ValueError('`extent`s do not match!')
     if m.ndim != 2:
@@ -124,7 +125,8 @@ def plot_map(m, colors=None, extent=None, vlim=None, clim=None,
         scaleunits = getattr(extent,'units',None)
     else:
         scaleunits = Unit(scaleunits)
-    extent.convert_to(scaleunits, subs=subs)
+    if scaleunits is not None:
+        extent.convert_to(scaleunits, subs=subs)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print 'plot a map - paramters:'
