@@ -25,7 +25,7 @@ Example:
     current age of the universe: 12.8697344013 [Myr]
     >>> s.loadable_blocks()
     ['vel', 'mass', 'ID', 'pos']
-    >>> if set(s.deriveable_blocks()) != set('Epot vx jzjc vy vz rcyl momentum angmom E dV vrad Ekin temp vcirc r jcirc y x z'.split()):
+    >>> if not set(s.deriveable_blocks()) >= set('Epot vx jzjc vy vz rcyl momentum angmom E dV vrad Ekin temp vcirc r jcirc y x z'.split()):
     ...     print ' '.join(sorted(s.deriveable_blocks()))
     >>> assert set(s.all_blocks()) == set(s.loadable_blocks() + s.deriveable_blocks())
     >>> mwgt_pos = np.tensordot(s['mass'], s['pos'], axes=1).view(UnitArr)
@@ -133,7 +133,7 @@ Example:
     One can test for available blocks and families by the 'in' opertator:
     >>> 'r' in s
     True
-    >>> if set(s.available_blocks()) != set('Epot pot pos jzjc vx vy vz rcyl momentum mass vel angmom jcirc E vrad ID Ekin vcirc r y x z acce'.split()):
+    >>> if not set(s.available_blocks()) >= set('Epot pot pos jzjc vx vy vz rcyl momentum mass vel angmom jcirc E vrad ID Ekin vcirc r y x z'.split()):
     ...     print ' '.join(sorted(s.available_blocks()))
     >>> s.delete_blocks(derived=True)
     >>> 'r' in s
