@@ -11,7 +11,7 @@ Also doctest other parts of this sub-module:
     >>> doctest.testmod(derive_rules)
     TestResults(failed=0, attempted=4)
     >>> doctest.testmod(derived)
-    TestResults(failed=0, attempted=11)
+    TestResults(failed=0, attempted=12)
     >>> doctest.testmod(sim_arr)
     TestResults(failed=0, attempted=18)
     >>> doctest.testmod(masks)

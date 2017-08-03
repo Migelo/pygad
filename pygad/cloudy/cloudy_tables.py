@@ -79,7 +79,7 @@ class IonisationTable(object):
     '''
 
     def __init__(self, redshift, tabledir,
-                 table_pattern='lt<z>f10', flux_factor=1.0,
+                 table_pattern='lt<z>f100_i45', flux_factor=1.0,
                  style='Oppenheimer new', nH=None, T=None, ions=None):
         if style not in ['Oppenheimer old', 'Oppenheimer new']:
             raise ValueError('Unknown style "%s"!' % style)
@@ -137,7 +137,7 @@ class IonisationTable(object):
             raise ValueError('The flux factor needs to be positive!')
         self._flux_factor = float(value)
 
-    def interp_snap(self, ion, s, nH='H/mass*rho/m_H', T='temp', selfshield=True):
+    def interp_snap(self, ion, s, nH='H/mass*rho/m_H', T='temp', selfshield=False):
         '''
         Convenience function: calling `interp_parts(ion, s.get(nH), s.get(T),
         selfshield, subs=s)`.
@@ -347,7 +347,7 @@ class IonisationTable(object):
         for filename in os.listdir(self._tabledir):
             match = re.match(pattern, filename)
             if match:
-                z = 0.1 * int(match.group(1))
+                z = float(match.group(1)[0]+'.'+match.group(1)[1:])
                 tables[z] = os.path.join(self._tabledir,filename)
         # check if any table was found
         if len(tables) == 0:
@@ -387,11 +387,10 @@ class IonisationTable(object):
             redshift2, nH_vals2, T_vals2, ions2, table2 = \
                     self._read_cloudy_table(tables[z2])
             if self._style == 'Oppenheimer new':
-                assert np.isclose(redshift1, z1)
-                assert np.isclose(redshift2, z2)
-                if not np.allclose( nH_vals1 == nH_vals2 ):
+                z1, z2 = redshift1, redshift2
+                if not np.allclose( nH_vals1, nH_vals2 ):
                     raise RuntimeError('nH values in tables do not match!')
-                if not np.allclose( T_vals1 == T_vals2 ):
+                if not np.allclose( T_vals1, T_vals2 ):
                     raise RuntimeError('T values in tables do not match!')
                 if not np.all( ions1 == ions2 ):
                     raise RuntimeError('Ions in tables do not match!')

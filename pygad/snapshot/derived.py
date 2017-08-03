@@ -11,7 +11,7 @@ Examples:
     >>> general
     {'always_cache': set(['Ekin', 'temp', 'age', 'mag*', 'angmom', 'LX', 'jcirc']), 'cache_derived': True}
     >>> iontable
-    {'ions': ['H I', 'He I', 'He II', 'C II', 'C III', 'C IV', 'N I', 'N II', 'N V', 'O I', 'O II', 'O III', 'O IV', 'O V', 'O VI', 'Mg II', 'Mg III', 'Si II', 'Si III', 'Si IV', 'P IV', 'S I', 'S II', 'S III', 'S IV', 'S V', 'S VI'], 'selfshield': True, 'pattern': 'lt<z>f10', 'tabledir': 'pygad//../iontbls/', 'flux_factor': 1.0, 'T_vals': [2.5, 0.05, 150.0], 'nH_vals': [-8.0, 0.05, 200.0]}
+    {'ions': [], 'tabledir': 'pygad//../iontbls/tbls-i45', 'style': 'Oppenheimer new', 'selfshield': False, 'pattern': 'lt<z>f100_i45', 'flux_factor': 1.0, 'T_vals': [2.5, 0.05, 140], 'nH_vals': [-8, 0.05, 160]}
 
     >>> from snapshot import Snap
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470')
@@ -31,12 +31,19 @@ Examples:
     load block ne... done.
     derive block temp... done.
     derive block CIV... load tables:
-      "pygad//../iontbls/lt00f10" (z=0.000)
-      "pygad//../iontbls/lt01f10" (z=0.100)
+      "pygad//../iontbls/tbls-i45/lt00000f100_i45" (z=0.000)
+      "pygad//../iontbls/tbls-i45/lt00491f100_i45" (z=0.049)
     derive block C... done.
     done.
     SimArr([...],
            units="1e+10 Msol h_0**-1", snap="snap_M1196_4x_470":gas)
+    >>> s.gas['MgII'].sum() # doctest: +ELLIPSIS
+    derive block MgII... load tables:
+      "pygad//../iontbls/tbls-i45/lt00000f100_i45" (z=0.000)
+      "pygad//../iontbls/tbls-i45/lt00491f100_i45" (z=0.049)
+    derive block Mg... done.
+    done.
+    UnitArr(0.00131..., units="1e+10 Msol h_0**-1")
 
 '''
 __all__ = ['ptypes_and_deps', 'read_derived_rules', 'general']
@@ -56,7 +63,7 @@ general = {
 }
 iontable = {
         'tabledir':     None,
-        'pattern':      'lt<z>f100_i31',
+        'pattern':      'lt<z>f100_i45',
         'style':        'Oppenheimer new',
         'flux_factor':  1.0,
         'selfshield':   False,

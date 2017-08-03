@@ -78,16 +78,17 @@ h5py = environment.secure_get_h5py()
 FULL_ELEMENT_NAME = {
         'H':    'Hydrogen',
         'He':   'Helium',
+        'C':    'Carbon',
+        'N':    'Nitrogen',
+        'O':    'Oxygen',
+        'Ne':   'Neon',
         'Mg':   'Magnesium',
         'Al':   'Aluminium',
-        'C':    'Carbon',
-        'O':    'Oxygen',
-        'Fe':   'Iron',
         'Si':   'Silicon',
-        'N':    'Nitrogen',
-        'Ne':   'Neon',
+        'P':    'Phosphorus',
         'S':    'Sulphur',
         'Ca':   'Calcium',
+        'Fe':   'Iron',
 }
 SHORT_ELEMENT_NAME = { v:k for k,v in FULL_ELEMENT_NAME.iteritems() }
 # US and Canada do not know English...

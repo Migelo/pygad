@@ -2,7 +2,7 @@
 Some general quantities and constants.
 
 Examples:
-    >>> solar.Z()   # TODO: Why so low, isn't it more like 0.02?
+    >>> solar.Z()
     0.012946810000000086
     >>> assert abs(sum(solar.Z_massfrac) - 1.0) < 1e-3
     >>> c

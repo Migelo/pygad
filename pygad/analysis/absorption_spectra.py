@@ -62,31 +62,31 @@ Doctests:
     ...             print '; EW = %.3f %s' % (EW_l, EW_l.units)
     l.o.s.: [ 34800.  35566.] [ckpc h_0**-1]
        H1215
-        N = 4.439e+17 [cm**-2] ; EW = 1.799 [Angstrom]
-        N = 4.436e+17 [cm**-2] ; EW = 1.370 [Angstrom]
-        N = 4.441e+17 [cm**-2] ; EW = 1.341 [Angstrom]
+        N = 7.506e+17 [cm**-2] ; EW = 1.879 [Angstrom]
+        N = 7.501e+17 [cm**-2] ; EW = 1.439 [Angstrom]
+        N = 7.509e+17 [cm**-2] ; EW = 1.412 [Angstrom]
        OVI1031
-        N = 8.272e+14 [cm**-2] ; EW = 0.960 [Angstrom]
-        N = 8.265e+14 [cm**-2] ; EW = 0.646 [Angstrom]
-        N = 8.279e+14 [cm**-2] ; EW = 0.640 [Angstrom]
+        N = 8.693e+14 [cm**-2] ; EW = 0.990 [Angstrom]
+        N = 8.686e+14 [cm**-2] ; EW = 0.655 [Angstrom]
+        N = 8.700e+14 [cm**-2] ; EW = 0.648 [Angstrom]
     l.o.s.: [ 34700.  35600.] [ckpc h_0**-1]
        H1215
-        N = 2.301e+15 [cm**-2] ; EW = 1.402 [Angstrom]
-        N = 2.299e+15 [cm**-2] ; EW = 1.129 [Angstrom]
-        N = 2.304e+15 [cm**-2] ; EW = 1.111 [Angstrom]
+        N = 2.815e+15 [cm**-2] ; EW = 1.435 [Angstrom]
+        N = 2.811e+15 [cm**-2] ; EW = 1.156 [Angstrom]
+        N = 2.818e+15 [cm**-2] ; EW = 1.139 [Angstrom]
        OVI1031
-        N = 7.455e+14 [cm**-2] ; EW = 0.905 [Angstrom]
-        N = 7.447e+14 [cm**-2] ; EW = 0.547 [Angstrom]
-        N = 7.462e+14 [cm**-2] ; EW = 0.539 [Angstrom]
+        N = 7.536e+14 [cm**-2] ; EW = 0.909 [Angstrom]
+        N = 7.528e+14 [cm**-2] ; EW = 0.538 [Angstrom]
+        N = 7.543e+14 [cm**-2] ; EW = 0.530 [Angstrom]
     l.o.s.: [ 35000.  35600.] [ckpc h_0**-1]
        H1215
-        N = 4.382e+13 [cm**-2] ; EW = 0.289 [Angstrom]
-        N = 4.377e+13 [cm**-2] ; EW = 0.284 [Angstrom]
-        N = 4.386e+13 [cm**-2] ; EW = 0.284 [Angstrom]
+        N = 4.816e+13 [cm**-2] ; EW = 0.312 [Angstrom]
+        N = 4.811e+13 [cm**-2] ; EW = 0.306 [Angstrom]
+        N = 4.821e+13 [cm**-2] ; EW = 0.306 [Angstrom]
        OVI1031
-        N = 1.210e+14 [cm**-2] ; EW = 0.201 [Angstrom]
-        N = 1.209e+14 [cm**-2] ; EW = 0.182 [Angstrom]
-        N = 1.211e+14 [cm**-2] ; EW = 0.182 [Angstrom]
+        N = 1.098e+14 [cm**-2] ; EW = 0.184 [Angstrom]
+        N = 1.097e+14 [cm**-2] ; EW = 0.167 [Angstrom]
+        N = 1.099e+14 [cm**-2] ; EW = 0.167 [Angstrom]
     >>> environment.verbose = environment.VERBOSE_NORMAL
 """
 __all__ = ['mock_absorption_spectrum_of', 'mock_absorption_spectrum',
