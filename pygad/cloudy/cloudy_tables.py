@@ -331,12 +331,18 @@ class IonisationTable(object):
                     raise RuntimeError('Short name of "%s[...]" not found!' % abb_el)
                 short_ions.append(el+' '+state)
 
-            nH_vals, cnts = np.unique(tbl[:,0], return_counts=True)
-            if np.any( cnts != cnts[0]) or np.any(tbl[:cnts[0],0]!=tbl[0,0]):
-                raise RuntimeError('Table "%s" of unexpected format!' % filename)
-            T_vals,  cnts = np.unique(tbl[:,1], return_counts=True)
-            if np.any(cnts!=cnts[0]) or cnts[0]!=len(nH_vals) or len(cnts)!=len(T_vals):
-                raise RuntimeError('Table "%s" of unexpected format!' % filename)
+            try:    # numpy version >=1.9 required
+                nH_vals, cnts = np.unique(tbl[:,0], return_counts=True)
+                if np.any( cnts != cnts[0]) or np.any(tbl[:cnts[0],0]!=tbl[0,0]):
+                    raise RuntimeError('Table "%s" of unexpected format!' % filename)
+                T_vals,  cnts = np.unique(tbl[:,1], return_counts=True)
+                if np.any(cnts!=cnts[0]) or cnts[0]!=len(nH_vals) or len(cnts)!=len(T_vals):
+                    raise RuntimeError('Table "%s" of unexpected format!' % filename)
+            except RuntimeError as rt:
+                raise rt
+            except:
+                nH_vals = np.unique(tbl[:,0])
+                T_vals  = np.unique(tbl[:,1])
             tbl = tbl[:,2:].reshape((len(nH_vals),len(T_vals),len(ions)))
         return redshift, nH_vals, T_vals, short_ions, tbl
 
