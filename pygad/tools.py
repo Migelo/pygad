@@ -990,30 +990,31 @@ def fill_derived_gas_trace_qty(snap, units=None, invalid=0.0):
     gas['metal_gain_in'].convert_to(gas['metals'].units)
     """
 
-def read_pyigm_COS_halos_EWs(transition='HI 1215'):
+def read_pyigm_COS_halos_EWs(transitions=('HI 1215', 'MgII 2796', 'MgII 2803', 'CIV 1548',
+                                          'CIV 1550', 'OVI 1031', 'OVI 1037')):
     '''
     Read the EW as a function of impact parameter of the COS halos using pyigm.
 
     References: Tumlinson+11; Werk+12; Tumlinson+13; Werk+13; Werk+14
 
     Args:
-        transition (str):   The line transition to load the data for.
-                            Eg. 'HI 1215' for Lyman-alpha. Or 'HI 1025',
-                            'MgII 2796', 'MgII 2803', 'OVI 1037', 'OVI 1031',
-                            'SiIII 1206', 'CIII 977', 'CIV 1548', 'CIV 1550',
-                            etc.
+        transitions (iterable): The line transition to load the data for.
+                                Eg. 'HI 1215' for Lyman-alpha. Or 'HI 1025',
+                                'MgII 2796', 'MgII 2803', 'OVI 1037', 'OVI 1031',
+                                'SiIII 1206', 'CIII 977', 'CIV 1548', 'CIV 1550',
+                                etc.
 
     Returns:
-        data (dict):        Relevant data for each line of sight. It includes:
-                            'z' (reshifts), 'rho' (impact parameter),
-                            'EW' (equivalent widths of the lines),
-                            'Mstars' (stellar masses of the associated galaxies),
-                            and more. Each entry is a UnitArr.
+        data (dict):            Relevant data for each line of sight. It includes:
+                                'z' (reshifts), 'rho' (impact parameter),
+                                'EW' (equivalent widths of the lines),
+                                'Mstars' (stellar masses of the associated
+                                galaxies), and more. Each entry is a UnitArr.
     '''
     import pyigm
     from pyigm.cgm import cos_halos
     cos_halos = cos_halos.COSHalos()
-    data = []
+    data = {trans:[] for trans in transitions}
     for sys in cos_halos:
         sys = sys.to_dict()
         Mhalo  = sys['galaxy']['halo_mass']
@@ -1023,22 +1024,23 @@ def read_pyigm_COS_halos_EWs(transition='HI 1215'):
         for component in sys['igm_sys']['components']:
             for line in sys['igm_sys']['components'][component]['lines']:
                 tname = sys['igm_sys']['components'][component]['lines'][line]['name']
-                if tname == transition:
+                if tname in transitions:
                     EW = sys['igm_sys']['components'][component]['lines'][line]['attrib']['EW']['value']
-                    data.append( [sys['z'], sys['rho'], EW,
-                                  Mhalo, Mstars, sSFR, Rvir] )
-    if len(data) == 0:
-        raise RuntimeError('transition "%s" not found' % transition)
+                    data[tname].append( [sys['z'], sys['rho'], EW,
+                                         Mhalo, Mstars, sSFR, Rvir] )
+    for trans,d in data.iteritems():
+        if len(d) == 0:
+            raise RuntimeError('transition "%s" not found' % trans)
 
-    data = np.array(data)
-    data = {
-            'z':        UnitArr(data[:,0]),
-            'rho':      UnitArr(data[:,1], 'kpc'),
-            'EW':       UnitArr(10.**data[:,2], 'Angstrom'),
-            'Mhalo':    UnitArr(10.**data[:,3], 'Msol'),
-            'Mstars':   UnitArr(10.**data[:,4], 'Msol'),
-            'sSFR':     UnitArr(data[:,5]),
-            'Rvir':     UnitArr(data[:,6], 'kpc'),
-    }
-    return data
+    data = { trans:np.array(d) for trans,d in data.iteritems() }
+    return { trans:{
+            'z':        UnitArr(d[:,0]),
+            'rho':      UnitArr(d[:,1], 'kpc'),
+            #'EW':       UnitArr(10.**d[:,2], 'Angstrom'),
+            'EW':       UnitArr(d[:,2], 'Angstrom'),
+            'Mhalo':    UnitArr(10.**d[:,3], 'Msol'),
+            'Mstars':   UnitArr(10.**d[:,4], 'Msol'),
+            'sSFR':     UnitArr(d[:,5]),
+            'Rvir':     UnitArr(d[:,6], 'kpc'),
+    } for trans,d in data.iteritems() }
 
