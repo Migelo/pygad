@@ -3,7 +3,8 @@ Module for convenience routines for plotting maps.
 
 Doctests impossible, since they would require visual inspection...
 '''
-__all__ = ['plot_map', 'image', 'phase_diagram', 'over_plot_species_phases', 'vec_field']
+__all__ = ['plot_map', 'image', 'phase_diagram', 'over_plot_species_phases', 'vec_field',
+           'correlation_chart']
 
 import numpy as np
 import matplotlib as mpl
@@ -830,4 +831,64 @@ def vec_field(s, qty, extent, field=False, av=None, reduction=None,
         ax.quiver(X, Y, mx, my, color=color, pivot=pivot, **kwargs)
 
     return fig, ax
+
+def correlation_chart(variables, labels=None, title='correlations', bins=30,
+                      useoffset=False):
+    '''
+    Plot a correlation chart of each combination of the given variables.
+
+    Args:
+        variables (iterable):   An iterable of the array-like variable ensembles.
+        labels (iterable):      The names of the variables, i.e. the labels to use
+                                for the axis.
+        title (str):            The figure title.
+        bins (int):             The number of bins in the correlation scatter plots
+                                and the histogram plots.
+        useoffset (bool):       Whether to use an offset in the axis ticks (setting
+                                `mpl.rcParams["axes.formatter.useoffset"]`).
+
+    Returns:
+        fig (Figure):           The figure of the axis plotted on.
+        ax (AxesSubplot):       The axis plotted on.
+    '''
+    useoffset_sys = mpl.rcParams["axes.formatter.useoffset"]
+    mpl.rcParams["axes.formatter.useoffset"]  = useoffset
+    from matplotlib import gridspec
+    N = len(variables)
+    fig = plt.figure(figsize=(2.5*N,2.5*N))
+    gs = gridspec.GridSpec(N,N)
+    axs = np.empty((N,N), dtype=object)
+    def plot(x,y):
+        ax = axs[x,y]
+        if x == y:
+            ax.hist( variables[x], histtype='step', color='k', bins=bins )
+        else:
+            scatter_map( variables[x], variables[y],
+                         cmap='gray_r', bins=bins,
+                         showcbar=False, ax=ax )
+            r = np.corrcoef(variables[x], variables[y])[0,1]
+            ax.text( 0.05, 0.95, 'r=%.2f'%r,
+                     horizontalalignment='left',
+                     verticalalignment='top',
+                     transform=ax.transAxes )
+        if labels is not None:
+            if y == N-1:      ax.set_xlabel(labels[x], fontsize=14)
+            if x==0 and y!=0: ax.set_ylabel(labels[y], fontsize=14)
+    for x in xrange(N):
+        y = N-1
+        axs[x,y] = fig.add_subplot(gs[y,x])
+        plot(x,y)
+        for y in xrange(N-2,x-1,-1):
+            axs[x,y] = fig.add_subplot(gs[y,x], sharex=axs[N-1,y])
+            plot(x,y)
+    plt.setp([ax.get_yticklabels() for ax in axs[1:,:].flat  if ax is not None],
+             visible=False)
+    plt.setp([ax.get_xticklabels() for ax in axs[:,:-1].flat if ax is not None],
+             visible=False)
+
+    fig.suptitle(title, size=18)
+    gs.tight_layout(fig, rect=[0, 0, 1, 0.97])
+
+    mpl.rcParams["axes.formatter.useoffset"] = useoffset_sys
+    return fig, axs
 
