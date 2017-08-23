@@ -1,7 +1,7 @@
 '''
 Utility functions regarding geometry.
 '''
-__all__ = ['angle', 'dist']
+__all__ = ['angle', 'dist', 'find_maxima_prominence']
 
 import numpy as np
 from ..units import UnitArr, UnitQty, UnitQty
@@ -76,4 +76,106 @@ def dist(arr, pos=None, metric='euclidean', p=2, V=None, VI=None, w=None):
     res = cdist(arr, [pos]).ravel().view(UnitArr)
     res.units = units
     return res
+
+def find_maxima_prominence(arr, prominence=None, sort=True):
+    '''
+    Find all local maxima in an array (of a minimum prominence).
+
+    Note:
+        If two or more consequtive values are the same and together build a
+        local extremum, they will all count as individual local extrema.
+
+    Args:
+        arr (array-like):       The 1-dimensional array in which to look for
+                                the maxima.
+        prominence (float):     A minimum prominence to filter for.
+                                If None, do not filter the results.
+        sort (bool):            Whether to sort the results descending by
+                                prominence.
+
+    Returns:
+        maxima (np.ndarray):    All the (filtered) maxima. It is an array with
+                                named fields: 'index', 'value', and 'prominence'.
+    Examples:
+        >>> find_maxima_prominence( np.array([1,2,3,2,0,2,1,3],dtype=float) )
+        array([(2,  3.,  3.), (7,  3.,  3.), (5,  2.,  1.)],
+              dtype=[('index', '<i8'), ('value', '<f8'), ('prominence', '<f8')])
+        >>> find_maxima_prominence( [1,1,1] )
+        array([(0, 1, 0), (1, 1, 0), (2, 1, 0)],
+              dtype=[('index', '<i8'), ('value', '<i8'), ('prominence', '<i8')])
+        >>> find_maxima_prominence( [0,1,4,1,0] )
+        array([(2, 4, 4)],
+              dtype=[('index', '<i8'), ('value', '<i8'), ('prominence', '<i8')])
+        >>> find_maxima_prominence( [0,1,4,1,-3,-2,1,-1,0,3,5,6,4,1], sort=False )
+        array([( 2, 4, 7), ( 6, 1, 2), (11, 6, 9)],
+              dtype=[('index', '<i8'), ('value', '<i8'), ('prominence', '<i8')])
+        >>> find_maxima_prominence( [0,5,-2,-2,1,0,8,0] )
+        array([(6, 8, 10), (1, 5,  7), (4, 1,  1)],
+              dtype=[('index', '<i8'), ('value', '<i8'), ('prominence', '<i8')])
+        >>> find_maxima_prominence( [0] )
+        array([],
+              dtype=[('index', '<i8'), ('value', '<i8'), ('prominence', '<i8')])
+    '''
+    arr = np.asarray(arr)
+    if arr.ndim != 1:
+        raise ValueError('Only one dimensional array can be processed!')
+    if len(arr) < 2:
+        return np.array([],
+                        dtype=[('index',int), ('value',arr.dtype), ('prominence',arr.dtype)])
+
+    neg_arr = -arr
+    def is_local_max(i, a=arr):
+        next_other, j = a[i], i
+        while next_other == a[i]:
+            j += 1
+            next_other = a[i]-1 if j==len(a) else a[j]
+        prev_other, j = a[i], i
+        while prev_other == a[i]:
+            j -= 1
+            prev_other = a[i]-1 if j==-1 else a[j]
+        return prev_other < a[i] > next_other
+    def is_local_min(i):
+        return is_local_max(i, a=neg_arr)
+
+    # find all the local extrema in the smoothed spectrum
+    extrema = [ ]
+    for i in xrange(len(arr)):
+        if is_local_max(i):
+            extrema.append( ['max', arr[i], i] )
+        elif is_local_min(i):
+            extrema.append( ['min', arr[i], i] )
+
+    # get the prominence of the maxima
+    for iex,ex in enumerate(extrema):
+        if ex[0] == 'min':
+            ex.append( -1.0 )
+            continue
+        def find_one_sided_prominence(iex, ex, left):
+            prom_one = np.inf
+            vmin = ex[1]
+            nrange = xrange(iex-1,-1,-1) if left else xrange(iex+1,len(extrema))
+            for n in nrange:
+                if extrema[n][0] == 'min':
+                    if extrema[n][1] < vmin: vmin = extrema[n][1]
+                elif extrema[n][0] == 'max':
+                    if extrema[n][1] >= ex[1]:
+                        prom_one = ex[1] - vmin
+                        break
+            return prom_one
+        # the total prominence is the minimum of the two
+        prom = min(find_one_sided_prominence(iex,ex,left=True),
+                   find_one_sided_prominence(iex,ex,left=False))
+        if np.isinf(prom):
+            prom = arr.ptp()
+        ex.append( prom )
+
+    # filter maxima with given prominence
+    maxima = [ ex for ex in extrema
+                if (ex[0]=='max' and (prominence is None or ex[-1]>prominence)) ]
+    if sort:
+        # sort the local maxima descending by prominence
+        maxima = sorted(maxima, key=lambda ex: -ex[-1])
+    # return the pixel positions only
+    return np.array( [(idx,val,prom) for _,val,idx,prom in maxima],
+                      dtype=[('index',int), ('value',arr.dtype), ('prominence',arr.dtype)] )
 
