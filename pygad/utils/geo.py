@@ -1,7 +1,7 @@
 '''
 Utility functions regarding geometry.
 '''
-__all__ = ['angle', 'dist', 'find_maxima_prominence']
+__all__ = ['angle', 'dist', 'find_maxima_prominence_isolation']
 
 import numpy as np
 from ..units import UnitArr, UnitQty, UnitQty
@@ -77,9 +77,13 @@ def dist(arr, pos=None, metric='euclidean', p=2, V=None, VI=None, w=None):
     res.units = units
     return res
 
-def find_maxima_prominence(arr, prominence=None, sort=True):
+def find_maxima_prominence_isolation(arr, prominence=None, sort=True):
     '''
     Find all local maxima in an array (of a minimum prominence).
+
+    This function does not only return the maxima, but also their position (as
+    an index), their prominence, and their isolation (in pixels/indices). The
+    latter two have the usual topographic definitions.
 
     Note:
         If two or more consequtive values are the same and together build a
@@ -95,24 +99,22 @@ def find_maxima_prominence(arr, prominence=None, sort=True):
 
     Returns:
         maxima (np.ndarray):    All the (filtered) maxima. It is an array with
-                                named fields: 'index', 'value', and 'prominence'.
+                                named fields: 'index', 'value', 'prominence',
+                                and 'isolation'.
     Examples:
-        >>> find_maxima_prominence( np.array([1,2,3,2,0,2,1,3],dtype=float) )
-        array([(2,  3.,  3.), (7,  3.,  3.), (5,  2.,  1.)],
-              dtype=[('index', '<i8'), ('value', '<f8'), ('prominence', '<f8')])
-        >>> find_maxima_prominence( [1,1,1] )
-        array([(0, 1, 0), (1, 1, 0), (2, 1, 0)],
-              dtype=[('index', '<i8'), ('value', '<i8'), ('prominence', '<i8')])
-        >>> find_maxima_prominence( [0,1,4,1,0] )
-        array([(2, 4, 4)],
-              dtype=[('index', '<i8'), ('value', '<i8'), ('prominence', '<i8')])
-        >>> find_maxima_prominence( [0,1,4,1,-3,-2,1,-1,0,3,5,6,4,1], sort=False )
-        array([( 2, 4, 7), ( 6, 1, 2), (11, 6, 9)],
-              dtype=[('index', '<i8'), ('value', '<i8'), ('prominence', '<i8')])
-        >>> find_maxima_prominence( [0,5,-2,-2,1,0,8,0] )
-        array([(6, 8, 10), (1, 5,  7), (4, 1,  1)],
-              dtype=[('index', '<i8'), ('value', '<i8'), ('prominence', '<i8')])
-        >>> find_maxima_prominence( [0] )
+        >>> find_maxima_prominence_isolation( np.array([1,2,3,2,0,2,1,3],dtype=float) )
+        array([(2,  3.,  3., 6), (7,  3.,  3., 8), (5,  2.,  1., 2)],
+              dtype=[('index', '<i8'), ('value', '<f8'), ('prominence', '<f8'), ('isolation', '<i8')])
+        >>> find_maxima_prominence_isolation( [1,1,1] )['value']
+        array([1, 1, 1])
+        >>> find_maxima_prominence_isolation( [0,1,4,1,0] )['index']
+        array([2])
+        >>> find_maxima_prominence_isolation( [0,1,4,1,-3,-2,1,-1,0,3,5,6,4,1], sort=False )
+        array([( 2, 4, 7,  8), ( 6, 1, 2,  3), (11, 6, 9, 12)],
+              dtype=[('index', '<i8'), ('value', '<i8'), ('prominence', '<i8'), ('isolation', '<i8')])
+        >>> find_maxima_prominence_isolation( [0,5,-2,-2,1,0,8,0] )[0]
+        (6, 8, 10, 7)
+        >>> find_maxima_prominence_isolation( [0] )
         array([],
               dtype=[('index', '<i8'), ('value', '<i8'), ('prominence', '<i8')])
     '''
@@ -150,6 +152,8 @@ def find_maxima_prominence(arr, prominence=None, sort=True):
         if ex[0] == 'min':
             ex.append( -1.0 )
             continue
+
+        # find the prominence
         def find_one_sided_prominence(iex, ex, left):
             prom_one = np.inf
             vmin = ex[1]
@@ -168,14 +172,24 @@ def find_maxima_prominence(arr, prominence=None, sort=True):
         if np.isinf(prom):
             prom = arr.ptp()
         ex.append( prom )
+        # find the isolation
+        iso = max( ex[2]+1, len(arr)-ex[2] )
+        for i in xrange(1,max(ex[2],len(arr)-ex[2])):
+            if ex[2]-i>= 0 and arr[ex[2]-i] > ex[1]:
+                iso = i
+                break
+            if ex[2]+i<len(arr) and arr[ex[2]+i] > ex[1]:
+                iso = i
+                break
+        ex.append( iso )
 
     # filter maxima with given prominence
     maxima = [ ex for ex in extrema
-                if (ex[0]=='max' and (prominence is None or ex[-1]>prominence)) ]
+                if (ex[0]=='max' and (prominence is None or ex[3]>prominence)) ]
     if sort:
         # sort the local maxima descending by prominence
-        maxima = sorted(maxima, key=lambda ex: -ex[-1])
-    # return the pixel positions only
-    return np.array( [(idx,val,prom) for _,val,idx,prom in maxima],
-                      dtype=[('index',int), ('value',arr.dtype), ('prominence',arr.dtype)] )
+        maxima = sorted(maxima, key=lambda ex: -ex[3])
+    return np.array( [(idx,val,prom,iso) for _,val,idx,prom,iso in maxima],
+                      dtype=[('index',int), ('value',arr.dtype),
+                             ('prominence',arr.dtype), ('isolation',int)] )
 
