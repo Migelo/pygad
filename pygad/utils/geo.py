@@ -77,7 +77,8 @@ def dist(arr, pos=None, metric='euclidean', p=2, V=None, VI=None, w=None):
     res.units = units
     return res
 
-def find_maxima_prominence_isolation(arr, prominence=None, sort=True):
+def find_maxima_prominence_isolation(arr, prominence=None, sortby='index',
+                                     descending=False):
     '''
     Find all local maxima in an array (of a minimum prominence).
 
@@ -94,26 +95,32 @@ def find_maxima_prominence_isolation(arr, prominence=None, sort=True):
                                 the maxima.
         prominence (float):     A minimum prominence to filter for.
                                 If None, do not filter the results.
-        sort (bool):            Whether to sort the results descending by
-                                prominence.
+        sortby (str):           Whether / how to sort the results. This must be
+                                one of 'index', 'value', 'prominence', and
+                                'isolation'.
+                                They are naturally sorted by the indices. Hence,
+                                this option is the fastest when chosen with
+                                `descending=False`.
+        descending (bool):      Sort in descending order.
 
     Returns:
         maxima (np.ndarray):    All the (filtered) maxima. It is an array with
                                 named fields: 'index', 'value', 'prominence',
                                 and 'isolation'.
     Examples:
-        >>> find_maxima_prominence_isolation( np.array([1,2,3,2,0,2,1,3],dtype=float) )
-        array([(2,  3.,  3., 6), (7,  3.,  3., 8), (5,  2.,  1., 2)],
+        >>> find_maxima_prominence_isolation( np.array([1,2,3,2,0,2,1,3],dtype=float) ) # doctest:+ELLIPSIS
+        array([(2,  3...,  3..., 6), (5,  2...,  1..., 2), (7,  3.,  3..., 8)],
               dtype=[('index', '<i8'), ('value', '<f8'), ('prominence', '<f8'), ('isolation', '<i8')])
         >>> find_maxima_prominence_isolation( [1,1,1] )['value']
         array([1, 1, 1])
         >>> find_maxima_prominence_isolation( [0,1,4,1,0] )['index']
         array([2])
-        >>> find_maxima_prominence_isolation( [0,1,4,1,-3,-2,1,-1,0,3,5,6,4,1], sort=False )
-        array([( 2, 4, 7,  8), ( 6, 1, 2,  3), (11, 6, 9, 12)],
+        >>> find_maxima_prominence_isolation( [0,1,4,1,-3,-2,1,-1,0,3,5,6,4,1],
+        ...                                   sortby='prominence', descending=True ) # doctest:+ELLIPSIS
+        array([(11, 6, 9, 12), ( 2, 4, 7, ...8), ( 6, 1, 2, ...3)],
               dtype=[('index', '<i8'), ('value', '<i8'), ('prominence', '<i8'), ('isolation', '<i8')])
         >>> find_maxima_prominence_isolation( [0,5,-2,-2,1,0,8,0] )[0]
-        (6, 8, 10, 7)
+        (1, 5, 7, 5)
         >>> find_maxima_prominence_isolation( [0] )
         array([],
               dtype=[('index', '<i8'), ('value', '<i8'), ('prominence', '<i8')])
@@ -186,9 +193,19 @@ def find_maxima_prominence_isolation(arr, prominence=None, sort=True):
     # filter maxima with given prominence
     maxima = [ ex for ex in extrema
                 if (ex[0]=='max' and (prominence is None or ex[3]>prominence)) ]
-    if sort:
-        # sort the local maxima descending by prominence
-        maxima = sorted(maxima, key=lambda ex: -ex[3])
+    if sortby == 'index':
+        if descending:
+            maxima = sorted(maxima, key=lambda ex: ex[2], reverse=descending)
+        else:
+            pass    # nothing to do...
+    elif sortby == 'value':
+        maxima = sorted(maxima, key=lambda ex: ex[1], reverse=descending)
+    elif sortby == 'prominence':
+        maxima = sorted(maxima, key=lambda ex: ex[3], reverse=descending)
+    elif sortby == 'isolation':
+        maxima = sorted(maxima, key=lambda ex: ex[4], reverse=descending)
+    else:
+        raise ValueError('Cannot sort by "%s" -  unknown property.' % sortby)
     return np.array( [(idx,val,prom,iso) for _,val,idx,prom,iso in maxima],
                       dtype=[('index',int), ('value',arr.dtype),
                              ('prominence',arr.dtype), ('isolation',int)] )
