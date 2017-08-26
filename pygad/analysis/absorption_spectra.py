@@ -104,6 +104,7 @@ from .. import utils
 from .. import C
 from .. import environment
 import numpy as np
+from scipy.special import wofz
 
 lines = {
     'H1215':     {'ion':'HI',     'l':'1215.6701 Angstrom', 'f':0.4164,
@@ -253,7 +254,6 @@ def Voigt(x, sigma, gamma):
     Returns:
         y (float, np.ndarray):  The value(s) of the Voigt profile.
     '''
-    from scipy.special import wofz
     z = (x + 1j*gamma) / (sigma * np.sqrt(2.))
     return np.real(wofz(z)) / ( sigma * np.sqrt(2.*np.pi) )
 
@@ -265,14 +265,18 @@ def thermal_b_param(line, T, units='km/s'):
     b = np.sqrt( 2. * kB * T / atomwt ).in_units_of(units)
     return b
 
-def line_profile(line, N, T, b=None, lim=None, bins=1000, mode='Voigt'):
+def line_profile(line, N, T=None, b=None, l0=None,
+                 l=None, lim=None, bins=1000,
+                 mode='Voigt'):
     '''
     Calculate the theoretical line profile of a non-moving slice of
     homogenous gas with constant temperature and given column density.
 
     Args:
-        line (str):     The line name as listed in
-                        `analysis.absorption_spectra.lines`.
+        line (str, dict):
+                        The line name as listed in
+                        `analysis.absorption_spectra.lines` or an analogous
+                        dictionary.
         N (UnitScalar): The column density of the slice. Can either bin in
                         particles per area (e.g. 'cm**-2') or in mass per
                         area (e.g. 'g cm**-2').
@@ -280,6 +284,11 @@ def line_profile(line, N, T, b=None, lim=None, bins=1000, mode='Voigt'):
         b (UnitScalar): The b-parameter. If give, `T` is ignore, which
                         otherwise would translate into a thermal b-parameter.
                         (Units default to 'km/s'.)
+        l0 (UnitScalar):The line centroid. Defaults to the restframe wavelength
+                        of the given line.
+        l (UnitQty):    The wavelengths to calculate the optical depths for. If
+                        this is None, create the wavelength array from the
+                        following two parameters.
         lim (UnitQty):  The limits of the spectrum in wavelength. If one of
                         the values is negative, they are taken to be realtive
                         to the line center.
@@ -300,15 +309,18 @@ def line_profile(line, N, T, b=None, lim=None, bins=1000, mode='Voigt'):
                             of the above two profiles.
 
     Returns:
-        l (UnitArr):        The wavelengths of the sprectrum.
+        l (UnitArr):        The wavelengths of the sprectrum (is input `l` if
+                            given).
         tau (np.ndarray):   The optical depth at the given wavelengths.
     '''
     if isinstance(line,str):
         line = lines[line]
-    atomwt, f, l0 = map(UnitScalar,
-            [line['atomwt'], line['f'], line['l']])
+    f = float(line['f'])
+    atomwt = UnitScalar(line['atomwt']) if 'atomwt' in line else None
     A_ki = UnitScalar(line.get('A_ki',0.0), 'Hz')
-    l0.convert_to('Angstrom')
+    if l0 is None:
+        l0 = line['l']
+    l0 = UnitScalar(l0, 'Angstrom')
     lim = UnitQty([-5,5] if lim is None else lim, 'Angstrom', dtype=float)
     if np.any(lim < 0):
         lim += l0
@@ -325,7 +337,10 @@ def line_profile(line, N, T, b=None, lim=None, bins=1000, mode='Voigt'):
     else:
         b = UnitScalar(b, 'km/s')
 
-    l = UnitArr( np.linspace( lim[0], lim[1], bins ), lim.units )
+    if l is None:
+        l = UnitArr( np.linspace( lim[0], lim[1], bins ), lim.units )
+    else:
+        l = UnitQty( l, 'Angstrom' )
     nu = (c/l).in_units_of('Hz')
     nu0 = (c/l0).in_units_of('Hz')
     x = (nu-nu0).view(np.ndarray)
@@ -350,8 +365,9 @@ def curve_of_growth(line, b, Nlim=(10,21), bins=30):
     Calculate the curve of growth for homogeneous gas.
 
     Args:
-        line (str):         The line to calculate the curve of growth for
-                            as listed in `analysis.absorption_spectra.lines`.
+        line (str, dict):   The line to calculate the curve of growth for
+                            as listed in `analysis.absorption_spectra.lines` or
+                            an analogous dictionary.
         b (UnitScalar):     The b-parameter which is relevant in the flat part.
                             You might want to use `thermal_b_param` here.
         Nlim (arraly-like): The limits in logarithmic column density in units of
@@ -375,7 +391,7 @@ def curve_of_growth(line, b, Nlim=(10,21), bins=30):
         while tau[0] > 1e-3 or tau[-1] > 1e-3:
             lim_ = l0 + np.array(lim)
             l, tau = line_profile(line,
-                    '%g cm**-2' % N_, None, b, lim=lim_, bins=bins)
+                    '%g cm**-2' % N_, b=b, lim=lim_, bins=bins)
             lim, bins = [2*lim[0], 2*lim[1]], 2*bins
         dl = UnitArr(l[1]-l[0], l.units)
         l_edges = UnitArr(np.empty(len(l)+1), l.units)
@@ -425,7 +441,7 @@ def fit_Voigt(l, flux, line, Nlim=(8,22), blim=(0,200), bins=(57,41)):
     dl = l0_line - l0
     l_lim = UnitArr( [l[0]+dl,l[-1]+dl], l.units)
     def err(N,b):
-        _, tau = line_profile(line, N, None, b=b,
+        _, tau = line_profile(line, N, b=b,
                               lim=l_lim, bins=len(flux))
         return np.sum( (np.exp(-tau) - flux)**2 )
 

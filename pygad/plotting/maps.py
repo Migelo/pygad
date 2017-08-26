@@ -851,6 +851,7 @@ def correlation_chart(variables, labels=None, title='correlations', bins=30,
         fig (Figure):           The figure of the axis plotted on.
         ax (AxesSubplot):       The axis plotted on.
     '''
+    #TODO: consider using scipy.stats.gaussian_kde or some other density estimator.
     useoffset_sys = mpl.rcParams["axes.formatter.useoffset"]
     mpl.rcParams["axes.formatter.useoffset"]  = useoffset
     from matplotlib import gridspec
