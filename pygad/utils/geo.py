@@ -108,17 +108,23 @@ def find_maxima_prominence_isolation(arr, prominence=None, sortby='index',
                                 named fields: 'index', 'value', 'prominence',
                                 and 'isolation'.
     Examples:
-        >>> find_maxima_prominence_isolation( np.array([1,2,3,2,0,2,1,3],dtype=float) ) # doctest:+ELLIPSIS
-        array([(2,...3...,...3..., 6), (5,...2...,...1..., 2), (7,...3...,...3..., 8)],
-              dtype=[('index', '<i8'), ('value', '<f8'), ('prominence', '<f8'), ('isolation', '<i8')])
+        >>> m = find_maxima_prominence_isolation( np.array([1,2,3,2,0,2,1,3],dtype=float) )
+        >>> m['index']
+        array([2, 5, 7])
+        >>> m['value']
+        array([ 3.,  2.,  3.])
+        >>> m['prominence']
+        array([ 3.,  1.,  3.])
+        >>> m['isolation']
+        array([6, 2, 8])
         >>> find_maxima_prominence_isolation( [1,1,1] )['value']
         array([1, 1, 1])
         >>> find_maxima_prominence_isolation( [0,1,4,1,0] )['index']
         array([2])
         >>> find_maxima_prominence_isolation( [0,1,4,1,-3,-2,1,-1,0,3,5,6,4,1],
-        ...                                   sortby='prominence', descending=True ) # doctest:+ELLIPSIS
-        array([(11, 6, 9, 12), ...2, 4, 7,...8), ...6, 1, 2,...3)],
-              dtype=[('index', '<i8'), ('value', '<i8'), ('prominence', '<i8'), ('isolation', '<i8')])
+        ...                                   sortby='prominence',
+        ...                                   descending=True )['value']
+        array([6, 4, 1])
         >>> find_maxima_prominence_isolation( [0,5,-2,-2,1,0,8,0] )[0]
         (1, 5, 7, 5)
         >>> len(find_maxima_prominence_isolation( [0] ))
