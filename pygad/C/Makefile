@@ -5,7 +5,7 @@ ifneq ($(wildcard ${GSL_LIB}),)
 endif
 
 CC 		= g++
-CFLAGS 	= -std=c++11 -fext-numeric-literals
+CFLAGS 	= -std=c++11 #-fext-numeric-literals
 CFLAGS  += -pedantic -Wall -Wextra -Wno-unused-parameter
 CFLAGS 	+= -O3 -DNDEBUG -fopenmp
 #CFLAGS 	+= -Wno-unknown-pragmas -O2 -DDEBUG

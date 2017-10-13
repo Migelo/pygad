@@ -15,8 +15,8 @@ pipelines:
         script:
           - wget https://bitbucket.org/broett/pygad/downloads/bc03.tar.gz
           - tar -xzf bc03.tar.gz
-          - wget https://bitbucket.org/broett/pygad/downloads/iontbls_HM01.tar.gz
-          - tar -xzf iontbls_HM01.tar.gz iontbls
+          - wget https://bitbucket.org/broett/pygad/downloads/iontbls.tar.gz
+          - tar -xzf iontbls.tar.gz iontbls
           - wget https://bitbucket.org/broett/pygad/downloads/snaps.tar.gz
           - tar -xzf snaps.tar.gz
           - python setup.py install

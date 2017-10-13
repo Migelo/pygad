@@ -45,8 +45,8 @@ For full functionality, you need to download the tables for [Bruzual & Charlot (
 ```
 $ wget https://bitbucket.org/broett/pygad/downloads/bc03.tar.gz
 $ tar -xzf bc03.tar.gz
-$ wget https://bitbucket.org/broett/pygad/downloads/iontbls_HM01.tar.gz
-$ tar -xzf iontbls_HM01.tar.gz
+$ wget https://bitbucket.org/broett/pygad/downloads/iontbls.tar.gz
+$ tar -xzf iontbls.tar.gz
 ```
 The [Bruzual & Charlot (2003)][BC03] tables are optional but recommended, since required for standard star plotting routines.
 For absorption line generation, you need the ionisation tables.
