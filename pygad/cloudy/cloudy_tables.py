@@ -137,20 +137,22 @@ class IonisationTable(object):
             raise ValueError('The flux factor needs to be positive!')
         self._flux_factor = float(value)
 
-    def interp_snap(self, ion, s, nH='H/mass*rho/m_H', T='temp', selfshield=False):
+    def interp_snap(self, ion, s, nH='H/mass*rho/m_H', T='temp', selfshield=False,
+                    warn_outofbounds=True):
         '''
         Convenience function: calling `interp_parts(ion, s.get(nH), s.get(T),
-        selfshield, subs=s)`.
+        selfshield, subs=s, warn_outofbounds=warn_outofbounds)`.
         '''
         if abs(s.redshift - self._redshift) > 0.01:
             import sys
             print >> sys.stderr, 'WARNING: the snapshot\'s redshift ' + \
                                  '(%.3f) does not match the ' % s.redshift + \
                                  'table\'s redshift (%.3f)!' % self._redshift
-        return self.interp_parts(ion, s.get(nH), s.get(T), selfshield, subs=s)
+        return self.interp_parts(ion, s.get(nH), s.get(T), selfshield, subs=s,
+                                 warn_outofbounds=warn_outofbounds)
 
     def interp_parts(self, ion, nH, T, selfshield=True, UVB=gadget.general['UVB'],
-                     z=None, fbaryon=None, subs=None):
+                     z=None, fbaryon=None, subs=None, warn_outofbounds=True):
         '''
         Given nH and temperatures for a list of particles, get the fractions for
         a given ion by a bilinear interpolation of the table for each particle.
@@ -183,6 +185,9 @@ class IonisationTable(object):
             subs (dict, Snap):  Used for substitutions that might be neccessary
                                 when converting units (for more info see
                                 `UnitArr.in_units_of`).
+            warn_outofbounds (bool):
+                                Whether to print out a warning if particles are
+                                out of the bounds of the ionisation tables.
 
         Returns:
             f (np.ndarray):     The fractions of the ion for each particle as read
@@ -251,12 +256,13 @@ class IonisationTable(object):
         high_nH = (k_nH>=N_nH-1)
         low_T   = (l_T <0)
         high_T  = (l_T >=N_T -1)
-        out_of_bounds = np.sum( low_nH | high_nH | low_T | high_T )
-        if out_of_bounds:
-            import sys
-            from .. import utils
-            print >> sys.stderr, 'WARNING: %s particles out of bounds!' % \
-                    utils.nice_big_num_str(out_of_bounds)
+        if warn_outofbounds:
+            out_of_bounds = np.sum( low_nH | high_nH | low_T | high_T )
+            if out_of_bounds:
+                import sys
+                from .. import utils
+                print >> sys.stderr, 'WARNING: %s particles out of bounds!' % \
+                        utils.nice_big_num_str(out_of_bounds)
         # avoid invalid indices in the following (masking would slow down and be
         # not very readable):
         k_nH[ low_nH  ] = 0
