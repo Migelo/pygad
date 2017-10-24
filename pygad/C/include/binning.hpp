@@ -14,6 +14,7 @@ void sph_bin_3D(size_t N,
                 double *extent,
                 size_t Npx[3],
                 double *grid,
+                double *Snorm,
                 const char *kernel_,
                 double periodic);
 
@@ -26,6 +27,7 @@ void sph_bin_3D_nonorm(size_t N,
                        double *extent,
                        size_t Npx[3],
                        double *grid,
+                       double *Snorm,
                        const char *kernel_,
                        double periodic);
 
@@ -38,6 +40,7 @@ void sph_3D_bin_2D(size_t N,
                    double *extent,
                    size_t Npx[2],
                    double *grid,
+                   double *Snorm,
                    const char *kernel_,
                    double periodic);
 
@@ -50,6 +53,7 @@ void sph_3D_bin_2D_nonorm(size_t N,
                           double *extent,
                           size_t Npx[2],
                           double *grid,
+                          double *Snorm,
                           const char *kernel_,
                           double periodic);
 
@@ -107,6 +111,7 @@ void bin_sph(size_t N,
              double *extent,
              size_t Npx[d],
              double *grid,
+             double *Snorm,
              const char *kernel_,
              double periodic) {
     Kernel<(projected ? d+1 : d)> &kernel = kernels.at(kernel_);
@@ -176,6 +181,7 @@ void bin_sph(size_t N,
         } else {
             S = 1.0;
         }
+        Snorm[j] = S;
 
         if ( norm and S<1e-4 ) {
             // Mind the reversed indexing of i_min, i_max, and i due to performace

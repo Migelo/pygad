@@ -86,7 +86,7 @@ from numbers import Number
 from ..snapshot import BoxMask
 
 def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml',
-                  normed=True):
+                  normed=True, ret_Snorm=False):
     '''
     Bin some SPH quantity onto a 3D grid, fully accouting for the smoothing
     lengths.
@@ -121,6 +121,7 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml',
                                 discrete grid. This ensures the integral of the
                                 binned quantity is conserved; the kernel must be
                                 normed to one, of course.
+        ret_Snorm (bool):       Also return the S values.
 
     Returns:
         grid (Map):             The binned SPH quantity.
@@ -185,6 +186,7 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml',
 
     ext = extent.view(np.ndarray).astype(np.float64).copy()
     grid = np.empty(np.prod(Npx), dtype=np.float64)
+    Snorm = np.empty(len(sub), dtype=np.float64)
     Npx = Npx.astype(np.intp)
     if normed:
         sph_bin = C.cpygad.sph_bin_3D
@@ -198,6 +200,7 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml',
             C.c_void_p(ext.ctypes.data),
             C.c_void_p(Npx.ctypes.data),
             C.c_void_p(grid.ctypes.data),
+            C.c_void_p(Snorm.ctypes.data),
             C.create_string_buffer(kernel),
             C.c_double(s.boxsize.in_units_of(s['pos'].units)),
     )
@@ -206,10 +209,13 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml',
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print 'done with SPH grid'
 
-    return Map(grid, extent)
+    if ret_Snorm:
+        return Map(grid, extent), Snorm
+    else:
+        return Map(grid, extent)
 
 def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
-                  hsml='hsml', normed=True):
+                  hsml='hsml', normed=True, ret_Snorm=False):
     '''
     Bin some SPH quantity onto a 2D grid, fully accouting for the smoothing
     lengths.
@@ -244,6 +250,7 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
                                 discrete grid. This ensures the integral of the
                                 binned quantity is conserved; the kernel must be
                                 normed to one, of course.
+        ret_Snorm (bool):       Also return the S values.
 
     Returns:
         grid (Map):             The binned SPH quantity.
@@ -316,6 +323,7 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
 
     ext = extent.view(np.ndarray).astype(np.float64).copy()
     grid = np.empty(np.prod(Npx), dtype=np.float64)
+    Snorm = np.empty(len(sub), dtype=np.float64)
     Npx = Npx.astype(np.intp)
     if normed:
         sph_bin = C.cpygad.sph_3D_bin_2D
@@ -329,6 +337,7 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
             C.c_void_p(ext.ctypes.data),
             C.c_void_p(Npx.ctypes.data),
             C.c_void_p(grid.ctypes.data),
+            C.c_void_p(Snorm.ctypes.data),
             C.create_string_buffer(kernel),
             C.c_double(s.boxsize.in_units_of(s['pos'].units)),
     )
@@ -337,7 +346,10 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print 'done with SPH grid'
 
-    return Map(grid, extent)
+    if ret_Snorm:
+        return Map(grid, extent), Snorm
+    else:
+        return Map(grid, extent)
 
 def SPH_3D_to_line(s, qty, los, extent, Npx, xaxis=0, yaxis=1, kernel=None,
                    dV='dV', hsml='hsml'):

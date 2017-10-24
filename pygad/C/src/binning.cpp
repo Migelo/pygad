@@ -10,9 +10,10 @@ void sph_bin_3D(size_t N,
                 double *extent,
                 size_t Npx[3],
                 double *grid,
+                double *Snorm,
                 const char *kernel_,
                 double periodic) {
-    bin_sph<3>(N, pos, hsml, dV, qty, extent, Npx, grid, kernel_, periodic);
+    bin_sph<3>(N, pos, hsml, dV, qty, extent, Npx, grid, Snorm, kernel_, periodic);
 }
 
 void sph_bin_3D_nonorm(size_t N,
@@ -23,9 +24,10 @@ void sph_bin_3D_nonorm(size_t N,
                        double *extent,
                        size_t Npx[3],
                        double *grid,
+                       double *Snorm,
                        const char *kernel_,
                        double periodic) {
-    bin_sph<3,false,false>(N, pos, hsml, dV, qty, extent, Npx, grid, kernel_, periodic);
+    bin_sph<3,false,false>(N, pos, hsml, dV, qty, extent, Npx, grid, Snorm, kernel_, periodic);
 }
 
 void sph_3D_bin_2D_nonorm(size_t N,
@@ -36,9 +38,10 @@ void sph_3D_bin_2D_nonorm(size_t N,
                           double *extent,
                           size_t Npx[2],
                           double *grid,
+                          double *Snorm,
                           const char *kernel_,
                           double periodic) {
-    bin_sph<2,true,false>(N, pos, hsml, dV, qty, extent, Npx, grid, kernel_, periodic);
+    bin_sph<2,true,false>(N, pos, hsml, dV, qty, extent, Npx, grid, Snorm, kernel_, periodic);
 }
 
 void sph_3D_bin_2D(size_t N,
@@ -49,9 +52,10 @@ void sph_3D_bin_2D(size_t N,
                    double *extent,
                    size_t Npx[2],
                    double *grid,
+                   double *Snorm,
                    const char *kernel_,
                    double periodic) {
-    bin_sph<2,true>(N, pos, hsml, dV, qty, extent, Npx, grid, kernel_, periodic);
+    bin_sph<2,true>(N, pos, hsml, dV, qty, extent, Npx, grid, Snorm, kernel_, periodic);
 }
 
 void bin_sph_along_line(size_t N,
