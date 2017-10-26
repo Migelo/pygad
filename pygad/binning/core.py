@@ -321,6 +321,11 @@ class Map(UnitArr):
         #r = r[:-1] + ', V=%g %s>' % (V, V.units)
         return r
 
+    def __str__(self):
+        s = self.view(UnitArr).__str__()
+        s += ' (Npx=%s)' % (self.Npx,)
+        return s
+
     @property
     def grid(self):
         """Just the underlying `UnitArr`."""

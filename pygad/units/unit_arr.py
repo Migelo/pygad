@@ -422,7 +422,7 @@ class UnitArr(np.ndarray):
             f = float(self.view(np.ndarray))    # avoid conversion of units!
             s = str(f) if (1e-3<=f<=1e3) else ('%e' % f)
         else:
-            s = np.ndarray.__str__(self)
+            s = str(self.view(np.ndarray))
         if self.units is not None and self.units != 1:
             s += ' %s' % self.units
         return s
