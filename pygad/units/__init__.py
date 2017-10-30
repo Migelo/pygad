@@ -15,5 +15,5 @@ import os
 from ..environment import module_dir
 define_from_cfg(['./units.cfg',
                  os.getenv("HOME")+'/.config/pygad/units.cfg',
-                 module_dir+'units/units.cfg'])
+                 module_dir+'config/units.cfg'])
 

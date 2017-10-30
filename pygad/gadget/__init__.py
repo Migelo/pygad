@@ -18,5 +18,5 @@ import os
 from ..environment import module_dir
 read_config(['./gadget.cfg',
              os.getenv("HOME")+'/.config/pygad/gadget.cfg',
-             module_dir+'gadget/gadget.cfg'])
+             module_dir+'config/gadget.cfg'])
 

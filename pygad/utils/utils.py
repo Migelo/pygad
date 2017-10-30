@@ -174,8 +174,8 @@ def periodic_distance_to(pos, center, boxsize):
         >>> from ..units import UnitArr
         >>> from ..environment import module_dir
         >>> units.undefine_all()
-        >>> units.define_from_cfg([module_dir+'units/units.cfg'])
-        reading units definitions from "pygad/units/units.cfg"
+        >>> units.define_from_cfg([module_dir+'config/units.cfg'])
+        reading units definitions from "pygad/config/units.cfg"
         >>> pos = UnitArr([[1.1,2.1,3.7], [2.8,-1.4,5.4], [7.0,3.4,-5.6]],
         ...               units='m')
         >>> ref = UnitArr([10.,120.,280.], units='cm')

@@ -3,8 +3,8 @@ A module to prepare derived arrays for the snapshot.
 
 Examples:
     >>> from ..environment import module_dir
-    >>> rules = read_derived_rules([module_dir+'snapshot/derived.cfg'])
-    reading config file "pygad/snapshot/derived.cfg"
+    >>> rules = read_derived_rules([module_dir+'config/derived.cfg'])
+    reading config file "pygad/config/derived.cfg"
     >>> assert rules == _rules
     >>> rules['r'], rules['metallicity']
     ('dist(pos)', 'metals/elements.sum(axis=1)')
