@@ -5,7 +5,8 @@ Doctests are in the functions themselves.
 '''
 __all__ = ['DevNull', 'static_vars', 'nice_big_num_str', 'float_to_nice_latex',
            'perm_inv', 'periodic_distance_to', 'sane_slice', 'is_consecutive',
-           'rand_dir', 'ProgressBar', 'sec_to_nice_str', 'weighted_percentile']
+           'rand_dir', 'ProgressBar', 'time_from_color_str', 'time_to_nice_str',
+           'sec_to_nice_str', 'weighted_percentile']
 
 import numpy as np
 import re
@@ -660,12 +661,75 @@ class ProgressBar(object):
                                 [self._it]
         self._eta_known = True
 
-def sec_to_nice_str(secs, prec=None, days=None):
+def time_from_color_str(time, units='s'):
+    '''
+    TODO!
+
+    Examples:
+        >>> time_from_color_str('6:12')
+        UnitArr(372.0, units="s")
+        >>> time_from_color_str('1:20:00', units='h')
+        UnitArr(1.33333333333, units="h")
+    '''
+    from ..units import UnitArr
+    nums = time.split(':')
+    t = 0
+    for val in nums:
+        t = 60*t + float(val)
+    return UnitArr(t,'s').in_units_of(units)
+
+def time_to_nice_str(time, colon=False, opt_hour=False, prec=None, days=None):
+    '''
+    Convert a number of seconds to a nice string.
+
+    Args:
+        time (UnitScalar):  The time unit scalar to format into a nice string.
+        colon (bool):       Use colons to seperate hours, minutes, and seconds,
+                            not letters.
+        opt_hour (bool):    Do not print the number of hours (and days) if they
+                            are zero.
+        prec (int):         The precision of the seconds. If not specified, it
+                            will either just be integer precision for integral
+                            values of secs, or it defaults to a precision of
+                            three otherwise.
+        days (bool):        Whether to print the number of days or just break it
+                            down to hours. When not specified / None, the number
+                            of days is only printed, it the duration (`secs`)
+                            exceeds 24h.
+
+    Returns:
+        repr (str):         A human readable string representation of the time in
+                            (days,) hours, minutes, and seconds.
+
+    Examples:
+        >>> time_to_nice_str(62*60+3)
+        '1h 2m 3s'
+        >>> time_to_nice_str( '73 min' )
+        '1h 13m 0s'
+        >>> time_to_nice_str( '73 min', colon=True )
+        '01:13:00'
+        >>> time_to_nice_str(int(123e4), prec=1)
+        '14d 5h 40m 0.0s'
+        >>> time_to_nice_str( time_from_color_str('3:11'), colon=True, opt_hour=True )
+        '3:11'
+    '''
+    from ..units import UnitScalar
+    time = UnitScalar(time, 's')
+    if prec is None:
+        if abs(time)>1 and abs(time-int(time))<1e-12:
+            prec = 0
+    return sec_to_nice_str(float(time), colon=colon, opt_hour=opt_hour, prec=prec, days=days)
+
+def sec_to_nice_str(secs, colon=False, opt_hour=False, prec=None, days=None):
     '''
     Convert a number of seconds to a nice string.
 
     Args:
         secs (int, float):  The number of seconds to format into a nice string.
+        colon (bool):       Use colons to seperate hours, minutes, and seconds,
+                            not letters.
+        opt_hour (bool):    Do not print the number of hours (and days) if they
+                            are zero.
         prec (int):         The precision of the seconds. If not specified, it
                             will either just be integer precision for integral
                             values of secs, or it defaults to a precision of
@@ -682,12 +746,24 @@ def sec_to_nice_str(secs, prec=None, days=None):
     Examples:
         >>> sec_to_nice_str(12345)
         '3h 25m 45s'
+        >>> sec_to_nice_str(12345, colon=True)
+        '03:25:45'
         >>> sec_to_nice_str(123e4)
         '14d 5h 40m 0.000s'
+        >>> sec_to_nice_str(123e4, colon=True)
+        '14d 05:40:00.000'
         >>> sec_to_nice_str(int(123e4))
         '14d 5h 40m 0s'
         >>> sec_to_nice_str(int(123e4), days=False)
         '341h 40m 0s'
+        >>> sec_to_nice_str(int(123e4), colon=True)
+        '14d 05:40:00'
+        >>> sec_to_nice_str(int(123e4), colon=True, days=False)
+        '341:40:00'
+        >>> sec_to_nice_str(123, opt_hour=True)
+        '2m 3s'
+        >>> sec_to_nice_str(123, colon=True, opt_hour=True)
+        '2:03'
         >>> sec_to_nice_str(180, days=True)
         '0d 0h 3m 0s'
         >>> sec_to_nice_str(123.456)
@@ -704,22 +780,37 @@ def sec_to_nice_str(secs, prec=None, days=None):
     if not (prec is None or (isinstance(prec,int) and prec>=0)):
         raise ValueError("Precision needs to be a positive integer!")
 
+    m, s = divmod(secs, 60)
+    m = int(m)
+    h, m = divmod(m, 60)
+
     if isinstance(secs,numbers.Integral):
         tformat = '%dh %dm %ds'
+        prec = 0
     else:
         if prec is None:
             prec = 3 if secs>1 else min(9,3-np.log10(secs))
         tformat = '%%dh %%dm %%.%dfs' % prec
-
-    m, s = divmod(secs, 60)
-    m = int(m)
-    h, m = divmod(m, 60)
+    if colon:
+        tformat = tformat[:-1].replace('h ',':').replace('m ',':')
+        tformat = tformat.replace('%d','%02d')
+        tformat = tformat.replace('%.','%%0%d.'%(2+(prec>0)+prec))
 
     if days or (days is None and h >= 24):
         d, h = divmod(h, 24)
         string = ('%dd ' + tformat) % (d, h, m, s)
     else:
+        d = None
         string = tformat % (h, m, s)
+
+    if opt_hour and (d is None or d==0) and h==0:
+        if colon:
+            string = string[string.find(':')+1:]
+        else:
+            string = string[string.find(' ')+1:]
+        string = string.lstrip('0')
+        if string[0] == ':':
+            string = '0'+string
 
     return string
 
