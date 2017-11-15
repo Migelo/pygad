@@ -143,9 +143,12 @@ def plot_map(m, colors=None, extent=None, vlim=None, clim=None,
     if surface_dens:
         m = m / np.prod(res)
     if units:
+        units = Unit(units)
         m = m.in_units_of(units, subs=subs)
         if hasattr(vlim,'units'):
             vlim = vlim.in_units_of(units)
+    else:
+        units = getattr(m,'units',None)
     if logscale:
         m = np.log10(m)
         if vlim is not None:
@@ -185,7 +188,13 @@ def plot_map(m, colors=None, extent=None, vlim=None, clim=None,
 
     if showcbar:
         if cbartitle is None:
-            cbartitle = ''
+            if units is not None:
+                cbartitle = r'[$%s$]' % units.latex()
+                if logscale:
+                    cbartitle = cbartitle.replace('$','')
+                    cbartitle = r'$\log_{10}(%s)$' % cbartitle
+            else:
+                cbartitle = ''
         cbar = add_cbar(ax, cbartitle, clim=clim, cmap=cmap,
                         fontcolor=fontcolor, fontsize=fontsize,
                         nticks=7)

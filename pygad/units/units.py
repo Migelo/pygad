@@ -78,9 +78,9 @@ Unit("0.5 kpc")
 One can also read config files, that define units. See define_from_cfg for more
 dertails.
 >>> from ..environment import module_dir
->>> define_from_cfg([module_dir+'units/units.cfg'], allow_redef=True,
+>>> define_from_cfg([module_dir+'config/units.cfg'], allow_redef=True,
 ...                 warn=False)
-reading units definitions from "pygad/units/units.cfg"
+reading units definitions from "pygad/config/units.cfg"
 >>> Unit('erg').in_units_of('J')
 1e-07
 >>> Unit('Msol / h_0').latex()

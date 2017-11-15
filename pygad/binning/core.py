@@ -295,6 +295,24 @@ class Map(UnitArr):
     def __array_wrap__(self, array, context=None):
         return UnitArr.__array_wrap__(self, array, context)
 
+    def __getitem__(self, key):
+        item = super(Map, self).__getitem__(key)
+        if item.ndim != self.ndim:
+            if (isinstance(key,np.ndarray) and key.dtype==bool) or \
+                    (not isinstance(key,slice) and
+                            all(isinstance(k,bool) for k in key)):
+                #TODO: handle: boolean masking, that turned out to mask out a dim'
+                pass
+            else:
+                #TODO: how to handle np.newaxis/None?
+                if not isinstance(key, (slice,tuple,list,np.ndarray)):
+                    raise NotImplementedError("key/index is not of type 'tuple',"
+                            " but '%s'" % type(key))
+                take = map(lambda s: isinstance(s,(slice,tuple,list,np.ndarray)), key) + \
+                        [True]*(self.ndim-len(key))
+                item._extent = self._extent[take]
+        return item
+
     def __repr__(self):
         r = self.view(UnitArr).__repr__(val='')
         r = r.replace('UnitArr(,', '<Map at 0x%x;' % id(self))
@@ -302,6 +320,11 @@ class Map(UnitArr):
         #V = self.vol_tot()
         #r = r[:-1] + ', V=%g %s>' % (V, V.units)
         return r
+
+    def __str__(self):
+        s = self.view(UnitArr).__str__()
+        s += ' (Npx=%s)' % (self.Npx,)
+        return s
 
     @property
     def grid(self):

@@ -4,8 +4,8 @@ configs!).
 
 Example:
     >>> from ..environment import module_dir
-    >>> read_config([module_dir+'gadget/gadget.cfg'])
-    reading config file "pygad/gadget/gadget.cfg"
+    >>> read_config([module_dir+'config/gadget.cfg'])
+    reading config file "pygad/config/gadget.cfg"
     >>> block_order
     ['POS ', 'VEL ', 'ID  ', 'MASS']
     >>> families.keys()

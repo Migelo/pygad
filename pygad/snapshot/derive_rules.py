@@ -232,7 +232,8 @@ def calc_HI_mass(s, UVB=gadget.general['UVB'], flux_factor=None):
     return cloudy.Rahmati_HI_mass(s, UVB, flux_factor=flux_factor)
 calc_HI_mass._deps = set(['H', 'temp', 'rho', 'mass'])
 
-def calc_ion_mass(s, el, ionisation, selfshield=True, iontbl=None):
+def calc_ion_mass(s, el, ionisation, selfshield=True, iontbl=None,
+                  warn_outofbounds=True):
     '''
     Calculate the mass of the given ion from Cloudy tables.
 
@@ -250,6 +251,9 @@ def calc_ion_mass(s, el, ionisation, selfshield=True, iontbl=None):
                             The ionisation table to use for the table
                             interpolation. Default to the one given by
                             `derived.cfg` for the redshift of the (sub-)snapshot.
+        warn_outofbounds (bool):
+                            Whether to print out a warning if particles are
+                            out of the bounds of the ionisation tables.
 
     Returns:
         ion_mass (UnitArr): The mass block of the ion (per particle) in units if
@@ -258,7 +262,8 @@ def calc_ion_mass(s, el, ionisation, selfshield=True, iontbl=None):
     # if there is some ion table specified in the config, use it as default
     iontbl = cloudy.config_ion_table(s.redshift) if iontbl is None else iontbl
     f_ion = 10.**iontbl.interp_snap(el+' '+ionisation, s.gas,
-                                    selfshield=selfshield)
+                                    selfshield=selfshield,
+                                    warn_outofbounds=warn_outofbounds)
     return f_ion * s.gas.get(el)
 # this is not super correct: typically the element is taken from the block
 # 'elements', but could in principle also be defined seperately!

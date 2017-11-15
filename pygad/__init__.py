@@ -78,8 +78,7 @@ import binning
 import analysis
 import tools
 import cloudy
-if environment.interactive:
-    import plotting
+import plotting
 
 # the version of this pygad
 # this line gets changed by setup.py during installation, and hence is different
@@ -101,8 +100,6 @@ from physics import G, m_p, solar
 from transformation import Translation, Rotation
 from snapshot import Snap, BallMask, BoxMask, DiscMask, IDMask, ExprMask
 from binning import gridbin2d, gridbin, smooth
-if environment.interactive:
-    from plotting import show_image
 from tools import prepare_zoom, read_info_file
 
 import gc
