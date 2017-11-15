@@ -49,7 +49,7 @@ from .. import environment
 def map_qty(s, extent, field, qty, av=None, reduction=None, Npx=256,
             xaxis=0, yaxis=1, softening=None, sph=True, kernel=None, dV='dV'):
     '''
-    A fast pure-Python routine for binning SPH quantities onto a map.
+    A fast routine for binning SPH quantities onto a map.
 
     Args:
         s (Snap):           The (sub-)snapshot to bin from.
@@ -69,6 +69,7 @@ def map_qty(s, extent, field, qty, av=None, reduction=None, Npx=256,
         reduction (str):    If not None, interpret the SPH quantity not as a SPH
                             field, but as a particle property and reduce with this
                             given method along the third axis / line of sight.
+                            See `SPH_to_2Dgrid_by_particle` for more information.
         Npx (int, sequence):The number of pixel per side. Either an integer that
                             is taken for both sides or a pair of such, the first
                             for the x-direction, the second for the y-direction.
