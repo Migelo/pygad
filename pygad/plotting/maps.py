@@ -22,8 +22,8 @@ def plot_map(m, colors=None, extent=None, vlim=None, clim=None,
              surface_dens=False, csurf_dens=False,
              cmap=None, normcmaplum=True, desat=None,
              ax=None, showcbar=True, cbartitle=None, scaleind='line',
-             scaleunits=None, fontcolor='white', fontsize=14, im_alpha=None,
-             xaxis=None, yaxis=None, subs=None,
+             scaleunits=None, fontcolor='white', fontsize=14, outline=True,
+             im_alpha=None, xaxis=None, yaxis=None, subs=None,
              interpolation='nearest', maps=None, zero_is_white=False):
     '''
     Plot a map (color-code with a second one).
@@ -87,6 +87,9 @@ def plot_map(m, colors=None, extent=None, vlim=None, clim=None,
                             well as for the scale bar.
         fontsize (int):     The size of the labels and other font sizes are scaled
                             accordingly.
+        outline (array-like):
+                            Draw an outline around text for better readability.
+                            The first element is the thickness, the second the color.
         im_alpha (float):   Make the plotted image transparent with this alpha-value.
         interpolation (str):The interpolation to use between pixels. See imshow
                             for more details.
@@ -197,11 +200,11 @@ def plot_map(m, colors=None, extent=None, vlim=None, clim=None,
                 cbartitle = ''
         cbar = add_cbar(ax, cbartitle, clim=clim, cmap=cmap,
                         fontcolor=fontcolor, fontsize=fontsize,
-                        nticks=7)
+                        fontoutline=outline, nticks=7)
 
     make_scale_indicators(ax, extent, scaleind=scaleind, scaleunits=scaleunits,
                           xaxis=xaxis, yaxis=yaxis, fontsize=fontsize,
-                          fontcolor=fontcolor)
+                          fontcolor=fontcolor, outline=outline)
 
     if showcbar:
         return fig, ax, im, cbar

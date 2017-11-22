@@ -199,8 +199,8 @@ def show_image(m, extent=None, cmap=CM_DEF, vlim=None, aspect=None,
 def scatter_map(x, y, s=None, qty=None, av=None, bins=150, extent=None,
                 logscale=False, vlim=None, cmap=None, colors=None, colors_av=None,
                 clim=None, clogscale=False, fontcolor=None, fontsize=14,
-                cbartitle=None, showcbar=True, aspect='auto', ax=None,
-                zero_is_white=False, **kwargs):
+                outline=True, cbartitle=None, showcbar=True, aspect='auto',
+                ax=None, zero_is_white=False, **kwargs):
     '''
     Do a binned scatter plot.
 
@@ -237,6 +237,9 @@ def scatter_map(x, y, s=None, qty=None, av=None, bins=150, extent=None,
                                 labels.
         fontsize (int):         The size of the axis ticks and the cbar title.
                                 Other font sizes are scaled accordingly.
+        outline (array-like):   Draw an outline around text for better
+                                readability. The first element is the thickness,
+                                the second the color.
         cbartitle (str):        A specific colorbar title. If not given, a
                                 automatic one is chosen.
         showcbar (bool):        Whether to show a colorbar for the color-coding.
@@ -362,7 +365,7 @@ def scatter_map(x, y, s=None, qty=None, av=None, bins=150, extent=None,
                 cbartitle = r'$\log_{10}$(' + cbartitle + ')'
 
         cbar = add_cbar(ax, cbartitle, clim=clim, cmap=cmap, fontcolor=fontcolor,
-                        fontsize=fontsize, nticks=7)
+                        fontsize=fontsize, fontoutline=outline, nticks=7)
 
     xunits = r'[$%s$]' % x.units.latex() if getattr(x,'units',None) else ''
     yunits = r'[$%s$]' % y.units.latex() if getattr(y,'units',None) else ''
@@ -379,7 +382,8 @@ def scatter_map(x, y, s=None, qty=None, av=None, bins=150, extent=None,
         return fig, ax, im
 
 def make_scale_indicators(ax, extent, scaleind='line', scaleunits=None,
-                          xaxis=0, yaxis=1, fontsize=14, fontcolor='black'):
+                          xaxis=0, yaxis=1, fontsize=14, fontcolor='black',
+                          outline=None):
     '''
     Set the scale indicators for a map.
 
@@ -400,7 +404,23 @@ def make_scale_indicators(ax, extent, scaleind='line', scaleunits=None,
                                 axis in 'labels' scale mode.
         fontsize (int,float):   The font size to use.
         fontcolor (str):        The font color to use.
+        outline (array-like):   Draw an outline around text for better
+                                readability. The first element is the thickness,
+                                the second the color.
     '''
+    import matplotlib.patheffects
+
+    if outline is True:
+       outline = [
+               3,
+               np.array([1,1,1]) - mpl.colors.ColorConverter.to_rgb(fontcolor)
+        ]
+    if outline is None:
+        path_effects=[]
+    else:
+        path_effects=[mpl.patheffects.withStroke(linewidth=outline[0],
+                                                 foreground=outline[1]),
+                      mpl.patheffects.Normal()]
     if scaleind in [None, 'none']:
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
@@ -424,17 +444,21 @@ def make_scale_indicators(ax, extent, scaleind='line', scaleunits=None,
         if scale/order<2.0:     scale = 1.0*order
         elif scale/order<5.0:   scale = 2.0*order
         else:                   scale = 5.0*order
-        from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
-        from matplotlib.font_manager import FontProperties
-        fp = FontProperties(size=0.9*fontsize)
-        asb =  AnchoredSizeBar(ax.transData, scale,
-                               r'%g%s' % (scale,
-                                   ' $%s$'%width.units.latex()
-                                        if getattr(width,'units',None) is not None
-                                        else ''),
-                               loc=3, pad=0.1, borderpad=0.7, sep=12,
-                               frameon=False, color=fontcolor, fontproperties=fp)
-        ax.add_artist(asb)
+        scale_label = r'%g%s' % (scale,
+                           ' $%s$'%width.units.latex()
+                                if getattr(width,'units',None) is not None
+                                else '')
+        line = np.array( [[extent[0,0] + 0.05*extent[0].ptp(),
+                           extent[0,0] + 0.05*extent[0].ptp() + scale],
+                          [extent[1,0] + 0.12*extent[1].ptp(),
+                           extent[1,0] + 0.12*extent[1].ptp()]] )
+        if outline:
+            ax.plot(line[0], line[1], color=outline[1], linewidth=3+outline[0])
+        ax.plot(line[0], line[1], color=fontcolor,  linewidth=3)
+        ax.text(np.mean(line[0]), extent[1,0]+0.10*extent[1].ptp(),
+                scale_label, color=fontcolor, size=0.9*fontsize,
+                horizontalalignment='center', verticalalignment='top',
+                transform=ax.transData, path_effects=path_effects)
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
     else:
@@ -442,7 +466,7 @@ def make_scale_indicators(ax, extent, scaleind='line', scaleunits=None,
         warnings.warn('Unknown scaling indicator scaleind="%s"!' % scaleind)
 
 def add_cbar(ax, cbartitle, clim, cmap=None, fontcolor='black', fontsize=14,
-             nticks=None, tick_dist=None):
+             fontoutline=None, nticks=None, tick_dist=None):
     '''
     Adding a pygad standard colorbar for a map.
 
@@ -454,6 +478,10 @@ def add_cbar(ax, cbartitle, clim, cmap=None, fontcolor='black', fontsize=14,
         fontcolor (str):        The font color for the ticks and the title.
         fontsize (int,float):   The font size of the title (ticks are 0.65 this
                                 size).
+        fontoutline (array-like):
+                                Draw an outline around the text for better
+                                readability. The first element is the thickness,
+                                the second the color.
         nticks (int):           Set the number of ticks in the colorbar. If None,
                                 it will be chosen automatically.
         tick_dist (float):      The distance between the tick labels, i.e. they
@@ -463,9 +491,23 @@ def add_cbar(ax, cbartitle, clim, cmap=None, fontcolor='black', fontsize=14,
         cbar (Colorbar):        The added colorbar instance.
     '''
     from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+    import matplotlib.patheffects
+
+    if fontoutline is True:
+       fontoutline = [
+               3,
+               np.array([1,1,1]) - mpl.colors.ColorConverter.to_rgb(fontcolor)
+        ]
+    if fontoutline is None:
+        path_effects=[]
+    else:
+        path_effects=[mpl.patheffects.withStroke(linewidth=fontoutline[0],
+                                                 foreground=fontoutline[1]),
+                      mpl.patheffects.Normal()]
 
     cax = inset_axes(ax, width="70%", height="3%", loc=1)
     norm = mpl.colors.Normalize(vmin=clim[0], vmax=clim[1])
+
     cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm,
                                      orientation='horizontal')
 
@@ -477,10 +519,12 @@ def add_cbar(ax, cbartitle, clim, cmap=None, fontcolor='black', fontsize=14,
 
     cbar.ax.tick_params(labelsize=8)
     for tl in cbar.ax.get_xticklabels():
+        tl.set_path_effects(path_effects)
         tl.set_color(fontcolor)
         tl.set_fontsize(0.65*fontsize)
 
-    cbar.set_label(cbartitle, color=fontcolor, fontsize=fontsize, labelpad=12)
+    cbar.set_label(cbartitle, color=fontcolor, fontsize=fontsize, labelpad=12,
+                   path_effects=path_effects)
 
     return cbar
 
