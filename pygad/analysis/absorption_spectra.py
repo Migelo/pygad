@@ -34,7 +34,7 @@ Doctests:
 
     Broadly following Oppenheimer & Dave (2009) for the OVI turbulent broadening
     (adding the minimum of 100 km/s):
-    >>> nH = s.gas.get('rho * H/mass / m_H').in_units_of('cm**-3')
+    >>> nH = s.gas['nH'].in_units_of('cm**-3')
     >>> b_turb = UnitArr( np.sqrt( np.maximum(1405.*np.log10(nH**2) +
     ...                     15674.*np.log10(nH) + 43610., 100.**2 ) ), 'km/s')
     >>> for los in los_arr:

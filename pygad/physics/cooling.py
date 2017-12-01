@@ -49,7 +49,7 @@ Doctests:
     >>> perc = np.percentile(Lambda, [10,25,50,75,90])
     >>> np.round(perc, decimals=25)
     array([ -1.31000000e-23,  -6.40000000e-24,  -7.00000000e-25,
-             1.58000000e-23,   4.33000000e-23])
+             1.57000000e-23,   4.30000000e-23])
 
     The cooling rates of the galaxy are much smaller than they are overall:
     >>> Lambda_gal = tbl.get_cooling(g.gas,
@@ -66,7 +66,7 @@ Doctests:
     add the Compton cooling rates...
     >>> perc_gal = np.percentile(Lambda_gal, [10,25,50,75,90])
     >>> np.round(np.array(perc_gal)/np.array(perc), decimals=5)
-    array([ 0.03941,  0.05754,  0.31656, -0.0059 ,  0.00071])
+    array([ 0.03983,  0.0583 ,  0.32214, -0.00594,  0.00067])
 '''
 __all__ = ['Wiersma_CoolingTable']
 
@@ -323,7 +323,7 @@ class Wiersma_CoolingTable(object):
             print 'calculate cooling rates for\n  %s' % g
 
         T = g['temp'].in_units_of('K',subs=s).view(np.ndarray)
-        nH = (g['rho'] * g['H']/g['mass']).in_units_of('u/cm**3',subs=s).view(np.ndarray)
+        nH = g['nH'].in_units_of('cm**-3',subs=s).view(np.ndarray)
         fHe = ( g['He'] / (g['He'] + g['H']) ).in_units_of(1,subs=s).view(np.ndarray)
 
         T[T<self.T_range[0]] = self.T_range[0]

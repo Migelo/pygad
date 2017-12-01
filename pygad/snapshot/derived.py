@@ -33,6 +33,7 @@ Examples:
     derive block CIV... load tables:
       "pygad//../iontbls/tbls-i45/lt00000f100_i45" (z=0.000)
       "pygad//../iontbls/tbls-i45/lt00491f100_i45" (z=0.049)
+    derive block nH... done.
     derive block C... done.
     done.
     SimArr([...],
