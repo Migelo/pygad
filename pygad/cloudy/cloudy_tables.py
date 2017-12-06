@@ -137,7 +137,7 @@ class IonisationTable(object):
             raise ValueError('The flux factor needs to be positive!')
         self._flux_factor = float(value)
 
-    def interp_snap(self, ion, s, nH='H/mass*rho/m_H', T='temp', selfshield=False,
+    def interp_snap(self, ion, s, nH='nH', T='temp', selfshield=False,
                     warn_outofbounds=True):
         '''
         Convenience function: calling `interp_parts(ion, s.get(nH), s.get(T),

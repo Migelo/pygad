@@ -34,7 +34,7 @@ Doctests:
 
     Broadly following Oppenheimer & Dave (2009) for the OVI turbulent broadening
     (adding the minimum of 100 km/s):
-    >>> nH = s.gas.get('rho * H/mass / m_H').in_units_of('cm**-3')
+    >>> nH = s.gas['nH'].in_units_of('cm**-3')
     >>> b_turb = UnitArr( np.sqrt( np.maximum(1405.*np.log10(nH**2) +
     ...                     15674.*np.log10(nH) + 43610., 100.**2 ) ), 'km/s')
     >>> for los in los_arr:
@@ -360,7 +360,7 @@ def line_profile(line, N, T=None, b=None, l0=None,
 
     return l, tau.view(np.ndarray)
 
-def curve_of_growth(line, b, Nlim=(10,21), bins=30):
+def curve_of_growth(line, b, Nlim=(10,21), bins=30, mode='Voigt'):
     '''
     Calculate the curve of growth for homogeneous gas.
 
@@ -374,6 +374,18 @@ def curve_of_growth(line, b, Nlim=(10,21), bins=30):
                             particles per cm**2.
         bins (int):         The number of evaltuation points in the given range
                             of column densities (equi-distant in log-space).
+        mode (str):         What profile to use:
+                            'Gaussian', 'thermal', 'Doppler':
+                                Take just the thermal broadening into account,
+                                which produces a Gaussian profile of the optical
+                                depths.
+                            'Lorentzian', 'natural', 'intrinsic':
+                                Take just the natural/instrinsic line width into
+                                account, which produces a Lorentzian profile of
+                                the optical depth.
+                            'Voigt', 'full':
+                                Generate the full Voigt profile of the
+                                convolution of the above two profiles.
 
     Returns:
         N (UnitQty):        The (linear) column densities at which the EW were
@@ -391,7 +403,7 @@ def curve_of_growth(line, b, Nlim=(10,21), bins=30):
         while tau[0] > 1e-3 or tau[-1] > 1e-3:
             lim_ = l0 + np.array(lim)
             l, tau = line_profile(line,
-                    '%g cm**-2' % N_, b=b, lim=lim_, bins=bins)
+                    '%g cm**-2' % N_, b=b, lim=lim_, bins=bins, mode=mode)
             lim, bins = [2*lim[0], 2*lim[1]], 2*bins
         dl = UnitArr(l[1]-l[0], l.units)
         l_edges = UnitArr(np.empty(len(l)+1), l.units)

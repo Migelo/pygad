@@ -24,9 +24,9 @@ Examples and doctests:
     Test some properties of the integrated kernels:
     >>> for kernel in kernels.iterkeys():
     ...     integ_kernel = integrate_kernel(kernel)
-    ...     if abs(integ_kernel(1.0) - 1.0) > 1e6:
+    ...     if abs(integ_kernel(1.0) - 1.0) > 1e-6:
     ...         print 'Kernel %s did not got integrated to one!', name
-    ...     if abs(integ_kernel(0.0)) > 1e6:
+    ...     if abs(integ_kernel(0.0)) > 1e-6:
     ...         print 'Integrated kernel %s does not start at zero!', name
     ...     for r in [0.1, 0.3, 0.5, 0.8, 0.9]:
     ...         assert 0 < integ_kernel(r) < 1

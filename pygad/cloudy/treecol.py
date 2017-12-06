@@ -116,8 +116,7 @@ def Rahmati_HI_mass(s, UVB=gadget.general['UVB'], flux_factor=None):
         flux_factor = derived.iontable['flux_factor']
 
     T  = s.gas['temp'].in_units_of('K')
-    nH = s.gas['rho'] * s.gas['H']/s.gas['mass'] / physics.m_H
-    nH.convert_to('cm**-3', subs=s)
+    nH = s.gas['nH'].in_units_of('cm**-3', subs=s)
 
     fgamma_HI = Rahmati_fGamma_HI(s.redshift, nH=nH, T=T, 
                                   fbaryon=s.cosmology.Omega_b/s.cosmology.Omega_m,
