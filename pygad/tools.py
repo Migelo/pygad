@@ -896,7 +896,8 @@ def fill_derived_gas_trace_qty(snap, units=None, invalid=0.0):
 
     # The events of the last infall and the last ejection are a bit messy to
     # access. Create extra blocks:
-    last_infall_idx = np.sum(~np.isnan(gas['infall_a']), axis=-1) - 1
+    #last_infall_idx = np.sum(~np.isnan(gas['infall_a']), axis=-1) - 1
+    last_infall_idx = np.sum(gas['infall_a']!=invalid, axis=-1) - 1
     last_infall_idx = np.arange(len(last_infall_idx)), last_infall_idx
     for last, alle in [('last_infall_a', 'infall_a'),
                        ('last_infall_time', 'infall_time'),
@@ -913,7 +914,8 @@ def fill_derived_gas_trace_qty(snap, units=None, invalid=0.0):
     del last_infall_idx
     environment.gc_full_collect()
 
-    last_ejection_idx = np.sum(~np.isnan(gas['ejection_a']), axis=-1) - 1
+    #last_ejection_idx = np.sum(~np.isnan(gas['ejection_a']), axis=-1) - 1
+    last_ejection_idx = np.sum(gas['ejection_a']!=invalid, axis=-1) - 1
     last_ejection_idx = np.arange(len(last_ejection_idx)), last_ejection_idx
     for last, alle in [('last_ejection_a', 'ejection_a'),
                        ('last_ejection_time', 'ejection_time'),
