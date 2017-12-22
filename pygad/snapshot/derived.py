@@ -59,6 +59,7 @@ from ConfigParser import SafeConfigParser
 from .. import utils
 from .. import gadget
 from .. import environment
+from ..units import UnitQty
 import re
 import warnings
 import derive_rules
@@ -111,7 +112,7 @@ def ptypes_and_deps(defi, snap):
             ptypes = [(ptypes[i] and (i in fam)) for i in xrange(6)]
         elif hasattr(derive_rules, name):
             func = getattr(derive_rules, name)
-            if not hasattr(func,'_deps'):
+            if not hasattr(func,'_deps') and not func is UnitQty:
                 warnings.warn('The derived block defining function ' +
                               '"%s" has not attribute `_deps` ' % name +
                               'defining its dependencies! -- Assume no ' +

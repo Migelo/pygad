@@ -63,6 +63,10 @@ def calc_temps(u, XH=0.76, ne=0.0, XZ=None, f=3, subs=None):
         T (UnitArr):            The temperatures for the particles (in K if
                                 possible).
     '''
+    u = UnitQty(u, 'km**2/s**2', subs=subs)
+    XH = np.array(XH)
+    ne = np.array(ne)
+
     tmp = XH/1.008
     XHe = 1.0 - XH
     if XZ is not None:
