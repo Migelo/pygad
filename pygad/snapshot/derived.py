@@ -45,6 +45,12 @@ Examples:
     derive block Mg... done.
     done.
     UnitArr(0.00131..., units="1e+10 Msol h_0**-1")
+    >>> s.stars['lum'].sum() # doctest: +ELLIPSIS
+    load block form_time... done.
+    derive block age... done.
+    ...
+    derive block lum... done.
+    UnitArr(3.460675e+10, units="Lsol")
 
 '''
 __all__ = ['ptypes_and_deps', 'read_derived_rules', 'general']
@@ -204,13 +210,13 @@ def read_derived_rules(config, delete_old=False):
     _rules.update( cfg.items('rules') )
 
     for derived_name in _rules.keys():
-        if derived_name=='mag':
+        if derived_name=='lum':
             mag, lum = 'mag', 'lum'
-        elif re.match('mag_[a-zA-Z]', derived_name):
-            mag, lum = derived_name, 'lum_'+derived_name[-1]
+        elif re.match('lum_[a-zA-Z]', derived_name):
+            mag, lum = 'mag_'+derived_name[-1], derived_name
         else:
             continue
-        _rules[lum] = "UnitQty(10**(-0.4*(%s-solar.abs_mag)),'Lsol')" % mag
+        _rules[mag] = "lum_to_mag(%s)" % lum
 
     # add the ions from the Cloudy table as derived blocks
     if iontable['style'] == 'Oppenheimer new':
