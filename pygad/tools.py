@@ -63,9 +63,9 @@ def read_info_file(filename):
 def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
                  linking_length=None, linking_vel='200 km/s', ret_FoF=False,
                  sph_overlap_mask=False, gal_R200=0.10, star_form='deduce',
-                 gas_trace='deduce', to_physical=True, fill_undefined_nan=True,
-                 gas_traced_blocks='all', gas_traced_dervied_blocks=None,
-                 **kwargs):
+                 gas_trace='deduce', to_physical=True, load_double_prec=False,
+                 fill_undefined_nan=True, gas_traced_blocks='all',
+                 gas_traced_dervied_blocks=None, **kwargs):
     '''
     A convenience function to load a snapshot from a zoomed-in simulation that is
     not yet centered or oriented.
@@ -147,6 +147,9 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
                             the snapshot filename by taking its directory and
                             looking for files '/../*gastrace*'.
         to_physical (bool): Whether to convert the snapshot to physical units.
+        load_double_prec (bool):
+                            Force to load all blocks in double precision.
+                            Equivalent with setting the snapshots attribute.
         fill_undefined_nan (bool):
                             Fill star formation info for IDs not listed in the
                             `star_form` file. For more info see
@@ -183,7 +186,7 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
             
 
     if isinstance(s, (str,unicode)):
-        s = Snap(s)
+        s = Snap(s, load_double_prec=load_double_prec)
     gal_R200 = float(gal_R200)
     if environment.verbose >= environment.VERBOSE_TACITURN:
         print 'prepare zoomed-in', s
