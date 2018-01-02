@@ -58,7 +58,6 @@ Example:
     derive block He... done.
     derive block metals... done.
     derive block metallicity... done.
-    derive block mag_v... done.
     derive block lum_v... done.
     >>> if abs(eff_radius(sub, 'V', proj=2) - '10.7 kpc') > '0.2 kpc':
     ...     print eff_radius(sub, 'V', proj=2)

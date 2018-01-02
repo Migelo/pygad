@@ -7,10 +7,10 @@ direct dependencies, i.e. the blocks it needs directly to calculate the derived
 one from.
 '''
 __all__ = ['calc_temps', 'age_from_form', 'calc_x_ray_lum', 'calc_HI_mass',
-           'calc_ion_mass', 'calc_cooling_rates']
+           'calc_ion_mass', 'calc_cooling_rates', 'get_luminosities']
 
 from .. import environment
-from ..units import UnitArr, UnitScalar, UnitError
+from ..units import UnitArr, UnitScalar, UnitQty, UnitError
 import numpy as np
 from .. import physics
 from .. import gadget
@@ -63,6 +63,10 @@ def calc_temps(u, XH=0.76, ne=0.0, XZ=None, f=3, subs=None):
         T (UnitArr):            The temperatures for the particles (in K if
                                 possible).
     '''
+    u = UnitQty(u, 'km**2/s**2', subs=subs)
+    XH = np.array(XH)
+    ne = np.array(ne)
+
     tmp = XH/1.008
     XHe = 1.0 - XH
     if XZ is not None:
@@ -268,4 +272,37 @@ def calc_ion_mass(s, el, ionisation, selfshield=True, iontbl=None,
 # this is not super correct: typically the element is taken from the block
 # 'elements', but could in principle also be defined seperately!
 calc_ion_mass._deps = set(['H', 'mass', 'rho', 'temp', 'elements'])
+
+def get_luminosities(stars, band='bolometric', IMF=None):
+    '''
+    Get the luminosities for a stellar sub-snapshot for a given band.
+
+    This function calls `ssp.inter_bc_qty` and, hence, is using
+
+    Args:
+        stars (Snap):   The stellar snapshot to interpolate the luminosities for.
+        band (str):     The band in which to interpolate the luminosities for.
+                        Possible choices are:
+                        'bolometric', 'U', 'B', 'V', 'R', and 'K',
+        IMF (str):      The name of the IMF to use, if folder and base is not
+                        given (undefined behaviour otherwise). By default the one
+                        given in `gadget.cfg` is used. Values that are not in
+                        `table_base_name.keys()` are invalid.
+
+    Returns:
+        lum (UnitArr):  The luminosities of the star particles.
+    '''
+    from ..ssp import inter_bc_qty
+    from ..physics import solar
+
+    if band == 'bolometric':
+        qty = 'Mbol'
+    else:
+        qty = '%smag' % band.upper()
+
+    mag_per_Msol = inter_bc_qty(stars['age'], stars['metallicity'], qty=qty,
+                                units='mag', IMF=IMF)
+    lum_per_Msol = UnitQty( 10.**(-0.4*(mag_per_Msol-solar.abs_mag)), 'Lsol')
+    return (stars['mass']/UnitScalar('1 Msol')).in_units_of(1,subs=stars) * lum_per_Msol
+get_luminosities._deps = set(['age', 'metallicity', 'mass'])
 
