@@ -131,6 +131,13 @@ class Transformation(object):
         self._pre  = [] if pre  is None else pre.copy()
         self._post = [] if post is None else prost.copy()
 
+    def __copy__(self):
+        cp = Transformation.__new__(Transformation)
+        cp._change = self._change.copy()
+        cp._pre  = self._pre.copy()
+        cp._post = self._prost.copy()
+        return cp
+
     @property
     def changes(self):
         '''The names of the blocks that are changed, if applied to a snapshot.'''
@@ -250,14 +257,29 @@ class Translation(Transformation):
 
     Args:
         trans (UnitQty):    The translation vector.
+
+    Doctests:
+        >>> T = Translation(UnitArr([1.0,-2.0,1.23],'kpc'))
+        >>> T.trans
+        UnitArr([ 1.  , -2.  ,  1.23], units="kpc")
+        >>> Tcp = T.copy()
+        >>> assert Tcp is not T
+        >>> assert Tcp._trans is not T._trans
+        >>> assert np.all(Tcp.trans == T.trans)
     '''
 
     def __init__(self, trans):
         # velocities are peculiar, hence already correct
-        super(Translation,self).__init__( {
+        super(Translation,self).__init__( change={
                     'pos':  self._apply_to_block,
                 })
         self.trans = trans
+
+    def __copy__(self):
+        return Translation(self.trans)
+
+    def copy(self):
+        return self.copy()
 
     @property
     def trans(self):
@@ -303,16 +325,35 @@ class Rotation(Transformation):
         test_proper (bool):     Test for a proper rotation (i.e. det(R) = +1) on
                                 initialization and whenever the rotation matrix is
                                 changed.
+
+    Doctests:
+        >>> ca, sa = np.cos(1.2), np.sin(1.2)
+        >>> R = Rotation([[ca,sa,0],[-sa,ca,0],[0,0,1]])
+        >>> R.rotmat
+        matrix([[ 0.36235775,  0.93203909,  0.        ],
+                [-0.93203909,  0.36235775,  0.        ],
+                [ 0.        ,  0.        ,  1.        ]])
+        >>> Rcp = R.copy()
+        >>> assert Rcp is not R
+        >>> assert Rcp._R is not R._R
+        >>> assert np.all(Rcp.rotmat == R.rotmat)
+        >>> assert Rcp.test_proper == R.test_proper
     '''
 
     def __init__(self, rotmat, test_proper=True):
-        super(Rotation,self).__init__( {
+        super(Rotation,self).__init__( change={
                     'pos':  self._apply_to_block,
                     'vel':  self._apply_to_block,
                     'acce': self._apply_to_block,
                 } )
         self.test_proper = test_proper
         self.rotmat = rotmat
+
+    def __copy__(self):
+        return Rotation(self.rotmat, self.test_proper)
+
+    def copy(self):
+        return self.copy()
 
     @property
     def rotmat(self):
