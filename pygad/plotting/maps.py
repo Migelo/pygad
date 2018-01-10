@@ -809,6 +809,8 @@ def vec_field(s, qty, extent, field=False, av=None, reduction=None,
     Returns:
         fig (Figure):       The figure of the axis plotted on.
         ax (AxesSubplot):   The axis plotted on.
+        P (...):            The return value of either `ax.streamplot` or
+                            `ax.quiver` depending on the value of `streamlines`.
     """
     extent, Npx, res = grid_props(extent=extent, Npx=Npx, dim=2)
     extent = extent.in_units_of(s['pos'].units, subs=s)
@@ -838,11 +840,11 @@ def vec_field(s, qty, extent, field=False, av=None, reduction=None,
     else:
         fig = ax.get_figure()
     if streamlines:
-        ax.streamplot(X, Y, mx, my, color=color, **kwargs)
+        P = ax.streamplot(X, Y, mx, my, color=color, **kwargs)
     else:
-        ax.quiver(X, Y, mx, my, color=color, pivot=pivot, **kwargs)
+        P = ax.quiver(X, Y, mx, my, color=color, pivot=pivot, **kwargs)
 
-    return fig, ax
+    return fig, ax, P
 
 def correlation_chart(variables, labels=None, title='correlations', bins=30,
                       useoffset=False):
