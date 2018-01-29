@@ -426,6 +426,10 @@ class IDMask(SnapMask):
         
     def _get_mask_for(self, s):
         IDs = self._IDs
+        if IDs.dtype != s['ID'].dtype:
+            raise RuntimeError("You cannot mask with IDs of different type "
+                    "(%s) than those of the snapshot (%s)!" % (
+                        IDs.dtype, s['ID'].dtype))
         return np.in1d(s['ID'], IDs)
 
 class ExprMask(SnapMask):
