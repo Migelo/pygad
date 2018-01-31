@@ -185,6 +185,11 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
         return M_lowres/M > threshold
             
 
+    if 'gastrace' in kwargs:
+        raise ValueError("You passed 'gastrace'. Did you mean 'gas_trace'?")
+    if 'starform' in kwargs:
+        raise ValueError("You passed 'starform'. Did you mean 'star_form'?")
+
     if isinstance(s, (str,unicode)):
         s = Snap(s, load_double_prec=load_double_prec)
     gal_R200 = float(gal_R200)

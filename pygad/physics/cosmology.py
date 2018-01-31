@@ -113,7 +113,7 @@ def WMAP7():
 
 class FLRWCosmo(object):
     '''
-    A Friedman-Lemaitre-Robertson-Walter cosmology that can calculate various
+    A Friedman-Lemaitre-Robertson-Walker cosmology that can calculate various
     cosmological values.
 
     Args:

@@ -194,8 +194,7 @@ def plot_map(m, colors=None, extent=None, vlim=None, clim=None,
             if units is not None:
                 cbartitle = r'[$%s$]' % units.latex()
                 if logscale:
-                    cbartitle = cbartitle.replace('$','')
-                    cbartitle = r'$\log_{10}(%s)$' % cbartitle
+                    cbartitle = r'$\log_{10}$(%s)' % cbartitle
             else:
                 cbartitle = ''
         cbar = add_cbar(ax, cbartitle, clim=clim, cmap=cmap,
@@ -505,46 +504,34 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
 
     if showcbar and cbartitle is None:
         cqty = colors if colors is not None else qty
+        cav  = colors_av if colors is not None else av
         if isinstance(cqty,(str,unicode)):
             cname = cqty
             if reduction is not None:
                 cname = '%s(%s)' % (reduction, cname)
-            if colors is not None:
-                if cunits is None and len(s)>0:
-                    cunits = s.get(cqty).units
-                    if field:
-                        cunits = (cunits * s['pos'].units).gather()
-                    if csurf_dens:
-                        cunits = (cunits * im_col.units).gather()
-                if csurf_dens:
-                    cname = 'surface-density of ' + cname
-            else:
-                if cunits is None:
-                    if units is None:
-                        if len(s) == 0:
-                            cunits = None
-                        else:
-                            cunits = s.get(cqty).units
-                            if field:
-                                cunits = (cunits * s['pos'].units).gather()
-                    else:
-                        cunits = units
+            cunits = None if len(s)==0 else s.get(cqty).units
+            if cunits is None and units is not None:
+                cunits = units
+            if cav is None:
+                if field:
+                    cunits = (cunits * s['pos'].units).gather()
         else:
             cname = ''
             if cunits is None:
                 cunits = units if units is not None else getattr(cqty,'units',None)
-        if surface_dens and colors is None:
+        if (surface_dens and colors is None) or (csurf_dens and colors is not None):
             if units is None and cunits is not None:
                 cunits = cunits/s['pos'].units**2
             cname = r'$\Sigma$ of ' + cname
         if cunits is None or cunits == 1:
-            cunits = ''
+            cunits_name = ''
         else:
-            cunits = r'[$%s$]' % cunits.latex()
-        cbartitle = cname + (' ' if (cname!='' and cunits!='') else '') + cunits
+            cunits_name = r'[$%s$]' % cunits.latex()
+        cbartitle = cname + ' ' + cunits_name
         if (logscale and colors is None) or \
                 (clogscale and colors is not None):
             cbartitle = r'$\log_{10}$(' + cbartitle + ')'
+        cbartitle = cbartitle.strip()
 
     return plot_map(im_lum, colors=im_col,
                     extent=extent, vlim=vlim, clim=clim,
