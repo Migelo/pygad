@@ -29,7 +29,7 @@ Examples:
     SimArr([[-119.9617691 , -215.21350098, -218.84106445],
             [-100.0279007 , -203.89819336, -218.8409729 ],
             [-107.25678253, -204.94604492, -213.70817566]],
-           dtype=float32, units="s**-1 km", snap="snap_M1196_4x_470")
+           dtype=float32, units="a**1/2 s**-1 km", snap="snap_M1196_4x_470")
     >>> Translation(UnitArr([10,-20,30],'Mpc')).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_470"... done.
     >>> s['pos'][:3]
@@ -50,7 +50,7 @@ Examples:
             [  59.79833984, -180.23754883,   15.16521835],
             [ 147.31933594,  -25.50907898, -103.11534119],
             [  60.9321785 ,  114.03372955,  -84.46931458]],
-           dtype=float32, units="1e+10 ckpc h_0**-1 Msol h_0**-1 km s**-1", snap="snap_M1196_4x_470")
+           dtype=float32, units="1e+10 ckpc h_0**-1 Msol a**1/2 h_0**-1 km s**-1", snap="snap_M1196_4x_470")
     >>> rot.apply(s)
     apply Rotation to "vel" of "snap_M1196_4x_470"... done.
     apply Rotation to "pos" of "snap_M1196_4x_470"... done.
@@ -64,7 +64,7 @@ Examples:
             [-180.23754883,   15.16521835,   59.79833984],
             [ -25.50907898, -103.11534119,  147.31933594],
             [ 114.03372955,  -84.46931458,   60.9321785 ]],
-           dtype=float32, units="1e+10 ckpc h_0**-1 Msol h_0**-1 km s**-1", snap="snap_M1196_4x_470")
+           dtype=float32, units="1e+10 ckpc h_0**-1 Msol a**1/2 h_0**-1 km s**-1", snap="snap_M1196_4x_470")
     >>> ca, sa = np.cos(12), np.sin(12)
     >>> Rotation([[ca,sa,0],[-sa,ca,0],[0,0,1]]).apply(s)
     apply Rotation to "vel" of "snap_M1196_4x_470"... done.
@@ -106,7 +106,7 @@ Examples:
     SimArr([[  14.27710342,  -56.8183403 ,   54.35939789],
             [  37.94758224,   84.52431488,  130.14624023],
             [  37.37803268,   64.14741516,   -4.18749571]],
-           dtype=float32, units="s**-1 km", snap="snap_M1196_4x_470")
+           dtype=float32, units="a**1/2 s**-1 km", snap="snap_M1196_4x_470")
 '''
 __all__ = ['Transformation', 'Translation', 'Rotation', 'rot_from_axis_angle',
            'rot_to_z']
@@ -130,6 +130,13 @@ class Transformation(object):
         self._change = change.copy()
         self._pre  = [] if pre  is None else pre.copy()
         self._post = [] if post is None else prost.copy()
+
+    def __copy__(self):
+        cp = Transformation.__new__(Transformation)
+        cp._change = self._change.copy()
+        cp._pre  = self._pre.copy()
+        cp._post = self._prost.copy()
+        return cp
 
     @property
     def changes(self):
@@ -250,14 +257,29 @@ class Translation(Transformation):
 
     Args:
         trans (UnitQty):    The translation vector.
+
+    Doctests:
+        >>> T = Translation(UnitArr([1.0,-2.0,1.23],'kpc'))
+        >>> T.trans
+        UnitArr([ 1.  , -2.  ,  1.23], units="kpc")
+        >>> Tcp = T.copy()
+        >>> assert Tcp is not T
+        >>> assert Tcp._trans is not T._trans
+        >>> assert np.all(Tcp.trans == T.trans)
     '''
 
     def __init__(self, trans):
         # velocities are peculiar, hence already correct
-        super(Translation,self).__init__( {
+        super(Translation,self).__init__( change={
                     'pos':  self._apply_to_block,
                 })
         self.trans = trans
+
+    def __copy__(self):
+        return Translation(self.trans)
+
+    def copy(self):
+        return self.copy()
 
     @property
     def trans(self):
@@ -303,16 +325,35 @@ class Rotation(Transformation):
         test_proper (bool):     Test for a proper rotation (i.e. det(R) = +1) on
                                 initialization and whenever the rotation matrix is
                                 changed.
+
+    Doctests:
+        >>> ca, sa = np.cos(1.2), np.sin(1.2)
+        >>> R = Rotation([[ca,sa,0],[-sa,ca,0],[0,0,1]])
+        >>> R.rotmat
+        matrix([[ 0.36235775,  0.93203909,  0.        ],
+                [-0.93203909,  0.36235775,  0.        ],
+                [ 0.        ,  0.        ,  1.        ]])
+        >>> Rcp = R.copy()
+        >>> assert Rcp is not R
+        >>> assert Rcp._R is not R._R
+        >>> assert np.all(Rcp.rotmat == R.rotmat)
+        >>> assert Rcp.test_proper == R.test_proper
     '''
 
     def __init__(self, rotmat, test_proper=True):
-        super(Rotation,self).__init__( {
+        super(Rotation,self).__init__( change={
                     'pos':  self._apply_to_block,
                     'vel':  self._apply_to_block,
                     'acce': self._apply_to_block,
                 } )
         self.test_proper = test_proper
         self.rotmat = rotmat
+
+    def __copy__(self):
+        return Rotation(self.rotmat, self.test_proper)
+
+    def copy(self):
+        return self.copy()
 
     @property
     def rotmat(self):
@@ -408,7 +449,7 @@ def rot_from_axis_angle(u, angle):
         >>> np.sqrt(1**2+2**2+3**2)*R.axis(), R.angle()
         (array([ 1.,  2.,  3.]), 1.234)
     '''
-    if isinstance(angle, (str,UnitArr)):
+    if isinstance(angle, (str,unicode,UnitArr)):
         angle = UnitScalar(angle, 'rad')
     angle = float(angle)
     u = np.array(u, dtype=float)

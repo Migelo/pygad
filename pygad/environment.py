@@ -40,7 +40,7 @@ def git_descr(path=os.curdir, dirty='dirty', PEP440=False):
                         describe` returned could not have been converted into a
                         PEP 0440 compliant version.
     '''
-    if not os.path.exists(path):
+    if not os.path.exists(os.path.expanduser(path)):
         raise IOError('The path "%s" does not exist!' % path)
     if not os.path.isdir(path):
         path = os.path.dirname(path)

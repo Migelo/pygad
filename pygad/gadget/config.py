@@ -4,8 +4,8 @@ configs!).
 
 Example:
     >>> from ..environment import module_dir
-    >>> read_config([module_dir+'gadget/gadget.cfg'])
-    reading config file "pygad/gadget/gadget.cfg"
+    >>> read_config([module_dir+'config/gadget.cfg'])
+    reading config file "pygad/config/gadget.cfg"
     >>> block_order
     ['POS ', 'VEL ', 'ID  ', 'MASS']
     >>> families.keys()
@@ -13,7 +13,7 @@ Example:
     >>> families['dm']
     [1, 2, 3]
     >>> general
-    {'kernel': 'cubic', 'vol_def_x': 'ones(len(gas))', 'SSP_dir': 'pygad//../bc03', 'IMF': 'Kroupa'}
+    {'kernel': 'cubic', 'unclear_blocks': 'warning', 'IMF': 'Kroupa', 'UVB': 'HM01', 'vol_def_x': 'ones(len(gas))', 'SSP_dir': 'pygad//../bc03'}
     >>> block_infos['MASS'], block_infos['HSML']
     ((1, 'float', None), (1, 'float', 'gas'))
     >>> get_block_units('RHO ')
@@ -31,7 +31,7 @@ __all__ = ['families', 'elements', 'default_gadget_units', 'block_units',
 
 from ConfigParser import SafeConfigParser
 from ..units import *
-from os.path import exists
+from os.path import exists, expanduser
 from .. import environment
 from .. import kernels
 
@@ -42,8 +42,10 @@ elements = []
 general = {
     'kernel': '<undefined>',
     'vol_def_x': '<undefined>',
+    'UVB': '<undefined>',
     'IMF': '<undefined>',
     'SSP_dir': '<undefined>',
+    'unclear_blocks': 'warning',
     }
 block_infos = {}
 # def. units have to be strings - they are used as replacements
@@ -66,8 +68,8 @@ def read_config(config):
                         types. It must define gas, stars, dm (dark matter),
                         baryons, and bh (black holes).
     general:            A definition of the block ordering for format 1 files
-                        (without info block) and a list of the elements in block
-                        'Z'. This block is optional
+                        (without info block), a list of the elements in block 'Z',
+                        IFM definition, and more.
     base units:         The (default) Gadget base units (length, velocity, mass).
     block units:        The units for the different blocks.
     hdf5 names:         Name correspondences blocks in HDF5 files. (From HDF5 to
@@ -88,7 +90,7 @@ def read_config(config):
                              'following entries: ' + str(entries))
 
     for filename in config:
-        if exists(filename):
+        if exists(expanduser(filename)):
             break
     else:
         raise IOError('Config file "%s" does not exist!' % config)
@@ -126,6 +128,7 @@ def read_config(config):
     if x == '1':
         x = 'ones(len(gas))'
     general['vol_def_x'] = x
+    general['UVB'] = cfg.get('general', 'UVB')
     IMF = cfg.get('general', 'IMF')
     if IMF not in ['Kroupa', 'Salpeter', 'Chabrier']:
         raise ValueError('IMF "%s" is unknown!' % IMF)
@@ -133,6 +136,10 @@ def read_config(config):
     if cfg.has_option('general', 'SSP_dir'):
         general['SSP_dir'] = cfg.get('general', 'SSP_dir',
                                      vars={'PYGAD_DIR':environment.module_dir})
+    unclear_blocks = cfg.get('general', 'unclear_blocks')
+    if unclear_blocks not in ['exception', 'warning', 'ignore']:
+        raise ValueError('Unclear block mode "%s" is unknown!' % unclear_blocks)
+    general['unclear_blocks'] = unclear_blocks
 
     default_gadget_units.clear()
     default_gadget_units.update( cfg.items('base units') )
@@ -179,8 +186,8 @@ def get_block_units(block, gad_units=None):
 
     u = block_units[block]
     for dimension, unit in gad_units.iteritems():
-        if isinstance(unit, str):
-            u = u.replace(dimension, '('+unit+')')
+        if isinstance(unit, (str,unicode)):
+            u = u.replace(dimension, '('+str(unit)+')')
         else:
             u = u.replace(dimension, '('+str(Unit(unit))[1:-1]+')')
     return Unit(u).gather()

@@ -11,11 +11,11 @@ Also doctest other parts of this sub-module:
     >>> doctest.testmod(derive_rules)
     TestResults(failed=0, attempted=4)
     >>> doctest.testmod(derived)
-    TestResults(failed=0, attempted=8)
+    TestResults(failed=0, attempted=13)
     >>> doctest.testmod(sim_arr)
     TestResults(failed=0, attempted=18)
     >>> doctest.testmod(masks)
-    TestResults(failed=0, attempted=33)
+    TestResults(failed=0, attempted=45)
 '''
 from snapshot import *
 from derive_rules import *
@@ -27,5 +27,5 @@ import os
 from ..environment import module_dir
 read_derived_rules(['./derived.cfg',
                    os.getenv("HOME")+'/.config/pygad/derived.cfg',
-                   module_dir+'snapshot/derived.cfg'])
+                   module_dir+'config/derived.cfg'])
 

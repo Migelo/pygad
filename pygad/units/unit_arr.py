@@ -95,6 +95,8 @@ Examples:
     UnitArr(5.515856e+12, units="kg km**-3")
     >>> (0.5 * M_earth * v_earth**2).in_units_of('J')
     UnitArr(2.648129e+33, units="J")
+    >>> UnitArr('1.2 N*m').in_base_units()
+    UnitArr(1.200000e+03, units="g m**2 s**-2")
 
     Unit conversion at construction:
     >>> UnitArr('10**8 km', units='AU')
@@ -132,7 +134,7 @@ Examples:
     >>> assert v.T._unit_carrier is not v._unit_carrier
     >>> assert (v+v)._unit_carrier is not v._unit_carrier
 '''
-__all__ = ['UnitArr', 'dist', 'UnitQty', 'UnitScalar']
+__all__ = ['UnitArr', 'UnitQty', 'UnitScalar']
 
 import numpy as np
 import numpy.core.umath_tests
@@ -270,7 +272,7 @@ class UnitArr(np.ndarray):
 
     def __new__(subtype, data, units=None, subs=None, **kwargs):
         # handle cases where `obj` is a string of a unit:
-        if isinstance(data, str):
+        if isinstance(data, (str,unicode)):
             data = Unit(data)
         if isinstance(data, _UnitClass):
             if units is None:
@@ -282,8 +284,9 @@ class UnitArr(np.ndarray):
                     data = data.in_units_of(units, subs=subs)
 
         # actually create the new object
-        if isinstance(data, UnitArr):   # avoid interference of different
-            kwargs['copy'] = True       # `_unit_carrier`s and units
+        if isinstance(data, UnitArr) and 'copy' not in kwargs:
+            # avoid interference of different `_unit_carrier`s and units
+            kwargs['copy'] = True
         obj = np.array(data, **kwargs).view(subtype)
         # bool needed in some situations (such as np.median(UnitArr))
         if obj.dtype.kind not in 'uifb':
@@ -382,17 +385,24 @@ class UnitArr(np.ndarray):
         else:
             return self.__copy__()
 
-    def __repr__(self):
+    def __repr__(self, val=None):
         if not self.shape and self.dtype.kind == 'f':
             r = 'UnitArr('
-            f = float(self.view(np.ndarray)) # avoid conversion of units!
-            r += str(f) if (1e-3<=f<=1e3) else ('%e' % f)
+            if val is None:
+                f = float(self.view(np.ndarray)) # avoid conversion of units!
+                r += str(f) if (1e-3<=f<=1e3) else ('%e' % f)
+            else:
+                r += str(val)
             if self.dtype not in ['int', 'float']:
                 r += ', dtype=' + str(self.dtype)
             r += ')'
         else:
-            r = np.ndarray.__repr__(self)
-            r = 'UnitArr' + r[r.find('('):].replace('\n', '\n  ')
+            if val is None:
+                r = repr(self.view(np.ndarray))
+                r = r[r.find('('):].replace('\n', '\n  ')
+            else:
+                r = '(' + str(val) + ')'
+            r = 'UnitArr' + r
         if hasattr(self,'units'):
             if self.units is not None and self.units != 1:
                 r = r[:-1] + (', units="%s")' % str(self.units)[1:-1])
@@ -412,7 +422,7 @@ class UnitArr(np.ndarray):
             f = float(self.view(np.ndarray))    # avoid conversion of units!
             s = str(f) if (1e-3<=f<=1e3) else ('%e' % f)
         else:
-            s = np.ndarray.__str__(self)
+            s = str(self.view(np.ndarray))
         if self.units is not None and self.units != 1:
             s += ' %s' % self.units
         return s
@@ -505,7 +515,7 @@ class UnitArr(np.ndarray):
             UnitError:          In case the current units and the target units are
                                 not convertable.
         '''
-        if not isinstance(units, (_UnitClass,str,numbers.Number)):
+        if not isinstance(units, (_UnitClass,str,unicode,numbers.Number)):
             raise TypeError('Cannot convert type %s to units!' % \
                             type(units).__name__)
         units = Unit(units)
@@ -515,6 +525,25 @@ class UnitArr(np.ndarray):
         c = self.copy()
         c.convert_to(units=units, subs=subs)
         return c
+
+    def convert_to_base_units(self, subs=None):
+        '''
+        Convert to the base units, i.e. the units all other units are defined in.
+
+        For more information see `convert_to`.
+        '''
+        units = self.units.standardize().free_of_factors()
+        return self.convert_to(units, subs=subs)
+
+    def in_base_units(self, subs=None, copy=False):
+        '''
+        Return the array in the base units, i.e. the units all other units are
+        defined in.
+
+        For more information see `in_units_of`.
+        '''
+        units = self.units.standardize().free_of_factors()
+        return self.in_units_of(units, subs=subs, copy=copy)
 
 
     def __setitem__(self, i, value):
@@ -623,6 +652,15 @@ class UnitArr(np.ndarray):
             res = np.ndarray.__pow__(self,x)
         return res
 
+    def __ipow__(self, x):
+        if isinstance(x,Fraction) and self.dtype.kind=='f':
+            # way faster to use floats:
+            np.ndarray.__ipow__(self.view(np.ndarray),float(x))
+        else:
+            np.ndarray.__ipow__(self,x)
+        self.units **= x
+        return self
+
     def prod(self, axis=None, *args, **kwargs):
         x = np.ndarray.prod(self, axis, *args, **kwargs).view(UnitArr)
         if self.units is not None:
@@ -696,43 +734,6 @@ class UnitArr(np.ndarray):
     def argsort(self, *args, **kwargs):
         return np.ndarray.argsort(self.view(np.ndarray), *args, **kwargs)
 
-def dist(arr, pos=None, metric='euclidean', p=2, V=None, VI=None, w=None):
-    '''
-    Calculate the distances of the positions in arr to pos.
-
-    This function uses scipy.spatial.distance.cdist and is, hence, faster than
-    sqrt(sum((arr-pos)**2,axis=1)). Also see its documentation for more
-    information. This is only a wrapper that handles the units. The overhead is
-    marginal.
-
-    Args:
-        arr (array-like):   The array of positions (shape: (...,N)).
-        pos (array-like):   The reference position (shape: (N,)).
-                            Default: [0]*N
-        [...]:              See scipy.spatial.distance.cdist.
-
-    Returns:
-        dists (UnitArr):    Basically cdist(arr, [pos], [...]).ravel() with units.
-    '''
-    from scipy.spatial.distance import cdist
-    arr_units = getattr(arr, 'units', None)
-    pos_units = getattr(pos, 'units', None)
-    if pos is None:
-        if not isinstance(arr, np.ndarray): # includes UnitArr
-            arr = np.array(arr)
-        pos = [0]*arr.shape[-1]
-    if arr_units is not None:
-        units = arr_units
-        if pos_units is not None:
-            pos = pos.in_units_of(arr_units)
-    elif pos_units is not None:
-        units = pos_units
-    else:
-        units = None
-    res = cdist(arr, [pos]).ravel().view(UnitArr)
-    res.units = units
-    return res
-
 for f in (np.ndarray.__lt__, np.ndarray.__le__, np.ndarray.__eq__,
           np.ndarray.__ne__, np.ndarray.__gt__, np.ndarray.__ge__):
     # N.B. cannot use functools.partial because it doesn't implement the
@@ -780,9 +781,14 @@ def _same_units_binary(a, b):
 @UnitArr.ufunc_rule(np.abs)
 @UnitArr.ufunc_rule(np.floor)
 @UnitArr.ufunc_rule(np.ceil)
+@UnitArr.ufunc_rule(np.trunc)
+@UnitArr.ufunc_rule(np.round)   # TODO: does not work, since the
+@UnitArr.ufunc_rule(np.around)  # function does something more inbetween
+@UnitArr.ufunc_rule(np.round_)  # than others (and calls np.rint)
+@UnitArr.ufunc_rule(np.rint)
+@UnitArr.ufunc_rule(np.fix)
 @UnitArr.ufunc_rule(np.transpose)
 @UnitArr.ufunc_rule(np.conjugate)
-@UnitArr.ufunc_rule(np.round)
 def _same_units_unary(a):
     return a.units
 

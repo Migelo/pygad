@@ -24,7 +24,7 @@ Example:
     apply Rotation to "vel" of "snap_M1196_4x_320"... done.
     apply Rotation to "pos" of "snap_M1196_4x_320"... done.
     >>> if np.linalg.norm(sub['angmom'].sum(axis=0) -
-    ...         UnitArr([-4.24e+08,2.90e+07,1.49e+14],'kpc Msol km/s')) > 1e12:
+    ...         UnitArr([3.18e+08,-5.05e+07,1.24e+14],'kpc Msol km/s')) > 1e12:
     ...     print sub['angmom'].sum(axis=0)
     derive block momentum... done.
     derive block angmom... done.
@@ -52,12 +52,12 @@ Example:
     ...     print eff_radius(sub, 'V', proj=None)
     load block form_time... done.
     derive block age... done.
-    load block elements... done.
+    load block Z... done.
+    derive block elements... done.
     derive block H... done.
     derive block He... done.
     derive block metals... done.
-    derive block Z... done.
-    derive block mag_v... done.
+    derive block metallicity... done.
     derive block lum_v... done.
     >>> if abs(eff_radius(sub, 'V', proj=2) - '10.7 kpc') > '0.2 kpc':
     ...     print eff_radius(sub, 'V', proj=2)
@@ -66,30 +66,33 @@ Example:
     ...     print half_mass_radius(sub.stars)
     >>> ifr, ofr = flow_rates(s, '50 kpc')
     derive block vrad... done.
-    >>> if abs(ifr - '428 Msol/yr') > '10 Msol/yr' or abs(ofr - '388 Msol/yr') > '10 Msol/yr':
+    >>> if abs(ifr - '355 Msol/yr') > '10 Msol/yr' or abs(ofr - '337 Msol/yr') > '10 Msol/yr':
     ...     print ifr, ofr
-    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc')) - '-5.5 Msol/yr') > '0.2 Msol/yr':
+    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc')) - '-4.6 Msol/yr') > '0.2 Msol/yr':
     ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'))
-    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'in') - '-14.7 Msol/yr') > '0.2 Msol/yr':
-    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'in')
-    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'out') - '9.1 Msol/yr') > '0.2 Msol/yr':
-    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), 'out')
+    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), qty='metals') - '-0.014 Msol/yr') > '0.002 Msol/yr':
+    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), qty='metals')
+    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), direction='in') - '-12.2 Msol/yr') > '0.2 Msol/yr':
+    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), direction='in')
+    >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), direction='out') - '7.6 Msol/yr') > '0.2 Msol/yr':
+    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), direction='out')
     >>> ifr, ofr = flow_rates(s.gas, '50 kpc')
 
-    >>> if abs(ifr - '15.3 Msol/yr') > '1.0 Msol/yr' or abs(ofr - '11 Msol/yr') > '0.1 Msol/yr':
+    >>> if abs(ifr - '13.0 Msol/yr') > '1.0 Msol/yr' or abs(ofr - '9.1 Msol/yr') > '0.1 Msol/yr':
     ...     print ifr, ofr
     >>> eta = ofr / s.gas['sfr'].sum()
     load block sfr... done.
-    >>> if abs(eta - 2.4) > 0.2:
+    >>> if abs(eta - 2.0) > 0.2:
     ...     print 'mass loading:', eta
 
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470', load_double_prec=True)
     >>> s.gas['lx'] = x_ray_luminosity(s, lumtable=module_dir+'../snaps/em.dat')
-    load block elements... done.
+    load block Z... done.
+    derive block elements... done.
     derive block H... done.
     derive block He... done.
     derive block metals... done.
-    derive block Z... done.
+    derive block metallicity... done.
     load block ne... done.
     load block rho... done.
     load block mass... done.
@@ -109,11 +112,12 @@ __all__ = ['mass_weighted_mean', 'center_of_mass', 'reduced_inertia_tensor',
 
 import numpy as np
 from ..units import *
+from ..utils import dist
 from ..transformation import *
 from pygad import physics
 import sys
 
-def mass_weighted_mean(s, qty):
+def mass_weighted_mean(s, qty, mass='mass'):
     '''
     Calculate the mass weighted mean of some quantity, i.e.
     sum(mass[i]*qty[i])/sum(mass).
@@ -125,21 +129,25 @@ def mass_weighted_mean(s, qty):
                             itself (make shure it already has the appropiate
                             shape), or a expression that can be passed to Snap.get
                             (e.g. simply a name of a block).
+        mass (str, UnitArr):The mass block.
 
     Returns:
         mean (UnitArr):     The mass weighted mean.
     '''
-    if isinstance(qty, str):
+    if isinstance(qty, (str,unicode)):
         qty = s.get(qty)
     else:
         qty = UnitArr(qty)
     if len(s) == 0:
         return UnitArr([0]*qty.shape[-1], units=qty.units, dtype=qty.dtype)
+    if isinstance(mass, (str,unicode)):
+        mass = s.get(mass)
+    else:
+        mass = UnitArr(mass)
     # only using the np.ndarray views does not speed up
-    mwgt = np.tensordot(s['mass'], qty, axes=1).view(UnitArr)
-    mwgt.units = s['mass'].units * qty.units
-    normalized_mwgt = mwgt / s['mass'].sum()
-    return normalized_mwgt
+    mwgt = np.tensordot(mass, qty, axes=1)
+    normalized_mwgt = mwgt / float(mass.sum())
+    return UnitArr(normalized_mwgt, qty.units)
 
 def qty_weighted_mean(s, qty, weight):
     '''
@@ -180,8 +188,8 @@ def center_of_mass(snap):
 
 def reduced_inertia_tensor(s):
     '''
-    Calculate the 'reduced' inertia tensor by Raini and Steinmetz (2005) of this
-    ensemble.
+    Calculate the 'reduced' inertia tensor by Gerhard (1983) / Bailin & Steinmetz
+    (2005) of this ensemble.
 
     $I_ij = \\sum_k m_k \\frac{r_{k,i} r_{k,j}}{r_k^2}$
     I_ij = sum_k m_k (r_ki r_kj) / r_k^2
@@ -297,14 +305,12 @@ def half_qty_radius(s, qty, Qtot=None, center=None, proj=None):
 
     if center is None:
         center = UnitQty([0]*3)
-    else:
-        center = UnitQty(center)
-    center = center.in_units_of(s['pos'].units,subs=s)
+    center = UnitQty(center, s['pos'].units, subs=s)
 
     if isinstance(proj,int):
-        proj_mask = tuple([i for i in xrange(3) if i!=proj])
+        proj_mask = [i for i in xrange(3) if i!=proj]
         if len(center)==3:
-            center = center[(proj_mask,)]
+            center = center[proj_mask]
 
     if np.all(center==0):
         if isinstance(proj,int):
@@ -316,7 +322,7 @@ def half_qty_radius(s, qty, Qtot=None, center=None, proj=None):
                 else dist(s['pos'],center)
     r_ind = r.argsort()
 
-    if isinstance(qty,str):
+    if isinstance(qty,(str,unicode)):
         qty = s.get(qty)
     else:
         qty = UnitQty(qty)
@@ -378,7 +384,7 @@ def eff_radius(s, band=None, L=None, center=None, proj=2):
         qty += '_' + band.lower()
     return half_qty_radius(s.stars, qty=qty, Qtot=L, center=center, proj=proj)
 
-def shell_flow_rates(s, Rlim, direction='both', units='Msol/yr'):
+def shell_flow_rates(s, Rlim, qty='mass', direction='both', units='Msol/yr'):
     '''
     Estimate flow rate in spherical shell.
     
@@ -388,6 +394,7 @@ def shell_flow_rates(s, Rlim, direction='both', units='Msol/yr'):
     Args:
         s (Snap):               The (sub-)snapshot to use.
         Rlim (UnitQty):         The inner and outer radius of the shell.
+        qty (str, UnitQty):     The (mass) quantity to calculate the flow rates of.
         direction ('in', 'out', 'both'):
                                 The direction to take into account. If 'in', only
                                 take onflowing gas particles into the calculation;
@@ -412,12 +419,16 @@ def shell_flow_rates(s, Rlim, direction='both', units='Msol/yr'):
     else:
         raise RuntimeError('unknown direction %s!' % direction)
 
-    flow = np.sum(shell['mass'] * shell['vrad'] / UnitArr(Rlim[1]-Rlim[0], Rlim.units))
-    flow.convert_to(units)
+    if isinstance(qty, (str,unicode)):
+        qty = shell.get(qty)
+    else:
+        qty = UnitArr(qty, 'Msol', subs=s)
+
+    flow = np.sum(qty * shell['vrad'] / UnitArr(Rlim[1]-Rlim[0], Rlim.units))
+    flow.convert_to(units, subs=s)
     return flow
 
 def flow_rates(s, R, qty='mass', dt='3 Myr'):
-    #TODO: extend to discs!
     '''
     Estimate in- and outflow rates of a given quantity (default: mass) 
     through a given radius.
@@ -533,7 +544,7 @@ def x_ray_luminosity(s, lumtable='em.dat', tempbin=None, lx0bin=None, dlxbin=Non
         tempbin = np.asarray(tempbin)
 
     tlow = tempbin[0] - 0.5*(tempbin[1]-tempbin[0]) # lower temperature bin limit
-    Z = s.gas['Z'] / physics.solar.Z()              # metallicity in solar units
+    Z = s.gas['metallicity'] / physics.solar.Z()    # metallicity in solar units
     mp = physics.m_p.in_units_of('g')               # proton mass
     # emission measure of gas particles (n_e * n_H * V)
     em = np.float64(s.gas['ne']) * np.float64(s.gas['H']).in_units_of('g')**2 * \

@@ -38,6 +38,10 @@ Examples:
     attr
     more
     test
+    >>> e.eval('a%2 == 0', {'a':np.arange(6)})
+    array([ True, False,  True, False,  True, False], dtype=bool)
+    >>> e.eval('(a%2 == 0) | ((a%3 == 0))', {'a':np.arange(6)})
+    array([ True, False,  True,  True,  True, False], dtype=bool)
 '''
 __all__ = ['iter_idents_in_expr', 'EvalError', 'Evaluator', 'eval']
 
@@ -115,6 +119,7 @@ class Evaluator(object):
                 ast.Sub: op.sub,
                 ast.Mult: op.mul,
                 ast.Div: op.truediv if truediv else op.div,
+                ast.Mod: op.mod,
                 ast.Pow: op.pow,
                 ast.Eq: op.eq,
                 ast.Gt: op.gt,
@@ -123,6 +128,9 @@ class Evaluator(object):
                 ast.LtE: op.le,
                 ast.Is: op.is_,
                 ast.IsNot: op.is_not,
+                ast.BitAnd: np.bitwise_and,
+                ast.BitOr: np.bitwise_or,
+                ast.BitXor: np.bitwise_xor,
                 }
         self.un_op = {
                 ast.UAdd: op.pos,
@@ -135,7 +143,7 @@ class Evaluator(object):
         for ns in [my_math.__dict__, namespace if namespace is not None else {}]:
             self.namespace.update( { name:val for name,val in ns.iteritems()
                     if hasattr(val,'__call__')
-                    or isinstance(val,(numbers.Number,str,np.ndarray)) } )
+                    or isinstance(val,(numbers.Number,str,unicode,np.ndarray)) } )
 
     def _eval(self, node):
         if hasattr(node,'ctx') and not isinstance(node.ctx, ast.Load):
@@ -167,6 +175,12 @@ class Evaluator(object):
                 return self._eval(node.orelse)
         elif isinstance(node, ast.Compare):
             left = self._eval(node.left)
+            if len(node.ops) == 1:
+                # might be an array-like comparison, that does not work in the
+                # general case of multiple comparisons at once
+                operator, comparator = node.ops[0], node.comparators[0]
+                right = self._eval(comparator)
+                return self.bin_op[type(operator)](left, right)
             for operator,comparator in zip(node.ops,node.comparators):
                 right = self._eval(comparator)
                 if not self.bin_op[type(operator)](left, right):

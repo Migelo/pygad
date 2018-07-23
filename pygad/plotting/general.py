@@ -3,9 +3,9 @@ Module for general convenience routines for plotting.
 
 Only very little doctests are possible, since it is mostly visual inspection
 required...
-    # 'plasma' and 'viridis' are not always available
+    # 'plasma' and 'viridis' are not always available (they are from mpl v2.0 on)
     >>> for cmap in ['jet', 'rainbow', #'plasma', 'viridis',
-    ...              'Age', 'NoBlue', 'NoBlue_r', 'Bright']:
+    ...              'age', 'isolum']:
     ...     if isinstance(cmap, str):
     ...         cmap = plt.cm.get_cmap(cmap)
     ...     normed_cmap = isolum_cmap(cmap)
@@ -14,9 +14,8 @@ required...
     ...     if np.any( np.abs(lum - np.mean(lum)) > 1e-6 ):
     ...         print '%s:'%cmap.name, np.mean(lum), np.percentile(lum,[0,100])
 '''
-__all__ = ['cm_k_b', 'cm_k_y', 'cm_age', 'cm_k_g', 'cm_k_p', 'cm_nobl',
-           'cm_nobl_r', 'cm_temp',
-           'luminance', 'isolum_cmap', 'color_code', 'show_image', 'scatter_map']
+__all__ = ['CM_DEF', 'luminance', 'isolum_cmap', 'color_code', 'show_image',
+           'scatter_map', 'make_scale_indicators', 'add_cbar']
 
 import numpy as np
 import matplotlib as mpl
@@ -25,124 +24,8 @@ from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from ..units import *
 from ..binning import *
 
-# used 'http://colormap.org' for creation
-cm_k_b = LinearSegmentedColormap('BlackBlue',
-        {'red':   ((0.0, 0.0, 0.0),
-                   (0.25, 0.0, 0.0),
-                   (1.0, 0.3, 0.3)),
-         'green': ((0.0, 0.0, 0.0),
-                   (0.25, 0.0, 0.0),
-                   (1.0, 0.75, 0.75)),
-         'blue':  ((0.0, 0.0, 0.0),
-                   (0.25, 0.5, 0.5),
-                   (1.0, 1.0, 1.0))
-        })
-cm_k_b.set_bad('black')
-
-cm_k_y = LinearSegmentedColormap('BlackYellow',
-        {'red':   ((0.0, 0.0, 0.0),
-                   (1.0, 1.0, 1.0)),
-         'green': ((0.0, 0.0, 0.0),
-                   (1.0, 1.0, 1.0)),
-         'blue':  ((0.0, 0.0, 0.0),
-                   (0.5, 0.0, 0.0),
-                   (0.75, 0.2, 0.2),
-                   (1.0, 0.55, 0.55))
-        })
-cm_k_y.set_bad('black')
-
-cm_k_g = LinearSegmentedColormap('BlackGreen',
-        {'red':   ((0.0, 0.0, 0.0),
-                   (0.25, 0.0, 0.0),
-                   (1.0, 0.3, 0.3)),
-         'green': ((0.0, 0.0, 0.0),
-                   (1.0, 1.0, 1.0)),
-         'blue':  ((0.0, 0.0, 0.0),
-                   (0.25, 0.0, 0.0),
-                   (1.0, 0.3, 0.3))
-        })
-cm_k_g.set_bad('black')
-
-cm_k_p = LinearSegmentedColormap('BlackPurple',
-        {'red':   ((0.0, 0.0, 0.0),
-                   (1.0, 0.4, 0.4)),
-         'green': ((0.0, 0.0, 0.0),
-                   (1.0, 0.1, 0.1)),
-         'blue':  ((0.0, 0.0, 0.0),
-                   (1.0, 1.0, 1.0))
-        })
-cm_k_p.set_bad('black')
-
-cm_age = LinearSegmentedColormap('Age',
-        {'red':   ((0.0,  0.45, 0.45),
-                   (0.1,  0.80, 0.80),
-                   (0.15, 0.90, 0.90),
-                   (0.25, 1.00, 1.00),
-                   (1.0,  1.00, 1.00)),
-         'green': ((0.0,  0.50, 0.50),
-                   (0.1,  0.82, 0.82),
-                   (0.15, 0.85, 0.85),
-                   (0.30, 0.60, 0.60),
-                   (1.0,  0.25, 0.25)),
-         'blue':  ((0.0,  0.95, 0.95),
-                   (0.1,  0.90, 0.90),
-                   (0.15, 0.85, 0.85),
-                   (0.30, 0.15, 0.15),
-                   (1.0,  0.05, 0.05))
-        })
-
-cm_nobl = LinearSegmentedColormap('NoBlue',
-        {'red':   ((0.0,  1.00, 1.00),
-                   (0.5,  1.00, 1.00),
-                   (0.75, 0.00, 0.00),
-                   (1.0,  0.00, 0.00)),
-         'green': ((0.0,  0.00, 0.00),
-                   (0.25, 0.00, 0.00),
-                   (0.5,  1.00, 1.00),
-                   (1.0,  1.00, 1.00)),
-         'blue':  ((0.0,  1.00, 1.00),
-                   (0.25, 0.00, 0.00),
-                   (0.75, 0.00, 0.00),
-                   (1.0,  1.00, 1.00))
-        })
-cm_nobl.set_bad('black')
-cm_nobl_r = LinearSegmentedColormap('NoBlue_r',
-        {'red':   ((0.0,  0.00, 0.00),
-                   (0.25, 0.00, 0.00),
-                   (0.5,  1.00, 1.00),
-                   (1.0,  1.00, 1.00)),
-         'green': ((0.0,  1.00, 1.00),
-                   (0.5,  1.00, 1.00),
-                   (0.75, 0.00, 0.00),
-                   (1.0,  0.00, 0.00)),
-         'blue':  ((0.0,  1.00, 1.00),
-                   (0.25, 0.00, 0.00),
-                   (0.75, 0.00, 0.00),
-                   (1.0,  1.00, 1.00))
-        })
-cm_nobl_r.set_bad('black')
-
-cm_temp = LinearSegmentedColormap('Bright',
-        {'red':   ((0.0,  0.50, 0.50),
-                   (0.2,  0.00, 0.00),
-                   (0.37, 0.00, 0.00),
-                   (0.62, 1.00, 1.00),
-                   (1.0,  1.00, 1.00)),
-         'green': ((0.0,  0.50, 0.50),
-                   (0.2,  1.00, 1.00),
-                   (0.62, 1.00, 1.00),
-                   (0.87, 0.00, 0.00),
-                   (1.0,  0.15, 0.15)),
-         'blue':  ((0.0,  1.00, 1.00),
-                   (0.35, 1.00, 1.00),
-                   (0.6,  0.00, 0.00),
-                   (0.87, 0.00, 0.00),
-                   (1.0,  0.15, 0.15))
-        })
-cm_temp.set_bad('black')
-
-for cmap in [cm_k_b, cm_k_g, cm_k_p, cm_k_y, cm_age, cm_nobl, cm_nobl_r, cm_temp]:
-    mpl.cm.register_cmap(name=cmap.name, cmap=cmap)
+# 'jet' is bad -- the new default in matplotlib v2.0 ('viridis') is much better
+CM_DEF = 'viridis'
 
 # cf. http://alienryderflex.com/hsp.html
 RGB_lum_weight = np.array([0.299, 0.587, 0.114])
@@ -165,12 +48,14 @@ def luminance(colors):
         c = colors[:,:3]
     return np.sqrt( np.dot(c**2, RGB_lum_weight) )
 
-def isolum_cmap(cmap, desat=None):
+def isolum_cmap(cmap, isolum=1.0, desat=None):
     '''
     Return version of the colormap with constant luminance.
 
     Args:
         cmap (str, Colormap):   The colormap to norm in luminance.
+        isolum (float):         The grade to which the colormap shall be converted
+                                to a iso-luminosity one.
         desat (float):          If not None, a factor of how much to desatureate
                                 the colormap first. This allows higher luminance.
 
@@ -190,7 +75,9 @@ def isolum_cmap(cmap, desat=None):
     
     # convert RGBA to perceived greyscale luminance
     # cf. http://alienryderflex.com/hsp.html
-    lum = luminance(colors)
+    if not (0.0 <= isolum <= 1.0):
+        raise ValueError('`isolum` needs to be in [0,1], but is %s!' % isolum)
+    lum = (isolum * luminance(colors)) + (1.-isolum)
     for i in xrange(3):
         colors[:, i] /= lum
     # if rgb=(1,1,1), then lum=sqrt(3)>1
@@ -200,7 +87,7 @@ def isolum_cmap(cmap, desat=None):
     return mpl.colors.LinearSegmentedColormap.from_list(cmap.name + '_lumnormed',
                                                         colors, cmap.N)        
 
-def color_code(im_lum, im_col, cmap='Bright', vlim=None, clim=None,
+def color_code(im_lum, im_col, cmap=CM_DEF, vlim=None, clim=None,
                zero_is_white=False):
     '''
     Colorcode a mono-chrome image with onother one.
@@ -247,21 +134,22 @@ def color_code(im_lum, im_col, cmap='Bright', vlim=None, clim=None,
 
     return im
 
-def show_image(im, extent=None, cmap='Bright', vlim=None, aspect=None,
+def show_image(m, extent=None, cmap=CM_DEF, vlim=None, aspect=None,
                interpolation='nearest', ax=None, **kwargs):
     '''
-    Show an image with the 'physicsit's orientation'.
+    Show a map or an image with the 'physicist's orientation'.
 
-    The first axis of im is the x-direction and the second one the y-direction,
+    The first axis of `m` is the x-direction and the second one the y-direction,
     contrary to the default behaviour of plt.imshow.
 
     Args:
-        im (array-like):    The image to show. It can be a luminance image (shape
-                            (w,h)), a rgb-image (shape (w,h,3)) or a rgba-image
-                            (shape (w,h,4)).
-        extent (array-like):The ranges of the image. It can either be a sequence
-                            of four values (xmin,xmax,ymin,ymax) or an array-like,
-                            of the structure [[xmin,xmax],[ymin,ymax]].
+        m (Map, array-like):    The map/image to show. It can be a luminance image
+                                (shape (w,h)), a rgb-image (shape (w,h,3)) or a
+                                rgba-image (shape (w,h,4)).
+        extent (array-like):    The ranges of the image. It can either be a sequence
+                                of four values (xmin,xmax,ymin,ymax) or an
+                                array-like, of the structure
+                                [[xmin,xmax],[ymin,ymax]].
         cmap (str, Colormap):
                             The colormap to use, it a luminance image was passed.
                             Ignored otherwise.
@@ -282,8 +170,12 @@ def show_image(im, extent=None, cmap='Bright', vlim=None, aspect=None,
         ax (AxesSubplot):   The axis plotted on.
         im (AxesImage):     The image instance created.
     '''
-    if len(im.shape)!=2 and not (len(im.shape)==3 and im.shape[-1] in [3,4]):
+    if len(m.shape)!=2 and not (len(m.shape)==3 and m.shape[-1] in [3,4]):
         raise ValueError('Image has to have shape (w,h), (w,h,3) or (w,h,4)!')
+    if extent is None:
+        extent = getattr(m,'extent',None)
+        if extent is None:
+            raise ValueError('No extent given and `m` is not a `Map`!')
 
     if ax is None:
         fig, ax = plt.subplots()
@@ -293,22 +185,23 @@ def show_image(im, extent=None, cmap='Bright', vlim=None, aspect=None,
     if extent is not None:
         extent = np.asarray(extent).ravel()
 
-    if len(im.shape) == 2:
-        im = im.T
+    if len(m.shape) == 2:
+        m = m.T
     else:
-        im = np.dstack( [im[:,:,i].T for i in range(im.shape[-1])] )
+        m = np.dstack( [m[:,:,i].T for i in range(m.shape[-1])] )
 
-    im = ax.imshow(im, origin='lower', extent=extent,
+    im = ax.imshow(m, origin='lower', extent=extent,
                    cmap=cmap, vmin=vmin, vmax=vmax,
                    aspect=aspect, interpolation=interpolation, **kwargs)
 
     return fig, ax, im
 
-def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
-                vlim=None, cmap=None, colors=None, colors_av=None, clim=None,
-                clogscale=False, fontcolor=None, fontsize=14, cbartitle=None,
-                showcbar=True, aspect='auto', ax=None,
-                zero_is_white=False, **kwargs):
+
+def scatter_map(x, y, s=None, qty=None, av=None, bins=150, extent=None,
+                logscale=False, vlim=None, cmap=None, colors=None, colors_av=None,
+                clim=None, clogscale=False, fontcolor=None, fontsize=14,
+                outline=True, cbartitle=None, showcbar=True, aspect='auto',
+                ax=None, zero_is_white=False, **kwargs):
     '''
     Do a binned scatter plot.
 
@@ -324,6 +217,8 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
                                 colors_av is a string (block name).
         qty (str, array-like):  If given, not just scatter, but actually bin this
                                 quantity onto a grid.
+        av (str, array-like):   If given, plot the average the quantity `qty`,
+                                weighted by this quantity.
         bins (int, sequence):   The number of bins per axis.
         extent (UnitArr):       The extent to plot over:
                                 [[min(x),max(x)],[min(y),max(y)]]
@@ -343,6 +238,9 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
                                 labels.
         fontsize (int):         The size of the axis ticks and the cbar title.
                                 Other font sizes are scaled accordingly.
+        outline (array-like):   Draw an outline around text for better
+                                readability. The first element is the thickness,
+                                the second the color.
         cbartitle (str):        A specific colorbar title. If not given, a
                                 automatic one is chosen.
         showcbar (bool):        Whether to show a colorbar for the color-coding.
@@ -359,34 +257,38 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
         fig (Figure):       The figure of the axis plotted on.
         ax (AxesSubplot):   The axis plotted on.
         im (AxesImage):     The image instance created.
-       [cbar (Colobar):     The colorbar, if showcbar is True.]
+       [cbar (Colorbar):    The colorbar, if showcbar is True.]
     '''
     xname = ''
     yname = ''
     qtyname = ''
     cname = ''
-    if isinstance(x,str):
+    if isinstance(x,(str,unicode)):
         xname = x
         x = s.get(x)
-    if isinstance(y,str):
+    if isinstance(y,(str,unicode)):
         yname = y
         y = s.get(y)
-    if isinstance(qty,str):
+    if isinstance(qty,(str,unicode)):
         qtyname = qty
         qty = s.get(qty)
+    if isinstance(av,(str,unicode)):
+        av = s.get(av)
     if cmap is None:
-        cmap = 'cubehelix' if colors is None else 'Bright'
+        cmap = CM_DEF if colors is None else 'isolum'
+        cmap = mpl.cm.get_cmap(cmap)
+        cmap.set_bad('w' if zero_is_white else 'k')
         if fontcolor is None:
-            fontcolor = 'w'
+            fontcolor = 'k' if zero_is_white else 'w'
     if isinstance(cmap,str):
         cmap = mpl.cm.get_cmap(cmap)
-    if isinstance(colors,str):
+    if isinstance(colors,(str,unicode)):
         cname = colors
         colors = s.get(colors)
-    if isinstance(colors_av,str):
+    if isinstance(colors_av,(str,unicode)):
         colors_av = s.get(colors_av)
     if fontcolor is None:
-        fontcolor = 'k'
+        fontcolor = 'k' if zero_is_white else 'w'
 
     if extent is None:
         extent = np.asarray( [[np.min(x), np.max(x)], [np.min(y), np.max(y)]] )
@@ -399,7 +301,14 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
                 extent[1] = extent[1].in_units_of(y.units)
         extent = np.asarray(extent)
 
-    grid = gridbin2d(x, y, qty, bins=bins, extent=extent, nanval=0.0)
+    if av is not None:
+        grid = gridbin2d(x, y, av*qty, bins=bins, extent=extent,
+                        nanval=0.0)
+        grid /= gridbin2d(x, y, av, bins=bins, extent=extent,
+                         nanval=0.0)
+        #grid[np.isnan(grid)] = 0.0
+    else:
+        grid = gridbin2d(x, y, qty, bins=bins, extent=extent, nanval=0.0)
     if getattr(vlim,'units',None) is not None \
             and getattr(grid,'units',None) is not None:
         vlim = vlim.in_units_of(grid.units)
@@ -408,7 +317,7 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
         if vlim is not None:
             vlim = np.log10(vlim)
     if vlim is None:
-        vlim = np.percentile(grid[np.isfinite(grid)], [0,100])
+        vlim = np.percentile(grid[np.isfinite(grid)], [1,99])
 
     if colors is None:
         clim = vlim
@@ -438,19 +347,6 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
                              clim=clim, **kwargs)
 
     if showcbar:
-        from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-        cax = inset_axes(ax, width="70%", height="3%", loc=1)
-        norm = mpl.colors.Normalize(vmin=clim[0], vmax=clim[1])
-        cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm,
-                                         orientation='horizontal')
-        cbar.ax.tick_params(labelsize=8)
-        # only max. 6 ticks on colorbar
-        tick_locator = mpl.ticker.MaxNLocator(nbins=6)
-        cbar.locator = tick_locator
-        cbar.update_ticks()
-        for tl in cbar.ax.get_xticklabels():
-            tl.set_color(fontcolor)
-            tl.set_fontsize(0.65*fontsize)
         if cbartitle is None:
             name = cname if colors is not None else qtyname
             count_units = r'$\mathrm{count}$'
@@ -468,7 +364,9 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
             if (logscale and colors is None) or \
                     (clogscale and colors is not None):
                 cbartitle = r'$\log_{10}$(' + cbartitle + ')'
-        cbar.set_label(cbartitle, color=fontcolor, fontsize=fontsize, labelpad=12)
+
+        cbar = add_cbar(ax, cbartitle, clim=clim, cmap=cmap, fontcolor=fontcolor,
+                        fontsize=fontsize, fontoutline=outline, nticks=7)
 
     xunits = r'[$%s$]' % x.units.latex() if getattr(x,'units',None) else ''
     yunits = r'[$%s$]' % y.units.latex() if getattr(y,'units',None) else ''
@@ -483,4 +381,157 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
         return fig, ax, im, cbar
     else:
         return fig, ax, im
+
+def make_scale_indicators(ax, extent, scaleind='line', scaleunits=None,
+                          xaxis=0, yaxis=1, fontsize=14, fontcolor='black',
+                          outline=None):
+    '''
+    Set the scale indicators for a map.
+
+    Args:
+        ax (AxesSubplot):       The axis to set the indicators for.
+        extent (UnitArr):       The extent plotted over. It needs to be of the
+                                form: [[min(x),max(x)],[min(y),max(y)]]
+        scaleind (str):         Can be:
+                                    'labels':   ticks and labels are drawn on the
+                                                axes
+                                    'line':     a bar is drawn in the lower left
+                                                corner indicating the scale
+                                    'none':     neither nor is done -- make the
+                                                axes unvisible
+        scaleunits (str):       If the scale indication is 'labels', this is the
+                                units of these. (Can still be None, though.)
+        xaxis/yaxis (int):      The x- and y-axis in indices used to label the
+                                axis in 'labels' scale mode.
+        fontsize (int,float):   The font size to use.
+        fontcolor (str):        The font color to use.
+        outline (array-like):   Draw an outline around text for better
+                                readability. The first element is the thickness,
+                                the second the color.
+    '''
+    import matplotlib.patheffects
+
+    if outline is True:
+       outline = [
+               3,
+               np.array([1,1,1]) - mpl.colors.ColorConverter.to_rgb(fontcolor)
+        ]
+    if outline is None:
+        path_effects=[]
+    else:
+        path_effects=[mpl.patheffects.withStroke(linewidth=outline[0],
+                                                 foreground=outline[1]),
+                      mpl.patheffects.Normal()]
+    if scaleind in [None, 'none']:
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+    elif scaleind == 'labels':
+        if scaleunits is None:
+            units_txt = ''
+        else:
+            units_txt = r' [$%s$]' % scaleunits.latex()
+        x_label = r'$%s$%s' % ({0:'x',1:'y',2:'z'}[xaxis], units_txt)
+        ax.set_xlabel(x_label, fontsize=fontsize)
+        y_label = r'$%s$%s' % ({0:'x',1:'y',2:'z'}[yaxis], units_txt)
+        ax.set_ylabel(y_label, fontsize=fontsize)
+        for tl in ax.get_xticklabels():
+            tl.set_fontsize(0.8*fontsize)
+        for tl in ax.get_yticklabels():
+            tl.set_fontsize(0.8*fontsize)
+    elif scaleind == 'line':
+        width = extent[:,1] - extent[:,0]
+        scale = width.min() / 4.0
+        order = 10.0**int(np.log10(scale))
+        if scale/order<2.0:     scale = 1.0*order
+        elif scale/order<5.0:   scale = 2.0*order
+        else:                   scale = 5.0*order
+        scale_label = r'%g%s' % (scale,
+                           ' $%s$'%width.units.latex()
+                                if getattr(width,'units',None) is not None
+                                else '')
+        line = np.array( [[extent[0,0] + 0.05*extent[0].ptp(),
+                           extent[0,0] + 0.05*extent[0].ptp() + scale],
+                          [extent[1,0] + 0.12*extent[1].ptp(),
+                           extent[1,0] + 0.12*extent[1].ptp()]] )
+        if outline:
+            ax.plot(line[0], line[1], color=outline[1], linewidth=3+outline[0])
+        ax.plot(line[0], line[1], color=fontcolor,  linewidth=3)
+        ax.text(np.mean(line[0]), extent[1,0]+0.10*extent[1].ptp(),
+                scale_label, color=fontcolor, size=0.9*fontsize,
+                horizontalalignment='center', verticalalignment='top',
+                transform=ax.transData, path_effects=path_effects)
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+    else:
+        import warnings
+        warnings.warn('Unknown scaling indicator scaleind="%s"!' % scaleind)
+
+def add_cbar(ax, cbartitle, clim, cmap=None, fontcolor='black', fontsize=14,
+             fontoutline=None, nticks=None, tick_dist=None):
+    '''
+    Adding a pygad standard colorbar for a map.
+
+    Args:
+        ax (AxesSubplot):       The axis to set the indicators for.
+        cbartitle (str):        The title for the color bar.
+        clim (array-like):      The limits of the color bar.
+        cmap (str, Colormap):   The colormap to use.
+        fontcolor (str):        The font color for the ticks and the title.
+        fontsize (int,float):   The font size of the title (ticks are 0.65 this
+                                size).
+        fontoutline (array-like):
+                                Draw an outline around the text for better
+                                readability. The first element is the thickness,
+                                the second the color.
+        nticks (int):           Set the number of ticks in the colorbar. If None,
+                                it will be chosen automatically.
+        tick_dist (float):      The distance between the tick labels, i.e. they
+                                are placed at multiples of the given number.
+
+    Returns:
+        cbar (Colorbar):        The added colorbar instance.
+    '''
+    from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+    import matplotlib.patheffects
+
+    if fontoutline is True:
+       fontoutline = [
+               3,
+               np.array([1,1,1]) - mpl.colors.ColorConverter.to_rgb(fontcolor)
+        ]
+    if fontoutline is None:
+        path_effects=[]
+    else:
+        path_effects=[mpl.patheffects.withStroke(linewidth=fontoutline[0],
+                                                 foreground=fontoutline[1]),
+                      mpl.patheffects.Normal()]
+
+    cax = inset_axes(ax, width="70%", height="3%", loc=1)
+    norm = mpl.colors.Normalize(vmin=clim[0], vmax=clim[1])
+
+    cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm,
+                                     orientation='horizontal')
+
+    if tick_dist is not None:
+        cbar.locator = mpl.ticker.MultipleLocator(tick_dist)
+    if nticks is not None:
+        cbar.locator = mpl.ticker.MaxNLocator(nbins=nticks)
+    cbar.update_ticks()
+
+    cbar.ax.tick_params(labelsize=8)
+    for tl in cbar.ax.get_xticklabels():
+        tl.set_path_effects(path_effects)
+        tl.set_color(fontcolor)
+        tl.set_fontsize(0.65*fontsize)
+        if bg_flag:
+            tl.set_bbox(dict(facecolor='white', alpha=0.8, linewidth=0))
+
+    if bg_flag:
+            cbar.set_label(cbartitle, color=fontcolor, fontsize=fontsize, labelpad=12, 
+                           bbox=dict(facecolor='white', alpha=0.8, linewidth=0))
+    else:
+        cbar.set_label(cbartitle, color=fontcolor, fontsize=fontsize, labelpad=12,
+                       path_effects=path_effects)
+
+    return cbar
 

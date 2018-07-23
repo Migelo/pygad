@@ -19,15 +19,17 @@ Example:
     apply Rotation to "pos" of "snap_M1196_4x_470"... done.
     >>> sub = s[BoxMask('120 kpc', sph_overlap=True)]
     load block hsml... done.
-    >>> m_b, px2 = map_qty(sub.baryons, '120 kpc', 'mass', Npx=256)
+    >>> m_b = map_qty(sub.baryons, '120 kpc', False, 'mass', Npx=256)
     create a 256 x 256 map (120 x 120 [kpc])...
     load block rho... done.
     derive block dV... done.
     create a 256 x 256 SPH-grid (120 x 120 [kpc])...
     done with SPH grid
-    >>> m_s, px2 = map_qty(sub.stars, '120 kpc', 'mass', Npx=256)
+    >>> m_b # doctest: +ELLIPSIS
+    <Map at 0x...; units="Msol", Npx=(256, 256)>
+    >>> m_s = map_qty(sub.stars, '120 kpc', False, 'mass', Npx=256)
     create a 256 x 256 map (120 x 120 [kpc])...
-    >>> m_g, px2 = map_qty(sub.gas, '120 kpc', 'mass', Npx=256)
+    >>> m_g = map_qty(sub.gas, '120 kpc', False, 'mass', Npx=256)
     create a 256 x 256 map (120 x 120 [kpc])...
     create a 256 x 256 SPH-grid (120 x 120 [kpc])...
     done with SPH grid
@@ -44,10 +46,11 @@ from ..gadget import *
 from ..kernels import *
 from .. import environment
 
-def map_qty(s, extent, qty, av=None, Npx=256, xaxis=0, yaxis=1, softening=None,
-            sph=True, kernel=None, surf_av=False, dispersion=False, sigToom=False):
+def map_qty(s, extent, field, qty, av=None, reduction=None, Npx=256,
+            xaxis=0, yaxis=1, softening=None, sph=True, kernel=None, dV='dV',
+            surf_av=False, dispersion=False, sigToom=False):
     '''
-    A fast pure-Python routine for binning SPH quantities onto a map.
+    A fast routine for binning SPH quantities onto a map.
 
     Args:
         s (Snap):           The (sub-)snapshot to bin from.
@@ -55,10 +58,19 @@ def map_qty(s, extent, qty, av=None, Npx=256, xaxis=0, yaxis=1, softening=None,
                             taken to be the total side length of a square around
                             the origin or a sequence of the minima and maxima of
                             the directions: [[xmin,xmax],[ymin,ymax]]
+        field (bool):       If no `reduction` is given, this determines whether
+                            the SPH-quantity is interpreted as a density-field or
+                            its integral quantity.
+                            For instance: rho would be the density-field of the
+                            integral quantity mass.
         qty (UnitQty, str): The quantity to map. It can be a UnitArr of length
                             L=len(s) and dimension 1 (i.e. shape (L,)) or a string
                             that can be passed to s.get and returns such an array.
         av (UnitQty, str):  The quantity to average over. Otherwise as 'qty'.
+        reduction (str):    If not None, interpret the SPH quantity not as a SPH
+                            field, but as a particle property and reduce with this
+                            given method along the third axis / line of sight.
+                            See `SPH_to_2Dgrid_by_particle` for more information.
         Npx (int, sequence):The number of pixel per side. Either an integer that
                             is taken for both sides or a pair of such, the first
                             for the x-direction, the second for the y-direction.
@@ -75,11 +87,11 @@ def map_qty(s, extent, qty, av=None, Npx=256, xaxis=0, yaxis=1, softening=None,
                             particle.
         kernel (str):       The kernel to use for smoothing. (Default: 'kernel'
                             from config file `gadget.cfg`)
+        dV (UnitQty, str):  The volume elements of the particles.
 
     Returns:
-        grid (UnitArr):     The quantity summed along the third axis over the area
+        grid (Map):         The quantity summed along the third axis over the area
                             of a pixel (column -- *not* column density).
-        px_area (UnitArr):  The area of a pixel.
     '''
     zaxis = (set([0,1,2]) - set([xaxis, yaxis])).pop()
     if set([xaxis, yaxis, zaxis]) != set([0,1,2]):
@@ -88,74 +100,74 @@ def map_qty(s, extent, qty, av=None, Npx=256, xaxis=0, yaxis=1, softening=None,
     if kernel is None:
         kernel = general['kernel']
 
-    if isinstance(qty, str):
+    if isinstance(qty, (str,unicode)):
         qty = s.get(qty)
 
     if dispersion:
         if av is not None:
             if isinstance(av, str):
                 av = s.get(av)
-            Eqty2, px2 = map_qty(s, extent, av*qty**2, av=None, Npx=Npx,
-                                xaxis=xaxis, yaxis=yaxis, softening=softening,
-                                sph=sph, kernel=kernel)
-            Eqty, px2 = map_qty(s, extent, av*qty, av=None, Npx=Npx,
-                                xaxis=xaxis, yaxis=yaxis, softening=softening,
-                                sph=sph, kernel=kernel)
-            norm, px2 = map_qty(s, extent, av, av=None, Npx=Npx,
-                                xaxis=xaxis, yaxis=yaxis, softening=softening,
-                                sph=sph, kernel=kernel)
+            Eqty2 = map_qty(s, extent, field, av*qty**2, av=None, Npx=Npx,
+                            xaxis=xaxis, yaxis=yaxis, softening=softening,
+                            sph=sph, kernel=kernel, dV=dV)
+            Eqty = map_qty(s, extent, field, av*qty, av=None, Npx=Npx,
+                           xaxis=xaxis, yaxis=yaxis, softening=softening,
+                           sph=sph, kernel=kernel, dV=dV)
+            norm = map_qty(s, extent, field, av, av=None, Npx=Npx,
+                           xaxis=xaxis, yaxis=yaxis, softening=softening,
+                           sph=sph, kernel=kernel, dV=dV)
             grid = np.sqrt((norm*Eqty2-Eqty**2)/norm**2)
             grid[np.isnan(grid)] = 0.0
-            return grid, px2
+            return grid
         else:
-            Eqty2, px2 = map_qty(s, extent, qty**2, av=None, Npx=Npx,
+            Eqty2 = map_qty(s, extent, field, qty**2, av=None, Npx=Npx,
                                 xaxis=xaxis, yaxis=yaxis, softening=softening,
                                 sph=sph, kernel=kernel)
-            Eqty, px2 = map_qty(s, extent, qty, av=None, Npx=Npx,
+            Eqty = map_qty(s, extent, field, qty, av=None, Npx=Npx,
                                 xaxis=xaxis, yaxis=yaxis, softening=softening,
-                                sph=sph, kernel=kernel)
+                                sph=sph, kernel=kernel, dV=dV)
             grid = np.sqrt(Eqty2-Eqty**2)
             grid[np.isnan(grid)] = 0.0
-            return grid, px2
+            return grid
     elif sigToom:
         if av is None:
-            av =s.get('mass')
+            av = s.get('mass')
         if isinstance(av, str):
             av = s.get(av)
-            grid, px2 = map_qty(s, extent, av*qty, av=None, Npx=Npx,
-                                xaxis=xaxis, yaxis=yaxis, softening=softening,
-                                sph=sph, kernel=kernel)
-            norm, px2 = map_qty(s, extent, av, av=None, Npx=Npx,
-                                xaxis=xaxis, yaxis=yaxis, softening=softening,
-                                sph=sph, kernel=kernel)
+            grid = map_qty(s, extent, field, av*qty, av=None, Npx=Npx,
+                           xaxis=xaxis, yaxis=yaxis, softening=softening,
+                           sph=sph, kernel=kernel, dV=dV)
+            norm = map_qty(s, extent, field, av, av=None, Npx=Npx,
+                           xaxis=xaxis, yaxis=yaxis, softening=softening,
+                           sph=sph, kernel=kernel, dV=dV)
             grid /= norm**2 # to get 1/surface density
             vel = s.get('vel[:,2]') # line-of-sight velocity
-            Ev2, px2 = map_qty(s, extent, av*vel**2, av=None, Npx=Npx,
-                                xaxis=xaxis, yaxis=yaxis, softening=softening,
-                                sph=sph, kernel=kernel)
-            Ev, px2 = map_qty(s, extent, av*vel, av=None, Npx=Npx,
-                                xaxis=xaxis, yaxis=yaxis, softening=softening,
-                                sph=sph, kernel=kernel)
+            Ev2 = map_qty(s, extent, field, av*vel**2, av=None, Npx=Npx,
+                          xaxis=xaxis, yaxis=yaxis, softening=softening,
+                          sph=sph, kernel=kernel, dV=dV)
+            Ev = map_qty(s, extent, field, av*vel, av=None, Npx=Npx,
+                         xaxis=xaxis, yaxis=yaxis, softening=softening,
+                         sph=sph, kernel=kernel, dV=dV)
             sigma = np.sqrt((norm*Ev2-Ev**2)/norm**2) # velocity dispersion
             sigma[np.isnan(sigma)] = 0.0
             grid *= sigma
-            return grid, px2
+            return grid
     else:
         if av is not None:
             if isinstance(av, str):
                 av = s.get(av)
-            grid, px2 = map_qty(s, extent, av*qty, av=None, Npx=Npx,
-                                xaxis=xaxis, yaxis=yaxis, softening=softening,
-                                sph=sph, kernel=kernel)
-            norm, px2 = map_qty(s, extent, av, av=None, Npx=Npx,
-                                xaxis=xaxis, yaxis=yaxis, softening=softening,
-                                sph=sph, kernel=kernel)
+            grid = map_qty(s, extent, field, av*qty, av=None, Npx=Npx,
+                           xaxis=xaxis, yaxis=yaxis, softening=softening,
+                           sph=sph, kernel=kernel, dV=dV)
+            norm = map_qty(s, extent, field, av, av=None, Npx=Npx,
+                           xaxis=xaxis, yaxis=yaxis, softening=softening,
+                           sph=sph, kernel=kernel, dV=dV)
             if surf_av:
                 grid /= norm
             grid /= norm
             grid[np.isnan(grid)] = 0.0
-            return grid, px2
-    
+            return grid
+
     # prepare arguments
     extent, Npx, res = grid_props(extent=extent, Npx=Npx, dim=2)
     extent = extent.in_units_of(s['pos'].units, subs=s)
@@ -171,24 +183,40 @@ def map_qty(s, extent, qty, av=None, Npx=256, xaxis=0, yaxis=1, softening=None,
 
     grid = np.zeros(Npx)
     if isinstance(qty, UnitArr):
-        grid = UnitArr(grid, qty.units)
+        grid = UnitArr(grid,
+                (qty.units*s['pos'].units).gather() if field else qty.units)
 
     if len(s) == 0:
-        return grid, np.prod(res)
+        return Map(grid, extent=extent)
 
     if sph:
         sph = s.gas
         sph_qty = qty[s.gas._mask]
         if len(sph) != 0:
-            from cbinning import SPH_to_2Dgrid
-            dV = sph['dV'].in_units_of(sph['pos'].units**3)
-            sph_binned, px2 = SPH_to_2Dgrid(sph, qty=sph_qty/dV, extent=extent,
-                                            Npx=Npx, xaxis=xaxis, yaxis=yaxis,
-                                            kernel=kernel)
-            px2 = np.prod(px2)
-            sph_binned *= px2
+            if isinstance(dV, (str,unicode)):
+                dV = s.gas.get(dV)
+            dV = UnitQty(dV, sph['pos'].units**3)
+            if reduction is not None:
+                from cbinning import SPH_to_2Dgrid_by_particle
+                sph_binned = SPH_to_2Dgrid_by_particle(sph, qty=sph_qty,
+                                                       av=av, dV=dV,
+                                                       extent=extent,
+                                                       Npx=Npx,
+                                                       reduction=reduction,
+                                                       xaxis=xaxis,
+                                                       yaxis=yaxis,
+                                                       kernel=kernel)
+            else:
+                from cbinning import SPH_to_2Dgrid
+                sph_binned = SPH_to_2Dgrid(sph,
+                                           qty = sph_qty if field
+                                                       else sph_qty/dV,
+                                           extent=extent,
+                                           Npx=Npx, xaxis=xaxis, yaxis=yaxis,
+                                           kernel=kernel)
+                if not field:
+                    sph_binned *= sph_binned.vol_voxel()
 
-            assert abs((px2 - np.prod(res)) / px2) < 1e-3
             grid += sph_binned
 
     if sph:
@@ -221,5 +249,5 @@ def map_qty(s, extent, qty, av=None, Npx=256, xaxis=0, yaxis=1, softening=None,
                           bins=Npx_w, nanval=0.0)
         grid += tmp
 
-    return grid, np.prod(res)
+    return Map(grid, extent=extent)
 

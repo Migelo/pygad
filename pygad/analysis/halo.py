@@ -23,37 +23,41 @@ Examples:
     >>> Translation(-center).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_320"... done.
 
-    >>> FoF, N_FoF = find_FoF_groups(s.highres.dm, '3.5 kpc',
-    ...                              dvmax='100 km/s') # doctest: +ELLIPSIS
+    >>> l3 = 1500.*s.cosmology.rho_crit(s.redshift)/np.median(s.highres.dm['mass'])
+    >>> FoF, N_FoF = find_FoF_groups(s.highres.dm,
+    ...             l=l3**Fraction(-1,3),
+    ...             dvmax='100 km/s') # doctest: +ELLIPSIS
     load block vel... done.
     perform a FoF search on 1,001,472 particles:
-      l      = 3.5 [kpc]
+      l      = 2.2 [kpc]
       dv_max = 1e+02 [s**-1 km]
       N     >= 100
-    found 123 groups
+    found 90 groups
     the 3 most massive ones are:
-      group 0:   1.59e+11 [Msol]  @  [-0..., 0..., -0...] [kpc]
-      group 1:   6.88e+10 [Msol]  @  [4..., 9..., 4...] [kpc]
-      group 2:   1.56e+10 [Msol]  @  [-1...+03, -1...e+03, -1...e+03] [kpc]
+      group 0:   1.02e+11 [Msol]  @  [0..., 0..., 0...] [kpc]
+      group 1:    4.1e+10 [Msol]  @  [4..., 9..., 4...] [kpc]
+      group 2:   8.37e+09 [Msol]  @  [...] [kpc]
 
     # find galaxies (exclude those with almost only gas)
-    >>> galaxies = generate_FoF_catalogue(s.baryons, l='3 kpc', min_N=3e2,
+    >>> galaxies = generate_FoF_catalogue(s.baryons,
+    ...             min_N=300,
     ...             dvmax='100 km/s', #max_halos=5,
+    ...             progressbar=False,
     ...             exclude=lambda g,s: g.Mgas/g.mass>0.9)  # doctest: +ELLIPSIS
     perform a FoF search on 1,001,472 particles:
-      l      = 3 [kpc]
+      l      = 1.3 [kpc]
       dv_max = 1e+02 [s**-1 km]
       N     >= 300
-    found 7 groups
+    found 4 groups
     the 3 most massive ones are:
-      group 0:   3.76e+10 [Msol]  @  [-0..., 0..., 0...] [kpc]
-      group 1:    7.1e+09 [Msol]  @  [4..., 9..., 4...] [kpc]
-      group 2:   4.71e+09 [Msol]  @  [8..., 1...e+03, 7...] [kpc]
+      group 0:   3.12e+10 [Msol]  @  [0..., 0..., 0...] [kpc]
+      group 1:   6.94e+09 [Msol]  @  [4..., 9..., 4...] [kpc]
+      group 2:   3.36e+09 [Msol]  @  [8..., 1...e+03, 7...] [kpc]
     initialize halos from FoF group IDs...
     load block ID... done.
     initialized 3 halos.
     >>> galaxies[0] # doctest: +ELLIPSIS
-    <Halo N = 66,... /w M = 3.8e+10 [Msol] @ com = [-0..., 0..., 0...] [kpc]>
+    <Halo @0x..., N = 55,..., M = 3.1e+10 [Msol]>
     >>> gal = s[galaxies[0]]
     >>> assert len(gal) == len(galaxies[0])
     >>> assert set(gal['ID']) == set(galaxies[0].IDs)
@@ -61,7 +65,8 @@ Examples:
     >>> assert gal['mass'].sum() == galaxies[0].props['mass']
     >>> assert gal.stars['mass'].sum() == galaxies[0].Mstars
     >>> gal = galaxies[0]
-    >>> gal._calc_prop('ssc', s)
+    >>> gal.calc_prop('ssc', root=s)    # doctest:+ELLIPSIS
+    UnitArr([...], units="kpc")
     >>> if np.linalg.norm(gal.ssc - gal.com) > '1.0 kpc':
     ...     print gal.ssc
     ...     print gal.com
@@ -78,14 +83,17 @@ Examples:
     >>> assert np.all(gal_2.com == gal.com)
 '''
 __all__ = ['shrinking_sphere', 'virial_info', 'find_FoF_groups',
-           'NO_FOF_GROUP_ID', 'Halo', 'generate_FoF_catalogue',
+           'NO_FOF_GROUP_ID', 'Rockstar_halo_field_names',
+           'Rockstar_particle_field_names', 'RockstarHeader',
+           'read_Rockstar_file', 'generate_Rockstar_halos', 'Halo',
+           'nxt_ngb_dist_perc', 'generate_FoF_catalogue',
            'find_most_massive_progenitor']
 
 import numpy as np
 from .. import utils
 from ..units import *
 from ..utils import *
-import sys
+import sys, os
 from ..transformation import *
 from properties import *
 from ..snapshot import *
@@ -93,11 +101,11 @@ from .. import environment
 from .. import C
 
 def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
-                     stop_N=10, verbose=environment.verbose):
+                     stop_N=10, verbose=None):
     '''
     Find the densest point by shrinking sphere technique.
 
-    Cf. TODO: cite!!!
+    Technique is described in Power et al. (2003).
 
     Args:
         s (Snap):               The (sub-)snapshot to find the densest point for.
@@ -108,10 +116,14 @@ def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
         shrink_factor (float):  The factor to shrink the sphere in each step.
         stop_N (int):           If so many or less particles are left in the
                                 sphere, stop.
+        verbose (int):          Verbosity level. Default: the gobal pygad
+                                verbosity level.
 
     Returns:
         center (UnitArr):       The center.
     '''
+    if verbose is None:
+        verbose = environment.verbose
     center0 = UnitQty(center,s['pos'].units,subs=s,dtype=np.float64)
     R = UnitScalar(R,s['pos'].units,subs=s)
 
@@ -223,20 +235,24 @@ def virial_info(s, center=None, odens=200.0, N_min=10):
            UnitArr(info[1],s['mass'].units)
 
 NO_FOF_GROUP_ID = int( np.array(-1, np.uintp) )
-def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True,
-                    verbose=environment.verbose):
+def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True, verbose=None):
     '''
     Perform a friends-of-friends search on a (sub-)snapshot.
 
     Args:
         s (Snap):           The (sub-)snapshot to perform the FoF finder on.
-        l (UnitScalar):     The linking length to use for the FoF finder.
+        l (UnitScalar):     The linking length to use for the FoF finder (for dark
+                            matter / all matter it turned out that
+                            ( 1500. * rho_crit / median(mass) )^(-1/3) is a
+                            reasonable value).
         dvmax (UnitScalar): The "linking velocity" to use for the FoF finder.
         min_N (int):        The minimum number of particles in a FoF group to
                             actually define it as such.
         sort (bool):        Whether to sort the groups by mass. If True, the group
                             with ID 0 will be the most massive one and the in
                             descending order.
+        verbose (int):      Verbosity level. Default: the gobal pygad verbosity
+                            level.
 
     Returns:
         FoF (np.ndarray):   A block of FoF group IDs for the particles of `s`.
@@ -245,6 +261,8 @@ def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True,
                             np.array(-1,np.uintp).
         N_FoF (int):        The number of FoF groups found.
     '''
+    if verbose is None:
+        verbose = environment.verbose
     l = UnitScalar(l, s['pos'].units, subs=s, dtype=float)
     dvmax = UnitScalar(dvmax, s['vel'].units, subs=s, dtype=float)
     sort = bool(sort)
@@ -304,6 +322,266 @@ def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True,
 
     return FoF, N_FoF
 
+_ROCKSTAR_HALO_DTYPES = [
+        ('id','i'), ('internal_id','i'), ('num_p','i'),
+        ('mvir','f'), ('mbound_vir','f'), ('rvir','f'), ('vmax','f'),
+        ('rvmax','f'), ('vrms','f'), ('x','f'), ('y','f'), ('z','f'),
+        ('vx','f'), ('vy','f'), ('vz','f'), ('Jx','f'), ('Jy','f'),
+        ('Jz','f'), ('energy','f'), ('spin','f')
+]
+_ROCKSTAR_PART_DTYPES = [
+        ('x','f'), ('y','f'), ('z','f'), ('vx','f'), ('vy','f'), ('vz','f'),
+        ('particle_id','i'), ('assigned_internal_haloid','i'),
+        ('internal_haloid','i'), ('external_haloid','i')
+]
+def Rockstar_halo_field_names():
+    return [name for name,t in _ROCKSTAR_HALO_DTYPES]
+def Rockstar_particle_field_names():
+    return [name for name,t in _ROCKSTAR_PART_DTYPES]
+
+class RockstarHeader(object):
+    def __init__(self, txt):
+        self._txt = txt
+
+        props = {}
+        for line in txt.split('\n'):
+            for info in line.split(';'):
+                info = info.split(':' if ':' in info else '=')
+                if len(info) != 2 or not info[-1]:
+                    # not a info with ':' or '=', or with an empty value
+                    continue
+                name, value = info
+                name = name.strip('#')
+                if name == 'Units':
+                    try:
+                        try:
+                            name, value = value.split(' in ')
+                        except:
+                            name, value = value.split(' are ')
+                    except:
+                        continue
+                props[name.strip()] = value.strip()
+        self._props = props
+
+    @property
+    def txt(self):
+        return self._txt
+
+    @property
+    def props(self):
+        return self._props.copy()
+
+    def get(self, key, default=None):
+        return self._props.get(key, default)
+
+    def __getitem__(self, key):
+        return self.get(key)
+
+    def __contains__(self, key):
+        return key in self._props
+
+def read_Rockstar_file(fname):
+    '''
+    Read in a Rockstar file.
+
+    Note:
+        Rockstar had to be run with the option 'FULL_PARTICLE_CHUNKS = 1', in
+        order to output the whole particle data, which is needed here. This is
+        also the file which filename needs to be specified.
+
+    Args:
+        fname (str):                The path to the particle(!) Rockstar output.
+
+    Returns:
+        header (RockstarHeader):    The header from the Rockstar file.
+        halos (np.ndarray):         A numpy array with the halo table.
+        particles (np.ndarray):     A numpy array with the particle table.
+    '''
+    from io import StringIO
+    import codecs
+    BEFORE_HALO_TBL = '#Halo table begins here:'
+    BEFORE_PART_TBL = '#Particle table begins here:'
+
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'read Rockstar file "%s"' % fname
+    with codecs.open(fname,'r',"utf-8") as f:
+        rs_file = f.read()
+
+    halo_start = rs_file.find(BEFORE_HALO_TBL)
+    particle_start = rs_file.find(BEFORE_PART_TBL)
+
+    # read the header
+    header = RockstarHeader(rs_file[:halo_start])
+
+    # read the halo table
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print '  read halo table'
+    # get rid of the leading '#'
+    halo_tbl = u'\n'.join( line[1:] \
+                           for line in
+                           rs_file[halo_start+len(BEFORE_HALO_TBL)+1:particle_start].split('\n') )
+    halos = np.loadtxt( StringIO(halo_tbl), dtype=_ROCKSTAR_HALO_DTYPES )
+
+    # read the particle table
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print '  read particle table'
+    particles = np.loadtxt(
+            StringIO(rs_file[particle_start+len(BEFORE_PART_TBL)+1:]),
+            dtype=_ROCKSTAR_PART_DTYPES )
+
+    return header, halos, particles
+
+def generate_Rockstar_halos(fname, snap, exclude=None, nosubs=True, data=None,
+                            ignore_inconsistency=False, **kwargs):
+    '''
+    Create a list of halos from a Rockstar particle file.
+
+    Args:
+        fname (str):        The path to the particle(!) Rockstar output. (Cf. also
+                            `read_Rockstar_file`!)
+                            This argument is ignored, if `data` contains 'halos'
+                            and 'particle'.
+        snap (Snap):        The corresponding snapshot. Can be None, if used in
+                            neither `exclude` nor calculation of the Halo classes
+                            are requested.
+        exclude (function): Exclude all halos h for which `exclude(h,snap)`
+                            returns a true value. Here `h` is the halo information
+                            from the Rockstar file, i.e. a np.ndarray with named
+                            fields (for instance: `h['num_p']` is the number of
+                            particles in that halos).
+                            For all fields see `halo.Rockstar_halo_field_names()`.
+        nosubs (bool):      TODO
+        data (dict):        If a dictionary is passed, it will hold the Rockstar
+                            tables for the halos and particles after the function
+                            call.
+                            Furthermore, if it already contains these two entries,
+                            `fname` is ignored and this data is taken for the
+                            generation.
+        ignore_inconsistency (bool):
+                            Just warn about inconsistencies between the Rockstar
+                            file and the snapshot and do not raise exceptions.
+        **kwargs            Further arguments are passed to `Halo.__init__`.
+
+    Returns:
+        halos (list):       A list of Halo class instances created from the
+                            Rockstar output.
+    '''
+    # get the data / create dictionary to return them
+    if data is not None and 'halos' in data and 'particles' in data:
+        pass
+    else:
+        if data is None:
+            data = {}
+        # read the Rockstar file
+        import time
+        start_time = time.time()
+        data['header'], data['halos'], data['particles'] = read_Rockstar_file(fname)
+        if environment.verbose >= environment.VERBOSE_NORMAL:
+            print 'loaded in %.2f sec' % (time.time()-start_time)
+
+    # check for consistency between Rockstar file and snapshot
+    try:
+        if environment.verbose >= environment.VERBOSE_NORMAL:
+            print 'checking for consistency...'
+        h = data['header']
+        if 'a' in h and abs(float(h['a'])-snap.scale_factor) > 0.01:
+            raise RuntimeError("Scale factors of snapshot and Rockstar file do "
+                               "not match: %s vs. %s" % (
+                                   h['a'],snap.scale_factor))
+        cosmo = snap.cosmology
+        for name, attr in [('Om','Omega_m'), ('Ol','Omega_Lambda'), ('h','h_0')]:
+            if name in h and abs(float(h[name])-getattr(cosmo,attr)) > 0.0001:
+                raise RuntimeError("%s of snapshot and Rockstar file " % (name,attr) +
+                                   "do not match: %s vs. %s" % (
+                                       h[name],getattr(cosmo,attr)))
+        if 'Box size' in h:
+            # it seems Rockstar supresses the information that the units are
+            # comoving fot the box size
+            bz = UnitScalar(str(h['Box size']).replace('h','h_0'),
+                            snap.boxsize.units,
+                            subs={'a':1.0,'z':0.0,'h_0':cosmo.h_0})
+            if abs( float(bz/snap.boxsize) - 1 ) > 0.01:
+                raise RuntimeError("box sizes of snapshot and Rockstar file " +
+                                   "do not match: %s vs. %s" % (bz, snap.boxsize))
+    except RuntimeError as e:
+        if ignore_inconsistency:
+            print 'WARNING:', e.message
+        else:
+            raise
+
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'create halo list from the Rockstar data'
+    halo_classes = []
+    parts = data['particles']
+
+    halos = data['halos']
+    import time
+    start_time = time.time()
+    # exclude non-physical halos and those excluded specifically
+    halos = [ h for h in data['halos']
+              if ((h['id']!=-1) and not (exclude and exclude(h,snap))) ]
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'pre-selection from %s down to %s halos' % (
+                len(data['halos']), len(halos))
+
+    # load blocks needed in order to avoid cluttering the progress bar
+    if snap is not None:
+        snap['ID']
+        snap['pos']
+        snap['mass']
+
+    if 'calc' not in kwargs:
+        kwargs['calc'] = None
+    if 'properties' in kwargs:
+        properties = kwargs['properties']
+        del kwargs['properties']
+    else:
+        properties = {}
+    start_time = time.time()
+    with ProgressBar(halos, label='initialize halos', show_eta=False,
+                     show_percent=False) as pbar:
+        for h in pbar:
+            # create mask for the particle data
+            # 1st requirement: restrict to chosen halo
+            # 2nd requirement: exclude substructures
+            mask = (parts['external_haloid'] == h['id'])
+            if nosubs:
+                mask &= (parts['internal_haloid'] ==
+                            parts['assigned_internal_haloid'])
+
+            # enrich the halo properties (e.g. by units)
+            prop = { dt[0]:val for dt,val in zip(_ROCKSTAR_HALO_DTYPES,h) }
+            for name in ['x','y','z','vx','vy','vz','Jx','Jy','Jz']:
+                del prop[name]
+            prop.update( {
+                'mvir':       UnitArr(h['mvir'], 'Msol/h_0'),
+                'mbound_vir': UnitArr(h['mbound_vir'], 'Msol/h_0'),
+                'center':     UnitArr([h['x'],h['y'],h['z']],'cMpc/h_0'),
+                'vel':        UnitArr([h['vx'],h['vy'],h['vz']],'km/s'),
+                'vmax':       UnitArr(h['vmax'],'km/s'),
+                'rvmax':      UnitArr(h['rvmax'],'km/s'),
+                'vrms':       UnitArr(h['vrms'],'km/s'),
+                'J':          UnitArr([h['Jx'],h['Jy'],h['Jz']],
+                                      'Msol/h_0 * Mpc/h_0 * km/s'),
+                'energy':     UnitArr(h['energy'], 'Msol/h_0 * (km/s)**2'),
+            } )
+            #TODO: are these quantities those?
+            #prop['mass'] = prop['mvir']
+            #prop['com']  = prop['center']
+            # (over-)write specified properties
+            prop.update( properties )
+
+            halo = Halo(IDs=parts['particle_id'][mask], root=snap,
+                        properties=prop, **kwargs)
+            halo_classes.append( halo )
+    duration = time.time() - start_time
+
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print 'created a list of %s halos in %s' % (
+                nice_big_num_str(len(halo_classes)), sec_to_nice_str(duration))
+
+    return halo_classes
+
 class Halo(object):
     '''
     A class representing an halo or some group of an snapshot represented by IDs.
@@ -312,24 +590,27 @@ class Halo(object):
     as total mass and R200) are calculated.
 
     Args:
-        halo (Snap):                The sub-snapshot that defines the halo.
-
-        alternatively:
-
         IDs (set, array-like):      The IDs that define the halo.
-        snap (Snap):                Some (sub-)snapshot that entirely contains the
-                                    halo defining IDs.
-
+        halo (Snap):                A sub-snapshot that defines the halo. Only
+                                    used if `IDs` is None.
         calc (set, list, tuple):    A list of the properties to calculate at
-                                    isinstantiation.
-                                    'mass', 'com', and 'parts' are always
-                                    calculated (since they might be needed by some
-                                    of the other properties anyway).
-                                    If calc='all' -- the default --, all defined
-                                    properties are calculated.
+                                    instantiation.
+                                    If calc='all', all defined properties are
+                                    calculated.
                                     For an overview of the available properties
-                                    see `Halo.calculable_props()` and
+                                    see `Halo.calculable_props()` (also see
                                     `Halo.prop_descr(pro_name)`.
+        root (Snap):                Some (sub-)snapshot that entirely contains the
+                                    halo-defining IDs. It is only needed in case
+                                    properties are about to calculate and `halo`
+                                    is not given, otherwise it will be set to
+                                    `halo.root`.
+        properties (dict):          Properties to be set. This is done before the
+                                    property calculation, meaning if a property
+                                    would be calculated otherwise, it will not be
+                                    if specified here.
+        testing (bool):             Perform some (rather compute intensive)
+                                    consistency checks.
     '''
     __long_name_prop__ = {
             'mass':     'total mass',
@@ -339,7 +620,9 @@ class Halo(object):
             'parts':    'number of particles per species',
             'com':      'center of mass',
             'ssc':      'shrinking sphere center',
-            'Rmax':     'maximum distance of a particle from com',
+            'vel':          'mass-weighted velocity',
+            'vel_sigma':    'mass-weighted velocity dispersion',
+            'Rmax':         'maximum distance of a particle from com',
             'lowres_part':  'number of low-resolution particles',
             'lowres_mass':  'mass of low-resolution particles',
     }
@@ -362,130 +645,78 @@ class Halo(object):
 
     @staticmethod
     def calculable_props():
-        '''A list of the properties that can be calculated (c.f. `calc` of
-        `__init__`).'''
+        '''A list of the properties that can be calculated.'''
         return Halo.__long_name_prop__.keys()
 
     @staticmethod
     def prop_descr(name):
         '''Long description of a property.'''
-        return Halo.__long_name_prop__.get(name, 'unknown')
+        return Halo.__long_name_prop__.get(name, '<unknown>')
 
 
-    def __init__(self, halo=None, IDs=None, snap=None, calc='all'):
-        if halo is None:
-            halo = snap[IDMask(IDs)]
-            if len(halo) != len(IDs):
-                print >> sys.stderr, 'WARNING: The given snapshot does not ' + \
-                                     'contain all specified IDs!'
-        elif IDs is not None:
-            raise ValueError('If the sub-snapshot `halo` is given, the Halo ' + \
-                             'will be defined by this and `IDs` must be None ' + \
-                             'to avoid confusion!')
-        elif snap is not None:
-            if halo.root is not snap.root:
-                raise ValueError('If the sub-snapshot `halo` and `snap` are ' + \
-                                 'given, they must have the same root ' + \
-                                 'snapshot to avoid confusion!')
+    def __init__(self, IDs=None, halo=None,
+                 calc=None, root=None,
+                 properties=None, testing=False):
+        if IDs is None:
+            if halo is None:
+                raise ValueError('Halo needs to be defined by either an ID list '
+                                 '(`IDs`) or a sub-snapshot (`halo`)!')
+            IDs = halo['ID']
 
         # the defining property:
-        self._IDs = np.array(halo['ID'])
-
-        # derive some properties
+        self._IDs = np.array(IDs, copy=True)
+        # property dictionary
         self._props = {}
+
+        # add the predefined properties
+        if properties is not None:
+            for prop, val in properties.iteritems():
+                self._props[prop.replace(' ','_')] = val
+
+        # some testing for consistency
+        if testing:
+            IDset = set(self._IDs)
+            if len(IDset) != len(self._IDs):
+                raise ValueError('ID list is not unique!')
+            if halo is None and root is not None:
+                halo = root[IDMask(self._IDs)]
+            if root is None and halo is not None:
+                root = halo.root
+            if root is not halo.root:
+                raise ValueError('`halo` and `root` are inconsistent!')
+            if len(IDset - set(root['ID'])) > 0:
+                print >> sys.stderr, 'WARNING: Not all IDs are in the ' + \
+                                     'root snapshot!'
+        if halo is not None and len(halo) != len(self._IDs):
+            print >> sys.stderr, 'WARNING: The given halo does not ' + \
+                                 'contain all specified IDs!'
+
+        # calculate the properties asked for
+
+        if calc is None:
+            return
+        if halo is None:
+            if root is None:
+                raise ValueError('Need `halo` or `root` to calculate properties!')
+            halo = root[IDMask(self._IDs)]
+            if len(halo) != len(self._IDs):
+                print >> sys.stderr, 'WARNING: The given snapshot does not ' + \
+                                     'contain all specified IDs!'
+        elif root is not None and testing:
+            if root is not halo.root:
+                print >> sys.stderr, 'WARNING: `halo` and `root` are ' + \
+                                     'inconsistent!'
+        if root is None:
+            root = halo.root
+
         if calc == 'all':
             calc = Halo.calculable_props()
-        calc = set(calc) - set(['mass', 'com', 'parts'])
-        self._calc_prop('mass', halo=halo, snap=snap, recompute=False)
-        self._calc_prop('com', halo=halo, snap=snap, recompute=False)
-        self._calc_prop('parts', halo=halo, snap=snap, recompute=False)
         for prop in calc:
-            self._calc_prop(prop, halo=halo, snap=snap, recompute=False)
-
-    def _calc_prop(self, prop, snap=None, halo=None, recompute=True):
-        if not recompute and prop in self._props:
-            return
-
-        if halo is None:
-            halo = snap[self.mask]
-
-        if prop == 'mass':
-            val = halo['mass'].sum()
-        elif prop == 'com':
-            val = center_of_mass(halo)
-        elif prop == 'parts':
-            val = tuple(halo.parts)   # shall not change!
-        elif prop in ['Mstars', 'Mgas', 'Mdm']:
-            sub = getattr(halo, prop[1:], None)
-            if sub is None:
-                val = UnitScalar(0.0, halo['mass'].units)
-            else:
-                val = sub['mass'].sum()
-        elif prop == 'ssc':
-            R_max = np.percentile(periodic_distance_to(halo['pos'],
-                                                       self.com,
-                                                       halo.boxsize),
-                                  90)
-            val = shrinking_sphere(halo, center=self.com,
-                                   R=R_max, verbose=False)
-        elif prop == 'Rmax':
-            val = periodic_distance_to(halo['pos'], self.com,
-                                       halo.boxsize).max()
-        elif prop[0] in ['R','M'] and (prop[1:4]=='vir' or prop[1:4].isdigit()) \
-                and prop[4]=='_':
-            qty = prop[0]
-            odens_n = prop[1:4]
-            scheme = prop[5:]
-            odens = 18.*np.pi**2 if odens_n=='vir' else float(odens_n)
-            if scheme == 'FoF':
-                rho_crit = halo.cosmology.rho_crit( z=halo.redshift )
-                rho_crit.convert_to(halo['mass'].units/halo['pos'].units**3,
-                                    subs=halo)
-                r3 = 3.0 * self.mass / (4.0*np.pi * odens*rho_crit)
-                val = r3 ** Fraction(1,3)
-            else:
-                if snap is None:
-                    raise ValueError('Requested %s, but `snap` is None!' % prop)
-                if scheme == 'com':
-                    center = self.com
-                elif scheme == 'ssc':
-                    if 'ssc' not in self._props:
-                        self._calc_prop('ssc', snap=snap, halo=halo,
-                                        recompute=False)    # TODO: correct?!
-                    center = self.ssc
-                else:
-                    raise ValueError('Unknown scheme for property "%s"!' % prop)
-                Rodens, Modens = virial_info(snap, center=center, odens=odens)
-                val = Rodens if qty=='R' else Modens
-                # don't waste the additional information!
-                for qty in ['R', 'M']:
-                    name = qty+odens_n+'_'+scheme
-                    # if we recompute some property, it might be requested to keep
-                    # old values...
-                    if not recompute and name not in self._props:
-                        self._props[name] = Rodens if qty=='R' else Modens
-        elif prop == 'lowres_part':
-            low = getattr(halo, 'lowres', None)
-            val = 0 if low is None else len(low)
-        elif prop == 'lowres_mass':
-            low = getattr(halo, 'lowres', None)
-            if low is None:
-                val = UnitScalar(0.0, halo['mass'].units)
-            else:
-                val = low['mass'].sum()
-        else:
-            raise ValueError('Unknown property "%s"!' % prop)
-
-        self._props[prop] = val
+            self.calc_prop(prop, halo=halo, root=root, recompute=False)
 
     @property
     def IDs(self):
-        '''
-        The defining IDs.
-        
-        Note:
-            If changed, the halo properties do not getupdated!
-        '''
+        '''The defining IDs.'''
         return self._IDs
 
     @property
@@ -516,28 +747,200 @@ class Halo(object):
         raise AttributeError('%s has no attribute "%s"!' % (self, name))
 
     def __repr__(self):
-        r = '<Halo N = %s' % nice_big_num_str(len(self))
-        r += ' /w M = %.2g %s' % (self.mass, self.mass.units)
-        r += ' @ com = [%.2g, %.2g, %.2g] %s' % (
-                tuple(self.com) + (self.com.units,))
+        r = '<Halo @%s' % hex(id(self))
+        try:
+            r += ', N = %s' % nice_big_num_str(len(self))
+        except:
+            pass
+        try:
+            r += ', M = %.2g %s' % (self.mass, self.mass.units)
+        except:
+            pass
         r += '>'
         return r
 
     def __len__(self):
-        return sum(self._props['parts'])
+        if 'parts' in self._props:
+            return sum(self._props['parts'])
+        else:
+            return None
+
+    def _get(self, prop, halo=None, root=None, recompute=False):
+        if recompute or prop not in self._props:
+            self.calc_prop(prop, halo=halo, root=root)
+        return self._props[prop]
+
+    def calc_prop(self, prop='all', halo=None, root=None, recompute=True):
+        '''
+        Calculate a (defined) property.
+
+        Args:
+            prop (str):         The property's name to compute. If it is 'all',
+                                all properties in `Halo.calculable_props()` are
+                                computed.
+            halo (Snap):        The (sub-)snapshot of this halo, i.e. `root[self]`
+                                where `root` is the root snapshot.
+            root (Snap):        The root snapshot of this halo. Does not need to
+                                be specified, but if `halo` is None, it will be
+                                set by masking this root with the IDMask of this
+                                halo.
+            recompute (bool):   Recompute this quantity even if it already is
+                                stored in the properties dictionary.
+
+        Returns:
+            val (...):      The value of the property calculated (or just taken
+                            from the properties dictionary, if recompute=False).
+                            In case of calc='all', the entire property dictionary
+                            is returned.
+        '''
+        # preparation
+        if not recompute and (isinstance(prop,(str,unicode)) and prop!='all'
+                                    and prop in self._props):
+            return self._props[prop]
+        if halo is None:
+            halo = root[self.mask]
+        elif root is None:
+            root = halo.root
+        args = {'halo':halo, 'root':root, 'recompute':recompute}
+
+        # handle special cases
+        if prop == 'all':
+            for p in Halo.calculable_props():
+                self.calc_prop(p, **args)
+            return self.props
+        if isinstance(prop, (list,tuple,np.ndarray)):
+            for p in prop:
+                self.calc_prop(p, **args)
+            return self.props
+
+        # compute the requested
+        if prop == 'mass':
+            val = halo['mass'].sum()
+        elif prop == 'com':
+            val = center_of_mass(halo)
+        elif prop == 'parts':
+            val = tuple(halo.parts)   # shall not change!
+        elif prop in ['Mstars', 'Mgas', 'Mdm']:
+            sub = getattr(halo, prop[1:], None)
+            if sub is None:
+                val = UnitScalar(0.0, halo['mass'].units)
+            else:
+                val = sub['mass'].sum()
+        elif prop == 'vel':
+            val = mass_weighted_mean(halo, 'vel')
+        elif prop == 'vel_sigma':
+            v0 = mass_weighted_mean(halo, 'vel')
+            val = np.sqrt(np.sum(mass_weighted_mean(halo,'vel**2') - v0**2))
+        elif prop == 'ssc':
+            com = self._get('com', **args)
+            R_max = np.percentile(periodic_distance_to(halo['pos'],
+                                                       com,
+                                                       halo.boxsize),
+                                  90)
+            val = shrinking_sphere(halo, center=com,
+                                   R=R_max, verbose=False)
+        elif prop == 'Rmax':
+            val = periodic_distance_to(halo['pos'], self._get('com', **args),
+                                       halo.boxsize).max()
+        elif prop[0] in ['R','M'] and len(prop)>4 and \
+                (prop[1:4]=='vir' or prop[1:4].isdigit()) and prop[4]=='_':
+            qty = prop[0]
+            odens_n = prop[1:4]
+            scheme = prop[5:]
+            odens = 18.*np.pi**2 if odens_n=='vir' else float(odens_n)
+            if scheme == 'FoF':
+                rho_crit = halo.cosmology.rho_crit( z=halo.redshift )
+                rho_crit.convert_to(halo['mass'].units/halo['pos'].units**3,
+                                    subs=halo)
+                mass = self._get('mass', **args)
+                r3 = 3.0 * mass / (4.0*np.pi * odens*rho_crit)
+                val = r3 ** Fraction(1,3)
+            else:
+                if scheme not in ['com', 'ssc']:
+                    raise ValueError('Unknown scheme for property "%s"!' % prop)
+                center = self._get(scheme, **args)
+                Rodens, Modens = virial_info(root, center=center, odens=odens)
+                val = Rodens if qty=='R' else Modens
+                # don't waste the additional information!
+                for qty in ['R', 'M']:
+                    name = qty+odens_n+'_'+scheme
+                    # if we recompute some property, it might be requested to keep
+                    # old values...
+                    if not recompute and name not in self._props:
+                        self._props[name] = Rodens if qty=='R' else Modens
+        elif prop == 'lowres_part':
+            low = getattr(halo, 'lowres', None)
+            val = 0 if low is None else len(low)
+        elif prop == 'lowres_mass':
+            low = getattr(halo, 'lowres', None)
+            if low is None:
+                val = UnitScalar(0.0, halo['mass'].units)
+            else:
+                val = low['mass'].sum()
+        else:
+            raise ValueError('Unknown property "%s"!' % prop)
+
+        self._props[prop] = val
+        return val
+
+def nxt_ngb_dist_perc(s, q, N=1000, tree=None, ret_sample=False, verbose=None):
+    '''
+    Estime the percentile distance to the the next neighbour within the given snapshot.
+
+    Args:
+        s (Snap):           The snapshot to use.
+        q (int,float):      The percentile to ask for.
+        N (int):            The sample size to estimate the distance from.
+        tree (cOctree):     The octree class to use, if already present. Will be
+                            generated on the fly otherwise.
+        ret_sample (bool):  Also return the entire sample drawn.
+        verbose (int):      Verbosity level. Default: the gobal pygad verbosity
+                            level.
+    Returns:
+        d (UnitArr):        The q-percentile distance to the next neighbour.
+       [dists (UnitArr):    The sample drawn.]
+    '''
+    if verbose is None:
+        verbose = environment.verbose
+    from .. import octree
+    pos = s['pos'].view(np.ndarray)
+    boxsize = s.boxsize.in_units_of(s['pos'].units)
+    if tree is None:
+        if verbose >= environment.VERBOSE_NORMAL:
+            print 'building the octree...'
+        tree = octree.cOctree(pos)
+    if verbose >= environment.VERBOSE_NORMAL:
+        print 'preparing...'
+    d = np.empty(N, dtype=float)
+    cond = np.ones(len(s), dtype=np.int32)
+    with ProgressBar(np.random.randint(len(s),size=N), label='sampling') as pbar:
+        for i in pbar:
+            cond[i] = 0
+            i_next = tree.find_next_ngb(pos[i], pos, periodic=boxsize, cond=cond)
+            cond[i] = 1
+            d[pbar.iteration-1] = dist(pos[i], pos[i_next])
+    if ret_sample:
+        return UnitArr( np.percentile(d,q), s['pos'].units), \
+               UnitArr( d, s['pos'].units )
+    else:
+        return UnitArr( np.percentile(d,q), s['pos'].units)
 
 def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
-                           max_halos=None, ret_FoFs=False,
-                           verbose=environment.verbose, **kwargs):
+                           max_halos=None, ret_FoFs=False, verbose=None,
+                           progressbar=True, **kwargs):
     '''
     Generate a list of Halos defined by FoF groups.
 
     Args:
         s (Snap):           The snapshot to generate the FoF groups for.
-        l (UnitScalar):     The linking length for the FoF groups.
+        l (UnitScalar):     The linking length for the FoF groups (for dark
+                            matter / all matter it turned out that
+                            ( 1500. * rho_crit / median(mass) )^(-1/3) is a
+                            reasonable value, which will be used as default, when
+                            l=None).
         calc (set, list, tuple):
                             A list of the properties to calculate at instantiation
-                            of the Halo instances.
+                            of the Halo instances. (Cf. also `Halo`.)
         FoF (np.array):     An array with group IDs for each particle in the
                             snapshot `s`. If given, `l` is ignored and the FoF
                             groups are not calculated within this function.
@@ -548,7 +951,11 @@ def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
                             most massive halos. If None, all halos are returned.
         ret_FoFs (bool):    Also return the array with the FoF group indices
                             (sorted by mass).
-        verbose (bool):     Verbosity.
+        verbose (bool):     Verbosity level. Default: the gobal pygad verbosity
+                            level.
+        progressbar (bool): Whether to show a progress bar for initialising the
+                            halo classes (not for generating the FoF groups,
+                            though!).
         **kwargs:           Other keywords are passed to `find_FoF_groups` (e.g.
                             `dvmax`).
 
@@ -562,22 +969,39 @@ def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
                             and/or function `find_FoF_groups`).
         N_FoF (int):        The number of FoF groups in `FoF`.
     '''
+    if verbose is None:
+        verbose = environment.verbose
     if FoF is None:
+        if l is None:
+            l = ( 1500. * s.cosmology.rho_crit(s.redshift)
+                        / np.median(s['mass']) )**Fraction(-1,3)
         FoF, N_FoF = find_FoF_groups(s, l=l, verbose=verbose, **kwargs)
     else:
         N_FoF = len(set(FoF)) - 1
 
-    if verbose >= environment.VERBOSE_NORMAL:
-        print 'initialize halos from FoF group IDs...'
-        sys.stdout.flush()
 
+    from ..utils import ProgressBar, DevNull
+    if verbose>=environment.VERBOSE_NORMAL and progressbar:
+        outfile = sys.stdout
+    else:
+        outfile = DevNull()
     halos = []
-    for i in xrange(N_FoF):
-        h = Halo(s[FoF==i], snap=s, calc=calc)
-        if exclude is None or not exclude(h,s):
-            halos.append( h )
-        if len(halos)==max_halos:
-            break
+    with ProgressBar(
+                xrange( min(N_FoF,max_halos) if exclude is None else N_FoF ),
+                show_eta=False,
+                show_percent=False,
+                label='initialize halos',
+                file=outfile) as pbar:
+        if not progressbar:
+            print 'initialize halos from FoF group IDs...'
+            sys.stdout.flush()
+        for i in pbar:
+            h = Halo(halo=s[FoF==i], root=s, calc=calc)
+            h.linking_length = l
+            if exclude is None or not exclude(h,s):
+                halos.append( h )
+            if len(halos)==max_halos:
+                break
 
     if verbose >= environment.VERBOSE_NORMAL:
         print 'initialized %d halos.' % (len(halos))

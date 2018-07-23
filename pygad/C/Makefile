@@ -1,9 +1,14 @@
 GSL_HOME	:= ${GSL_HOME} /opt/local
+GSL_LIB		:= $(wildcard /usr/lib/libgsl.*)
+ifneq ($(wildcard ${GSL_LIB}),)
+	GSL_HOME	:= ${GSL_HOME} /usr
+endif
 
 CC 		= g++
-CFLAGS 	= -Wall -std=c++11 -Ofast -DNDEBUG -fopenmp
-#CFLAGS 	= -Wall -std=c++11 -O2 -fopenmp
-#CFLAGS 	= -Wall -std=c++11 -O0 -DDEBUG
+CFLAGS 	= -std=c++11 #-fext-numeric-literals
+CFLAGS  += -pedantic -Wall -Wextra -Wno-unused-parameter
+CFLAGS 	+= -O3 -DNDEBUG -fopenmp
+#CFLAGS 	+= -Wno-unknown-pragmas -O2 -DDEBUG
 IPATH	= $(addprefix -I, $(addsuffix /include, $(GSL_HOME)))
 LPATH	= $(addprefix -L, $(addsuffix /lib, $(GSL_HOME)))
 LDFLAGS = -lm -fopenmp -lgsl -lgslcblas

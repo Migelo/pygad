@@ -13,9 +13,15 @@ pygad.egg-info
 # weird MacOS files
 .DS_store
 
+# images
+*.png
+*.jpg
+
 # some directories and downloads you might have from the bitbucket side
 bc03
+iontbls
+CoolingTables
 snaps
 wiki
-QuickStart.ipynb
+QuickStart*
 

@@ -13,7 +13,7 @@ doctests:
     >>> print >> sys.stderr, "ATTENTION: full doctest takes a few minutes!!!"
     >>> print >> sys.stderr, 'testing module utils...'
     >>> doctest.testmod(utils)
-    TestResults(failed=0, attempted=3)
+    TestResults(failed=0, attempted=5)
     >>> print >> sys.stderr, 'testing module environment...'
     >>> doctest.testmod(environment)
     TestResults(failed=0, attempted=0)
@@ -22,7 +22,7 @@ doctests:
     TestResults(failed=0, attempted=3)
     >>> print >> sys.stderr, 'testing module physics...'
     >>> doctest.testmod(physics)
-    TestResults(failed=0, attempted=3)
+    TestResults(failed=0, attempted=4)
     >>> print >> sys.stderr, 'testing module kernels...'
     >>> doctest.testmod(kernels)
     TestResults(failed=0, attempted=3)
@@ -43,10 +43,10 @@ doctests:
     TestResults(failed=0, attempted=2)
     >>> print >> sys.stderr, 'testing module binning...'
     >>> doctest.testmod(binning)
-    TestResults(failed=0, attempted=4)
+    TestResults(failed=0, attempted=5)
     >>> print >> sys.stderr, 'testing module analysis...'
     >>> doctest.testmod(analysis)
-    TestResults(failed=0, attempted=5)
+    TestResults(failed=0, attempted=6)
     >>> print >> sys.stderr, 'testing module tools...'
     >>> doctest.testmod(tools)
     TestResults(failed=0, attempted=0)
@@ -77,8 +77,8 @@ import ssp
 import binning
 import analysis
 import tools
-if environment.interactive:
-    import plotting
+import cloudy
+import plotting
 
 # the version of this pygad
 # this line gets changed by setup.py during installation, and hence is different
@@ -94,13 +94,12 @@ if environment.verbose >= environment.VERBOSE_TACITURN:
 
 # make some chosen elements directly visible
 from environment import gc_full_collect
-from units import Unit, Units, UnitArr, UnitQty, UnitScalar, dist, Fraction
+from units import Unit, Units, UnitArr, UnitQty, UnitScalar, Fraction
 from physics import cosmology
 from physics import G, m_p, solar
 from transformation import Translation, Rotation
-from snapshot import Snap, BallMask, BoxMask, DiscMask, IDMask
+from snapshot import Snap, BallMask, BoxMask, DiscMask, IDMask, ExprMask
 from binning import gridbin2d, gridbin, smooth
-from plotting import show_image
 from tools import prepare_zoom, read_info_file
 
 import gc

@@ -24,9 +24,9 @@ Examples and doctests:
     Test some properties of the integrated kernels:
     >>> for kernel in kernels.iterkeys():
     ...     integ_kernel = integrate_kernel(kernel)
-    ...     if abs(integ_kernel(1.0) - 1.0) > 1e6:
+    ...     if abs(integ_kernel(1.0) - 1.0) > 1e-6:
     ...         print 'Kernel %s did not got integrated to one!', name
-    ...     if abs(integ_kernel(0.0)) > 1e6:
+    ...     if abs(integ_kernel(0.0)) > 1e-6:
     ...         print 'Integrated kernel %s does not start at zero!', name
     ...     for r in [0.1, 0.3, 0.5, 0.8, 0.9]:
     ...         assert 0 < integ_kernel(r) < 1
@@ -83,7 +83,7 @@ def project_kernel(kernel, N=100, inter_kind='quadratic'):
                                err)
         table.append( w )
     return interp1d(Rs, table, copy=False, bounds_error=False, fill_value=0.0,
-                    assume_sorted=True, kind=inter_kind)
+                    kind=inter_kind)
 
 def integrate_kernel(kernel, N=100, inter_kind='quadratic'):
     '''
@@ -124,7 +124,7 @@ def integrate_kernel(kernel, N=100, inter_kind='quadratic'):
                                err)
         table.append( I )
     return interp1d(rs, table, copy=False, bounds_error=False, fill_value=1.0,
-                    assume_sorted=True, kind=inter_kind)
+                    kind=inter_kind)
 
 #old version: needs to use 'intergrate_kernel' now (cache it?!)...
 @static_vars( integs={} )

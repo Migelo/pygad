@@ -20,13 +20,13 @@ Example:
     load block pos... done.
     Unit("cMpc h_0**-1")
     >>> s.gadget_units
-    {'VELOCITY': 'km / s', 'LENGTH': 'cMpc/h_0', 'MASS': '1e10 Msol / h_0'}
+    {'VELOCITY': 'a**(1/2) km / s', 'LENGTH': 'cMpc/h_0', 'MASS': '1e10 Msol / h_0'}
     >>> print 'current age of the universe: %s' % s.cosmic_time().in_units_of('Myr')
     current age of the universe: 12.8697344013 [Myr]
     >>> s.loadable_blocks()
     ['vel', 'mass', 'ID', 'pos']
-    >>> if set(s.deriveable_blocks()) != set('Epot vx jzjc vy vz rcyl momentum angmom E dV vrad Ekin temp vcirc r jcirc y x z'.split()):
-    ...     print ' '.join(s.deriveable_blocks())
+    >>> if not set(s.deriveable_blocks()) >= set('Epot vx jzjc vy vz rcyl momentum angmom E dV vrad Ekin temp vcirc r jcirc y x z'.split()):
+    ...     print ' '.join(sorted(s.deriveable_blocks()))
     >>> assert set(s.all_blocks()) == set(s.loadable_blocks() + s.deriveable_blocks())
     >>> mwgt_pos = np.tensordot(s['mass'], s['pos'], axes=1).view(UnitArr)
     load block mass... done.
@@ -133,8 +133,8 @@ Example:
     One can test for available blocks and families by the 'in' opertator:
     >>> 'r' in s
     True
-    >>> if set(s.available_blocks()) != set('Epot pot pos jzjc vx vy vz rcyl momentum mass vel angmom jcirc E vrad ID Ekin vcirc r y x z'.split()):
-    ...     print ' '.join(s.available_blocks())
+    >>> if not set(s.available_blocks()) >= set('Epot pot pos jzjc vx vy vz rcyl momentum mass vel angmom jcirc E vrad ID Ekin vcirc r y x z'.split()):
+    ...     print ' '.join(sorted(s.available_blocks()))
     >>> s.delete_blocks(derived=True)
     >>> 'r' in s
     True
@@ -142,12 +142,13 @@ Example:
     True
 
     New custom blocks can be set easily (though have to fit the (sub-)snapshot):
-    >>> sub = s.baryons[s.baryons['Z']>1e-3].stars
-    load block elements... done.
+    >>> sub = s.baryons[s.baryons['metallicity']>1e-3].stars
+    load block Z... done.
+    derive block elements... done.
     derive block H... done.
     derive block He... done.
     derive block metals... done.
-    derive block Z... done.
+    derive block metallicity... done.
     >>> s.stars['new'] = np.ones(len(s.stars))
     >>> sub['new']
     SimArr([ 1.,  1.,  1., ...,  1.,  1.,  1.], snap="snap_M1196_4x_470":stars)
@@ -160,7 +161,7 @@ Example:
     load block mass... done.
     derive block r... done.
     writing block POS  (dtype=float32, units=[ckpc h_0**-1])... done.
-    writing block VEL  (dtype=float32, units=[s**-1 km])... done.
+    writing block VEL  (dtype=float32, units=[a**1/2 s**-1 km])... done.
     writing block ID   (dtype=uint32, units=[1])... done.
     writing block MASS (dtype=float32, units=[1e+10 Msol h_0**-1])... done.
     writing block R    (dtype=float32, units=[kpc])... done.
@@ -186,18 +187,14 @@ Example:
     load block nh... done.
     ...
     writing block POS  (dtype=float32, units=[ckpc h_0**-1])... done.
-    writing block VEL  (dtype=float32, units=[s**-1 km])... done.
+    writing block VEL  (dtype=float32, units=[a**1/2 s**-1 km])... done.
     writing block ID   (dtype=uint32, units=[1])... done.
     writing block MASS (dtype=float32, units=[1e+10 Msol h_0**-1])... done.
     writing block NH   (dtype=float32, units=[1])... done.
     ...
     >>> s2 = Snap(dest_file, physical=False)
     >>> s2.load_all_blocks()    # doctest:+ELLIPSIS
-    load block nh... done.
-    load block elements... done.
-    load block sfr... done.
-    load block pot... done.
-    load block inim... done.
+    load block ... done.
     ...
     >>> for name in s.loadable_blocks():
     ...     b  = s.get_host_subsnap(name)[name]
@@ -212,7 +209,7 @@ Example:
     >>> gadget.write(s, dest_file_hdf5) # doctest:+ELLIPSIS
     ...
     writing block POS  (dtype=float32, units=[ckpc h_0**-1])... done.
-    writing block VEL  (dtype=float32, units=[s**-1 km])... done.
+    writing block VEL  (dtype=float32, units=[a**1/2 s**-1 km])... done.
     writing block ID   (dtype=uint32, units=[1])... done.
     writing block MASS (dtype=float32, units=[1e+10 Msol h_0**-1])... done.
     writing block NH   (dtype=float32, units=[1])... done.
@@ -226,7 +223,7 @@ Example:
     load block nh... done.
     ...
     writing block POS  (dtype=float32, units=[ckpc h_0**-1])... done.
-    writing block VEL  (dtype=float32, units=[s**-1 km])... done.
+    writing block VEL  (dtype=float32, units=[a**1/2 s**-1 km])... done.
     writing block ID   (dtype=uint32, units=[1])... done.
     writing block MASS (dtype=float32, units=[1e+10 Msol h_0**-1])... done.
     writing block NH   (dtype=float32, units=[1])... done.
@@ -238,12 +235,7 @@ Example:
     ...     b  = s.get_host_subsnap(name)[name]
     ...     b2 = s2.get_host_subsnap(name)[name]
     ...     assert np.all( b == b2 )
-    load block pos... done.
-    load block nh... done.
-    load block elements... done.
-    load block hsml... done.
-    load block pot... done.
-    ...
+    load block ...
     >>> assert s.redshift == s2.redshift
     >>> for name, prop in s.properties.iteritems():
     ...     if not prop == s2.properties[name]:
@@ -289,8 +281,9 @@ import os.path
 from .. import gadget
 from ..gadget import write
 from .. import physics
-from ..units import *
 from .. import utils
+from ..units import *
+from ..utils import dist
 from .. import environment
 from ..environment import module_dir
 import numpy as np
@@ -301,23 +294,30 @@ import derived
 import fnmatch
 
 def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
-         gad_units=None):
+         gad_units=None, unclear_blocks=None):
     '''
     Create a snapshot from file (without loading the blocks, yet).
 
     Args:
-        filename (str):     The path to the snapshot. If it is distributed over
-                            several files, you shall omit the trailing (of
-                            inbetween in case of an HDF5 file) '.0'.
-        physical (bool):    Whether to convert to physical units on loading.
-        load_double_prec (bool):
-                            Force to load all blocks in double precision.
-                            Equivalent with setting the snapshots attribute.
-        cosmological (bool):Explicitly tell if the simulation is a cosmological
-                            one.
-        gad_units (dict):   Alternative base units (LENGTH, VELOCITY, MASS) for
-                            this snapshot. The default base units units are
-                            updated, meaning one can also just change one them.
+        filename (str):         The path to the snapshot. If it is distributed
+                                over several files, you shall omit the trailing
+                                (of inbetween in case of an HDF5 file) '.0'.
+        physical (bool):        Whether to convert to physical units on loading.
+        load_double_prec (bool):Force to load all blocks in double precision.
+                                Equivalent with setting the snapshots attribute.
+        cosmological (bool):    Explicitly tell if the simulation is a
+                                cosmological one.
+        gad_units (dict):       Alternative base units (LENGTH, VELOCITY, MASS)
+                                for this snapshot. The default base units units
+                                are updated, meaning one can also just change one
+                                them.
+        unclear_blocks (str):   What to do the blocks for which the block info is
+                                unclear (cannot be infered). Possible modes are:
+                                * exception:    raise an IOError
+                                * warning:      print a warning to the stderr
+                                * ignore:       guess what
+                                If it is None, the value from the `gadget.cfg` is
+                                taken.
 
     Raises:
         IOError:            If the snapshot does not exist.
@@ -341,10 +341,13 @@ def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
     s._filename   = os.path.abspath(base+suffix)
     s._descriptor = os.path.basename(base)+suffix
     # need first (maybe only) file for basic information
-    greader = gadget.FileReader(filename)
+    greader = gadget.FileReader(filename, unclear_blocks=unclear_blocks)
     s._file_handlers = [greader]
 
-    s._block_avail = { block.name:block.ptypes for block in greader.infos() }
+    s._block_avail = {
+            block.name:block.ptypes
+            for block in greader.infos()
+            if block.dtype is not None }
 
     s._N_part   = map(int, greader.header['N_part_all'])
     s._time     = greader.header['time']
@@ -375,7 +378,7 @@ def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
         N_part = map( int, greader.header['N_part'] )
         for n in xrange(1, greader.header['N_files']): # first already done
             filename = base + '.' + str(n) + suffix
-            greader = gadget.FileReader(filename)
+            greader = gadget.FileReader(filename, unclear_blocks=unclear_blocks)
             s._file_handlers.append( greader )
             # enshure Python int's to avoid overflows
             for i in xrange(6): N_part[i] += int(greader.header['N_part'][i])
@@ -401,10 +404,8 @@ def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
             new_name = name.strip().lower()
 
         # some renaming
-        if new_name in ['id']:
+        if new_name in ['id', 'z']:
             new_name = new_name.upper()
-        elif new_name == 'z':
-            new_name = 'elements'
         elif new_name == 'age':
             new_name = 'form_time'
 
@@ -418,47 +419,7 @@ def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
     # now the mass block is named 'mass' for all cases (HDF5 or other)
     s._block_avail['mass'] = [n>0 for n in s._N_part]
 
-    # calculate the dependencies and particle types of the derived blocks
-    changed = True
-    rules = derived._rules.copy()
-    # define 'dV' by 'vol_def_x' if not explicitly given
-    if 'dV' not in rules:
-        x = gadget.config.general['vol_def_x']
-        if x != '<undefined>':
-            rules['dV'] = '%s / kernel_weighted(gas,%s)' % (x,x)
-    # remove derived blocks that can be loaded
-    for name in rules.keys():
-        if name in s._load_name:
-            del rules[name]
-    # calculate the dependencies
-    while changed:
-        changed = False
-        for name, rule in rules.iteritems():
-            if name in s._load_name:
-                continue    # this derived block can actually be loaded
-            ptypes, deps = derived.ptypes_and_deps(rule, s)
-            if name in s._block_avail:
-                if ptypes!=s._block_avail[name] \
-                        or deps!=s._derive_rule_deps[name][1]:
-                   changed = True
-            else:
-               changed = True
-            s._block_avail[name] = ptypes
-            s._derive_rule_deps[name] = (rule, deps)
-    # now remove those derived blocks, that depend on non-existent blocks
-    not_available = set()
-    removed = -1
-    while removed != len(not_available):
-        removed = len(not_available)
-        for name, (rule, deps) in s._derive_rule_deps.iteritems():
-            if not (any(s._block_avail[name]) and (deps-not_available)):
-                not_available.add(name)
-        for name in not_available:
-            s._block_avail.pop(name,None)
-            s._derive_rule_deps.pop(name,None)
-
-    s._always_cache = set(s._derive_rule_deps.iterkeys()) \
-                        & derived.general['always_cache']
+    s.fill_derived_rules()
 
     s._descriptor = '"' + s._descriptor + '"'
 
@@ -626,6 +587,33 @@ class _Snap(object):
         '''
         return physics.z2a(self.redshift)
 
+    def write(self, filename, **kwargs):
+        '''
+        Write this (sub-)snapshot to the given file.
+
+        For more information see `gadget.write` as this function just calls it.
+
+        Args:
+            filename (str):     The path to write the snapshot to.
+            **kwargs:           Further (keyword) arguments are simply passed to
+                                `gadget.write` (by default it is
+                                `gad_units=self.root._gad_units`).
+        '''
+        return gadget.write(self, filename, gad_units=self.root._gad_units, **kwargs)
+
+    def headers(self, idx=None):
+        '''
+        A list of the header(s) as dict's. For common features see `properties`.
+
+        Args:
+            idx (int):      If not None, do not return the entire list, but just
+                            the header of the file of given number.
+        '''
+        if idx is None:
+            return [reader.header.copy() for reader in self._root._file_handlers]
+        else:
+            return self._root._file_handlers[idx].header.copy()
+
     def families(self):
         '''Return the names of the particle families (at least partly) present in
         this snapshot.'''
@@ -664,13 +652,82 @@ class _Snap(object):
                 utils.nice_big_num_str(len(self)),
                 self._root.redshift)
 
+    def fill_derived_rules(self, rules=None, clear_old=False):
+        '''
+        Fill the derived rules for (the root of) this snapshot.
+
+        Args:
+            rules (dict):       A dictionary of the rules to add. The keys are the
+                                names of the blocks (blocks that can be loaded
+                                will not be added!). The entries shall be strings
+                                with the rule.
+                                Defaults to the list loaded from `derived.cfg`.
+            clear_old (dict):   Whether to first clear any already existing rules.
+        '''
+        if not self is self.root:
+            self.root.fill_derived_rules(rules, clear_old)
+            return
+
+        if rules is None:
+            rules = derived._rules
+        rules = rules.copy()
+
+        if clear_old:
+            for name in self._derive_rule_deps.iterkeys():
+                self._block_avail.pop(name,None)
+            self._derive_rule_deps = {}
+
+        # calculate the dependencies and particle types of the derived blocks
+        # define 'dV' by 'vol_def_x' if not explicitly given
+        if 'dV' not in rules:
+            x = gadget.config.general['vol_def_x']
+            if x != '<undefined>':
+                rules['dV'] = '%s / kernel_weighted(gas,%s)' % (x,x)
+
+        # remove derived blocks that can be loaded
+        for name in rules.keys():
+            if name in self._load_name:
+                del rules[name]
+
+        # calculate the dependencies
+        changed = True
+        while changed:
+            changed = False
+            for name, rule in rules.iteritems():
+                if name in self._load_name:
+                    continue    # this derived block can actually be loaded
+                ptypes, deps = derived.ptypes_and_deps(rule, self)
+                if name in self._block_avail:
+                    if ptypes!=self._block_avail[name] \
+                            or deps!=self._derive_rule_deps[name][1]:
+                       changed = True
+                else:
+                   changed = True
+                self._block_avail[name] = ptypes
+                self._derive_rule_deps[name] = (rule, deps)
+
+        # now remove those derived blocks, that depend on non-existent blocks
+        not_available = set()
+        removed = -1
+        while removed != len(not_available):
+            removed = len(not_available)
+            for name, (rule, deps) in self._derive_rule_deps.iteritems():
+                if not (any(self._block_avail[name]) and (deps-not_available)):
+                    not_available.add(name)
+            for name in not_available:
+                self._block_avail.pop(name,None)
+                self._derive_rule_deps.pop(name,None)
+
+        self._always_cache = set(self._derive_rule_deps.iterkeys()) \
+                            & derived.general['always_cache']
+
     def __dir__(self):
         # Add the families available such that they occure in tab completion in
         # iPython, for instance.
         # The other list added here seems to include excatly the properties.
         return [k for k in self.__dict__.keys()
                         if not k.startswith('_')] + \
-                [k for k in self.root.__class__.__dict__.keys()
+                [k for k in self._root.__class__.__dict__.keys()
                         if not k.startswith('_')] + \
                 self.families()
 
@@ -731,9 +788,9 @@ class _Snap(object):
         '''
         done = set()
         if forthis:
-            names = self._block.iterkeys() if present else self.available_blocks()
+            names = self._blocks.iterkeys() if present else self.available_blocks()
         else:
-            names = self.root._block_avail.iterkeys()
+            names = self._root._block_avail.iterkeys()
         for block_name in names:
             if block_name in done:
                 continue
@@ -821,11 +878,12 @@ class _Snap(object):
     def __delitem__(self, name):
         if name in self.available_blocks():
             try:
-                del self._blocks[name]
-                if name not in self.root._load_name \
-                        and name not in self.root._derive_rule_deps:
+                host = self.get_host_subsnap(name)
+                del host._blocks[name]
+                if name not in self._root._load_name \
+                        and name not in self._root._derive_rule_deps:
                     # delete custom blocks entirely
-                    del self._block_avail[name]
+                    del self._root._block_avail[name]
             except KeyError:
                 pass
         else:
@@ -885,7 +943,7 @@ class _Snap(object):
                 read = reader.read_block(block_name, gad_units=root._gad_units)
                 units = read.units
                 if first:
-                    blocks = [read[np.sum(reader.header['N_part'][:pt])
+                    blocks = [read[int(np.sum(reader.header['N_part'][:pt]))
                                     :np.sum(reader.header['N_part'][:pt+1])] \
                                 for pt in xrange(6)]
                     first = False
@@ -893,7 +951,7 @@ class _Snap(object):
                     for pt in xrange(6):
                         if not reader.header['N_part'][pt]:
                             continue
-                        read_pt = read[np.sum(reader.header['N_part'][:pt])
+                        read_pt = read[int(np.sum(reader.header['N_part'][:pt]))
                                        :np.sum(reader.header['N_part'][:pt+1])]
                         blocks[pt] = np.concatenate((blocks[pt], read_pt),
                                                     axis=0).view(UnitArr)
@@ -1028,15 +1086,19 @@ class _Snap(object):
         else:
             raise RuntimeError('Data length does not fit the (sub-)snapshot!')
 
-        if name in self.root._block_avail:
+        if name in self._root._block_avail:
             raise NotImplementedError('Block name "%s" already exists ' % name +
                                       'for other parts of the snapshot!\n' +
                                       'Combining is not implemented.')
 
-        self.root._block_avail[name] = list(ptypes)
+        self._root._block_avail[name] = list(ptypes)
         host = self.get_host_subsnap(name)
         if host is not self:
-            del self.root._block_avail[name]
+            print >> sys.stderr, "name:", name
+            print >> sys.stderr, "for particle types:", self._root._block_avail[name]
+            print >> sys.stderr, "self:", self
+            print >> sys.stderr, "host:", host
+            del self._root._block_avail[name]
             raise RuntimeError('Can only set new blocks for entire family '
                                'sub-snapshots or the root.')
 
@@ -1175,7 +1237,7 @@ class _Snap(object):
             res (SimArr):       The result.
         '''
         from sim_arr import SimArr
-        from ..ssp import inter_bc_qty
+        from ..ssp import inter_bc_qty, lum_to_mag
 
         # prepare evaluator
         from numpy.core.umath_tests import inner1d
@@ -1184,7 +1246,8 @@ class _Snap(object):
         namespace.update( {'dist':dist, 'Unit':Unit, 'Units':Units,
                            'UnitArr':UnitArr, 'UnitQty':UnitQty,
                            'UnitScalar':UnitScalar, 'inner1d':inner1d,
-                           'inter_bc_qty':inter_bc_qty, 'perm_inv':utils.perm_inv,
+                           'inter_bc_qty':inter_bc_qty, 'lum_to_mag':lum_to_mag,
+                           'perm_inv':utils.perm_inv,
                            'solar':physics.solar, 'WMAP7':physics.WMAP7,
                            'Planck2013':physics.Planck2013,
                            'FLRWCosmo':physics.FLRWCosmo, 'a2z':physics.a2z,
@@ -1224,7 +1287,7 @@ class _Snap(object):
 
     def IDs_unique(self):
         '''Check whether the IDs (of this (sub-)snapshot) are unique.'''
-        return len(set( self['ID'] )) == len(self['ID'])
+        return len(np.unique(self['ID'])) == len(self)
 
 class _SubSnap(_Snap):
     '''
@@ -1288,7 +1351,8 @@ class _SubSnap(_Snap):
 
         s[mask], however, is not host (!)
         >>> assert np.all( s[mask]['elements'] == s.baryons['elements'] )
-        load block elements... done.
+        load block Z... done.
+        derive block elements... done.
         >>> len(slim[slim_mask]['elements'])
         10015
         >>> assert s[2:-123:10].stars['form_time'].shape[0] == len(s[2:-123:10].stars)

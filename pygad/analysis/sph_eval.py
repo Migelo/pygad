@@ -32,7 +32,8 @@ Examples:
     ...     print s.stars['gas_rho'][-1]
 
     >>> v1 = SPH_qty_at(s, 'elements', s.gas['pos'][:200:10])
-    load block elements... done.
+    load block Z... done.
+    derive block elements... done.
     >>> v2 = SPH_qty_at(s, 'elements', s.gas['pos'][:200])[::10]
     >>> if np.max(np.abs(v1-v2)/v1) > 1e-6:
     ...     print v1
@@ -43,6 +44,7 @@ __all__ = ['kernel_weighted', 'SPH_qty_at', 'scatter_gas_qty_to_stars']
 
 import numpy as np
 from ..units import *
+from ..utils import dist
 
 def _calc_ys(qty, all_gas_pos, gas_pos, hsml, kernel):
     y = np.empty( (len(gas_pos),)+qty.shape[1:] )
@@ -78,7 +80,7 @@ def kernel_weighted(s, qty, units=None, kernel=None, parallel=None):
     '''
     # TODO: find ways to speed it up! -- parallelisation very inefficient
     gas = s.gas
-    if isinstance(qty, str):
+    if isinstance(qty, (str,unicode)):
         qty = gas.get(qty)
     else:
         if len(qty) != len(gas):
@@ -123,7 +125,7 @@ def kernel_weighted(s, qty, units=None, kernel=None, parallel=None):
         for i in xrange(N_threads):
             y[chunk[i][0]:chunk[i][1]] = res[i].get()
     else:
-        y = _calc_ys(qty, gas_pos, hsml, kernel)
+        y = _calc_ys(qty, gas_pos, gas_pos, hsml, kernel)
 
     return UnitArr(y, units)
 
@@ -150,7 +152,7 @@ def SPH_qty_at(s, qty, r, units=None, kernel=None, dV='dV'):
     r = UnitQty(r, s['pos'].units, subs=s)
     if not (r.shape==(3,) or (r.shape[1:]==(3,) and len(r.shape)==2)):
         raise ValueError('Position `r` needs to have shape (3,) or (N,3)!')
-    if isinstance(qty, str):
+    if isinstance(qty, (str,unicode)):
         qty = s.gas.get(qty)
     else:
         if len(qty) != len(s.gas):
@@ -290,7 +292,7 @@ def scatter_gas_qty_to_stars(s, qty, name=None, units=None, kernel=None, dV='dV'
         KeyError:           If there already exists a block of that name.
     '''
     if name is None:
-        if isinstance(qty, str):
+        if isinstance(qty, (str,unicode)):
             name = qty
         else:
             raise RuntimeError('No name for the quantity is given!')

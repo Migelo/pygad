@@ -30,7 +30,7 @@ Examples:
     derive block r... done.
     load block hsml... done.
     >>> sub
-    <Snap "snap_M1196_4x_470":ball(r=60.0 [kpc]); N=198,250; z=0.000>
+    <Snap "snap_M1196_4x_470":Ball(r=60.0 [kpc]); N=198,250; z=0.000>
     >>> if abs(sub['r'].max().in_units_of('Mpc',subs=s) - 9.905) > 0.01:
     ...     print sub['r'].max().in_units_of('Mpc',subs=s)
     >>> no_gas_max_r = SubSnap(sub,list(set(range(6))-set(gadget.families['gas'])))['r'].max()
@@ -39,7 +39,7 @@ Examples:
     >>> s.to_physical_units()
     >>> sub = s[BoxMask('120 kpc',sph_overlap=False)]
     >>> sub # doctest:+ELLIPSIS
-    <Snap "snap_M1196_4x_470":box([[-60,60],[-60,60],[-60,60]] [kpc],strict); N=218,98...; z=0.000>
+    <Snap "snap_M1196_4x_470":Box([[-60,60],[-60,60],[-60,60]] [kpc],strict); N=218,98...; z=0.000>
     >>> if np.linalg.norm( np.abs(sub['pos']).max(axis=0) - [120/2]*3 ) > 0.1:
     ...     print np.abs(sub['pos']).max(axis=0)
 
@@ -52,14 +52,14 @@ Examples:
     derive block jzjc... done.
     derive block rcyl... done.
     >>> disc
-    <Snap "snap_M1196_4x_470":disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc]); N=36,419; z=0.000>
+    <Snap "snap_M1196_4x_470":Disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc]); N=36,419; z=0.000>
     >>> gal = s[s['r']<'60 kpc']
     >>> np.array(disc.parts,float) / np.array(gal.parts)
     array([ 0.78431754,  0.02731191,         nan,         nan,  0.26441513,
                    nan])
     >>> bulge = gal[discmask.inverted()]
     >>> bulge
-    <Snap "snap_M1196_4x_470":masked:~disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc]); N=159,918; z=0.000>
+    <Snap "snap_M1196_4x_470":masked:~Disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc]); N=159,918; z=0.000>
     >>> float(len(disc)) / len(bulge)
     0.2277354644255181
 
@@ -74,13 +74,38 @@ Examples:
     >>> assert not bool( set(antisub['ID']).intersection(sub['ID']) )
     >>> assert len(antisub) + len(sub) == len(gal)
     >>> assert set(sub['ID']) == set(gal[IDMask(set(IDs))]['ID'])
+
+    >>> expr_mask = ExprMask("abs(vel[:,2]) < '100 km/s'")
+    >>> sub = gal[expr_mask]
+    >>> sub
+    <Snap "snap_M1196_4x_470":masked:ExprMask("abs(vel[:,2]) < '100 km/s'"); N=145,157; z=0.000>
+    >>> assert np.all(sub['ID']
+    ...                 == gal['ID'][np.abs(gal['vel'][:,2]) < '100 km/s'])
+    >>> assert len(sub) + len(gal[~expr_mask]) == len(gal)
+    >>> sub = gal[ExprMask("(abs(vel[:,2]) < '100 km/s') & (r < '30 kpc')")]
+    >>> assert np.all(sub['ID'] == gal['ID'][
+    ...     (np.abs(gal['vel'][:,2]) < '100 km/s') & (gal['r'] < '30 kpc')])
+
+    Combining masks with (bitwise) logical operators:
+    >>> s[expr_mask & discmask]
+    <Snap "snap_M1196_4x_470":CompoundMask(ExprMask("abs(vel[:,2]) < '100 km/s'") & Disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc])); N=36,072; z=0.000>
+    >>> s[expr_mask | discmask]
+    <Snap "snap_M1196_4x_470":CompoundMask(ExprMask("abs(vel[:,2]) < '100 km/s'") | Disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc])); N=1,901,758; z=0.000>
+    >>> s[expr_mask ^ discmask]
+    <Snap "snap_M1196_4x_470":CompoundMask(ExprMask("abs(vel[:,2]) < '100 km/s'") ^ Disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc])); N=1,865,686; z=0.000>
+    >>> s[expr_mask & discmask & BallMask('30 kpc')]
+    <Snap "snap_M1196_4x_470":CompoundMask(CompoundMask(ExprMask("abs(vel[:,2]) < '100 km/s'") & Disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc])) & Ball(r=30.0 [kpc],strict)); N=34,177; z=0.000>
+    >>> np.round( np.percentile(
+    ...     s[ BallMask('100 kpc') & ~BallMask('30 kpc') ]['r'], [0,100]) )
+    array([  30.,  100.])
 '''
-__all__ = ['SnapMask', 'BallMask', 'BoxMask', 'DiscMask', 'IDMask']
+__all__ = ['SnapMask', 'BallMask', 'BoxMask', 'DiscMask', 'IDMask', 'ExprMask']
 
 import numpy as np
 from ..units import *
 from .. import gadget
 from snapshot import SubSnap
+import operator
 
 class SnapMask(object):
     '''The base class for more complicated masks.'''
@@ -99,11 +124,14 @@ class SnapMask(object):
 
     def __str__(self):
         s = '~' if self._inverse else ''
-        s += 'SnapMask'
+        s += self.__class__.__name__
         return s
 
     def _get_mask_for(self, s):
-        '''The actual implementation for getting the mask for this class.'''
+        '''
+        The actual implementation for getting the mask for this class, not
+        accounting for the _inverse flag.
+        '''
         raise NotImplementedError('This is just the interface!')
 
     def get_mask_for(self, s):
@@ -118,6 +146,13 @@ class SnapMask(object):
         '''
         mask = self._get_mask_for(s)
         return ~mask if self._inverse else mask
+
+    def __and__(self, other):
+        return CompoundMask(self, operator.and_, other)
+    def __or__(self, other):
+        return CompoundMask(self, operator.or_, other)
+    def __xor__(self, other):
+        return CompoundMask(self, operator.xor, other)
 
 class BallMask(SnapMask):
     '''
@@ -165,7 +200,7 @@ class BallMask(SnapMask):
 
     def __str__(self):
         s = '~' if self._inverse else ''
-        s += 'ball('
+        s += 'Ball('
         if not np.all(self._center==0):
             s += 'center=%s,' % self._center
         s += 'r=%s' % self._R
@@ -258,7 +293,7 @@ class BoxMask(SnapMask):
 
     def __str__(self):
         s = '~' if self._inverse else ''
-        s += 'box(['
+        s += 'Box(['
         for i in xrange(3):
             s += '[%.4g,%.4g]%s' % (tuple(self._extent[i]) +
                                         ('' if i==2 else ',',))
@@ -343,7 +378,7 @@ class DiscMask(SnapMask):
 
     def __str__(self):
         s = '~' if self._inverse else ''
-        s += 'disc(jzjc<%.2f' % self.jzjc_min
+        s += 'Disc(jzjc<%.2f' % self.jzjc_min
         if self._rmax is not None:
             s += ',rcyl<%s' % self._rmax
         if self._zmax is not None:
@@ -389,12 +424,99 @@ class IDMask(SnapMask):
     def IDs(self):
         return set(self._IDs)
         
-    def __str__(self):
-        s = '~' if self._inverse else ''
-        s += 'IDMask'
-        return s        
-        
     def _get_mask_for(self, s):
         IDs = self._IDs
+        if IDs.dtype != s['ID'].dtype:
+            raise RuntimeError("You cannot mask with IDs of different type "
+                    "(%s) than those of the snapshot (%s)!" % (
+                        IDs.dtype, s['ID'].dtype))
         return np.in1d(s['ID'], IDs)
+
+class ExprMask(SnapMask):
+    '''
+    Mask a snapshot by a given expression.
+
+    The expression defines a simple snapshot mask and shall be used in similar way
+    as `Snap.get()`.
+
+    Args:
+        expr (str):     A python expression as it can be used in Snap.get()
+                        returning a boolean array.
+    '''
+
+    def __init__(self, expr):
+        super(ExprMask,self).__init__()
+        self.expr = expr
+
+    @property
+    def expr(self):
+        return self._expr
+
+    @expr.setter
+    def expr(self, expr):
+        if not isinstance(expr, (str,unicode)):
+            raise ValueError('`expr` must be a string')
+        self._expr = expr.strip()
+
+    def inverted(self):
+        inv = ExprMask(self._expr)
+        inv._inverse = not self._inverse
+        return inv
+
+    def __str__(self):
+        s = '~' if self._inverse else ''
+        s += 'ExprMask("%s")' % self._expr
+        return s
+
+    def _get_mask_for(self, s):
+        mask = s.get(self._expr)
+        return mask.view(np.ndarray)
+
+class CompoundMask(SnapMask):
+    '''
+    A snapshot mask built from combining two others. Normally this class is not
+    isinstantiated by the constructur, but by an operation of two others.
+
+    Args:
+        m1 (SnapMask):  The first operand.
+        op (operator.and_, operand.or_, operand.xor):
+                        Operation to combine the two masks.
+        m2 (SnapMask):  The second operand.
+    '''
+
+    def __init__(self, m1, op, m2):
+        super(CompoundMask,self).__init__()
+        for m in (m1,m2):
+            if not isinstance(m, SnapMask):
+                raise ValueError('"%s" is not a SnapMask!' % m)
+        if op not in (operator.and_, operator.or_, operator.xor):
+            raise ValueError('Operator "%s" is not supported' % op)
+
+        self._masks = [m1, m2]
+        self._op = op
+
+    @property
+    def operator(self):
+        return self._op
+
+    def inverted(self):
+        inv = CompoundMask(self._masks[0], self._op, self._masks[1])
+        inv._inverse = not self._inverse
+        return inv
+
+    def __str__(self):
+        s = '~' if self._inverse else ''
+        s += 'CompoundMask(%s %s %s)' % (
+                self._masks[0],
+                {   operator.and_:  '&',
+                    operator.or_:   '|',
+                    operator.xor:   '^',
+                }.get(self._op, str(self._op)),
+                self._masks[1],
+        )
+        return s
+
+    def _get_mask_for(self, s):
+        m1, m2 = map(lambda m:m.get_mask_for(s), self._masks)
+        return self._op(m1,m2)
 

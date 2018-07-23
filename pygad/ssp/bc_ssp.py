@@ -21,28 +21,42 @@ Examples:
     >>> from ..environment import module_dir
     >>> from ..snapshot import Snap
     >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=True)
-    >>> inter_bc_qty(s.stars['age'], s.stars['Z'], qty='log Nly')
+    >>> inter_bc_qty(s.stars['age'], s.stars['metallicity'], qty='log Nly')
     load block form_time... done.
     derive block age... done.
-    load block elements... done.
+    load block Z... done.
+    derive block elements... done.
     derive block H... done.
     derive block He... done.
     derive block metals... done.
-    derive block Z... done.
+    derive block metallicity... done.
     UnitArr([ 40.88760733,  40.87670045,  41.10933622, ...,  41.1284523 ,
               41.21504043,  41.10660553])
-    >>> inter_bc_qty(s.stars['age'], s.stars['Z'], qty='Vmag', IMF='Chabrier')
+    >>> inter_bc_qty(s.stars['age'], s.stars['metallicity'], qty='Vmag', IMF='Chabrier')
     UnitArr([ 5.38572149,  5.38222705,  5.95851407, ...,  6.24853992,
               5.89012057,  6.2964592 ])
-    >>> inter_bc_qty(s.stars['age'], s.stars['Z'], qty='Vmag', IMF='Salpeter')
+    >>> inter_bc_qty(s.stars['age'], s.stars['metallicity'], qty='Vmag', IMF='Salpeter')
     UnitArr([ 5.73452262,  5.72079989,  6.27333274, ...,  6.56081867,
               6.19076843,  6.60469198])
+
+    magnitudes in the SSP tables are normalized to 1 solar mass -
+    `derive_rules.get_luminosities` takes care for scaling correctly:
+    >>> from ..snapshot import get_luminosities
+    >>> L = get_luminosities(s.stars, band='V')
+    load block mass... done.
+    >>> L
+    UnitArr([ 255272.44859605,  236937.66146024,  141531.12688612, ...,
+              101504.63406881,  143090.23019079,   97253.25881182], units="Lsol")
+    >>> lum_to_mag(L)
+    UnitArr([-8.76750986, -8.68658524, -8.12712991, ..., -7.76621467,
+             -8.13902496, -7.71976041], units="mag")
 '''
-__all__ = ['load_table', 'inter_bc_qty']
+__all__ = ['load_table', 'inter_bc_qty', 'lum_to_mag']
 
 import numpy as np
 from .. import gadget
 from ..units import UnitQty, UnitScalar
+from ..physics import solar
 from .. import environment
 import sys
 
@@ -294,4 +308,18 @@ def inter_bc_qty(age, Z, qty, units=None, IMF=None):
     if single_value:
         return UnitScalar(float(Q), units)
     return UnitQty(Q, units)
+
+def lum_to_mag(L, subs=None):
+    '''
+    Convert luminosities to magnitudes.
+
+    Args:
+        L (UnitQty):    The luminosities to convert (if not units are given, they
+                        are assumed to be in 'Lsol').
+
+    Returns:
+        mag (UnitArr):  The magnitudes.
+    '''
+    L = UnitQty(L, 'Lsol', subs=subs, dtype=float)
+    return UnitQty( solar.abs_mag - 2.5 * np.log10(L), 'mag')
 

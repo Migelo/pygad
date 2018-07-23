@@ -6,17 +6,31 @@ A function for a derived block shall return the derived block with units as a
 direct dependencies, i.e. the blocks it needs directly to calculate the derived
 one from.
 '''
-__all__ = ['calc_temps', 'age_from_form', 'calc_x_ray_lum']
+__all__ = ['calc_temps', 'age_from_form', 'calc_x_ray_lum', 'calc_HI_mass',
+           'calc_ion_mass', 'calc_cooling_rates', 'get_luminosities']
 
 from .. import environment
-from ..units import UnitArr, UnitScalar, UnitError
+from ..units import UnitArr, UnitScalar, UnitQty, UnitError
 import numpy as np
 from .. import physics
 from .. import gadget
+from .. import cloudy
+import derived
 from fractions import Fraction
 from multiprocessing import Pool, cpu_count
 import warnings
 import gc
+import sys
+
+def calc_cooling_rates(s, tbl='CoolingTables/z_0.000.hdf5'):
+    '''
+    Calculate the total cooling rates for the given snapshot.
+    '''
+    tbl = physics.cooling.Wiersma_CoolingTable(tbl)
+    Lambda = tbl.get_cooling(s, units='erg cm**3 s**-1')
+    return Lambda
+# TODO: add the elements individually (not just 'elements')
+calc_cooling_rates._deps = set(['elements', 'mass', 'Z', 'temp', 'rho'])
 
 def calc_temps(u, XH=0.76, ne=0.0, XZ=None, f=3, subs=None):
     '''
@@ -49,6 +63,10 @@ def calc_temps(u, XH=0.76, ne=0.0, XZ=None, f=3, subs=None):
         T (UnitArr):            The temperatures for the particles (in K if
                                 possible).
     '''
+    u = UnitQty(u, 'km**2/s**2', subs=subs)
+    XH = np.array(XH)
+    ne = np.array(ne)
+
     tmp = XH/1.008
     XHe = 1.0 - XH
     if XZ is not None:
@@ -69,10 +87,10 @@ def calc_temps(u, XH=0.76, ne=0.0, XZ=None, f=3, subs=None):
     try:
         T.convert_to('K', subs=subs)
     except UnitError as ue:
-        import sys
         print >> sys.stderr, 'WARNING: in "calc_temps":\n%s' % ue
     gc.collect()
     return T
+# (additional) dependencies
 calc_temps._deps = set()
 
 def _z2Gyr_vec(arr, cosmo):
@@ -199,4 +217,97 @@ def calc_x_ray_lum(s, lumtable, denslim=0.0, **kwargs):
     lx[s.gas['rho'].in_units_of('g/cm**3') > denslim] = 0.0
     print lx.sum()
     return lx
-calc_x_ray_lum._deps = set(['Z', 'ne', 'H', 'rho', 'mass', 'temp'])
+calc_x_ray_lum._deps = set(['metallicity', 'ne', 'H', 'rho', 'mass', 'temp'])
+
+def calc_HI_mass(s, UVB=gadget.general['UVB'], flux_factor=None):
+    '''
+    Estimate the HI mass with the fitting formula from Rahmati et al. (2013).
+
+    It just calls `cloudy.Rahmati_HI_mass`, but this function has `_deps`.
+
+    Args:
+        s (Snap):       The (gas-particles sub-)snapshot to use.
+        UVB (str):      The name of the UV background as named in `cloudy.UVB`.
+                        Defaults to the value of the UVB in the `gadget.cfg`.
+        flux_factor (float):
+                        Adjust the UVB by this factor (assume a optically thin
+                        limit and scale down the densities during the look-up by
+                        this factor).
+                        (Note: `sigHI` used in the Rahmati fitting formula is not
+                        adjusted!)
+
+    Returns:
+        HI (UnitArr):   The HI mass block for the gas (within `s`).
+    '''
+    return cloudy.Rahmati_HI_mass(s, UVB, flux_factor=flux_factor)
+calc_HI_mass._deps = set(['H', 'temp', 'rho', 'mass'])
+
+def calc_ion_mass(s, el, ionisation, selfshield=True, iontbl=None,
+                  warn_outofbounds=True):
+    '''
+    Calculate the mass of the given ion from Cloudy tables.
+
+    Args:
+        s (Snap):           The (gas-particles sub-)snapshot to use.
+        el (str):           The name of the ion-element. Needs also to be a block
+                            name (e.g. as one of the 'element' block).
+        ionisation (str):   The ionisation state. The concatenation of `el` and
+                            this must result in an ion name in the Cloudy table.
+        selfshield (bool):  Whether to account for self-shielding by assuming the
+                            attenuation of the UVB as experienced by HI using the
+                            Rahmati+ (2013) prescription (formula (14) of the
+                            paper). Note that this is just a rough approximation!
+        iontbl (IonisationTable):
+                            The ionisation table to use for the table
+                            interpolation. Default to the one given by
+                            `derived.cfg` for the redshift of the (sub-)snapshot.
+        warn_outofbounds (bool):
+                            Whether to print out a warning if particles are
+                            out of the bounds of the ionisation tables.
+
+    Returns:
+        ion_mass (UnitArr): The mass block of the ion (per particle) in units if
+                            the block given by `el`.
+    '''
+    # if there is some ion table specified in the config, use it as default
+    iontbl = cloudy.config_ion_table(s.redshift) if iontbl is None else iontbl
+    f_ion = 10.**iontbl.interp_snap(el+' '+ionisation, s.gas,
+                                    selfshield=selfshield,
+                                    warn_outofbounds=warn_outofbounds)
+    return f_ion * s.gas.get(el)
+# this is not super correct: typically the element is taken from the block
+# 'elements', but could in principle also be defined seperately!
+calc_ion_mass._deps = set(['H', 'mass', 'rho', 'temp', 'elements'])
+
+def get_luminosities(stars, band='bolometric', IMF=None):
+    '''
+    Get the luminosities for a stellar sub-snapshot for a given band.
+
+    This function calls `ssp.inter_bc_qty` and, hence, is using
+
+    Args:
+        stars (Snap):   The stellar snapshot to interpolate the luminosities for.
+        band (str):     The band in which to interpolate the luminosities for.
+                        Possible choices are:
+                        'bolometric', 'U', 'B', 'V', 'R', and 'K',
+        IMF (str):      The name of the IMF to use, if folder and base is not
+                        given (undefined behaviour otherwise). By default the one
+                        given in `gadget.cfg` is used. Values that are not in
+                        `table_base_name.keys()` are invalid.
+
+    Returns:
+        lum (UnitArr):  The luminosities of the star particles.
+    '''
+    from ..ssp import inter_bc_qty
+    from ..physics import solar
+
+    if band == 'bolometric':
+        qty = 'Mbol'
+    else:
+        qty = '%smag' % band.upper()
+
+    mag_per_Msol = inter_bc_qty(stars['age'], stars['metallicity'], qty=qty,
+                                units='mag', IMF=IMF)
+    lum_per_Msol = UnitQty( 10.**(-0.4*(mag_per_Msol-solar.abs_mag)), 'Lsol')
+    return (stars['mass']/UnitScalar('1 Msol')).in_units_of(1,subs=stars) * lum_per_Msol
+get_luminosities._deps = set(['age', 'metallicity', 'mass'])

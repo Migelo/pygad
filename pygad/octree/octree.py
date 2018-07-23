@@ -45,7 +45,8 @@ Example:
     A more realistic sample of positions (just every 100th for speed reasons):
     >>> from ..snapshot.snapshot import Snap
     >>> from ..environment import module_dir
-    >>> snap = Snap(module_dir+'../snaps/snap_M1196_4x_470',physical=False)
+    >>> snap = Snap(module_dir+'../snaps/snap_M1196_4x_470', physical=False,
+    ...             load_double_prec=True)
     >>> snap = snap[::100]
     >>> OctNode.MAX_DEPTH = 11  # making the following tree build way faster
     >>> tree = Octree(snap)
@@ -58,15 +59,15 @@ Example:
     >>> sub = snap[all_indices(tree)]
     >>> sub.parts
     [8573, 9334, 0, 0, 736, 0]
-    >>> apply_on(tree, populate_center_of_mass(snap['pos'], snap['mass']))
+    >>> apply_on(tree, populate_center_of_mass(snap['pos'], snap['mass']))  # doctest:+ELLIPSIS
     load block mass... done.
-    (array([ 34497.34417332,  35431.56577665,  33097.62803619]), 2.9262269136343093)
+    (array([ 34497.3...,  35431.5...,  33097.6...]), 2.926...)
     >>> from .. import analysis
     >>> com = analysis.center_of_mass(sub)
-    >>> d = np.sqrt(sum((tree.com - com)**2))
+    >>> d = np.sqrt(np.sum((tree.com - com)**2))
     >>> if not d < 0.5:
-    ...     print 'com      =', tree.com
-    ...     print 'tree.com =', com
+    ...     print 'com      =', com
+    ...     print 'tree.com =', tree.com
     >>> del_quantity(tree, 'com')
     >>> del_quantity(tree, 'mass')
 '''

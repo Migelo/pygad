@@ -23,15 +23,20 @@ def a2z(a):
     """
     Convert a scalefactor to redshift.
 
+    Limited to z=1e15 (i.e. a2z(0)=1e15) in order to make the numerics more
+    stable.
+
     Example:
         >>> a2z(1)
         0.0
-        >>> a2z(0.1234)
-        7.103727714748785
+        >>> round(a2z(0.1234), 4)
+        7.1037
         >>> round(a2z(z2a(1.234)), 10)
         1.234
+        >>> round( np.log10( a2z(0) ), 3 )
+        15.0
     """
-    return (1.0 - a) / a
+    return (1.0 - a) / (a+1e-15)
 
 def z2a(z):
     """
@@ -108,7 +113,7 @@ def WMAP7():
 
 class FLRWCosmo(object):
     '''
-    A Friedman-Lemaitre-Robertson-Walter cosmology that can calculate various
+    A Friedman-Lemaitre-Robertson-Walker cosmology that can calculate various
     cosmological values.
 
     Args:

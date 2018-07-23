@@ -35,6 +35,10 @@ Conversion factors can conveniently be calculated as long as they are convertabl
 Traceback (most recent call last):
 ...
 UnitError: 'Units [m] and [s] are not convertable!'
+>>> convertable('m', 'km')
+True
+>>> convertable('m', 'km/s')
+False
 
 Expanding, comparing, and undefining units is also straight forward:
 >>> kg = define('kg')
@@ -74,16 +78,17 @@ Unit("0.5 kpc")
 One can also read config files, that define units. See define_from_cfg for more
 dertails.
 >>> from ..environment import module_dir
->>> define_from_cfg([module_dir+'units/units.cfg'], allow_redef=True,
+>>> define_from_cfg([module_dir+'config/units.cfg'], allow_redef=True,
 ...                 warn=False)
-reading units definitions from "pygad/units/units.cfg"
+reading units definitions from "pygad/config/units.cfg"
 >>> Unit('erg').in_units_of('J')
 1e-07
 >>> Unit('Msol / h_0').latex()
 'M_\\\\odot\\\\,h_0^{-1}'
 '''
 __all__ = ['UnitError', 'define', 'set_latex_repr', 'undefine', 'undefine_all',
-           'defined_units', 'define_from_cfg', 'Unit', 'Units', 'Fraction']
+           'defined_units', 'define_from_cfg', 'Unit', 'Units', 'Fraction',
+           'convertable']
 
 from numbers import Number
 from fractions import Fraction
@@ -268,6 +273,9 @@ class _UnitClass(object):
 
     def __rtruediv__(self, rhs):
         return self.__rdiv__(rhs)
+
+    def sqrt(self):
+        return self.__pow__(Fraction(1,2))
 
     def __pow__(self, power):
         if not isinstance(power, (int, Fraction)):
@@ -525,7 +533,7 @@ def define_from_cfg(config, allow_redef=False, warn=True, undefine_old=True):
                            warn=warn)
 
     for filename in config:
-        if path.exists(filename):
+        if path.exists(path.expanduser(filename)):
             break
     else:
         raise IOError('Config file "%s" does not exist!' % config)
@@ -624,7 +632,7 @@ def Unit(x, allow_undefined=False):
         return _UnitClass(float(x), [])
     elif isinstance(x, _UnitClass):
         return x
-    elif not isinstance(x, str):
+    elif not isinstance(x, (str,unicode)):
         raise TypeError(x.__class__.__name__ + ' cannot be converted into ' +
                         'a unit.')
     # x is a string...!
@@ -679,9 +687,30 @@ def Units(l, allow_undefined=False):
     Returns:
         units (list):           A list of the construct units.
     '''
-    if isinstance(l, str):
-        l = l.replace(';',',')
+    if isinstance(l, (str,unicode)):
+        l = str(l).replace(';',',')
         if ',' in l:
             return Units(map(str.strip,l.split(',')), allow_undefined)
         return [Unit(l, allow_undefined)]
     return [Unit(n, allow_undefined) for n in l]
+
+def convertable(u1, u2, subs=None):
+    '''
+    Tests whether to units are convertable (provided substitutions).
+
+    Args:
+        u1, u2 (Unit, str):     The units to test.
+        subs (dict, Snap):      Unit to substitute with numbers in the convertion.
+                                For more information see '_UnitClass.substitute'.
+
+    Returns:
+        convertable (bool):     The result of the test.
+    '''
+    u1, u2 = Unit(u1), Unit(u2)
+    try:
+        u1.in_units_of(u2, subs=subs)
+    except:
+        return False
+    else:
+        return True
+

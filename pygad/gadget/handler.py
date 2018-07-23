@@ -21,31 +21,42 @@ class FileReader(object):
     A handler for reading Gadget files of all formats.
 
     Args:
-        filename (str):     The path to the Gadget file.
+        filename (str):         The path to the Gadget file.
+        unclear_blocks (str):   What to do the blocks for which the block info is
+                                unclear (cannot be infered). Possible modes are:
+                                * exception:    raise an IOError
+                                * warning:      print a warning to the stderr
+                                * ignore:       guess what
+                                If it is None, the value from the `gadget.cfg` is
+                                taken.
 
     Raises:
         RuntimeError:       If the information could not be infered or if the
                             given dtype of the given family is unknown.
     '''
-    def __init__(self, filename):
-        if not os.path.exists(filename):
+    def __init__(self, filename, unclear_blocks=None):
+        if not os.path.exists(os.path.expanduser(filename)):
             raise IOError('"%s" does not exist!' % filename)
         self._filename = filename
+        if unclear_blocks is None:
+            unclear_blocks = config.general['unclear_blocks']
         if h5py.is_hdf5(self._filename):
             self._format, self._endianness = 3, None
             with h5py.File(self._filename, 'r') as gfile:
                 self._header = read_header(gfile, self._format,
                                            self._endianness)
                 self._info = get_block_info(gfile, self._format,
-                                            self._endianness, self._header)
+                                            self._endianness, self._header,
+                                            unclear_blocks)
         else:
-            with open(self._filename, 'rb') as gfile:
+            with open(os.path.expanduser(self._filename), 'rb') as gfile:
                 self._format, self._endianness = \
                             get_format_and_endianness(gfile)
                 self._header = read_header(gfile, self._format,
                                            self._endianness)
                 self._info = get_block_info(gfile, self._format,
-                                            self._endianness, self._header)
+                                            self._endianness, self._header,
+                                            unclear_blocks)
 
     @property
     def filename(self):
@@ -86,9 +97,8 @@ class FileReader(object):
                                 actual block name is passed, it is tried to
                                 convert from the standard Gadget block name to the
                                 HDF5 one via 'gadget.config.std_name_to_HDF5'.
-            gad_units (dict):   The basic gadget units. If None, length is
-                                'ckpc/h_0', velocity is 'km/s', and mass is
-                                '1e10 Msol'.
+            gad_units (dict):   The basic gadget units. If None, take the units
+                                defined in the `gadget.cfg`.
             unit (Unit):        The unit to give the data. If it is None, use a
                                 default one if defined, Unit(1) otherwise.
 
@@ -112,7 +122,8 @@ class FileReader(object):
                         data[off:off+ds.shape[0]] = ds[:]   # actually load data
                         off += len(ds)
         else:
-            with open(self._filename, 'r') as gfile:
+            filename = os.path.expanduser(self._filename)
+            with open(filename, 'r') as gfile:
                 gfile.seek(block.start_pos)
                 data = np.fromfile(gfile,
                                    dtype=self._endianness+block.type_descr,
@@ -236,7 +247,7 @@ def write(snap, filename, blocks=None, gformat=2, endianness='native',
                             stored in the snapshot.
         overwrite (bool):   Allow to overwrite, if the file already exists.
     '''
-    if os.path.exists(filename) and not overwrite:
+    if os.path.exists(os.path.expanduser(filename)) and not overwrite:
         raise IOError('The file "%s" already exists. ' % filename +
                       'Consider "overwrite=True"!')
     if blocks is None:
@@ -336,6 +347,8 @@ def write(snap, filename, blocks=None, gformat=2, endianness='native',
                 hdf5name = snap._root._load_name.get(name)
                 if hdf5name in config.std_name_to_HDF5:
                     hdf5name = config.std_name_to_HDF5[hdf5name]
+                if hdf5name is None:
+                    hdf5name = name
 
                 if environment.verbose >= environment.VERBOSE_NORMAL:
                     print 'writing block', hdf5name,
@@ -354,7 +367,7 @@ def write(snap, filename, blocks=None, gformat=2, endianness='native',
                     print 'done.'
                     sys.stdout.flush()
     else:
-        with open(filename, 'wb') as gfile:
+        with open(os.path.expanduser(filename), 'wb') as gfile:
             write_header(gfile, header, gformat, endianness)
             for name in blocks:
                 block_name = info[name].name
