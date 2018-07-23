@@ -200,7 +200,8 @@ def isolum_cmap(cmap, desat=None):
     return mpl.colors.LinearSegmentedColormap.from_list(cmap.name + '_lumnormed',
                                                         colors, cmap.N)        
 
-def color_code(im_lum, im_col, cmap='Bright', vlim=None, clim=None):
+def color_code(im_lum, im_col, cmap='Bright', vlim=None, clim=None,
+               zero_is_white=False):
     '''
     Colorcode a mono-chrome image with onother one.
 
@@ -215,6 +216,10 @@ def color_code(im_lum, im_col, cmap='Bright', vlim=None, clim=None):
                                 im_col into actual colors.
         vlim (sequence):        The limits for brightnesses.
         clim (sequence):        The limits for the colors.
+        zero_is_white (bool):   Instead of scaling the image luminance by `qty` if
+                                if there is a color given, desaturate the colors
+                                to white for `qty` values approaching the lower
+                                limit of vlim (or zero if this is None).
 
     Returns:
         im (np.ndarray):        The rgb image (shape (w,h,3)).
@@ -229,10 +234,16 @@ def color_code(im_lum, im_col, cmap='Bright', vlim=None, clim=None):
 
     if isinstance(cmap,str): cmap = mpl.cm.get_cmap(cmap)
     im = cmap(im_col)
-
-    im[:,:,0] *= im_lum
-    im[:,:,1] *= im_lum
-    im[:,:,2] *= im_lum
+    
+    if zero_is_white:
+        white = np.ones( im.shape[:-1] )
+        im[:,:,0] = im_lum*im[:,:,0] + (1.-im_lum)*white
+        im[:,:,1] = im_lum*im[:,:,1] + (1.-im_lum)*white
+        im[:,:,2] = im_lum*im[:,:,2] + (1.-im_lum)*white
+    else:
+        im[:,:,0] *= im_lum
+        im[:,:,1] *= im_lum
+        im[:,:,2] *= im_lum
 
     return im
 
@@ -296,7 +307,8 @@ def show_image(im, extent=None, cmap='Bright', vlim=None, aspect=None,
 def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
                 vlim=None, cmap=None, colors=None, colors_av=None, clim=None,
                 clogscale=False, fontcolor=None, fontsize=14, cbartitle=None,
-                showcbar=True, aspect='auto', ax=None, **kwargs):
+                showcbar=True, aspect='auto', ax=None,
+                zero_is_white=False, **kwargs):
     '''
     Do a binned scatter plot.
 
@@ -337,6 +349,10 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
         aspect (str, float):    The aspect ratio of the plot.
         ax (AxesSubplot):       The axis object to plot on. If None, a new one is
                                 created by plt.subplots().
+        zero_is_white (bool):   Instead of scaling the image luminance by `qty` if
+                                if there is a color given, desaturate the colors
+                                to white for `qty` values approaching the lower
+                                limit of vlim (or zero if this is None).
         **kwargs:               Further arguments are passed to show_image.
 
     Returns:
@@ -415,7 +431,8 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
             finitegrid = col[np.isfinite(col)]
             clim = [finitegrid.min(), finitegrid.max()]
             del finitegrid
-        grid = color_code(grid, col, cmap=cmap, vlim=vlim, clim=clim)
+        grid = color_code(grid, col, cmap=cmap, vlim=vlim, clim=clim,
+                          zero_is_white=zero_is_white)
 
     fig, ax, im = show_image(grid, extent=extent, cmap=cmap, aspect=aspect, ax=ax,
                              clim=clim, **kwargs)
@@ -427,6 +444,10 @@ def scatter_map(x, y, s=None, qty=None, bins=150, extent=None, logscale=False,
         cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm,
                                          orientation='horizontal')
         cbar.ax.tick_params(labelsize=8)
+        # only max. 6 ticks on colorbar
+        tick_locator = mpl.ticker.MaxNLocator(nbins=6)
+        cbar.locator = tick_locator
+        cbar.update_ticks()
         for tl in cbar.ax.get_xticklabels():
             tl.set_color(fontcolor)
             tl.set_fontsize(0.65*fontsize)

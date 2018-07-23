@@ -2,6 +2,7 @@
 #include "general.hpp"
 
 #include <gsl/gsl_integration.h>
+#include <vector>
 
 enum KernelType {
     UNDEFINED_KERNEL,

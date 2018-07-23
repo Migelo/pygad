@@ -19,7 +19,8 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
           normcmaplum=True, desat=0.1, colors=None, colors_av=None, cunits=None,
           clogscale=None, csurf_dens=None, clim=None, ax=None, showcbar=True, 
           cbartitle=None, scaleind='line', scaleunits=None, fontcolor='white', 
-          fontsize=14, interpolation='nearest', **kwargs):
+          fontsize=14, interpolation='nearest', surf_av=None, bg_flag=None,
+          dispersion=None, sigToom=None, **kwargs):
     '''
     Show an image of the snapshot.
 
@@ -58,6 +59,9 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                             Default: True
         surface_dens (bool):Whether to plot the surface density of qty rather than
                             just sum it up along the line of sight per pixel.
+        surf_av (bool):     Whether the average should be the surface density of qty
+        dispersion (bool):  The dispersion of qty (weighted by av) is plotted, if True
+        sigToom (bool):     If True, special things are done to create a Toomre Q map
         extent (UnitQty):   The extent of the image. It can be a scalar and then
                             is taken to be the total side length of a square
                             around the origin or a sequence of the minima and
@@ -109,6 +113,8 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         softening (UnitQty):A list of te softening lengthes that are taken for
                             smoothing the maps of the paticle types. Is
                             consequently has to have length 6. Default: None.
+        bg_flag (bool):     Whether to add a white, semitransparent background to
+                            colorbar labels
         **kwargs:           Further keyword arguments are to pass to map_qty. I
                             want to mention 'softening' here, which is a list of
                             the sotening lengthes used to smooth the maps of the
@@ -168,12 +174,18 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
             qty, av = 'lum_v', None
             if logscale is None:        logscale = True
             if surface_dens is None:    surface_dens = True
+            if surf_av is None:         surf_av = False
+            if dispersion is None:      dispersion = False
+            if sigToom is None:         sigToom = False
         else:
             qty, av = 'mass', None
             # needed for cbartitle:
             if units is None:           units = s['mass'].units / s['pos'].units**2
             if logscale is None:        logscale = True
             if surface_dens is None:    surface_dens = True
+            if surf_av is None:         surf_av = False
+            if dispersion is None:      dispersion = False
+            if sigToom is None:         sigToom = False
         if colors is None and colors_av is None:
             if (len(s)!=0 and len(s.stars)==len(s)) \
                     or (s.descriptor.endswith('stars') and len(s)==0):
@@ -195,8 +207,12 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                                                         units.latex() )
     if logscale is None: logscale = True
     if surface_dens is None: surface_dens = True
+    if surf_av is None: surf_av = False
+    if dispersion is None: dispersion = False
+    if sigToom is None: sigToom = False
     if cmap is None: cmap = 'cubehelix' if colors is None else 'Bright'
     if csurf_dens is None: csurf_dens = False
+    if bg_flag is None: bg_flag = False
 
     if scaleunits is None:
         scaleunits = s['pos'].units
@@ -217,9 +233,12 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         px2 = np.prod(res)
     else:
         im_lum, px2 = map_qty(s, extent=extent, qty=qty, av=av, Npx=Npx,
-                              xaxis=xaxis, yaxis=yaxis, **kwargs)
+                              xaxis=xaxis, yaxis=yaxis, surf_av=surf_av, 
+                              dispersion=dispersion, sigToom=sigToom, **kwargs)
         if surface_dens:
             im_lum /= px2
+        if surf_av or sigToom:
+            im_lum *= px2
         if units is not None:
             im_lum.convert_to(units, subs=s)
     if logscale:
@@ -271,10 +290,16 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         norm = mpl.colors.Normalize(vmin=clim[0], vmax=clim[1])
         cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm,
                                          orientation='horizontal')
-        cbar.ax.tick_params(labelsize=8) 
+        cbar.ax.tick_params(labelsize=8)
+        # only max. 6 ticks on colorbar
+        tick_locator = mpl.ticker.MaxNLocator(nbins=6)
+        cbar.locator = tick_locator
+        cbar.update_ticks()
         for tl in cbar.ax.get_xticklabels():
             tl.set_color(fontcolor)
             tl.set_fontsize(0.65*fontsize)
+            if bg_flag:
+                tl.set_bbox(dict(facecolor='white', alpha=0.8, linewidth=0))
         if cbartitle is None:
             cqty = colors if colors is not None else qty
             if isinstance(cqty,str):
@@ -298,6 +323,9 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
                 if units is None and cunits is not None:
                     cunits = cunits/s['pos'].units**2
                 cname = r'$\Sigma$ of ' + cname
+            if surf_av and colors is None:
+                if units is None and cunits is not None:
+                    cunits = cunits*s['pos'].units**2
             if cunits is None or cunits == 1:
                 cunits = ''
             else:
@@ -306,7 +334,11 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
             if (logscale and colors is None) or \
                     (clogscale and colors is not None):
                 cbartitle = r'$\log_{10}$(' + cbartitle + ')'
-        cbar.set_label(cbartitle, color=fontcolor, fontsize=fontsize, labelpad=12)
+        if bg_flag:
+            cbar.set_label(cbartitle, color=fontcolor, fontsize=fontsize, labelpad=12, 
+                           bbox=dict(facecolor='white', alpha=0.8, linewidth=0))
+        else:
+            cbar.set_label(cbartitle, color=fontcolor, fontsize=fontsize, labelpad=12)
 
     if scaleind in [None, 'none']:
         ax.get_xaxis().set_visible(False)
@@ -324,7 +356,8 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         width = extent[:,1] - extent[:,0]
         scale = width.min() / 4.0
         order = 10.0**int(np.log10(scale))
-        if scale/order<2.0:     scale = 1.0*order
+        if scale/order<1.0:     scale = scale
+        elif scale/order<2.0:   scale = 1.0*order
         elif scale/order<5.0:   scale = 2.0*order
         else:                   scale = 5.0*order
         from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
@@ -346,6 +379,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         return fig, ax, im
 
 def phase_diagram(s, rho_units='Msol/pc**3', T_units='K',
+                  T_block='temp',
                   T_threshold=None, rho_threshold=None,
                   threshold_col='black', **kwargs):
     '''
@@ -356,6 +390,7 @@ def phase_diagram(s, rho_units='Msol/pc**3', T_units='K',
         s (Snap):               The (sub-)snapshot from which to use the gas of.
         rho_units, T_units (Unit):
                                 The units to plot in.
+        T_block (str):          The name of the temperature block to use.
         T_threshold, rho_threshold (UnitScalar):
                                 If not None, a line at this temperature and/or
                                 density is drawn.
@@ -373,7 +408,7 @@ def phase_diagram(s, rho_units='Msol/pc**3', T_units='K',
     if 'logscale' not in kwargs:    kwargs['logscale'] = True
     if 'showcbar' not in kwargs:    kwargs['showcbar'] = False
     res = scatter_map(np.log10(s['rho'].in_units_of(rho_units)),
-                      np.log10(s['temp'].in_units_of(T_units)),
+                      np.log10(s[T_block].in_units_of(T_units)),
                       s, **kwargs)
     if kwargs['showcbar']:
         fig, ax, im, cbar = res
@@ -390,17 +425,17 @@ def phase_diagram(s, rho_units='Msol/pc**3', T_units='K',
             from ..physics import m_u
             th = ((0.75*1+0.25*4)*m_u*th).in_units_of(rho_units)
         ax.vlines( np.log10(th), ax.get_ylim()[0], ax.get_ylim()[1],
-                   color=threshold_col )
+                   color=threshold_col, linewidth=2.0)
     if T_threshold:
         th = UnitScalar(T_threshold)
         th = th.in_units_of(T_units)
         ax.hlines( np.log10(th), ax.get_xlim()[0], ax.get_xlim()[1],
-                   color=threshold_col )
+                   color=threshold_col, linewidth=2.0 )
 
     ax.set_xlabel( r'$\log_{10}(\rho\,[%s])$' % Unit(rho_units).latex(),
-                   fontsize=16 )
+                   fontsize=30 )
     ax.set_ylabel( r'$\log_{10}(T\,[%s])$' % Unit(T_units).latex(),
-                   fontsize=16 )
+                   fontsize=30 )
 
     if kwargs['showcbar']:
         return fig, ax, im, cbar

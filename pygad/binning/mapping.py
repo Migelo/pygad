@@ -45,7 +45,7 @@ from ..kernels import *
 from .. import environment
 
 def map_qty(s, extent, qty, av=None, Npx=256, xaxis=0, yaxis=1, softening=None,
-            sph=True, kernel=None):
+            sph=True, kernel=None, surf_av=False, dispersion=False, sigToom=False):
     '''
     A fast pure-Python routine for binning SPH quantities onto a map.
 
@@ -91,19 +91,71 @@ def map_qty(s, extent, qty, av=None, Npx=256, xaxis=0, yaxis=1, softening=None,
     if isinstance(qty, str):
         qty = s.get(qty)
 
-    if av is not None:
+    if dispersion:
+        if av is not None:
+            if isinstance(av, str):
+                av = s.get(av)
+            Eqty2, px2 = map_qty(s, extent, av*qty**2, av=None, Npx=Npx,
+                                xaxis=xaxis, yaxis=yaxis, softening=softening,
+                                sph=sph, kernel=kernel)
+            Eqty, px2 = map_qty(s, extent, av*qty, av=None, Npx=Npx,
+                                xaxis=xaxis, yaxis=yaxis, softening=softening,
+                                sph=sph, kernel=kernel)
+            norm, px2 = map_qty(s, extent, av, av=None, Npx=Npx,
+                                xaxis=xaxis, yaxis=yaxis, softening=softening,
+                                sph=sph, kernel=kernel)
+            grid = np.sqrt((norm*Eqty2-Eqty**2)/norm**2)
+            grid[np.isnan(grid)] = 0.0
+            return grid, px2
+        else:
+            Eqty2, px2 = map_qty(s, extent, qty**2, av=None, Npx=Npx,
+                                xaxis=xaxis, yaxis=yaxis, softening=softening,
+                                sph=sph, kernel=kernel)
+            Eqty, px2 = map_qty(s, extent, qty, av=None, Npx=Npx,
+                                xaxis=xaxis, yaxis=yaxis, softening=softening,
+                                sph=sph, kernel=kernel)
+            grid = np.sqrt(Eqty2-Eqty**2)
+            grid[np.isnan(grid)] = 0.0
+            return grid, px2
+    elif sigToom:
+        if av is None:
+            av =s.get('mass')
         if isinstance(av, str):
             av = s.get(av)
-        grid, px2 = map_qty(s, extent, av*qty, av=None, Npx=Npx,
-                            xaxis=xaxis, yaxis=yaxis, softening=softening,
-                            sph=sph, kernel=kernel)
-        norm, px2 = map_qty(s, extent, av, av=None, Npx=Npx,
-                            xaxis=xaxis, yaxis=yaxis, softening=softening,
-                            sph=sph, kernel=kernel)
-        grid /= norm
-        grid[np.isnan(grid)] = 0.0
-        return grid, px2
-
+            grid, px2 = map_qty(s, extent, av*qty, av=None, Npx=Npx,
+                                xaxis=xaxis, yaxis=yaxis, softening=softening,
+                                sph=sph, kernel=kernel)
+            norm, px2 = map_qty(s, extent, av, av=None, Npx=Npx,
+                                xaxis=xaxis, yaxis=yaxis, softening=softening,
+                                sph=sph, kernel=kernel)
+            grid /= norm**2 # to get 1/surface density
+            vel = s.get('vel[:,2]') # line-of-sight velocity
+            Ev2, px2 = map_qty(s, extent, av*vel**2, av=None, Npx=Npx,
+                                xaxis=xaxis, yaxis=yaxis, softening=softening,
+                                sph=sph, kernel=kernel)
+            Ev, px2 = map_qty(s, extent, av*vel, av=None, Npx=Npx,
+                                xaxis=xaxis, yaxis=yaxis, softening=softening,
+                                sph=sph, kernel=kernel)
+            sigma = np.sqrt((norm*Ev2-Ev**2)/norm**2) # velocity dispersion
+            sigma[np.isnan(sigma)] = 0.0
+            grid *= sigma
+            return grid, px2
+    else:
+        if av is not None:
+            if isinstance(av, str):
+                av = s.get(av)
+            grid, px2 = map_qty(s, extent, av*qty, av=None, Npx=Npx,
+                                xaxis=xaxis, yaxis=yaxis, softening=softening,
+                                sph=sph, kernel=kernel)
+            norm, px2 = map_qty(s, extent, av, av=None, Npx=Npx,
+                                xaxis=xaxis, yaxis=yaxis, softening=softening,
+                                sph=sph, kernel=kernel)
+            if surf_av:
+                grid /= norm
+            grid /= norm
+            grid[np.isnan(grid)] = 0.0
+            return grid, px2
+    
     # prepare arguments
     extent, Npx, res = grid_props(extent=extent, Npx=Npx, dim=2)
     extent = extent.in_units_of(s['pos'].units, subs=s)

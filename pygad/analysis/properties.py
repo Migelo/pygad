@@ -141,6 +141,39 @@ def mass_weighted_mean(s, qty):
     normalized_mwgt = mwgt / s['mass'].sum()
     return normalized_mwgt
 
+def qty_weighted_mean(s, qty, weight):
+    '''
+    Calculate the weighted mean of some quantity, i.e.
+    sum(weight[i]*qty[i])/sum(weight).
+
+    Args:
+        s (Snap):           The (sub-)snapshot the quantity belongs to (the masses
+                            are taken from it, too).
+        qty (str, UnitArr): The quantity to average. It can either be the block
+                            itself (make shure it already has the appropiate
+                            shape), or a expression that can be passed to Snap.get
+                            (e.g. simply a name of a block).
+        weight (str, UnitArr): The quantitiy used as a weight
+
+    Returns:
+        mean (UnitArr):     The weighted mean.
+    '''
+    if isinstance(qty, str):
+        qty = s.get(qty)
+    else:
+        qty = UnitArr(qty)
+    if isinstance(weight, str):
+        weight = s.get(weight)
+    else:
+        weight = UnitArr(weight)
+    if len(s) == 0:
+        return UnitArr([0]*qty.shape[-1], units=qty.units, dtype=qty.dtype)
+    # only using the np.ndarray views does not speed up
+    mwgt = np.tensordot(weight, qty, axes=1).view(UnitArr)
+    mwgt.units = weight.units * qty.units
+    normalized_mwgt = mwgt / weight.sum()
+    return normalized_mwgt
+
 def center_of_mass(snap):
     '''Calculate and return the center of mass of this snapshot.'''
     return mass_weighted_mean(snap, 'pos')
@@ -392,6 +425,9 @@ def flow_rates(s, R, qty='mass', dt='3 Myr'):
     The estimation is done by propagating the positions with constant current
     velocities, i.e. pos_new = pos_old + vel*dt. Then counting the mass that
     passed the shell of radius R.
+    The function also calculates and returns the mean velocity and (if only 
+    gas particles are in the subsnapshot) density of the in- & outflowing 
+    particles.
 
     Args:
         s (Snap):               The (sub-)snapshot to use.
@@ -406,6 +442,12 @@ def flow_rates(s, R, qty='mass', dt='3 Myr'):
     Returns:
         ifr (UnitArr):          The estimated inflow rate.
         ofr (UnitArr):          The estimated outflow rate.
+        vin (UnitArr):          The mean velocity of all particles that are inflowing
+        vout (UnitArr):         The mean velocity of all particles that are outflowing
+        rhoin (UnitArr):        The mean density of all particles that are inflowing
+                                (given as zero if s contains not just gas particles)
+        rhoout (UnitArr):       The mean density of all particles that are outflowing
+                                (given as zero if s contains not just gas particles)
     '''
     R = UnitScalar(R, units=s['pos'].units, subs=s)
     dt = UnitScalar(dt, units='Myr', subs=s)
@@ -417,24 +459,44 @@ def flow_rates(s, R, qty='mass', dt='3 Myr'):
     of_mass = s[qty][(s['r'] < R) & (rpred >= R)]
     if_mass = s[qty][(s['r'] >= R) & (rpred < R)]
 
+    # average radial velocity of out/inflowing particles
+    vout = np.abs(np.mean(s['vrad'][(s['r'] < R) & (rpred >= R)]))
+    vin = np.abs(np.mean(s['vrad'][(s['r'] >= R) & (rpred < R)]))
+    # average density of flowing particles
+    if s.gas.parts == s.parts: # s contains only gas
+        rhoout = np.mean(s['rho'][(s['r'] < R) & (rpred >= R)])
+        rhoin = np.mean(s['rho'][(s['r'] >= R) & (rpred < R)])
+    else:
+        rhoout = rhoin = UnitArr(0, dtype=np.float32, units="Msol kpc**-3")
+
+    if np.isnan(vout): vout = UnitArr(0, dtype=np.float32, units="km s**-1")
+    if np.isnan(vin): vin = UnitArr(0, dtype=np.float32, units="km s**-1")
+    if np.isnan(rhoout): rhoout = UnitArr(0, dtype=np.float32, units="Msol kpc**-3")
+    if np.isnan(rhoin): rhoin = UnitArr(0, dtype=np.float32, units="Msol kpc**-3")
+
     dt.convert_to('yr',subs=s)  # to more intuitive units again
     ofr = np.sum(of_mass) / dt
     ifr = np.sum(if_mass) / dt
+    rhoout.convert_to('g cm**-3', subs=s)
+    rhoin.convert_to('g cm**-3', subs=s)
+    
+    return ifr, ofr, vin, vout, rhoin, rhoout
 
-    return ifr, ofr
-
-def los_velocity_dispersion(s, proj=2):
+def los_velocity_dispersion(s, proj=2, weight=None):
     '''
-    Calculate (mass-weighted) line-of-sight velocity dispersion.
+    Calculate (weighted) line-of-sight velocity dispersion.
 
     Args:
         s (Snap):       The (sub-)snapshot to use.
         proj (int):     The line of sight is along this axis (0=x, 1=y, 2=z).
+        weight (str, UnitArr): The quantity to weight the los by. default: mass
     '''
+    if weight == None:
+        weight = 'mass'
     # array of los velocities
     v = s['vel'][:,proj].ravel()
-    av_v = mass_weighted_mean(s, v)
-    sigma_v = np.sqrt( mass_weighted_mean(s, (v-av_v)**2) )
+    av_v = qty_weighted_mean(s, v, weight)
+    sigma_v = np.sqrt( qty_weighted_mean(s, (v-av_v)**2, weight) )
 
     return sigma_v
 

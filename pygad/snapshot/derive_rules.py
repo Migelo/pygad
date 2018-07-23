@@ -179,19 +179,24 @@ def age_from_form(form, subs, cosmic_time=None, cosmo=None, units='Gyr', paralle
     return form
 age_from_form._deps = set(['form_time'])
 
-def calc_x_ray_lum(s, lumtable, **kwargs):
+def calc_x_ray_lum(s, lumtable, denslim=0.0, **kwargs):
     '''
     Wrapping `x_ray_luminosity` for derived blocks.
     
     Args:
         s (Snap):           The snapshot to use.
         lumtable (str):     The filename of the XSPEC emission table to use.
+        denslim (float):    The cutoff density in g/cm^3 above which gas
+                            gas particles are ignored for the luminosity.
         **kwargs:           Further arguments passed to `x_ray_luminosity`.
 
     Returns:
         lx (UnitArr):       X-ray luminosities of the gas particles.
     '''
     from ..analysis import x_ray_luminosity
-    return x_ray_luminosity(s, lumtable=lumtable, **kwargs)
+    lx = x_ray_luminosity(s, lumtable=lumtable, **kwargs)
+    print lx.sum()
+    lx[s.gas['rho'].in_units_of('g/cm**3') > denslim] = 0.0
+    print lx.sum()
+    return lx
 calc_x_ray_lum._deps = set(['Z', 'ne', 'H', 'rho', 'mass', 'temp'])
-
