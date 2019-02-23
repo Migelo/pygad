@@ -17,11 +17,11 @@ Also doctest other parts of this sub-module:
     >>> doctest.testmod(masks)
     TestResults(failed=0, attempted=45)
 '''
-from snapshot import *
-from derive_rules import *
-from derived import *
-from sim_arr import *
-from masks import *
+from .snapshot import *
+from .derive_rules import *
+from .derived import *
+from .sim_arr import *
+from .masks import *
 import os
 
 from ..environment import module_dir

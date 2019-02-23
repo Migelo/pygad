@@ -6,5 +6,5 @@ Also doctest other parts of this sub-module:
     >>> doctest.testmod(transformation)
     TestResults(failed=0, attempted=54)
 '''
-from transformation import *
+from .transformation import *
 

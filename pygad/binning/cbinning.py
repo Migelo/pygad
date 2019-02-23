@@ -134,17 +134,17 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml',
 
     if res.max()/res.min() > 5:
         import sys
-        print >> sys.stderr, 'WARNING: 3D grid has very uneven ratio of ' + \
+        print('WARNING: 3D grid has very uneven ratio of ' + \
                              'smallest to largest resolution (ratio %.2g)!' % (
-                                     res.max()/res.min())
+                                     res.max()/res.min()), file=sys.stderr)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'create a %d x %d x %d' % tuple(Npx),
-        print 'SPH-grid (%.4g x %.4g x %.4g' % tuple(extent[:,1]-extent[:,0]),
-        print '%s)...' % extent.units
+        print('create a %d x %d x %d' % tuple(Npx), end=' ')
+        print('SPH-grid (%.4g x %.4g x %.4g' % tuple(extent[:,1]-extent[:,0]), end=' ')
+        print('%s)...' % extent.units)
 
     # prepare (sub-)snapshot
-    if isinstance(qty, (str,unicode)):
+    if isinstance(qty, str):
         qty = s.get(qty)
     qty_units = getattr(qty,'units',None)
     if qty_units is not None:
@@ -159,14 +159,14 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml',
     sub = s[BoxMask(extent, sph_overlap=True)]
 
     pos = sub['pos'].view(np.ndarray).astype(np.float64)
-    if isinstance(hsml, (str,unicode)):
+    if isinstance(hsml, str):
         hsml = sub[hsml].in_units_of(s['pos'].units)
     elif isinstance(hsml, (Number,Unit)):
         hsml = UnitScalar(hsml,s['pos'].units)*np.ones(len(sub), dtype=np.float64)
     else:   # should be some array
         hsml = UnitQty(hsml,s['pos'].units,subs=s)[sub._mask]
     hsml = hsml.view(np.ndarray).astype(np.float64)
-    if isinstance(dV, (str,unicode)):
+    if isinstance(dV, str):
         dV = sub[dV].in_units_of(s['pos'].units**3)
     elif dV is None:
         dV = (hsml/2.0)**3
@@ -204,7 +204,7 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml',
     grid = UnitArr(grid.reshape(tuple(Npx)), qty_units)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'done with SPH grid'
+        print('done with SPH grid')
 
     return Map(grid, extent)
 
@@ -260,17 +260,17 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
 
     if res.max()/res.min() > 5:
         import sys
-        print >> sys.stderr, 'WARNING: 2D grid has very uneven ratio of ' + \
+        print('WARNING: 2D grid has very uneven ratio of ' + \
                              'smallest to largest resolution (ratio %.2g)' % (
-                                     res.max()/res.min())
+                                     res.max()/res.min()), file=sys.stderr)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'create a %d x %d' % tuple(Npx),
-        print 'SPH-grid (%.4g x %.4g' % tuple(extent[:,1]-extent[:,0]),
-        print '%s)...' % extent.units
+        print('create a %d x %d' % tuple(Npx), end=' ')
+        print('SPH-grid (%.4g x %.4g' % tuple(extent[:,1]-extent[:,0]), end=' ')
+        print('%s)...' % extent.units)
 
     # prepare (sub-)snapshot
-    if isinstance(qty, (str,unicode)):
+    if isinstance(qty, str):
         qty = s.get(qty)
     qty_units = getattr(qty,'units',None)
     if qty_units is None:
@@ -292,14 +292,14 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
 
     # TODO: why always need a copy? C vs Fortran alignment...!?
     pos = sub['pos'].view(np.ndarray)[:,(xaxis,yaxis)].astype(np.float64).copy()
-    if isinstance(hsml, (str,unicode)):
+    if isinstance(hsml, str):
         hsml = sub[hsml].in_units_of(s['pos'].units)
     elif isinstance(hsml, (Number,Unit)):
         hsml = UnitScalar(hsml,s['pos'].units)*np.ones(len(sub), dtype=np.float64)
     else:   # should be some array
         hsml = UnitQty(hsml,s['pos'].units,subs=s)[sub._mask]
     hsml = hsml.view(np.ndarray).astype(np.float64)
-    if isinstance(dV, (str,unicode)):
+    if isinstance(dV, str):
         dV = sub[dV].in_units_of(s['pos'].units**3)
     elif dV is None:
         dV = (hsml/2.0)**3
@@ -329,13 +329,13 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
             C.c_void_p(ext.ctypes.data),
             C.c_void_p(Npx.ctypes.data),
             C.c_void_p(grid.ctypes.data),
-            C.create_string_buffer(kernel),
+            C.create_string_buffer(kernel.encode('ascii')),
             C.c_double(s.boxsize.in_units_of(s['pos'].units)),
     )
     grid = UnitArr(grid.reshape(tuple(Npx)), qty_units)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'done with SPH grid'
+        print('done with SPH grid')
 
     return Map(grid, extent)
 
@@ -392,11 +392,11 @@ def SPH_3D_to_line(s, qty, los, extent, Npx, xaxis=0, yaxis=1, kernel=None,
         kernel = gadget.general['kernel']
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'create a SPH-line with %d bins' % Npx,
-        print '(length %.4g %s)...' % (extent[0,1]-extent[0,0], extent.units)
+        print('create a SPH-line with %d bins' % Npx, end=' ')
+        print('(length %.4g %s)...' % (extent[0,1]-extent[0,0], extent.units))
 
     # prepare (sub-)snapshot
-    if isinstance(qty, (str,unicode)):
+    if isinstance(qty, str):
         qty = s.get(qty)
     qty_units = getattr(qty,'units',None)
     if qty_units is None:
@@ -415,14 +415,14 @@ def SPH_3D_to_line(s, qty, los, extent, Npx, xaxis=0, yaxis=1, kernel=None,
 
     # TODO: why always need a copy? C vs Fortran alignment...!?
     pos = sub['pos'].view(np.ndarray)[:,(xaxis,yaxis,zaxis)].astype(np.float64).copy()
-    if isinstance(hsml, (str,unicode)):
+    if isinstance(hsml, str):
         hsml = sub[hsml].in_units_of(s['pos'].units)
     elif isinstance(hsml, (Number,Unit)):
         hsml = UnitScalar(hsml,s['pos'].units)*np.ones(len(sub), dtype=np.float64)
     else:   # should be some array
         hsml = UnitQty(hsml,s['pos'].units,subs=s)[sub._mask]
     hsml = hsml.view(np.ndarray).astype(np.float64)
-    if isinstance(dV, (str,unicode)):
+    if isinstance(dV, str):
         dV = sub[dV].in_units_of(s['pos'].units**3)
     elif dV is None:
         dV = (hsml/2.0)**3
@@ -453,7 +453,7 @@ def SPH_3D_to_line(s, qty, los, extent, Npx, xaxis=0, yaxis=1, kernel=None,
     line = UnitArr(line, qty_units)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'done with SPH line'
+        print('done with SPH line')
 
     return Map(line, extent, Npx=Npx)
 
@@ -510,22 +510,22 @@ def SPH_to_2Dgrid_by_particle(s, qty, extent, Npx, reduction, xaxis=0, yaxis=1,
 
     if res.max()/res.min() > 5:
         import sys
-        print >> sys.stderr, 'WARNING: 2D grid has very uneven ratio of ' + \
+        print('WARNING: 2D grid has very uneven ratio of ' + \
                              'smallest to largest resolution (ratio %.2g)' % (
-                                     res.max()/res.min())
+                                     res.max()/res.min()), file=sys.stderr)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'create a particle %d x %d' % tuple(Npx),
-        print 'SPH-grid (%.4g x %.4g' % tuple(extent[:,1]-extent[:,0]),
-        print '%s) (reduction="%s")...' % (extent.units, reduction)
+        print('create a particle %d x %d' % tuple(Npx), end=' ')
+        print('SPH-grid (%.4g x %.4g' % tuple(extent[:,1]-extent[:,0]), end=' ')
+        print('%s) (reduction="%s")...' % (extent.units, reduction))
 
     # prepare (sub-)snapshot
-    if isinstance(qty, (str,unicode)):
+    if isinstance(qty, str):
         qty = s.get(qty)
     qty_units = getattr(qty,'units',None)
     if qty.shape!=(len(s),):
         raise ValueError('Quantity has to have shape (N,)!')
-    if isinstance(av, (str,unicode)):
+    if isinstance(av, str):
         av = s.get(av)
     if av is not None and av.shape!=(len(s),):
         raise ValueError('Weights quantity (`av`) has to have shape (N,)!')
@@ -542,14 +542,14 @@ def SPH_to_2Dgrid_by_particle(s, qty, extent, Npx, reduction, xaxis=0, yaxis=1,
 
     # TODO: why always need a copy? C vs Fortran alignment...!?
     pos = sub['pos'].view(np.ndarray)[:,(xaxis,yaxis)].astype(np.float64).copy()
-    if isinstance(hsml, (str,unicode)):
+    if isinstance(hsml, str):
         hsml = sub[hsml].in_units_of(s['pos'].units)
     elif isinstance(hsml, (Number,Unit)):
         hsml = UnitScalar(hsml,s['pos'].units)*np.ones(len(sub), dtype=np.float64)
     else:   # should be some array
         hsml = UnitQty(hsml,s['pos'].units,subs=s)[sub._mask]
     hsml = hsml.view(np.ndarray).astype(np.float64)
-    if isinstance(dV, (str,unicode)):
+    if isinstance(dV, str):
         dV = sub[dV].in_units_of(s['pos'].units**3)
     elif dV is None:
         dV = (hsml/2.0)**3
@@ -598,7 +598,7 @@ def SPH_to_2Dgrid_by_particle(s, qty, extent, Npx, reduction, xaxis=0, yaxis=1,
     grid = UnitArr(grid.reshape(tuple(Npx)), qty_units)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'done with particle SPH grid'
+        print('done with particle SPH grid')
 
     return Map(grid, extent)
 

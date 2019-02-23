@@ -152,14 +152,21 @@ cpygad.get_octree_ngbs_SPH.argtypes = [c_void_p,
                                        c_void_p, c_double, c_double]
 cpygad.get_octree_next_ngb.argtypes = [c_void_p, c_void_p, c_void_p, c_double,
                                        c_void_p]
+
+
 class _MAX_TREE_LEVEL_class(type):
-    _MAX_TREE_LEVEL = int( c_int.in_dll(cpygad, 'MAX_TREE_LEVEL').value )
+    _MAX_TREE_LEVEL = int(c_int.in_dll(cpygad, 'MAX_TREE_LEVEL').value)
+
     def _get_MAX_TREE_LEVEL(self):
         return self._MAX_TREE_LEVEL
+
     def _set_MAX_TREE_LEVEL(self, value):
         raise AttributeError("can't set attribute")
+
     MAX_TREE_LEVEL = property(_get_MAX_TREE_LEVEL, _set_MAX_TREE_LEVEL)
-class cOctree(object):
+
+
+class cOctree(object, metaclass=_MAX_TREE_LEVEL_class):
     '''
     A octree implementation with the backend in written in C.
 
@@ -170,15 +177,15 @@ class cOctree(object):
         center (array-like):    TODO
         side_2 (float):         TODO
     '''
-    __metaclass__ = _MAX_TREE_LEVEL_class
+
     @property
     def MAX_TREE_LEVEL(self):
         return cOctree.MAX_TREE_LEVEL
 
     def __init__(self, pos, H=None):
         if environment.verbose >= environment.VERBOSE_TALKY:
-            print 'build a cOctree with %s positions' % (
-                    utils.nice_big_num_str(len(s)))
+            print('build a cOctree with %s positions' % (
+                utils.nice_big_num_str(len(s))))
             sys.stdout.flush()
         pos = np.asarray(pos, dtype=np.float64)
         if pos.shape[1:] != (3,):
@@ -198,15 +205,15 @@ class cOctree(object):
         # Note: child node cOctrees do not get instantiated with a call of
         # `__init__`.
         self.__weakref_for_freeing_C_memory = weakref.ref(
-                self,
-                lambda wr, ptr=self.__node_ptr: cpygad.free_octree(ptr),
+            self,
+            lambda wr, ptr=self.__node_ptr: cpygad.free_octree(ptr),
         )
 
         if H is not None:
             self.update_max_H(H)
 
         if environment.verbose >= environment.VERBOSE_TALKY:
-            print 'done.'
+            print('done.')
             sys.stdout.flush()
 
     @property
@@ -231,7 +238,7 @@ class cOctree(object):
     @property
     def side_2(self):
         '''Half the side length of the tree box.'''
-        return float( cpygad.get_octree_side_2(self.__node_ptr) )
+        return float(cpygad.get_octree_side_2(self.__node_ptr))
 
     @property
     def full_side(self):
@@ -241,27 +248,27 @@ class cOctree(object):
     @property
     def is_leaf(self):
         '''Whether this is a leaf node.'''
-        return bool( cpygad.get_octree_is_leaf(self.__node_ptr) )
+        return bool(cpygad.get_octree_is_leaf(self.__node_ptr))
 
     @property
     def num_children(self):
         '''Number of child nodes.'''
-        return int( cpygad.get_octree_num_children(self.__node_ptr) )
+        return int(cpygad.get_octree_num_children(self.__node_ptr))
 
     @property
     def tot_num_part(self):
         '''Get the total number of particles in the tree.'''
-        return int( cpygad.get_octree_tot_part(self.__node_ptr) )
+        return int(cpygad.get_octree_tot_part(self.__node_ptr))
 
     @property
     def max_H(self):
         '''The maximum smoothing length (as support radius) in the tree.'''
-        return float( cpygad.get_octree_max_H(self.__node_ptr) )
+        return float(cpygad.get_octree_max_H(self.__node_ptr))
 
     @property
     def max_depth(self):
         '''The maximum depth of this particular tree. (Only node would be 0.)'''
-        return int( cpygad.get_octree_max_depth(self.__node_ptr) )
+        return int(cpygad.get_octree_max_depth(self.__node_ptr))
 
     def get_child(self, o):
         '''Return the child of octant o.'''
@@ -280,12 +287,12 @@ class cOctree(object):
         r = np.asarray(r, dtype=np.float64).copy()
         if r.shape != (3,):
             raise ValueError('Position has to have shape (3,)!')
-        return int( cpygad.get_octree_octant(self.__node_ptr, r.ctypes.data) )
+        return int(cpygad.get_octree_octant(self.__node_ptr, r.ctypes.data))
 
     def count_nodes(self, count_non_leaves=True):
         '''
         Count all nodes in the tree.
-        
+
         Args:
             count_non_leaves (bool):    Whether to count all nodes (that is also
                                         include nodes that are no leaves). If set
@@ -295,14 +302,14 @@ class cOctree(object):
             nodes (int):                The number of nodes.
         '''
         nol = int(bool(count_non_leaves))
-        return int( cpygad.get_octree_node_count(self.__node_ptr, nol) )
+        return int(cpygad.get_octree_node_count(self.__node_ptr, nol))
 
     def is_in_node(self, r):
         '''Check whether position r lies within this node.'''
         r = np.asarray(r, dtype=np.float64).copy()
         if r.shape != (3,):
             raise ValueError('Position has to have shape (3,)!')
-        return bool( cpygad.get_octree_in_region(self.__node_ptr, r.ctypes.data) )
+        return bool(cpygad.get_octree_in_region(self.__node_ptr, r.ctypes.data))
 
     def update_max_H(self, H=None):
         '''
@@ -320,7 +327,7 @@ class cOctree(object):
             cpygad.update_octree_const_max_H(self.__node_ptr, H)
         else:
             H = np.asarray(H, dtype=np.float64)
-            if H.shape!=(self.tot_num_part,):
+            if H.shape != (self.tot_num_part,):
                 raise ValueError('Smoothing lengthes have to have shape (N,)!')
             if H.base is not None:
                 H = H.copy()
@@ -372,7 +379,7 @@ class cOctree(object):
                                       max_ngbs, ngbs.ctypes.data, byref(N_ngbs),
                                       pos.ctypes.data, periodic,
                                       cond,
-        )
+                                      )
         ngbs.resize(N_ngbs.value)
         return ngbs
 
@@ -417,7 +424,7 @@ class cOctree(object):
                                    pos.ctypes.data,
                                    periodic,
                                    0.0,
-        )
+                                   )
         ngbs.resize(N_ngbs.value)
         return ngbs
 
@@ -461,7 +468,7 @@ class cOctree(object):
                                          pos.ctypes.data,
                                          periodic,
                                          cond,
-        )
+                                         )
         if ngb == -1:
             ngb = None
 

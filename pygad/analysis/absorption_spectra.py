@@ -18,7 +18,7 @@ Doctests:
     ...         print vs
     ...         print vs_back
     ...         print np.max(np.abs( ((vs-vs_back)/vs).in_units_of(1) ))
-    
+
     >>> los_arr = UnitArr([[ 34800.,  35566.],
     ...                    [ 34700.,  35600.],
     ...                    [ 35000.,  35600.]], 'ckpc/h_0')
@@ -107,98 +107,99 @@ import numpy as np
 from scipy.special import wofz
 
 lines = {
-    'H1215':     {'ion':'HI',     'l':'1215.6701 Angstrom', 'f':0.4164,
-                    'atomwt':m_H,       'A_ki':'4.6986e+08 s**-1'},
-    'H1025':     {'ion':'HI',     'l':'1025.722 Angstrom',  'f':0.079121,
-                    'atomwt':m_H,       'A_ki':'5.5751e+07 s**-1'},
-    'H972':      {'ion':'HI',     'l':'972.5368 Angstrom',  'f':2.900e-02,
-                    'atomwt':m_H,       'A_ki':'1.2785e+07 s**-1'},
+    'H1215': {'ion': 'HI', 'l': '1215.6701 Angstrom', 'f': 0.4164,
+              'atomwt': m_H, 'A_ki': '4.6986e+08 s**-1'},
+    'H1025': {'ion': 'HI', 'l': '1025.722 Angstrom', 'f': 0.079121,
+              'atomwt': m_H, 'A_ki': '5.5751e+07 s**-1'},
+    'H972': {'ion': 'HI', 'l': '972.5368 Angstrom', 'f': 2.900e-02,
+             'atomwt': m_H, 'A_ki': '1.2785e+07 s**-1'},
 
-    'HeII':      {'ion':'HeII',   'l': '303.918 Angstrom',  'f':0.4173, 
-                    'atomwt':'3.971 u'},
+    'HeII': {'ion': 'HeII', 'l': '303.918 Angstrom', 'f': 0.4173,
+             'atomwt': '3.971 u'},
 
-    'CII1036':   {'ion':'CII',    'l':'1036.337 Angstrom',  'f':0.1270,
-                    'atomwt':'12.011 u'},
-    'CII1334':   {'ion':'CII',    'l':'1334.532 Angstrom',  'f':0.1270,
-                    'atomwt':'12.011 u'},
-    'CII1335':   {'ion':'CII',    'l':'1335.708 Angstrom',  'f':0.1140,
-                    'atomwt':'12.011 u'},
-    'CIII977':   {'ion':'CIII',   'l': '977.020 Angstrom',  'f':0.7620,
-                    'atomwt':'12.011 u'},
-    'CIV1548':   {'ion':'CIV',    'l':'1548.195 Angstrom',  'f':0.1908,
-                    'atomwt':'12.011 u'},
-    'CIV1550':   {'ion':'CIV',    'l':'1550.777 Angstrom',  'f':0.09520,
-                    'atomwt':'12.011 u'},
+    'CII1036': {'ion': 'CII', 'l': '1036.337 Angstrom', 'f': 0.1270,
+                'atomwt': '12.011 u'},
+    'CII1334': {'ion': 'CII', 'l': '1334.532 Angstrom', 'f': 0.1270,
+                'atomwt': '12.011 u'},
+    'CII1335': {'ion': 'CII', 'l': '1335.708 Angstrom', 'f': 0.1140,
+                'atomwt': '12.011 u'},
+    'CIII977': {'ion': 'CIII', 'l': '977.020 Angstrom', 'f': 0.7620,
+                'atomwt': '12.011 u'},
+    'CIV1548': {'ion': 'CIV', 'l': '1548.195 Angstrom', 'f': 0.1908,
+                'atomwt': '12.011 u'},
+    'CIV1550': {'ion': 'CIV', 'l': '1550.777 Angstrom', 'f': 0.09520,
+                'atomwt': '12.011 u'},
 
-    'NI1199':    {'ion':'NI',     'l': '1199.550 Angstrom', 'f':0.1300,
-                    'atomwt':'14.0067 u'},
-    'NI1200':    {'ion':'NI',     'l': '1200.223 Angstrom', 'f':0.0862,
-                    'atomwt':'14.0067 u'},
-    'NI1201':    {'ion':'NI',     'l': '1200.710 Angstrom', 'f':0.043,
-                    'atomwt':'14.0067 u'},
-    'NII1083':   {'ion':'NII',    'l': '1083.994 Angstrom', 'f':0.1150,
-                    'atomwt':'14.0067 u'},
-    'NV1238':    {'ion':'NV',     'l': '1238.821 Angstrom', 'f':0.1560,
-                    'atomwt':'14.0067 u'},
-    'NV1242':    {'ion':'NV',     'l': '1242.804 Angstrom', 'f':0.0780,
-                    'atomwt':'14.0067 u'},
+    'NI1199': {'ion': 'NI', 'l': '1199.550 Angstrom', 'f': 0.1300,
+               'atomwt': '14.0067 u'},
+    'NI1200': {'ion': 'NI', 'l': '1200.223 Angstrom', 'f': 0.0862,
+               'atomwt': '14.0067 u'},
+    'NI1201': {'ion': 'NI', 'l': '1200.710 Angstrom', 'f': 0.043,
+               'atomwt': '14.0067 u'},
+    'NII1083': {'ion': 'NII', 'l': '1083.994 Angstrom', 'f': 0.1150,
+                'atomwt': '14.0067 u'},
+    'NV1238': {'ion': 'NV', 'l': '1238.821 Angstrom', 'f': 0.1560,
+               'atomwt': '14.0067 u'},
+    'NV1242': {'ion': 'NV', 'l': '1242.804 Angstrom', 'f': 0.0780,
+               'atomwt': '14.0067 u'},
 
-    'OI1302':    {'ion':'OI',    'l': '1302.168 Angstrom',  'f':0.05190,
-                    'atomwt':'15.9994 u'},
-    'OI1304':    {'ion':'OI',    'l': '1304.858 Angstrom',  'f':0.04877,
-                    'atomwt':'15.9994 u'},
-    'OI1306':    {'ion':'OI',    'l': '1306.029 Angstrom',  'f':0.04873,
-                    'atomwt':'15.9994 u'},
-    'OIV787':    {'ion':'OIV',    'l': '787.711 Angstrom',  'f':0.110,
-                    'atomwt':'15.9994 u'},
-    'OVI1031':   {'ion':'OVI',    'l':'1031.927 Angstrom',  'f':0.1329,
-                    'atomwt':'15.9994 u'},
-    'OVI1037':   {'ion':'OVI',    'l':'1037.617 Angstrom',  'f':0.06590,
-                    'atomwt':'15.9994 u'},
+    'OI1302': {'ion': 'OI', 'l': '1302.168 Angstrom', 'f': 0.05190,
+               'atomwt': '15.9994 u'},
+    'OI1304': {'ion': 'OI', 'l': '1304.858 Angstrom', 'f': 0.04877,
+               'atomwt': '15.9994 u'},
+    'OI1306': {'ion': 'OI', 'l': '1306.029 Angstrom', 'f': 0.04873,
+               'atomwt': '15.9994 u'},
+    'OIV787': {'ion': 'OIV', 'l': '787.711 Angstrom', 'f': 0.110,
+               'atomwt': '15.9994 u'},
+    'OVI1031': {'ion': 'OVI', 'l': '1031.927 Angstrom', 'f': 0.1329,
+                'atomwt': '15.9994 u'},
+    'OVI1037': {'ion': 'OVI', 'l': '1037.617 Angstrom', 'f': 0.06590,
+                'atomwt': '15.9994 u'},
 
-    'NeVIII770': {'ion':'NeVIII', 'l': '770.409 Angstrom',  'f':0.103,
-                    'atomwt':'20.180 u'},
+    'NeVIII770': {'ion': 'NeVIII', 'l': '770.409 Angstrom', 'f': 0.103,
+                  'atomwt': '20.180 u'},
 
-    'MgII2796':  {'ion':'MgII',   'l':'2796.352 Angstrom',  'f':0.6123,
-                    'atomwt':'24.305 u'},
+    'MgII2796': {'ion': 'MgII', 'l': '2796.352 Angstrom', 'f': 0.6123,
+                 'atomwt': '24.305 u'},
 
-    'SiII1190':  {'ion':'SiII',   'l':'1190.416 Angstrom',  'f':0.2930,
-                    'atomwt':'28.086 u'},
-    'SiII1193':  {'ion':'SiII',   'l':'1193.290 Angstrom',  'f':0.5850,
-                    'atomwt':'28.086 u'},
-    'SiII1260':  {'ion':'SiII',   'l':'1260.522 Angstrom',  'f':1.180,
-                    'atomwt':'28.086 u'},
-    'SiIII1206': {'ion':'SiIII',  'l':'1206.500 Angstrom',  'f':1.669,
-                    'atomwt':'28.086 u'},
-    'SiIV1393':  {'ion':'SiIV',   'l':'1393.755 Angstrom',  'f':0.5140,
-                    'atomwt':'28.086 u'},
-    'SiIV1402':  {'ion':'SiIV',   'l':'1402.770 Angstrom',  'f':0.2553,
-                    'atomwt':'28.086 u'},
+    'SiII1190': {'ion': 'SiII', 'l': '1190.416 Angstrom', 'f': 0.2930,
+                 'atomwt': '28.086 u'},
+    'SiII1193': {'ion': 'SiII', 'l': '1193.290 Angstrom', 'f': 0.5850,
+                 'atomwt': '28.086 u'},
+    'SiII1260': {'ion': 'SiII', 'l': '1260.522 Angstrom', 'f': 1.180,
+                 'atomwt': '28.086 u'},
+    'SiIII1206': {'ion': 'SiIII', 'l': '1206.500 Angstrom', 'f': 1.669,
+                  'atomwt': '28.086 u'},
+    'SiIV1393': {'ion': 'SiIV', 'l': '1393.755 Angstrom', 'f': 0.5140,
+                 'atomwt': '28.086 u'},
+    'SiIV1402': {'ion': 'SiIV', 'l': '1402.770 Angstrom', 'f': 0.2553,
+                 'atomwt': '28.086 u'},
 
-    'SI1295':    {'ion':'SI',     'l':'1295.653 Angstrom',  'f':0.08700,
-                    'atomwt':'32.065 u'},
-    'SI1425':    {'ion':'SI',     'l':'1425.030 Angstrom',  'f':0.1250,
-                    'atomwt':'32.065 u'},
-    'SI1473':    {'ion':'SI',     'l':'1473.994 Angstrom',  'f':0.08280,
-                    'atomwt':'32.065 u'},
-    'SII1250':   {'ion':'SII',    'l':'1250.584 Angstrom',  'f':0.00543,
-                    'atomwt':'32.065 u'},
-    'SII1253':   {'ion':'SII',    'l':'1253.811 Angstrom',  'f':0.01090,
-                    'atomwt':'32.065 u'},
-    'SII1259':   {'ion':'SII',    'l':'1259.519 Angstrom',  'f':0.01660,
-                    'atomwt':'32.065 u'},
-    'SIII1190':  {'ion':'SIII',   'l':'1190.203 Angstrom',  'f':0.02310,
-                    'atomwt':'32.065 u'},
+    'SI1295': {'ion': 'SI', 'l': '1295.653 Angstrom', 'f': 0.08700,
+               'atomwt': '32.065 u'},
+    'SI1425': {'ion': 'SI', 'l': '1425.030 Angstrom', 'f': 0.1250,
+               'atomwt': '32.065 u'},
+    'SI1473': {'ion': 'SI', 'l': '1473.994 Angstrom', 'f': 0.08280,
+               'atomwt': '32.065 u'},
+    'SII1250': {'ion': 'SII', 'l': '1250.584 Angstrom', 'f': 0.00543,
+                'atomwt': '32.065 u'},
+    'SII1253': {'ion': 'SII', 'l': '1253.811 Angstrom', 'f': 0.01090,
+                'atomwt': '32.065 u'},
+    'SII1259': {'ion': 'SII', 'l': '1259.519 Angstrom', 'f': 0.01660,
+                'atomwt': '32.065 u'},
+    'SIII1190': {'ion': 'SIII', 'l': '1190.203 Angstrom', 'f': 0.02310,
+                 'atomwt': '32.065 u'},
 }
 lines['Lyman_alpha'] = lines['H1215']
-lines['Lyman_beta']  = lines['H1025']
+lines['Lyman_beta'] = lines['H1025']
 lines['Lyman_gamma'] = lines['H972']
+
 
 def Gaussian(x, sigma):
     '''
     The Gaussian function:
 
-                              1                /    1     x^2    \ 
+                              1                /    1     x^2    \
     G (x; sigma)  =  --------------------  exp | - --- --------- |
                       sigma sqrt( 2 pi )       \    2   sigma^2  /
 
@@ -211,7 +212,8 @@ def Gaussian(x, sigma):
     Returns:
         y (float, np.ndarray):  The value(s) of the Gaussian.
     '''
-    return np.exp(-0.5*(x/sigma)**2) / ( sigma * np.sqrt(2.*np.pi) )
+    return np.exp(-0.5 * (x / sigma) ** 2) / (sigma * np.sqrt(2. * np.pi))
+
 
 def Lorentzian(x, gamma):
     '''
@@ -230,7 +232,8 @@ def Lorentzian(x, gamma):
     Returns:
         y (float, np.ndarray):  The value(s) of the Gaussian.
     '''
-    return gamma / (np.pi * (x**2 + gamma**2))
+    return gamma / (np.pi * (x ** 2 + gamma ** 2))
+
 
 def Voigt(x, sigma, gamma):
     '''
@@ -239,7 +242,7 @@ def Voigt(x, sigma, gamma):
     It is defined as a convolution of a Gaussian and a Lorentz function:
 
                            oo
-                           /\ 
+                           /\
     V (x; gamma, sigma) =  |  dx' G(x';sigma) L(x-x';gamma)
                           \/
                          -oo
@@ -254,16 +257,18 @@ def Voigt(x, sigma, gamma):
     Returns:
         y (float, np.ndarray):  The value(s) of the Voigt profile.
     '''
-    z = (x + 1j*gamma) / (sigma * np.sqrt(2.))
-    return np.real(wofz(z)) / ( sigma * np.sqrt(2.*np.pi) )
+    z = (x + 1j * gamma) / (sigma * np.sqrt(2.))
+    return np.real(wofz(z)) / (sigma * np.sqrt(2. * np.pi))
+
 
 def thermal_b_param(line, T, units='km/s'):
     '''Calculate the thermal Doppler b-parameter for given line and temperature.'''
-    if isinstance(line,str):
+    if isinstance(line, str):
         line = lines[line]
     atomwt = UnitScalar(line['atomwt'])
-    b = np.sqrt( 2. * kB * T / atomwt ).in_units_of(units)
+    b = np.sqrt(2. * kB * T / atomwt).in_units_of(units)
     return b
+
 
 def line_profile(line, N, T=None, b=None, l0=None,
                  l=None, lim=None, bins=1000,
@@ -313,15 +318,15 @@ def line_profile(line, N, T=None, b=None, l0=None,
                             given).
         tau (np.ndarray):   The optical depth at the given wavelengths.
     '''
-    if isinstance(line,str):
+    if isinstance(line, str):
         line = lines[line]
     f = float(line['f'])
     atomwt = UnitScalar(line['atomwt']) if 'atomwt' in line else None
-    A_ki = UnitScalar(line.get('A_ki',0.0), 'Hz')
+    A_ki = UnitScalar(line.get('A_ki', 0.0), 'Hz')
     if l0 is None:
         l0 = line['l']
     l0 = UnitScalar(l0, 'Angstrom')
-    lim = UnitQty([-5,5] if lim is None else lim, 'Angstrom', dtype=float)
+    lim = UnitQty([-5, 5] if lim is None else lim, 'Angstrom', dtype=float)
     if np.any(lim < 0):
         lim += l0
     N = UnitScalar(N)
@@ -329,7 +334,7 @@ def line_profile(line, N, T=None, b=None, l0=None,
         N = N.in_units_of('cm**-2')
     except:
         N = (N / atomwt).in_units_of('cm**-2')
-    sigma0 = f * q_e**2 / (4. * epsilon0 * m_e * c )
+    sigma0 = f * q_e ** 2 / (4. * epsilon0 * m_e * c)
     sigma0.convert_to('cm**2 / s')
     if b is None:
         T = UnitScalar(T, 'K')
@@ -338,19 +343,19 @@ def line_profile(line, N, T=None, b=None, l0=None,
         b = UnitScalar(b, 'km/s')
 
     if l is None:
-        l = UnitArr( np.linspace( lim[0], lim[1], bins ), lim.units )
+        l = UnitArr(np.linspace(lim[0], lim[1], bins), lim.units)
     else:
-        l = UnitQty( l, 'Angstrom' )
-    nu = (c/l).in_units_of('Hz')
-    nu0 = (c/l0).in_units_of('Hz')
-    x = (nu-nu0).view(np.ndarray)
-    sigma = (b/l0/np.sqrt(2)).in_units_of('Hz').view(np.ndarray)
-    gamma = (A_ki/(4.*np.pi)).in_units_of('Hz').view(np.ndarray)
-    if mode in ['Voigt','full']:
+        l = UnitQty(l, 'Angstrom')
+    nu = (c / l).in_units_of('Hz')
+    nu0 = (c / l0).in_units_of('Hz')
+    x = (nu - nu0).view(np.ndarray)
+    sigma = (b / l0 / np.sqrt(2)).in_units_of('Hz').view(np.ndarray)
+    gamma = (A_ki / (4. * np.pi)).in_units_of('Hz').view(np.ndarray)
+    if mode in ['Voigt', 'full']:
         phi = Voigt(x, sigma, gamma)
-    elif mode in ['Gaussian','thermal','Doppler']:
+    elif mode in ['Gaussian', 'thermal', 'Doppler']:
         phi = Gaussian(x, sigma)
-    elif mode in ['Lorentzian','natural','intrinsic']:
+    elif mode in ['Lorentzian', 'natural', 'intrinsic']:
         phi = Lorentzian(x, gamma)
     else:
         raise ValueError('Unknown mode "%s"' % mode)
@@ -360,7 +365,8 @@ def line_profile(line, N, T=None, b=None, l0=None,
 
     return l, tau.view(np.ndarray)
 
-def curve_of_growth(line, b, Nlim=(10,21), bins=30, mode='Voigt'):
+
+def curve_of_growth(line, b, Nlim=(10, 21), bins=30, mode='Voigt'):
     '''
     Calculate the curve of growth for homogeneous gas.
 
@@ -392,27 +398,28 @@ def curve_of_growth(line, b, Nlim=(10,21), bins=30, mode='Voigt'):
                             evaluated.
         EW (UnitQty):       The equivalent widths at the given column densities.
     '''
-    if isinstance(line,str):
+    if isinstance(line, str):
         line = lines[line]
-    l0 = UnitScalar( line['l'] )
-    N = UnitArr( np.logspace(Nlim[0], Nlim[1], int(bins)), 'cm**-2')
-    ew = UnitArr( np.empty(len(N)), 'Angstrom' )
-    for i,N_ in enumerate(N):
-        lim, bins = [-0.5,0.5], 300
-        tau = [1,1]
+    l0 = UnitScalar(line['l'])
+    N = UnitArr(np.logspace(Nlim[0], Nlim[1], int(bins)), 'cm**-2')
+    ew = UnitArr(np.empty(len(N)), 'Angstrom')
+    for i, N_ in enumerate(N):
+        lim, bins = [-0.5, 0.5], 300
+        tau = [1, 1]
         while tau[0] > 1e-3 or tau[-1] > 1e-3:
             lim_ = l0 + np.array(lim)
             l, tau = line_profile(line,
-                    '%g cm**-2' % N_, b=b, lim=lim_, bins=bins, mode=mode)
-            lim, bins = [2*lim[0], 2*lim[1]], 2*bins
-        dl = UnitArr(l[1]-l[0], l.units)
-        l_edges = UnitArr(np.empty(len(l)+1), l.units)
-        l_edges[:-1] = l-dl/2.
-        l_edges[-1] = l_edges[-2]+dl
+                                  '%g cm**-2' % N_, b=b, lim=lim_, bins=bins, mode=mode)
+            lim, bins = [2 * lim[0], 2 * lim[1]], 2 * bins
+        dl = UnitArr(l[1] - l[0], l.units)
+        l_edges = UnitArr(np.empty(len(l) + 1), l.units)
+        l_edges[:-1] = l - dl / 2.
+        l_edges[-1] = l_edges[-2] + dl
         ew[i] = EW(tau, l_edges)
     return N, ew
 
-def fit_Voigt(l, flux, line, Nlim=(8,22), blim=(0,200), bins=(57,41)):
+
+def fit_Voigt(l, flux, line, Nlim=(8, 22), blim=(0, 200), bins=(57, 41)):
     '''
     Fit a single Voigt profile to the given line.
 
@@ -436,40 +443,42 @@ def fit_Voigt(l, flux, line, Nlim=(8,22), blim=(0,200), bins=(57,41)):
         errs (UnitQty):     The integrateed squared differences of fit
                             and given spectrum.
     '''
-    if isinstance(line,str):
+    if isinstance(line, str):
         line = lines[line]
     Nlim = np.array(Nlim)
     blim = UnitQty(blim, 'km/s')
     l = UnitQty(l, 'Angstrom')
     flux = np.array(flux, dtype=float)
-    if isinstance(bins,int):
-        bins = [bins,bins]
+    if isinstance(bins, int):
+        bins = [bins, bins]
     bins = np.array(bins, dtype=int)
     if not bins.shape == (2,):
         raise ValueError('`bins` needs to be scalar or 2-tuple.')
 
-    l0_line = UnitArr( line['l'], l.units )
-    l0 = np.average( l, weights=1.-flux )
+    l0_line = UnitArr(line['l'], l.units)
+    l0 = np.average(l, weights=1. - flux)
     dl = l0_line - l0
-    l_lim = UnitArr( [l[0]+dl,l[-1]+dl], l.units)
-    def err(N,b):
+    l_lim = UnitArr([l[0] + dl, l[-1] + dl], l.units)
+
+    def err(N, b):
         _, tau = line_profile(line, N, b=b,
                               lim=l_lim, bins=len(flux))
-        return np.sum( (np.exp(-tau) - flux)**2 )
+        return np.sum((np.exp(-tau) - flux) ** 2)
 
-    errs = np.empty( tuple(bins), dtype=float )
+    errs = np.empty(tuple(bins), dtype=float)
     Ns = np.logspace(Nlim[0], Nlim[1], bins[0])
     bs = np.linspace(blim[0], blim[1], bins[1])
-    for i,N in enumerate(Ns):
-        for j,b in enumerate(bs):
-            errs[i,j] = err(N,b)
+    for i, N in enumerate(Ns):
+        for j, b in enumerate(bs):
+            errs[i, j] = err(N, b)
     finite = np.isfinite(errs)
-    errs[ ~finite ] = np.inf
+    errs[~finite] = np.inf
 
-    i = np.unravel_index( np.argmin(errs), errs.shape )
+    i = np.unravel_index(np.argmin(errs), errs.shape)
     N, b = Ns[i[0]], bs[i[1]]
 
-    return UnitArr(N,'cm**-2'), UnitArr(b,'km/s'), dl, errs * dl
+    return UnitArr(N, 'cm**-2'), UnitArr(b, 'km/s'), dl, errs * dl
+
 
 def find_line_contributers(s, los, line, vel_extent, threshold=0.95,
                            EW_space='wavelength', **kwargs):
@@ -505,20 +514,20 @@ def find_line_contributers(s, los, line, vel_extent, threshold=0.95,
                                 that are needed for the EW not falling below the
                                 specified threshold.
     '''
-    if isinstance(line, unicode):
+    if isinstance(line, str):
         line = str(line)
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'find all necessary particles, beginning with those that have ' + \
+        print('find all necessary particles, beginning with those that have ' + \
               'the highest column density along the line of sight, that are ' + \
-              'needed for getting %.1f%% of the total EW' % (100.*threshold)
-        if isinstance(line,str):
-            print '  line "%s" at %s' % (line, los)
+              'needed for getting %.1f%% of the total EW' % (100. * threshold))
+        if isinstance(line, str):
+            print('  line "%s" at %s' % (line, los))
 
-    if isinstance(line,str):
+    if isinstance(line, str):
         line = lines[line]
     taus, dens, temp, v_edges, restr_column = mock_absorption_spectrum_of(
-            s.gas, los=los, line=line, vel_extent=vel_extent, **kwargs)
-    N_intersecting = np.sum(restr_column>0)
+        s.gas, los=los, line=line, vel_extent=vel_extent, **kwargs)
+    N_intersecting = np.sum(restr_column > 0)
 
     z_edges = velocities_to_redshifts(v_edges, z0=s.redshift)
     l_edges = UnitScalar(line['l']) * (1.0 + z_edges)
@@ -534,37 +543,37 @@ def find_line_contributers(s, los, line, vel_extent, threshold=0.95,
         raise ValueError('Unknown `EW_space`: "%s"!' % EW_space)
     EW_full = EW(taus, edges)
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'in %s space EW = %s' % (EW_space, EW_full)
+        print('in %s space EW = %s' % (EW_space, EW_full))
 
     # bisect by percentiles
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'finding the necessary particles...'
-    low, mid, high = 0.,50.,100.
-    Nlow, Nmid, Nhigh = map( lambda x: np.percentile(restr_column,x),
-                             [low,mid,high] )
+        print('finding the necessary particles...')
+    low, mid, high = 0., 50., 100.
+    Nlow, Nmid, Nhigh = [np.percentile(restr_column, x) for x in [low, mid, high]]
     verbosity = environment.verbose
     environment.verbose = environment.VERBOSE_QUIET
-    while np.sum(restr_column>Nlow) > np.sum(restr_column>Nhigh) + 1:
+    while np.sum(restr_column > Nlow) > np.sum(restr_column > Nhigh) + 1:
         mid = (low + high) / 2.
         Nmid = np.percentile(restr_column, mid)
         taus, _, _, _, _ = mock_absorption_spectrum_of(
-                s.gas[restr_column>Nmid], los=los, line=line,
-                vel_extent=vel_extent, **kwargs)
-        E = EW(taus,edges)
-        if E < threshold*EW_full:
+            s.gas[restr_column > Nmid], los=los, line=line,
+            vel_extent=vel_extent, **kwargs)
+        E = EW(taus, edges)
+        if E < threshold * EW_full:
             high, Nhigh = mid, Nmid
         else:
             low, Nlow = mid, Nmid
     environment.verbose = verbosity
-    contributing = np.array( (restr_column>Nmid), dtype=bool)
+    contributing = np.array((restr_column > Nmid), dtype=bool)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print '%s of the %s N_intersecting particles needed ' % (
-                utils.nice_big_num_str(np.sum(contributing)),
-                utils.nice_big_num_str(N_intersecting)) + \
-              'for a line with >= %.1f%% of the EW' % (100.*threshold)
+        print('%s of the %s N_intersecting particles needed ' % (
+            utils.nice_big_num_str(np.sum(contributing)),
+            utils.nice_big_num_str(N_intersecting)) + \
+              'for a line with >= %.1f%% of the EW' % (100. * threshold))
 
     return contributing
+
 
 def mock_absorption_spectrum_of(s, los, line, vel_extent, **kwargs):
     '''
@@ -583,12 +592,12 @@ def mock_absorption_spectrum_of(s, los, line, vel_extent, **kwargs):
                                         A_ki=line.get('A_ki',0.0),
                                         **kwargs)
     '''
-    if isinstance(line, unicode):
+    if isinstance(line, str):
         line = str(line)
     try:
-        if isinstance(line,str):
+        if isinstance(line, str):
             line = lines[line]
-        elif not isinstance(line,dict):
+        elif not isinstance(line, dict):
             raise ValueError('`line` needs to be a string or a dictionary, ' +
                              'not %s!' % type(line))
     except KeyError:
@@ -598,8 +607,9 @@ def mock_absorption_spectrum_of(s, los, line, vel_extent, **kwargs):
                                     l=line['l'], f=line['f'],
                                     atomwt=line['atomwt'],
                                     vel_extent=vel_extent,
-                                    A_ki=line.get('A_ki',0.0),
+                                    A_ki=line.get('A_ki', 0.0),
                                     **kwargs)
+
 
 def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
                              vel_extent, Nbins=1000,
@@ -623,7 +633,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
     TODO:
         Check the "redshift correction of the wavelength difference"! Cf.
         Formular (5) in Churchill+(2015).
-    
+
     Args:
         s (Snap):               The snapshot to shoot the l.o.s. though.
         los (UnitQty):          The position of the l.o.s.. By default understood
@@ -729,10 +739,10 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
     v_units = Unit('km/s')
     l_units = Unit('cm')
 
-    if isinstance(ion, unicode):
+    if isinstance(ion, str):
         ion = str(ion)
-    zaxis = (set([0,1,2]) - set([xaxis,yaxis])).pop()
-    if set([xaxis,yaxis,zaxis]) != set([0,1,2]):
+    zaxis = (set([0, 1, 2]) - set([xaxis, yaxis])).pop()
+    if set([xaxis, yaxis, zaxis]) != set([0, 1, 2]):
         raise ValueError("x- and y-axis must be in [0,1,2] and different!")
     los = UnitQty(los, s['pos'].units, dtype=np.float64, subs=s)
     zero_Hubble_flow_at = UnitScalar(zero_Hubble_flow_at, s['pos'].units, subs=s)
@@ -743,7 +753,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
         restr_column_lims = UnitQty(restr_column_lims, 'km/s', dtype=np.float64, subs=s)
     l = UnitScalar(l, 'Angstrom')
     if v_turb is not None:
-        if isinstance(v_turb,(str,unicode)):
+        if isinstance(v_turb, str):
             try:
                 v_turb = UnitScalar(v_turb)
             except:
@@ -751,7 +761,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
         v_turb = UnitQty(v_turb, 'km/s', dtype=np.float64)
         if v_turb.shape == tuple():
             v_turb = UnitQty(float(v_turb) * np.ones(len(s.gas), dtype=np.float64),
-                             units=getattr(v_turb,'units','km/s'))
+                             units=getattr(v_turb, 'units', 'km/s'))
         assert v_turb.shape == (len(s.gas),)
         assert v_turb.units == 'km/s'
         if np.all(v_turb == 0):
@@ -767,55 +777,55 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
 
     # natural line width in frequency space, when using a Lorentzian
     # defined as: L(f) = 1/pi * (Gamma / (f**2 + Gamma**2))
-    Gamma = A_ki / ( 4. * np.pi )
+    Gamma = A_ki / (4. * np.pi)
     # ...and the velocity needed for an appropiate redshift
     # (i.e. a conversion of the width to velocity space)
-    #Gamma = (Gamma / (c/l)) * c   # c/l = f
-    Gamma = ( Gamma * l ).in_units_of(v_units, subs=s)
+    # Gamma = (Gamma / (c/l)) * c   # c/l = f
+    Gamma = (Gamma * l).in_units_of(v_units, subs=s)
 
     b_0 = np.sqrt(2.0 * kB * UnitScalar('1 K') / atomwt)
     b_0.convert_to(v_units)
-    s0 = q_e**2 / (4. * epsilon0 * m_e * c)
+    s0 = q_e ** 2 / (4. * epsilon0 * m_e * c)
     Xsec = f * s0 * l
-    Xsec = Xsec.in_units_of(l_units**2 * v_units, subs=s)
+    Xsec = Xsec.in_units_of(l_units ** 2 * v_units, subs=s)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'create a mock absorption spectrum:'
-        print '  at', los
-        if isinstance(ion,str):
-            print '  for', ion, 'at lambda =', l
+        print('create a mock absorption spectrum:')
+        print('  at', los)
+        if isinstance(ion, str):
+            print('  for', ion, 'at lambda =', l)
         else:
-            print '  at lambda =', l
-        print '  with oscillator strength f =', f
-        print '  => Xsec =', Xsec
-        print '  and atomic weight', atomwt
-        print '  => b(T=1e4K) =', b_0*np.sqrt(1e4)
-        print '  and a lifetime of 1/A_ki =', (1./A_ki)
-        print '  => Gamma =', Gamma
+            print('  at lambda =', l)
+        print('  with oscillator strength f =', f)
+        print('  => Xsec =', Xsec)
+        print('  and atomic weight', atomwt)
+        print('  => b(T=1e4K) =', b_0 * np.sqrt(1e4))
+        print('  and a lifetime of 1/A_ki =', (1. / A_ki))
+        print('  => Gamma =', Gamma)
         if v_turb is not None:
-            v_perc = np.percentile(v_turb, [10,90])
-            print '  and a turbulent motion per particle of v_turb ~(%.1f - %.1f) %s' % (
-                    v_perc[0], v_perc[-1], v_turb.units)
-        print '  using kernel "%s"' % kernel
+            v_perc = np.percentile(v_turb, [10, 90])
+            print('  and a turbulent motion per particle of v_turb ~(%.1f - %.1f) %s' % (
+                v_perc[0], v_perc[-1], v_turb.units))
+        print('  using kernel "%s"' % kernel)
 
-    v_edges = UnitArr(np.linspace(vel_extent[0], vel_extent[1], Nbins+1),
+    v_edges = UnitArr(np.linspace(vel_extent[0], vel_extent[1], Nbins + 1),
                       vel_extent.units)
 
     # get ne number of ions per particle
-    if isinstance(ion,str):
+    if isinstance(ion, str):
         ion = s.gas.get(ion)
     else:
         ion = UnitQty(ion, units=s['mass'].units, subs=s)
     # double precision needed in order not to overflow
     # 1 Msol / 1 u = 1.2e57, float max = 3.4e38, but double max = 1.8e308
     n = (ion.astype(np.float64) / atomwt).in_units_of(1, subs=s)
-    #n = n.view(np.ndarray).astype(np.float64)
+    # n = n.view(np.ndarray).astype(np.float64)
 
     if method != 'particles':
         # do SPH smoothing along the l.o.s.
         if spatial_extent is None:
-            spatial_extent = [ np.min( s.gas['pos'][:,zaxis] ),
-                               np.max( s.gas['pos'][:,zaxis] ) ]
+            spatial_extent = [np.min(s.gas['pos'][:, zaxis]),
+                              np.max(s.gas['pos'][:, zaxis])]
             spatial_extent = UnitArr(spatial_extent, spatial_extent[-1].units)
             if 1.01 * s.boxsize > spatial_extent.ptp() > 0.8 * s.boxsize:
                 # the box seems to be full with gas
@@ -824,21 +834,21 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
                 spatial_extent[1] += missing / 2.0
             spatial_extent.convert_to(s['pos'].units, subs=s)
         else:
-            spatial_extent = UnitQty( spatial_extent, s['pos'].units, subs=s )
+            spatial_extent = UnitQty(spatial_extent, s['pos'].units, subs=s)
 
         if spatial_res is None:
             spatial_res = UnitArr(np.percentile(s.gas['hsml'], 1),
                                   s.gas['hsml'].units)
         spatial_res = UnitScalar(spatial_res, s['pos'].units, subs=s)
-        N = int(max( 1e3,
-                     (spatial_extent.ptp()/spatial_res).in_units_of(1,subs=s) ))
+        N = int(max(1e3,
+                    (spatial_extent.ptp() / spatial_res).in_units_of(1, subs=s)))
         spatial_res == spatial_extent.ptp() / N
 
         if method == 'column':
             # do some padding in the 3D binning in order to use the the normation
             # process
             pad = int(pad)
-            Npx = (1+2*pad)*np.ones(3, dtype=np.int)
+            Npx = (1 + 2 * pad) * np.ones(3, dtype=np.int)
             Npx[zaxis] = N
             # mask for getting the middle column of interest
             m = [pad] * 3
@@ -847,32 +857,32 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
             if col_width is None:
                 col_width = spatial_res
             col_width = UnitScalar(col_width, s['pos'].units, subs=s)
-            w = ((0.5+2.*pad) * col_width).in_units_of(los.units, subs=s)
-            extent = UnitArr(np.empty((3,2), dtype=float), los.units)
-            extent[xaxis] = [los[0]-w, los[0]+w]
-            extent[yaxis] = [los[1]-w, los[1]+w]
+            w = ((0.5 + 2. * pad) * col_width).in_units_of(los.units, subs=s)
+            extent = UnitArr(np.empty((3, 2), dtype=float), los.units)
+            extent[xaxis] = [los[0] - w, los[0] + w]
+            extent[yaxis] = [los[1] - w, los[1] + w]
             extent[zaxis] = spatial_extent
 
             binargs = {
-                    'extent':   extent,
-                    'Npx':      Npx,
-                    'kernel':   kernel,
-                    'dV':       'dV',
-                    'hsml':     hsml,
-                    'normed':   True,
+                'extent': extent,
+                'Npx': Npx,
+                'kernel': kernel,
+                'dV': 'dV',
+                'hsml': hsml,
+                'normed': True,
             }
 
             # restrict to particles intersecting the l.o.s. column:
-            sub = s.gas[ (s.gas['pos'][:,xaxis] - s.gas['hsml'] < los[0] + col_width) &
-                         (s.gas['pos'][:,xaxis] + s.gas['hsml'] > los[0] - col_width) &
-                         (s.gas['pos'][:,yaxis] - s.gas['hsml'] < los[1] + col_width) &
-                         (s.gas['pos'][:,yaxis] + s.gas['hsml'] > los[1] - col_width) ]
+            sub = s.gas[(s.gas['pos'][:, xaxis] - s.gas['hsml'] < los[0] + col_width) &
+                        (s.gas['pos'][:, xaxis] + s.gas['hsml'] > los[0] - col_width) &
+                        (s.gas['pos'][:, yaxis] - s.gas['hsml'] < los[1] + col_width) &
+                        (s.gas['pos'][:, yaxis] + s.gas['hsml'] > los[1] - col_width)]
 
-            dV = sub['dV'].in_units_of(sub['pos'].units**3)
+            dV = sub['dV'].in_units_of(sub['pos'].units ** 3)
 
             if environment.verbose >= environment.VERBOSE_NORMAL:
-                print '  using an spatial extent of:', spatial_extent
-                print '  ... with %d bins of size %sx%s^2' % (N, col_width, spatial_res)
+                print('  using an spatial extent of:', spatial_extent)
+                print('  ... with %d bins of size %sx%s^2' % (N, col_width, spatial_res))
 
             from ..binning import SPH_to_3Dgrid
             def bin_func(s, qty, **args):
@@ -881,87 +891,88 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
                 return Q, px
 
             n_parts = n[sub._mask]
-            n   , px    = bin_func(sub, n_parts/dV, **binargs)
-            non0n       = (n!=0)
-            vel , px    = bin_func(sub, n_parts*sub['vel'][:,zaxis]/dV,
-                                   **binargs)
-            vel[non0n]  = vel[non0n] / n[non0n]
+            n, px = bin_func(sub, n_parts / dV, **binargs)
+            non0n = (n != 0)
+            vel, px = bin_func(sub, n_parts * sub['vel'][:, zaxis] / dV,
+                               **binargs)
+            vel[non0n] = vel[non0n] / n[non0n]
             # average sqrt(T), since thats what the therm. broadening scales with
-            temp, px    = bin_func(sub, n_parts*np.sqrt(sub['temp'])/dV,
-                                   **binargs)
+            temp, px = bin_func(sub, n_parts * np.sqrt(sub['temp']) / dV,
+                                **binargs)
             temp[non0n] = temp[non0n] / n[non0n]
-            temp      **= 2
+            temp **= 2
             # we actually need the column densities, not the number of particles
-            n          /= np.prod(px[[xaxis,yaxis]])
+            n /= np.prod(px[[xaxis, yaxis]])
 
             # the z-coordinates for the Hubble flow
-            los_pos     = UnitArr(np.linspace(spatial_extent[0],
-                                              spatial_extent[1]-px[zaxis], N),
-                                  spatial_extent.units)
+            los_pos = UnitArr(np.linspace(spatial_extent[0],
+                                          spatial_extent[1] - px[zaxis], N),
+                              spatial_extent.units)
         elif method == 'line':
             binargs = {
-                    'los':      los,
-                    'extent':   spatial_extent,
-                    'Npx':      N,
-                    'kernel':   kernel,
-                    'dV':       'dV',
-                    'hsml':     hsml,
-                    'xaxis':    xaxis,
-                    'yaxis':    yaxis,
+                'los': los,
+                'extent': spatial_extent,
+                'Npx': N,
+                'kernel': kernel,
+                'dV': 'dV',
+                'hsml': hsml,
+                'xaxis': xaxis,
+                'yaxis': yaxis,
             }
 
             # restrict to particles intersecting the l.o.s.:
-            sub = s.gas[ (s.gas['pos'][:,xaxis] - s.gas['hsml'] < los[0]) &
-                         (s.gas['pos'][:,xaxis] + s.gas['hsml'] > los[0]) &
-                         (s.gas['pos'][:,yaxis] - s.gas['hsml'] < los[1]) &
-                         (s.gas['pos'][:,yaxis] + s.gas['hsml'] > los[1]) ]
+            sub = s.gas[(s.gas['pos'][:, xaxis] - s.gas['hsml'] < los[0]) &
+                        (s.gas['pos'][:, xaxis] + s.gas['hsml'] > los[0]) &
+                        (s.gas['pos'][:, yaxis] - s.gas['hsml'] < los[1]) &
+                        (s.gas['pos'][:, yaxis] + s.gas['hsml'] > los[1])]
 
-            dV = sub['dV'].in_units_of(sub['pos'].units**3)
+            dV = sub['dV'].in_units_of(sub['pos'].units ** 3)
 
             if environment.verbose >= environment.VERBOSE_NORMAL:
-                print '  using an spatial extent of:', spatial_extent
-                print '  ... with %d bins of length %s' % (N, spatial_res)
+                print('  using an spatial extent of:', spatial_extent)
+                print('  ... with %d bins of length %s' % (N, spatial_res))
 
             from ..binning import SPH_3D_to_line
             bin_func = SPH_3D_to_line
+
             def bin_func(s, qty, **args):
                 Q = SPH_3D_to_line(sub, qty, **args)
-                Q, px = Q/Q.vol_voxel(), Q.res()
+                Q, px = Q / Q.vol_voxel(), Q.res()
                 Q.units = Q.units.gather()
                 return Q, px
 
             n_parts = n[sub._mask]
-            n   , px    = bin_func(sub, n_parts/dV, **binargs)
+            n, px = bin_func(sub, n_parts / dV, **binargs)
             # we actually need the column densities, not the number of particles
-            n          *= px
+            n *= px
             # for averaging, we want the integral over n_parts, not its density
-            n_  , px    = bin_func(sub, n_parts, **binargs)
-            non0n       = (n_!=0)
-            vel , px    = bin_func(sub, n_parts*sub['vel'][:,zaxis],
-                                   **binargs)
-            vel[non0n]  = vel[non0n] / n_[non0n]
+            n_, px = bin_func(sub, n_parts, **binargs)
+            non0n = (n_ != 0)
+            vel, px = bin_func(sub, n_parts * sub['vel'][:, zaxis],
+                               **binargs)
+            vel[non0n] = vel[non0n] / n_[non0n]
             # average sqrt(T), since thats what the therm. broadening scales with
-            temp, px    = bin_func(sub, n_parts*np.sqrt(sub['temp']),
-                                   **binargs)
+            temp, px = bin_func(sub, n_parts * np.sqrt(sub['temp']),
+                                **binargs)
             temp[non0n] = temp[non0n] / n_[non0n]
-            temp      **= 2
+            temp **= 2
 
             # the z-coordinates for the Hubble flow
-            los_pos     = UnitArr(np.linspace(spatial_extent[0],
-                                              spatial_extent[1]-px, N),
-                                  spatial_extent.units)
+            los_pos = UnitArr(np.linspace(spatial_extent[0],
+                                          spatial_extent[1] - px, N),
+                              spatial_extent.units)
         else:
             raise ValueError("Unkown method '%s'!" % method)
 
-        n.convert_to(l_units**-2, subs=s)
+        n.convert_to(l_units ** -2, subs=s)
         pos = None  # no use of positions in the C function
         hsml = None  # no use of smoothing lengths in the C function
         # inplace conversion possible (later conversion does not add to runtime!)
         vel.convert_to(v_units, subs=s)
         temp.convert_to('K', subs=s)
     else:
-        pos = s.gas['pos'][:,(xaxis,yaxis)]
-        vel = s.gas['vel'][:,zaxis]
+        pos = s.gas['pos'][:, (xaxis, yaxis)]
+        vel = s.gas['vel'][:, zaxis]
         temp = s.gas['temp']
         if temp.base is not None:
             temp.copy()
@@ -969,7 +980,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
         if isinstance(hsml, str):
             hsml = s.gas[hsml]
         elif isinstance(hsml, (Number, Unit)):
-            hsml = UnitScalar(hsml,s['pos'].units) * np.ones(len(s.gas),dtype=np.float64)
+            hsml = UnitScalar(hsml, s['pos'].units) * np.ones(len(s.gas), dtype=np.float64)
         else:
             hsml = UnitQty(hsml, s['pos'].units, subs=s)
         if hsml.base is not None:
@@ -978,7 +989,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
         N = len(s.gas)
 
         # the z-coordinates for the Hubble flow
-        los_pos = s.gas['pos'][:,zaxis]
+        los_pos = s.gas['pos'][:, zaxis]
 
     # add the Hubble flow
     zero_Hubble_flow_at.convert_to(los_pos.units, subs=s)
@@ -987,22 +998,22 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
     vel = vel + H_flow
 
     if pos is not None:
-        pos = pos.astype(np.float64).in_units_of(l_units,subs=s).view(np.ndarray).copy()
-    vel  = vel.astype(np.float64).in_units_of(v_units,subs=s).view(np.ndarray).copy()
-    temp = temp.in_units_of('K',subs=s).view(np.ndarray).astype(np.float64)
+        pos = pos.astype(np.float64).in_units_of(l_units, subs=s).view(np.ndarray).copy()
+    vel = vel.astype(np.float64).in_units_of(v_units, subs=s).view(np.ndarray).copy()
+    temp = temp.in_units_of('K', subs=s).view(np.ndarray).astype(np.float64)
     if hsml is not None:
-        hsml = hsml.in_units_of(l_units,subs=s).view(np.ndarray).astype(np.float64)
+        hsml = hsml.in_units_of(l_units, subs=s).view(np.ndarray).astype(np.float64)
 
-    los = los.in_units_of(l_units,subs=s) \
-             .view(np.ndarray).astype(np.float64).copy()
-    vel_extent = vel_extent.in_units_of(v_units,subs=s) \
-                           .view(np.ndarray).astype(np.float64).copy()
+    los = los.in_units_of(l_units, subs=s) \
+        .view(np.ndarray).astype(np.float64).copy()
+    vel_extent = vel_extent.in_units_of(v_units, subs=s) \
+        .view(np.ndarray).astype(np.float64).copy()
     if v_turb is not None:
-        v_turb = v_turb.in_units_of(v_units,subs=s) \
-                               .view(np.ndarray).astype(np.float64).copy()
+        v_turb = v_turb.in_units_of(v_units, subs=s) \
+            .view(np.ndarray).astype(np.float64).copy()
 
     b_0 = float(b_0.in_units_of(v_units, subs=s))
-    Xsec = float(Xsec.in_units_of(l_units**2 * v_units, subs=s))
+    Xsec = float(Xsec.in_units_of(l_units ** 2 * v_units, subs=s))
     Gamma = float(Gamma.in_units_of(v_units))
 
     taus = np.empty(Nbins, dtype=np.float64)
@@ -1010,7 +1021,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
     los_temp = np.empty(Nbins, dtype=np.float64)
     restr_column_lims = restr_column_lims.view(np.ndarray).astype(np.float64)
     restr_column = np.empty(N, dtype=np.float64)
-    C.cpygad.absorption_spectrum(method == 'particles',
+    C.cpygad.absorption_spectrum(method == 'particles'.encode('ascii'),
                                  C.c_size_t(N),
                                  C.c_void_p(pos.ctypes.data) if pos is not None else None,
                                  C.c_void_p(vel.ctypes.data),
@@ -1031,7 +1042,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
                                  C.c_void_p(restr_column.ctypes.data),
                                  C.create_string_buffer(kernel),
                                  C.c_double(s.boxsize.in_units_of(l_units))
-    )
+                                 )
 
     los_dens = UnitArr(los_dens, 'cm**-2')
     los_temp = UnitArr(los_temp, 'K')
@@ -1046,23 +1057,24 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
             l_edges = l * (1.0 + z_edges)
             EW_l = EW(taus, l_edges)
             extinct = np.exp(-np.asarray(taus))
-            v_mean = UnitArr( np.average((v_edges[:-1]+v_edges[1:])/2.,
-                                         weights=extinct), v_edges.units )
-            l_mean = UnitArr( np.average((l_edges[:-1]+l_edges[1:])/2.,
-                                         weights=extinct), l_edges.units )
-            print 'created line with:'
-            print '  EW =', EW_l
-            print '  v0 =', v_mean
-            print '  l0 =', l_mean
+            v_mean = UnitArr(np.average((v_edges[:-1] + v_edges[1:]) / 2.,
+                                        weights=extinct), v_edges.units)
+            l_mean = UnitArr(np.average((l_edges[:-1] + l_edges[1:]) / 2.,
+                                        weights=extinct), l_edges.units)
+            print('created line with:')
+            print('  EW =', EW_l)
+            print('  v0 =', v_mean)
+            print('  l0 =', l_mean)
         except:
             pass
 
     return taus, los_dens, los_temp, v_edges, restr_column
 
+
 def EW(taus, edges):
     '''
     Calculate the equivalent width of the given line / spectrum.
-    
+
     Args:
         taus (array-like):  The optical depths in the bins.
         edges (UnitQty):    The edges of the bins. May and should have units,
@@ -1075,16 +1087,17 @@ def EW(taus, edges):
                                     the units of the edges).
     '''
     edges = UnitQty(edges)
-    if edges.units in [1,None]:
+    if edges.units in [1, None]:
         edges = UnitArr(edges, 'Angstrom')
-    if edges.shape!=tuple() and len(taus)+1 != len(edges):
+    if edges.shape != tuple() and len(taus) + 1 != len(edges):
         raise ValueError("The length of the edges does not match the length of " +
                          "the optical depths!")
     if edges.shape == tuple():
-        EW = edges * np.sum( (1.0 - np.exp(-np.asarray(taus))) )
+        EW = edges * np.sum((1.0 - np.exp(-np.asarray(taus))))
     else:
-        EW = np.sum( (1.0 - np.exp(-np.asarray(taus))) * (edges[1:]-edges[:-1]) )
+        EW = np.sum((1.0 - np.exp(-np.asarray(taus))) * (edges[1:] - edges[:-1]))
     return EW
+
 
 def velocities_to_redshifts(vs, z0=0.0):
     '''
@@ -1103,9 +1116,10 @@ def velocities_to_redshifts(vs, z0=0.0):
     '''
     vs = UnitQty(vs, 'km/s', dtype=float)
     zs = (vs / c).in_units_of(1).view(np.ndarray)
-    if z0 != 0.0:   # avoid multiplication of 1.
-        zs = (1.+zs)*(1.+z0) - 1.
+    if z0 != 0.0:  # avoid multiplication of 1.
+        zs = (1. + zs) * (1. + z0) - 1.
     return zs
+
 
 def redshifts_to_velocities(zs, z0=0.0):
     '''
@@ -1123,8 +1137,8 @@ def redshifts_to_velocities(zs, z0=0.0):
         vs (UnitQty):       The velocities corresponding to the given redshifts.
     '''
     zs = np.array(zs, dtype=float)
-    if z0 != 0.0:   # avoid division by 1.
-        zs = (zs+1.) / (1.+z0) - 1.
+    if z0 != 0.0:  # avoid division by 1.
+        zs = (zs + 1.) / (1. + z0) - 1.
     vs = c * zs
     return vs
 

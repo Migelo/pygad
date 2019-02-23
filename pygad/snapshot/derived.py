@@ -55,14 +55,14 @@ Examples:
 '''
 __all__ = ['ptypes_and_deps', 'read_derived_rules', 'general']
 
-from ConfigParser import SafeConfigParser
+from configparser import SafeConfigParser
 from .. import utils
 from .. import gadget
 from .. import environment
 from ..units import UnitQty
 import re
 import warnings
-import derive_rules
+from . import derive_rules
 
 _rules = {}
 general = {
@@ -109,7 +109,7 @@ def ptypes_and_deps(defi, snap):
             deps.add(name)
         elif name in gadget.families:
             fam = gadget.families[name]
-            ptypes = [(ptypes[i] and (i in fam)) for i in xrange(6)]
+            ptypes = [(ptypes[i] and (i in fam)) for i in range(6)]
         elif hasattr(derive_rules, name):
             func = getattr(derive_rules, name)
             if not hasattr(func,'_deps') and not func is UnitQty:
@@ -157,7 +157,7 @@ def read_derived_rules(config, delete_old=False):
         raise IOError('Config file "%s" does not exist!' % config)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'reading config file "%s"' % filename
+        print('reading config file "%s"' % filename)
 
     cfg = SafeConfigParser(allow_no_value=True)
     cfg.optionxform = str
@@ -210,7 +210,7 @@ def read_derived_rules(config, delete_old=False):
         _rules[el] = 'elements[:,%d]' % i
     _rules.update( cfg.items('rules') )
 
-    for derived_name in _rules.keys():
+    for derived_name in list(_rules.keys()):
         if derived_name=='lum':
             mag, lum = 'mag', 'lum'
         elif re.match('lum_[a-zA-Z]', derived_name):

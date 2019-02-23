@@ -153,7 +153,7 @@ def find_maxima_prominence_isolation(arr, prominence=None, sortby='index',
 
     # find all the local extrema in the smoothed spectrum
     extrema = [ ]
-    for i in xrange(len(arr)):
+    for i in range(len(arr)):
         if is_local_max(i):
             extrema.append( ['max', arr[i], i] )
         elif is_local_min(i):
@@ -169,7 +169,7 @@ def find_maxima_prominence_isolation(arr, prominence=None, sortby='index',
         def find_one_sided_prominence(iex, ex, left):
             prom_one = np.inf
             vmin = ex[1]
-            nrange = xrange(iex-1,-1,-1) if left else xrange(iex+1,len(extrema))
+            nrange = range(iex-1,-1,-1) if left else range(iex+1,len(extrema))
             for n in nrange:
                 if extrema[n][0] == 'min':
                     if extrema[n][1] < vmin: vmin = extrema[n][1]
@@ -186,7 +186,7 @@ def find_maxima_prominence_isolation(arr, prominence=None, sortby='index',
         ex.append( prom )
         # find the isolation
         iso = max( ex[2]+1, len(arr)-ex[2] )
-        for i in xrange(1,max(ex[2],len(arr)-ex[2])):
+        for i in range(1,max(ex[2],len(arr)-ex[2])):
             if ex[2]-i>= 0 and arr[ex[2]-i] > ex[1]:
                 iso = i
                 break

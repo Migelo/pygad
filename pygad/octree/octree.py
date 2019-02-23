@@ -72,15 +72,16 @@ Example:
     >>> del_quantity(tree, 'mass')
 '''
 __all__ = ['OctNode', 'Octree', 'count_nodes', 'count_leaves', 'count_particles',
-          'max_depth', 'find_node', 'find_ngbs', 'all_indices', 'apply_on',
-          'del_quantity', 'populate_center_of_mass',
-          'delete_where_too_many_heavy_particles']
+           'max_depth', 'find_node', 'find_ngbs', 'all_indices', 'apply_on',
+           'del_quantity', 'populate_center_of_mass',
+           'delete_where_too_many_heavy_particles']
 
 import numpy as np
 from scipy.spatial.distance import cdist
 from ..units import *
 from .. import environment
 import sys
+
 
 def find_octant(pos, ref):
     '''Index corresponding to an octant of 'pos' with respect to 'ref'.'''
@@ -89,6 +90,7 @@ def find_octant(pos, ref):
     if pos[1] < ref[1]: res += 2
     if pos[2] < ref[2]: res += 4
     return res
+
 
 class OctNode(object):
     '''
@@ -118,20 +120,22 @@ class OctNode(object):
     SPLIT_NUM = 7
 
     def __init__(self, center, side, depth):
-        self.center = center        # the center of this octree node cube
-        self.side = side            # the (full) side length of this cube
-        self.depth = depth          # the depth level of this node (root is 0)
-        self.is_leaf = True         # whether this node has no children
-        self.child = []             # either the child nodes or the indices of the
-                                    # positions if this is a leaf node
+        self.center = center  # the center of this octree node cube
+        self.side = side  # the (full) side length of this cube
+        self.depth = depth  # the depth level of this node (root is 0)
+        self.is_leaf = True  # whether this node has no children
+        self.child = []  # either the child nodes or the indices of the
+        # positions if this is a leaf node
 
     def __repr__(self):
         re = 'OctNode('
         re += 'center=[%.4g,%.4g,%.4g]' % tuple(coord for coord in self.center)
         re += ', side=%.4g' % self.side
         re += ', depth=%d' % self.depth
-        if self.is_leaf: re += ', leaf'
-        else: re += ', non-leaf'
+        if self.is_leaf:
+            re += ', leaf'
+        else:
+            re += ', non-leaf'
         re += ')'
         return re
 
@@ -194,16 +198,24 @@ class OctNode(object):
             if self.child[octant] is None:
                 cntr = self.center
                 off = self.side / 4.0
-                if octant == 0:   cntr = (cntr[0]+off, cntr[1]+off, cntr[2]+off)
-                elif octant == 1: cntr = (cntr[0]-off, cntr[1]+off, cntr[2]+off)
-                elif octant == 2: cntr = (cntr[0]+off, cntr[1]-off, cntr[2]+off)
-                elif octant == 3: cntr = (cntr[0]-off, cntr[1]-off, cntr[2]+off)
-                elif octant == 4: cntr = (cntr[0]+off, cntr[1]+off, cntr[2]-off)
-                elif octant == 5: cntr = (cntr[0]-off, cntr[1]+off, cntr[2]-off)
-                elif octant == 6: cntr = (cntr[0]+off, cntr[1]-off, cntr[2]-off)
-                elif octant == 7: cntr = (cntr[0]-off, cntr[1]-off, cntr[2]-off)
+                if octant == 0:
+                    cntr = (cntr[0] + off, cntr[1] + off, cntr[2] + off)
+                elif octant == 1:
+                    cntr = (cntr[0] - off, cntr[1] + off, cntr[2] + off)
+                elif octant == 2:
+                    cntr = (cntr[0] + off, cntr[1] - off, cntr[2] + off)
+                elif octant == 3:
+                    cntr = (cntr[0] - off, cntr[1] - off, cntr[2] + off)
+                elif octant == 4:
+                    cntr = (cntr[0] + off, cntr[1] + off, cntr[2] - off)
+                elif octant == 5:
+                    cntr = (cntr[0] - off, cntr[1] + off, cntr[2] - off)
+                elif octant == 6:
+                    cntr = (cntr[0] + off, cntr[1] - off, cntr[2] - off)
+                elif octant == 7:
+                    cntr = (cntr[0] - off, cntr[1] - off, cntr[2] - off)
                 cntr = np.array(cntr)
-                self.child[octant] = OctNode(cntr, self.side/2.0, self.depth+1)
+                self.child[octant] = OctNode(cntr, self.side / 2.0, self.depth + 1)
             self.child[octant].insert(idx, pos_data)
 
 
@@ -230,12 +242,12 @@ def Octree(pos_data, idx=None, center=None, world_size=None):
     from ..snapshot.snapshot import _Snap
     if isinstance(pos_data, _Snap):
         s = pos_data
-        bz = float( s.boxsize.in_units_of(s['pos'].units, copy=False) )
-        return Octree(s['pos'], center=[bz/2.]*3, world_size=bz)
+        bz = float(s.boxsize.in_units_of(s['pos'].units, copy=False))
+        return Octree(s['pos'], center=[bz / 2.] * 3, world_size=bz)
 
     if environment.verbose >= environment.VERBOSE_TALKY:
-        print 'build a Octree with %s positions' % (
-                utils.nice_big_num_str(len(s)))
+        print('build a Octree with %s positions' % (
+            utils.nice_big_num_str(len(s))))
         sys.stdout.flush()
 
     if center is None:
@@ -259,14 +271,14 @@ def Octree(pos_data, idx=None, center=None, world_size=None):
     pos_data = np.array(pos_data)
 
     root = OctNode(np.array(list(center)), float(world_size), 0)
-    
+
     if idx is None:
-        idx = xrange(len(pos_data))
+        idx = range(len(pos_data))
     for i in idx:
         root.insert(i, pos_data)
 
     if environment.verbose >= environment.VERBOSE_TALKY:
-        print 'done.'
+        print('done.')
         sys.stdout.flush()
 
     return root
@@ -274,12 +286,13 @@ def Octree(pos_data, idx=None, center=None, world_size=None):
 
 def count_nodes(node):
     '''Count the total number of nodes within the given tree/node.'''
-    cnt = 1     # there is at least this node
+    cnt = 1  # there is at least this node
     if not node.is_leaf:
         for child in node.child:
             if child is not None:
                 cnt += count_nodes(child)
     return cnt
+
 
 def count_leaves(node):
     '''Count the number of leaf nodes within the given tree/node.'''
@@ -291,6 +304,7 @@ def count_leaves(node):
             cnt += count_leaves(child)
     return cnt
 
+
 def count_particles(node):
     '''Count the number of particles within the given tree/node.'''
     if node.is_leaf:
@@ -301,6 +315,7 @@ def count_particles(node):
             cnt += count_particles(child)
     return cnt
 
+
 def max_depth(node):
     '''Find the maximum depth within the given tree/node.'''
     if node.is_leaf:
@@ -310,6 +325,7 @@ def max_depth(node):
         if child is not None:
             d_max = max(d_max, max_depth(child))
     return d_max
+
 
 def find_node(tree, pos):
     '''
@@ -333,6 +349,7 @@ def find_node(tree, pos):
         return tree
     return find_node(tree.child[o], pos)
 
+
 def _find_ngbs(node, pos, r, pos_data):
     '''Helper function for speed. See find_ngbs!'''
     if node.is_leaf:
@@ -349,6 +366,7 @@ def _find_ngbs(node, pos, r, pos_data):
             continue
         ngbs += _find_ngbs(child, pos, r, pos_data)
     return ngbs
+
 
 def find_ngbs(node, pos, r, pos_data):
     '''
@@ -375,6 +393,7 @@ def find_ngbs(node, pos, r, pos_data):
         pos_data = pos_data.view(np.ndarray)
     return _find_ngbs(node, pos, r, pos_data)
 
+
 def _all_indices(node):
     '''Helper function for speed (no copy). See all_indices!'''
     if node.is_leaf:
@@ -386,12 +405,14 @@ def _all_indices(node):
                 idx += _all_indices(child)
         return idx
 
+
 def all_indices(node):
     '''Gather all position indices within the tree.'''
     if node.is_leaf:
-        return np.array(node.child,int)
+        return np.array(node.child, int)
     else:
-        return np.array(_all_indices(node),int)
+        return np.array(_all_indices(node), int)
+
 
 def apply_on(node, action):
     '''
@@ -412,6 +433,7 @@ def apply_on(node, action):
                 children[o] = apply_on(child, action)
     return action(node, children)
 
+
 def del_quantity(node, name):
     '''Delete a quantity with the given name at each node.'''
     if not node.is_leaf:
@@ -419,6 +441,7 @@ def del_quantity(node, name):
             if child is not None:
                 del_quantity(child, name)
     delattr(node, name)
+
 
 class populate_center_of_mass(object):
     '''
@@ -448,7 +471,7 @@ class populate_center_of_mass(object):
             r = self.pos[node.child]
             m = self.mass[node.child]
         else:
-            r, m = np.zeros((8,3)), np.zeros(8)
+            r, m = np.zeros((8, 3)), np.zeros(8)
             for o, child in enumerate(children):
                 if child is not None:
                     r[o] = child[0]
@@ -456,6 +479,7 @@ class populate_center_of_mass(object):
         setattr(node, 'mass', m.sum())
         setattr(node, 'com', (m * r.T).sum(axis=1) / node.mass)
         return node.com, node.mass
+
 
 class delete_where_too_many_heavy_particles(object):
     '''
@@ -486,15 +510,17 @@ class delete_where_too_many_heavy_particles(object):
 
     def __init__(self, snap, min_side, max_frac=1e-3, lowres_pts=None):
         self.max_frac = max_frac
-        self.min_side = float(UnitScalar(min_side,snap.boxsize.units,subs=snap))
+        self.min_side = float(UnitScalar(min_side, snap.boxsize.units, subs=snap))
 
-        self.lowres_pts = [2,3] if lowres_pts is None else list(lowres_pts)
+        self.lowres_pts = [2, 3] if lowres_pts is None else list(lowres_pts)
         self.N_cumsum = np.cumsum(snap.parts)
+
         def is_low_res(i):
             for pt in self.lowres_pts:
-                if self.N_cumsum[pt-1] <= i < self.N_cumsum[pt]:
+                if self.N_cumsum[pt - 1] <= i < self.N_cumsum[pt]:
                     return True
             return False
+
         self.is_low_res_idx = is_low_res
 
     def __call__(self, node, children):
@@ -507,7 +533,7 @@ class delete_where_too_many_heavy_particles(object):
             for o, child in enumerate(children):
                 if child is not None:
                     if node.child[o].side > self.min_side and (child[1] == 0 \
-                            or float(child[0]) / child[1] > self.max_frac):
+                                                               or float(child[0]) / child[1] > self.max_frac):
                         node.child[o] = None
                     else:
                         N_low_res += child[0]

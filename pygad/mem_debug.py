@@ -48,19 +48,17 @@ except ImportError:
     # Python 3.x compatibility
     InstanceType = None
 
-
 __author__ = "Marius Gedminas (marius@gedmin.as)"
 __copyright__ = "Copyright (c) 2008-2016 Marius Gedminas and contributors"
 __license__ = "MIT"
 __version__ = "2.1.0.dev0-pygadmod"
 __date__ = "2016-01-25"
 
-
 try:
-    basestring
+    str
 except NameError:
     # Python 3.x compatibility
-    basestring = str
+    str = str
 
 try:
     iteritems = dict.iteritems
@@ -72,10 +70,10 @@ except AttributeError:
 def get_peak_RAM_usage(who=resource.RUSAGE_SELF):
     '''
     Get the maximum amount of RAM (resident memory) used so far in GB.
-    
+
     The function is using the `resource` module and the `ru_maxrss` of
     `getrusage()`.
-    
+
     Args:
         who (int):      For the current process or for its children (you should
                         use resource.RUSAGE_*).
@@ -86,10 +84,10 @@ def get_peak_RAM_usage(who=resource.RUSAGE_SELF):
     usage = resource.getrusage(who).ru_maxrss
     if sys.platform == 'darwin':
         # seems OSX returns byte
-        return usage / 1024.**3
+        return usage / 1024. ** 3
     else:
         # other platforms seem to return kilobyte
-        return usage / 1024.**2
+        return usage / 1024. ** 2
 
 
 def count(typename, objects=None):
@@ -202,7 +200,7 @@ def most_common_types(limit=10, objects=None, shortnames=True):
        New parameter: ``shortnames``.
 
     """
-    stats = sorted(typestats(objects, shortnames=shortnames).items(),
+    stats = sorted(list(typestats(objects, shortnames=shortnames).items()),
                    key=operator.itemgetter(1), reverse=True)
     if limit:
         stats = stats[:limit]
@@ -282,7 +280,7 @@ def show_growth(limit=10, peak_stats={}, shortnames=True, file=sys.stdout):
         if count > old_count:
             deltas[name] = count - old_count
             peak_stats[name] = count
-    deltas = sorted(deltas.items(), key=operator.itemgetter(1),
+    deltas = sorted(list(deltas.items()), key=operator.itemgetter(1),
                     reverse=True)
     if limit:
         deltas = deltas[:limit]
@@ -592,7 +590,8 @@ def show_chain(*chains, **kw):
 
     def in_chains(x, ids=set(map(id, itertools.chain(*chains)))):
         return id(x) in ids
-    max_depth = max(map(len, chains)) - 1
+
+    max_depth = max(list(map(len, chains))) - 1
     if backrefs:
         show_backrefs([chain[-1] for chain in chains], max_depth=max_depth,
                       filter=in_chains, **kw)
@@ -635,7 +634,7 @@ def _find_chain(obj, predicate, edge_func, max_depth=20, extra_ignore=()):
     ignore.add(id(depth))
     ignore.add(id(parent))
     ignore.add(id(ignore))
-    ignore.add(id(sys._getframe()))   # this function
+    ignore.add(id(sys._getframe()))  # this function
     ignore.add(id(sys._getframe(1)))  # find_chain/find_backref_chain
     gc.collect()
     while queue:
@@ -693,7 +692,7 @@ def _show_graph(objs, edge_func, swap_source_target,
     ignore.add(id(queue))
     ignore.add(id(depth))
     ignore.add(id(ignore))
-    ignore.add(id(sys._getframe()))   # this function
+    ignore.add(id(sys._getframe()))  # this function
     ignore.add(id(sys._getframe().f_locals))
     ignore.add(id(sys._getframe(1)))  # show_refs/show_backrefs
     ignore.add(id(sys._getframe(1).f_locals))
@@ -744,7 +743,7 @@ def _show_graph(objs, edge_func, swap_source_target,
         for source in neighbours:
             if id(source) in ignore:
                 continue
-            if filter and not filter(source):
+            if filter and not list(filter(source)):
                 continue
             if n >= too_many:
                 skipped += 1
@@ -785,7 +784,7 @@ def _show_graph(objs, edge_func, swap_source_target,
     # The file should only be closed if this function was in charge of opening
     # the file.
     f.close()
-    print("Graph written to %s (%d nodes)" % (dot_filename, nodes))
+    print(("Graph written to %s (%d nodes)" % (dot_filename, nodes)))
     _present_graph(dot_filename, filename)
 
 
@@ -815,10 +814,10 @@ def _present_graph(dot_filename, filename=None):
         dot.wait()
         if dot.returncode != 0:
             # XXX: shouldn't this go to stderr or a log?
-            print('dot failed (exit code %d) while executing "%s"'
-                  % (dot.returncode, ' '.join(cmd)))
+            print(('dot failed (exit code %d) while executing "%s"'
+                   % (dot.returncode, ' '.join(cmd))))
         else:
-            print("Image generated as %s" % filename)
+            print(("Image generated as %s" % filename))
     else:
         if not filename:
             print("Graph viewer (xdot) and image renderer (dot) not found,"
@@ -851,9 +850,9 @@ def _obj_label(obj, extra_info=None, refcounts=False, shortnames=True):
 
 def _quote(s):
     return (s.replace("\\", "\\\\")
-             .replace("\"", "\\\"")
-             .replace("\n", "\\n")
-             .replace("\0", "\\\\0"))
+            .replace("\"", "\\\"")
+            .replace("\n", "\\n")
+            .replace("\0", "\\\\0"))
 
 
 def _get_obj_type(obj):
@@ -896,10 +895,10 @@ def _short_repr(obj):
                 return obj.__func__.__name__
         except AttributeError:  # pragma: nocover
             # Python < 2.6 compatibility
-            if obj.im_self is not None:
-                return obj.im_func.__name__ + ' (bound)'
+            if obj.__self__ is not None:
+                return obj.__func__.__name__ + ' (bound)'
             else:
-                return obj.im_func.__name__
+                return obj.__func__.__name__
 
     if isinstance(obj, types.FrameType):
         return '%s:%s' % (obj.f_code.co_filename, obj.f_lineno)
@@ -907,7 +906,7 @@ def _short_repr(obj):
         return '%d items' % len(obj)
     r = repr(obj)
     if len(r) > 40:
-        r = r[:23]+'[...]'+r[-12:]
+        r = r[:23] + '[...]' + r[-12:]
     return r
 
 
@@ -918,9 +917,9 @@ def _gradient(start_color, end_color, depth, max_depth):
     h1, s1, v1 = start_color
     h2, s2, v2 = end_color
     f = float(depth) / max_depth
-    h = h1 * (1-f) + h2 * f
-    s = s1 * (1-f) + s2 * f
-    v = v1 * (1-f) + v2 * f
+    h = h1 * (1 - f) + h2 * f
+    s = s1 * (1 - f) + s2 * f
+    v = v1 * (1 - f) + v2 * f
     return h, s, v
 
 
@@ -941,9 +940,9 @@ def _edge_label(source, target, shortnames=True):
                 return ' [label="__func__",weight=10]'
         except AttributeError:  # pragma: nocover
             # Python < 2.6 compatibility
-            if target is source.im_self:
+            if target is source.__self__:
                 return ' [label="im_self",weight=10]'
-            if target is source.im_func:
+            if target is source.__func__:
                 return ' [label="im_func",weight=10]'
     if isinstance(source, types.FunctionType):
         for k in dir(source):
@@ -952,7 +951,7 @@ def _edge_label(source, target, shortnames=True):
     if isinstance(source, dict):
         for k, v in iteritems(source):
             if v is target:
-                if isinstance(k, basestring) and _is_identifier(k):
+                if isinstance(k, str) and _is_identifier(k):
                     return ' [label="%s",weight=2]' % _quote(k)
                 else:
                     if shortnames:

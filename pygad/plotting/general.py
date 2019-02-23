@@ -29,6 +29,8 @@ CM_DEF = 'viridis'
 
 # cf. http://alienryderflex.com/hsp.html
 RGB_lum_weight = np.array([0.299, 0.587, 0.114])
+
+
 def luminance(colors):
     '''
     Return the luminance of (a) color(s).
@@ -45,8 +47,9 @@ def luminance(colors):
     if len(colors.shape) == 1:
         c = colors[:3]
     else:
-        c = colors[:,:3]
-    return np.sqrt( np.dot(c**2, RGB_lum_weight) )
+        c = colors[:, :3]
+    return np.sqrt(np.dot(c ** 2, RGB_lum_weight))
+
 
 def isolum_cmap(cmap, isolum=1.0, desat=None):
     '''
@@ -70,22 +73,23 @@ def isolum_cmap(cmap, isolum=1.0, desat=None):
         if not (0.0 <= desat <= 1.0):
             raise ValueError('`desat` needs to be in [0,1], but is %s!' % desat)
         hsv = mpl.colors.rgb_to_hsv(colors[:, :3])
-        hsv[:, 1] *= 1.0-desat
+        hsv[:, 1] *= 1.0 - desat
         colors[:, :3] = mpl.colors.hsv_to_rgb(hsv)
-    
+
     # convert RGBA to perceived greyscale luminance
     # cf. http://alienryderflex.com/hsp.html
     if not (0.0 <= isolum <= 1.0):
         raise ValueError('`isolum` needs to be in [0,1], but is %s!' % isolum)
-    lum = (isolum * luminance(colors)) + (1.-isolum)
-    for i in xrange(3):
+    lum = (isolum * luminance(colors)) + (1. - isolum)
+    for i in range(3):
         colors[:, i] /= lum
     # if rgb=(1,1,1), then lum=sqrt(3)>1
-    colors[:, :3] /= np.max(colors[:,:3])
+    colors[:, :3] /= np.max(colors[:, :3])
     lum = luminance(colors)
-    
+
     return mpl.colors.LinearSegmentedColormap.from_list(cmap.name + '_lumnormed',
-                                                        colors, cmap.N)        
+                                                        colors, cmap.N)
+
 
 def color_code(im_lum, im_col, cmap=CM_DEF, vlim=None, clim=None,
                zero_is_white=False):
@@ -112,27 +116,28 @@ def color_code(im_lum, im_col, cmap=CM_DEF, vlim=None, clim=None,
         im (np.ndarray):        The rgb image (shape (w,h,3)).
     '''
     if vlim is None:
-        vlim = np.percentile(im_lum[np.isfinite(im_lum)], [0,100])
+        vlim = np.percentile(im_lum[np.isfinite(im_lum)], [0, 100])
     if clim is None:
-        clim = np.percentile(im_col[np.isfinite(im_col)], [0,100])
+        clim = np.percentile(im_col[np.isfinite(im_col)], [0, 100])
 
     im_lum = scale01(im_lum, vlim)
     im_col = scale01(im_col, clim)
 
-    if isinstance(cmap,str): cmap = mpl.cm.get_cmap(cmap)
+    if isinstance(cmap, str): cmap = mpl.cm.get_cmap(cmap)
     im = cmap(im_col)
 
     if zero_is_white:
-        white = np.ones( im.shape[:-1] )
-        im[:,:,0] = im_lum*im[:,:,0] + (1.-im_lum)*white
-        im[:,:,1] = im_lum*im[:,:,1] + (1.-im_lum)*white
-        im[:,:,2] = im_lum*im[:,:,2] + (1.-im_lum)*white
+        white = np.ones(im.shape[:-1])
+        im[:, :, 0] = im_lum * im[:, :, 0] + (1. - im_lum) * white
+        im[:, :, 1] = im_lum * im[:, :, 1] + (1. - im_lum) * white
+        im[:, :, 2] = im_lum * im[:, :, 2] + (1. - im_lum) * white
     else:
-        im[:,:,0] *= im_lum
-        im[:,:,1] *= im_lum
-        im[:,:,2] *= im_lum
+        im[:, :, 0] *= im_lum
+        im[:, :, 1] *= im_lum
+        im[:, :, 2] *= im_lum
 
     return im
+
 
 def show_image(m, extent=None, cmap=CM_DEF, vlim=None, aspect=None,
                interpolation='nearest', ax=None, **kwargs):
@@ -170,10 +175,10 @@ def show_image(m, extent=None, cmap=CM_DEF, vlim=None, aspect=None,
         ax (AxesSubplot):   The axis plotted on.
         im (AxesImage):     The image instance created.
     '''
-    if len(m.shape)!=2 and not (len(m.shape)==3 and m.shape[-1] in [3,4]):
+    if len(m.shape) != 2 and not (len(m.shape) == 3 and m.shape[-1] in [3, 4]):
         raise ValueError('Image has to have shape (w,h), (w,h,3) or (w,h,4)!')
     if extent is None:
-        extent = getattr(m,'extent',None)
+        extent = getattr(m, 'extent', None)
         if extent is None:
             raise ValueError('No extent given and `m` is not a `Map`!')
 
@@ -181,20 +186,21 @@ def show_image(m, extent=None, cmap=CM_DEF, vlim=None, aspect=None,
         fig, ax = plt.subplots()
     else:
         fig = ax.get_figure()
-    vmin,vmax = vlim if vlim is not None else (None,None)
+    vmin, vmax = vlim if vlim is not None else (None, None)
     if extent is not None:
         extent = np.asarray(extent).ravel()
 
     if len(m.shape) == 2:
         m = m.T
     else:
-        m = np.dstack( [m[:,:,i].T for i in range(m.shape[-1])] )
+        m = np.dstack([m[:, :, i].T for i in range(m.shape[-1])])
 
     im = ax.imshow(m, origin='lower', extent=extent,
                    cmap=cmap, vmin=vmin, vmax=vmax,
                    aspect=aspect, interpolation=interpolation, **kwargs)
 
     return fig, ax, im
+
 
 def scatter_map(x, y, s=None, qty=None, av=None, bins=150, extent=None,
                 logscale=False, vlim=None, cmap=None, colors=None, colors_av=None,
@@ -262,16 +268,16 @@ def scatter_map(x, y, s=None, qty=None, av=None, bins=150, extent=None,
     yname = ''
     qtyname = ''
     cname = ''
-    if isinstance(x,(str,unicode)):
+    if isinstance(x, str):
         xname = x
         x = s.get(x)
-    if isinstance(y,(str,unicode)):
+    if isinstance(y, str):
         yname = y
         y = s.get(y)
-    if isinstance(qty,(str,unicode)):
+    if isinstance(qty, str):
         qtyname = qty
         qty = s.get(qty)
-    if isinstance(av,(str,unicode)):
+    if isinstance(av, str):
         av = s.get(av)
     if cmap is None:
         cmap = CM_DEF if colors is None else 'isolum'
@@ -279,50 +285,50 @@ def scatter_map(x, y, s=None, qty=None, av=None, bins=150, extent=None,
         cmap.set_bad('w' if zero_is_white else 'k')
         if fontcolor is None:
             fontcolor = 'k' if zero_is_white else 'w'
-    if isinstance(cmap,str):
+    if isinstance(cmap, str):
         cmap = mpl.cm.get_cmap(cmap)
-    if isinstance(colors,(str,unicode)):
+    if isinstance(colors, str):
         cname = colors
         colors = s.get(colors)
-    if isinstance(colors_av,(str,unicode)):
+    if isinstance(colors_av, str):
         colors_av = s.get(colors_av)
     if fontcolor is None:
         fontcolor = 'k' if zero_is_white else 'w'
 
     if extent is None:
-        extent = np.asarray( [[np.min(x), np.max(x)], [np.min(y), np.max(y)]] )
+        extent = np.asarray([[np.min(x), np.max(x)], [np.min(y), np.max(y)]])
     else:
-        if getattr(extent,'units',None):
+        if getattr(extent, 'units', None):
             extent = [extent[0], extent[1]]
-            if getattr(x,'units',None) is not None:
+            if getattr(x, 'units', None) is not None:
                 extent[0] = extent[0].in_units_of(x.units)
-            if getattr(y,'units',None) is not None:
+            if getattr(y, 'units', None) is not None:
                 extent[1] = extent[1].in_units_of(y.units)
         extent = np.asarray(extent)
 
     if av is not None:
-        grid = gridbin2d(x, y, av*qty, bins=bins, extent=extent,
-                        nanval=0.0)
-        grid /= gridbin2d(x, y, av, bins=bins, extent=extent,
+        grid = gridbin2d(x, y, av * qty, bins=bins, extent=extent,
                          nanval=0.0)
-        #grid[np.isnan(grid)] = 0.0
+        grid /= gridbin2d(x, y, av, bins=bins, extent=extent,
+                          nanval=0.0)
+        # grid[np.isnan(grid)] = 0.0
     else:
         grid = gridbin2d(x, y, qty, bins=bins, extent=extent, nanval=0.0)
-    if getattr(vlim,'units',None) is not None \
-            and getattr(grid,'units',None) is not None:
+    if getattr(vlim, 'units', None) is not None \
+            and getattr(grid, 'units', None) is not None:
         vlim = vlim.in_units_of(grid.units)
     if logscale:
-        grid = np.log10( grid )
+        grid = np.log10(grid)
         if vlim is not None:
             vlim = np.log10(vlim)
     if vlim is None:
-        vlim = np.percentile(grid[np.isfinite(grid)], [1,99])
+        vlim = np.percentile(grid[np.isfinite(grid)], [1, 99])
 
     if colors is None:
         clim = vlim
     else:
         if colors_av is not None:
-            col = gridbin2d(x, y, colors_av*colors, bins=bins, extent=extent,
+            col = gridbin2d(x, y, colors_av * colors, bins=bins, extent=extent,
                             nanval=0.0)
             col /= gridbin2d(x, y, colors_av, bins=bins, extent=extent,
                              nanval=0.0)
@@ -331,7 +337,7 @@ def scatter_map(x, y, s=None, qty=None, av=None, bins=150, extent=None,
             col = gridbin2d(x, y, colors, bins=bins, extent=extent, nanval=0.0)
 
         if clogscale:
-            col = np.log10( col )
+            col = np.log10(col)
             if clim is not None:
                 clim = np.log10(clim)
 
@@ -350,16 +356,16 @@ def scatter_map(x, y, s=None, qty=None, av=None, bins=150, extent=None,
             name = cname if colors is not None else qtyname
             count_units = r'$\mathrm{count}$'
             if colors is not None:
-                units = getattr(colors,'units',None)
+                units = getattr(colors, 'units', None)
             elif qty is not None:
-                units = getattr(qty,'units',None)
+                units = getattr(qty, 'units', None)
             else:
                 units = count_units
             if units == 1 or units is None:
                 units = ''
             elif units is not count_units:
                 units = r'[$%s$]' % units.latex()
-            cbartitle = name + (' ' if (name!='' and units!='') else '') + units
+            cbartitle = name + (' ' if (name != '' and units != '') else '') + units
             if (logscale and colors is None) or \
                     (clogscale and colors is not None):
                 cbartitle = r'$\log_{10}$(' + cbartitle + ')'
@@ -367,19 +373,20 @@ def scatter_map(x, y, s=None, qty=None, av=None, bins=150, extent=None,
         cbar = add_cbar(ax, cbartitle, clim=clim, cmap=cmap, fontcolor=fontcolor,
                         fontsize=fontsize, fontoutline=outline, nticks=7)
 
-    xunits = r'[$%s$]' % x.units.latex() if getattr(x,'units',None) else ''
-    yunits = r'[$%s$]' % y.units.latex() if getattr(y,'units',None) else ''
-    ax.set_xlabel( '%s%s' % (xname, xunits), fontsize=fontsize )
-    ax.set_ylabel( '%s%s' % (yname, yunits), fontsize=fontsize )
+    xunits = r'[$%s$]' % x.units.latex() if getattr(x, 'units', None) else ''
+    yunits = r'[$%s$]' % y.units.latex() if getattr(y, 'units', None) else ''
+    ax.set_xlabel('%s%s' % (xname, xunits), fontsize=fontsize)
+    ax.set_ylabel('%s%s' % (yname, yunits), fontsize=fontsize)
     for tl in ax.get_xticklabels():
-        tl.set_fontsize(0.8*fontsize)
+        tl.set_fontsize(0.8 * fontsize)
     for tl in ax.get_yticklabels():
-        tl.set_fontsize(0.8*fontsize)
+        tl.set_fontsize(0.8 * fontsize)
 
     if showcbar:
         return fig, ax, im, cbar
     else:
         return fig, ax, im
+
 
 def make_scale_indicators(ax, extent, scaleind='line', scaleunits=None,
                           xaxis=0, yaxis=1, fontsize=14, fontcolor='black',
@@ -411,16 +418,16 @@ def make_scale_indicators(ax, extent, scaleind='line', scaleunits=None,
     import matplotlib.patheffects
 
     if outline is True:
-       outline = [
-               3,
-               np.array([1,1,1]) - mpl.colors.ColorConverter.to_rgb(fontcolor)
+        outline = [
+            3,
+            np.array([1, 1, 1]) - mpl.colors.ColorConverter.to_rgb(fontcolor)
         ]
     if outline is None:
-        path_effects=[]
+        path_effects = []
     else:
-        path_effects=[mpl.patheffects.withStroke(linewidth=outline[0],
-                                                 foreground=outline[1]),
-                      mpl.patheffects.Normal()]
+        path_effects = [mpl.patheffects.withStroke(linewidth=outline[0],
+                                                   foreground=outline[1]),
+                        mpl.patheffects.Normal()]
     if scaleind in [None, 'none']:
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
@@ -429,34 +436,37 @@ def make_scale_indicators(ax, extent, scaleind='line', scaleunits=None,
             units_txt = ''
         else:
             units_txt = r' [$%s$]' % scaleunits.latex()
-        x_label = r'$%s$%s' % ({0:'x',1:'y',2:'z'}[xaxis], units_txt)
+        x_label = r'$%s$%s' % ({0: 'x', 1: 'y', 2: 'z'}[xaxis], units_txt)
         ax.set_xlabel(x_label, fontsize=fontsize)
-        y_label = r'$%s$%s' % ({0:'x',1:'y',2:'z'}[yaxis], units_txt)
+        y_label = r'$%s$%s' % ({0: 'x', 1: 'y', 2: 'z'}[yaxis], units_txt)
         ax.set_ylabel(y_label, fontsize=fontsize)
         for tl in ax.get_xticklabels():
-            tl.set_fontsize(0.8*fontsize)
+            tl.set_fontsize(0.8 * fontsize)
         for tl in ax.get_yticklabels():
-            tl.set_fontsize(0.8*fontsize)
+            tl.set_fontsize(0.8 * fontsize)
     elif scaleind == 'line':
-        width = extent[:,1] - extent[:,0]
+        width = extent[:, 1] - extent[:, 0]
         scale = width.min() / 4.0
-        order = 10.0**int(np.log10(scale))
-        if scale/order<2.0:     scale = 1.0*order
-        elif scale/order<5.0:   scale = 2.0*order
-        else:                   scale = 5.0*order
+        order = 10.0 ** int(np.log10(scale))
+        if scale / order < 2.0:
+            scale = 1.0 * order
+        elif scale / order < 5.0:
+            scale = 2.0 * order
+        else:
+            scale = 5.0 * order
         scale_label = r'%g%s' % (scale,
-                           ' $%s$'%width.units.latex()
-                                if getattr(width,'units',None) is not None
-                                else '')
-        line = np.array( [[extent[0,0] + 0.05*extent[0].ptp(),
-                           extent[0,0] + 0.05*extent[0].ptp() + scale],
-                          [extent[1,0] + 0.12*extent[1].ptp(),
-                           extent[1,0] + 0.12*extent[1].ptp()]] )
+                                 ' $%s$' % width.units.latex()
+                                 if getattr(width, 'units', None) is not None
+                                 else '')
+        line = np.array([[extent[0, 0] + 0.05 * extent[0].ptp(),
+                          extent[0, 0] + 0.05 * extent[0].ptp() + scale],
+                         [extent[1, 0] + 0.12 * extent[1].ptp(),
+                          extent[1, 0] + 0.12 * extent[1].ptp()]])
         if outline:
-            ax.plot(line[0], line[1], color=outline[1], linewidth=3+outline[0])
-        ax.plot(line[0], line[1], color=fontcolor,  linewidth=3)
-        ax.text(np.mean(line[0]), extent[1,0]+0.10*extent[1].ptp(),
-                scale_label, color=fontcolor, size=0.9*fontsize,
+            ax.plot(line[0], line[1], color=outline[1], linewidth=3 + outline[0])
+        ax.plot(line[0], line[1], color=fontcolor, linewidth=3)
+        ax.text(np.mean(line[0]), extent[1, 0] + 0.10 * extent[1].ptp(),
+                scale_label, color=fontcolor, size=0.9 * fontsize,
                 horizontalalignment='center', verticalalignment='top',
                 transform=ax.transData, path_effects=path_effects)
         ax.get_xaxis().set_visible(False)
@@ -464,6 +474,7 @@ def make_scale_indicators(ax, extent, scaleind='line', scaleunits=None,
     else:
         import warnings
         warnings.warn('Unknown scaling indicator scaleind="%s"!' % scaleind)
+
 
 def add_cbar(ax, cbartitle, clim, cmap=None, fontcolor='black', fontsize=14,
              fontoutline=None, nticks=None, tick_dist=None):
@@ -494,16 +505,16 @@ def add_cbar(ax, cbartitle, clim, cmap=None, fontcolor='black', fontsize=14,
     import matplotlib.patheffects
 
     if fontoutline is True:
-       fontoutline = [
-               3,
-               np.array([1,1,1]) - mpl.colors.ColorConverter.to_rgb(fontcolor)
+        fontoutline = [
+            3,
+            np.array([1, 1, 1]) - mpl.colors.ColorConverter.to_rgb(fontcolor)
         ]
     if fontoutline is None:
-        path_effects=[]
+        path_effects = []
     else:
-        path_effects=[mpl.patheffects.withStroke(linewidth=fontoutline[0],
-                                                 foreground=fontoutline[1]),
-                      mpl.patheffects.Normal()]
+        path_effects = [mpl.patheffects.withStroke(linewidth=fontoutline[0],
+                                                   foreground=fontoutline[1]),
+                        mpl.patheffects.Normal()]
 
     cax = inset_axes(ax, width="70%", height="3%", loc=1)
     norm = mpl.colors.Normalize(vmin=clim[0], vmax=clim[1])
@@ -521,7 +532,7 @@ def add_cbar(ax, cbartitle, clim, cmap=None, fontcolor='black', fontsize=14,
     for tl in cbar.ax.get_xticklabels():
         tl.set_path_effects(path_effects)
         tl.set_color(fontcolor)
-        tl.set_fontsize(0.65*fontsize)
+        tl.set_fontsize(0.65 * fontsize)
 
     cbar.set_label(cbartitle, color=fontcolor, fontsize=fontsize, labelpad=12,
                    path_effects=path_effects)

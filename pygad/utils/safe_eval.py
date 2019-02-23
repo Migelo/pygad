@@ -141,9 +141,9 @@ class Evaluator(object):
         self.namespace = {'None':None, 'True':True, 'False':False,
                 'Fraction':Fraction}
         for ns in [my_math.__dict__, namespace if namespace is not None else {}]:
-            self.namespace.update( { name:val for name,val in ns.iteritems()
+            self.namespace.update( { name:val for name,val in ns.items()
                     if hasattr(val,'__call__')
-                    or isinstance(val,(numbers.Number,str,unicode,np.ndarray)) } )
+                    or isinstance(val,(numbers.Number,str,np.ndarray)) } )
 
     def _eval(self, node):
         if hasattr(node,'ctx') and not isinstance(node.ctx, ast.Load):
@@ -157,10 +157,10 @@ class Evaluator(object):
         elif isinstance(node, ast.UnaryOp):
             return self.un_op[type(node.op)](self._eval(node.operand))
         elif isinstance(node, ast.Call):
-            if node.kwargs:
-                raise NotImplementedError('kwargs are not supported')
-            if node.starargs:
-                raise NotImplementedError('starargs are not supported')
+#            if node.kwargs:
+#                raise NotImplementedError('kwargs are not supported')
+#            if node.starargs:
+#                raise NotImplementedError('starargs are not supported')
             kwargs = { kw.arg: self._eval(kw.value) for kw in node.keywords }
             posargs = [self._eval(arg) for arg in node.args]
             return self._eval(node.func)(*posargs,**kwargs)
@@ -211,7 +211,7 @@ class Evaluator(object):
         elif node is None:
             return None
         elif isinstance(node, ast.List):
-            return map(self._eval, node.elts)
+            return list(map(self._eval, node.elts))
         elif isinstance(node, ast.Tuple):
             return tuple(map(self._eval, node.elts))
         else:

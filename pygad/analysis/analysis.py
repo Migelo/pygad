@@ -41,7 +41,7 @@ def radial_surface_density_profile(snap, quantity='mass', r_edges=None,
 
     Sigma = profile(snap, quantity, r_edges=r_edges, mode='cylindrical',
                     average='none', N_sample=N_sample, verbose=verbose)
-    for i in xrange(len(r_edges)-1):
+    for i in range(len(r_edges)-1):
         Sigma[i] /= np.pi*(r_edges[i+1]**2-r_edges[i]**2)
     Sigma.units /= r_edges.units**2
     if units is not None:

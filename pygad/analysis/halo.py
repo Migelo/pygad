@@ -95,10 +95,11 @@ from ..units import *
 from ..utils import *
 import sys, os
 from ..transformation import *
-from properties import *
+from .properties import *
 from ..snapshot import *
 from .. import environment
 from .. import C
+
 
 def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
                      stop_N=10, verbose=None):
@@ -124,14 +125,14 @@ def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
     '''
     if verbose is None:
         verbose = environment.verbose
-    center0 = UnitQty(center,s['pos'].units,subs=s,dtype=np.float64)
-    R = UnitScalar(R,s['pos'].units,subs=s)
+    center0 = UnitQty(center, s['pos'].units, subs=s, dtype=np.float64)
+    R = UnitScalar(R, s['pos'].units, subs=s)
 
     if verbose >= environment.VERBOSE_NORMAL:
-        print 'do a shrinking sphere...'
-        print '  starting values:'
-        print '    center = %s' % center0
-        print '    R      = %s' % R
+        print('do a shrinking sphere...')
+        print('  starting values:')
+        print('    center = %s' % center0)
+        print('    R      = %s' % R)
         sys.stdout.flush()
 
     if not 0 < shrink_factor < 1:
@@ -139,48 +140,49 @@ def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
     if not 0 < stop_N:
         raise ValueError('"stop_N" must be positive!')
 
-    pos  = s['pos'].astype(np.float64)
+    pos = s['pos'].astype(np.float64)
     mass = s['mass'].astype(np.float64)
     assert len(pos) == len(mass)
-    boxsize = float( s.boxsize.in_units_of(s['pos'].units) )
+    boxsize = float(s.boxsize.in_units_of(s['pos'].units))
 
     # needed since C does not know about stridings
     if pos.base is not None:
-        pos  = pos.copy()
+        pos = pos.copy()
         mass = mass.copy()
 
     center = np.empty((3,), dtype=np.float64)
     if periodic:
         C.cpygad.shrinking_sphere_periodic(
-                                  C.c_void_p(center.ctypes.data),
-                                  C.c_size_t(len(pos)),
-                                  C.c_void_p(pos.ctypes.data),
-                                  C.c_void_p(mass.ctypes.data),
-                                  C.c_void_p(center0.ctypes.data), C.c_double(R),
-                                  C.c_double(shrink_factor), C.c_size_t(stop_N),
-                                  C.c_double(boxsize))
+            C.c_void_p(center.ctypes.data),
+            C.c_size_t(len(pos)),
+            C.c_void_p(pos.ctypes.data),
+            C.c_void_p(mass.ctypes.data),
+            C.c_void_p(center0.ctypes.data), C.c_double(R),
+            C.c_double(shrink_factor), C.c_size_t(stop_N),
+            C.c_double(boxsize))
     else:
         C.cpygad.shrinking_sphere_nonperiodic(
-                                  C.c_void_p(center.ctypes.data),
-                                  C.c_size_t(len(pos)),
-                                  C.c_void_p(pos.ctypes.data),
-                                  C.c_void_p(mass.ctypes.data),
-                                  C.c_void_p(center0.ctypes.data), C.c_double(R),
-                                  C.c_double(shrink_factor), C.c_size_t(stop_N))
+            C.c_void_p(center.ctypes.data),
+            C.c_size_t(len(pos)),
+            C.c_void_p(pos.ctypes.data),
+            C.c_void_p(mass.ctypes.data),
+            C.c_void_p(center0.ctypes.data), C.c_double(R),
+            C.c_double(shrink_factor), C.c_size_t(stop_N))
     center = center.view(UnitArr)
     center.units = s['pos'].units
 
     if verbose >= environment.VERBOSE_NORMAL:
-        print 'done.'
+        print('done.')
         sys.stdout.flush()
 
     return center
+
 
 def virial_info(s, center=None, odens=200.0, N_min=10):
     '''
     Return the virial radius (R_odens) and the virial mass (M_odens) of the
     structure at 'center'.
-    
+
     The virial radius is the radius, where the average density within that radius
     is <odens> times the critical density of the universe. If the inner <N_min>
     particles do not exceed a density of <odens> times the critical density,
@@ -204,37 +206,40 @@ def virial_info(s, center=None, odens=200.0, N_min=10):
                                 R_odens, M_odens)
     '''
     if center is None:
-        center = [0,0,0]
-    center = UnitQty(center,s['pos'].units,subs=s).view(np.ndarray)
+        center = [0, 0, 0]
+    center = UnitQty(center, s['pos'].units, subs=s).view(np.ndarray)
 
     rho_crit = s.cosmology.rho_crit(z=s.redshift)
-    rho_crit = rho_crit.in_units_of(s['mass'].units/s['pos'].units**3, subs=s)
+    rho_crit = rho_crit.in_units_of(s['mass'].units / s['pos'].units ** 3, subs=s)
 
     # make use of the potentially precalculated derived block r
-    if np.all(center==0):
+    if np.all(center == 0):
         r = s['r']
     else:
         r = dist(s['pos'], center)
 
     mass = s['mass'].astype(np.float64)
-    r    = r.astype(np.float64)
+    r = r.astype(np.float64)
     if mass.base is not None:
         mass = mass.copy()
-        r    = r.copy()
+        r = r.copy()
     info = np.empty((2,), dtype=np.float64)
     C.cpygad.virial_info(C.c_size_t(len(r)),
                          C.c_void_p(mass.ctypes.data),
                          C.c_void_p(r.ctypes.data),
-                         C.c_double(odens*rho_crit),
+                         C.c_double(odens * rho_crit),
                          C.c_size_t(N_min),
                          C.c_void_p(info.ctypes.data),
-    )
+                         )
     if info[0] == 0.0:
         info[:] = np.nan
-    return UnitArr(info[0],s['pos'].units), \
-           UnitArr(info[1],s['mass'].units)
+    return UnitArr(info[0], s['pos'].units), \
+           UnitArr(info[1], s['mass'].units)
 
-NO_FOF_GROUP_ID = int( np.array(-1, np.uintp) )
+
+NO_FOF_GROUP_ID = int(np.array(-1, np.uintp))
+
+
 def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True, verbose=None):
     '''
     Perform a friends-of-friends search on a (sub-)snapshot.
@@ -269,11 +274,11 @@ def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True, verbose=None):
     min_N = int(min_N)
 
     if verbose >= environment.VERBOSE_NORMAL:
-        print 'perform a FoF search on %s particles:' % nice_big_num_str(len(s))
-        print '  l      = %.2g %s' % (l, l.units)
+        print('perform a FoF search on %s particles:' % nice_big_num_str(len(s)))
+        print('  l      = %.2g %s' % (l, l.units))
         if dvmax != np.inf:
-            print '  dv_max = %.2g %s' % (dvmax, dvmax.units)
-        print '  N     >= %g' % (min_N)
+            print('  dv_max = %.2g %s' % (dvmax, dvmax.units))
+        print('  N     >= %g' % (min_N))
         sys.stdout.flush()
 
     pos = s['pos'].astype(np.float64)
@@ -299,45 +304,51 @@ def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True, verbose=None):
                              C.c_void_p(FoF.ctypes.data),
                              C.c_double(boxsize),
                              None,  # build new tree
-    )
+                             )
 
     # do not count the particles with no halo!
     N_FoF = len(set(FoF)) - 1
 
     if verbose >= environment.VERBOSE_NORMAL:
-        print 'found %d groups' % N_FoF
+        print('found %d groups' % N_FoF)
         N_list = min(N_FoF, 3)
         if N_list:
-            if N_list==1:
-                print 'the most massive one is:'
+            if N_list == 1:
+                print('the most massive one is:')
             else:
-                print 'the %d most massive ones are:' % N_list
-            for i in xrange(N_list):
-                FoF_group = s[FoF==i]
+                print('the %d most massive ones are:' % N_list)
+            for i in range(N_list):
+                FoF_group = s[FoF == i]
                 com = center_of_mass(FoF_group)
                 M = FoF_group['mass'].sum()
-                print '  group %d:   %8.3g %s  @  [%.3g, %.3g, %.3g] %s' % (
-                        i, M, M.units, com[0], com[1], com[2], com.units)
+                print('  group %d:   %8.3g %s  @  [%.3g, %.3g, %.3g] %s' % (
+                    i, M, M.units, com[0], com[1], com[2], com.units))
         sys.stdout.flush()
 
     return FoF, N_FoF
 
+
 _ROCKSTAR_HALO_DTYPES = [
-        ('id','i'), ('internal_id','i'), ('num_p','i'),
-        ('mvir','f'), ('mbound_vir','f'), ('rvir','f'), ('vmax','f'),
-        ('rvmax','f'), ('vrms','f'), ('x','f'), ('y','f'), ('z','f'),
-        ('vx','f'), ('vy','f'), ('vz','f'), ('Jx','f'), ('Jy','f'),
-        ('Jz','f'), ('energy','f'), ('spin','f')
+    ('id', 'i'), ('internal_id', 'i'), ('num_p', 'i'),
+    ('mvir', 'f'), ('mbound_vir', 'f'), ('rvir', 'f'), ('vmax', 'f'),
+    ('rvmax', 'f'), ('vrms', 'f'), ('x', 'f'), ('y', 'f'), ('z', 'f'),
+    ('vx', 'f'), ('vy', 'f'), ('vz', 'f'), ('Jx', 'f'), ('Jy', 'f'),
+    ('Jz', 'f'), ('energy', 'f'), ('spin', 'f')
 ]
 _ROCKSTAR_PART_DTYPES = [
-        ('x','f'), ('y','f'), ('z','f'), ('vx','f'), ('vy','f'), ('vz','f'),
-        ('particle_id','i'), ('assigned_internal_haloid','i'),
-        ('internal_haloid','i'), ('external_haloid','i')
+    ('x', 'f'), ('y', 'f'), ('z', 'f'), ('vx', 'f'), ('vy', 'f'), ('vz', 'f'),
+    ('particle_id', 'i'), ('assigned_internal_haloid', 'i'),
+    ('internal_haloid', 'i'), ('external_haloid', 'i')
 ]
+
+
 def Rockstar_halo_field_names():
-    return [name for name,t in _ROCKSTAR_HALO_DTYPES]
+    return [name for name, t in _ROCKSTAR_HALO_DTYPES]
+
+
 def Rockstar_particle_field_names():
-    return [name for name,t in _ROCKSTAR_PART_DTYPES]
+    return [name for name, t in _ROCKSTAR_PART_DTYPES]
+
 
 class RockstarHeader(object):
     def __init__(self, txt):
@@ -380,6 +391,7 @@ class RockstarHeader(object):
     def __contains__(self, key):
         return key in self._props
 
+
 def read_Rockstar_file(fname):
     '''
     Read in a Rockstar file.
@@ -403,8 +415,8 @@ def read_Rockstar_file(fname):
     BEFORE_PART_TBL = '#Particle table begins here:'
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'read Rockstar file "%s"' % fname
-    with codecs.open(fname,'r',"utf-8") as f:
+        print('read Rockstar file "%s"' % fname)
+    with codecs.open(fname, 'r', "utf-8") as f:
         rs_file = f.read()
 
     halo_start = rs_file.find(BEFORE_HALO_TBL)
@@ -415,21 +427,22 @@ def read_Rockstar_file(fname):
 
     # read the halo table
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print '  read halo table'
+        print('  read halo table')
     # get rid of the leading '#'
-    halo_tbl = u'\n'.join( line[1:] \
-                           for line in
-                           rs_file[halo_start+len(BEFORE_HALO_TBL)+1:particle_start].split('\n') )
-    halos = np.loadtxt( StringIO(halo_tbl), dtype=_ROCKSTAR_HALO_DTYPES )
+    halo_tbl = '\n'.join(line[1:] \
+                         for line in
+                         rs_file[halo_start + len(BEFORE_HALO_TBL) + 1:particle_start].split('\n'))
+    halos = np.loadtxt(StringIO(halo_tbl), dtype=_ROCKSTAR_HALO_DTYPES)
 
     # read the particle table
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print '  read particle table'
+        print('  read particle table')
     particles = np.loadtxt(
-            StringIO(rs_file[particle_start+len(BEFORE_PART_TBL)+1:]),
-            dtype=_ROCKSTAR_PART_DTYPES )
+        StringIO(rs_file[particle_start + len(BEFORE_PART_TBL) + 1:]),
+        dtype=_ROCKSTAR_PART_DTYPES)
 
     return header, halos, particles
+
 
 def generate_Rockstar_halos(fname, snap, exclude=None, nosubs=True, data=None,
                             ignore_inconsistency=False, **kwargs):
@@ -477,40 +490,40 @@ def generate_Rockstar_halos(fname, snap, exclude=None, nosubs=True, data=None,
         start_time = time.time()
         data['header'], data['halos'], data['particles'] = read_Rockstar_file(fname)
         if environment.verbose >= environment.VERBOSE_NORMAL:
-            print 'loaded in %.2f sec' % (time.time()-start_time)
+            print('loaded in %.2f sec' % (time.time() - start_time))
 
     # check for consistency between Rockstar file and snapshot
     try:
         if environment.verbose >= environment.VERBOSE_NORMAL:
-            print 'checking for consistency...'
+            print('checking for consistency...')
         h = data['header']
-        if 'a' in h and abs(float(h['a'])-snap.scale_factor) > 0.01:
+        if 'a' in h and abs(float(h['a']) - snap.scale_factor) > 0.01:
             raise RuntimeError("Scale factors of snapshot and Rockstar file do "
                                "not match: %s vs. %s" % (
-                                   h['a'],snap.scale_factor))
+                                   h['a'], snap.scale_factor))
         cosmo = snap.cosmology
-        for name, attr in [('Om','Omega_m'), ('Ol','Omega_Lambda'), ('h','h_0')]:
-            if name in h and abs(float(h[name])-getattr(cosmo,attr)) > 0.0001:
-                raise RuntimeError("%s of snapshot and Rockstar file " % (name,attr) +
+        for name, attr in [('Om', 'Omega_m'), ('Ol', 'Omega_Lambda'), ('h', 'h_0')]:
+            if name in h and abs(float(h[name]) - getattr(cosmo, attr)) > 0.0001:
+                raise RuntimeError("%s of snapshot and Rockstar file " % (name, attr) +
                                    "do not match: %s vs. %s" % (
-                                       h[name],getattr(cosmo,attr)))
+                                       h[name], getattr(cosmo, attr)))
         if 'Box size' in h:
             # it seems Rockstar supresses the information that the units are
             # comoving fot the box size
-            bz = UnitScalar(str(h['Box size']).replace('h','h_0'),
+            bz = UnitScalar(str(h['Box size']).replace('h', 'h_0'),
                             snap.boxsize.units,
-                            subs={'a':1.0,'z':0.0,'h_0':cosmo.h_0})
-            if abs( float(bz/snap.boxsize) - 1 ) > 0.01:
+                            subs={'a': 1.0, 'z': 0.0, 'h_0': cosmo.h_0})
+            if abs(float(bz / snap.boxsize) - 1) > 0.01:
                 raise RuntimeError("box sizes of snapshot and Rockstar file " +
                                    "do not match: %s vs. %s" % (bz, snap.boxsize))
     except RuntimeError as e:
         if ignore_inconsistency:
-            print 'WARNING:', e.message
+            print('WARNING:', e.message)
         else:
             raise
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'create halo list from the Rockstar data'
+        print('create halo list from the Rockstar data')
     halo_classes = []
     parts = data['particles']
 
@@ -518,11 +531,11 @@ def generate_Rockstar_halos(fname, snap, exclude=None, nosubs=True, data=None,
     import time
     start_time = time.time()
     # exclude non-physical halos and those excluded specifically
-    halos = [ h for h in data['halos']
-              if ((h['id']!=-1) and not (exclude and exclude(h,snap))) ]
+    halos = [h for h in data['halos']
+             if ((h['id'] != -1) and not (exclude and exclude(h, snap)))]
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'pre-selection from %s down to %s halos' % (
-                len(data['halos']), len(halos))
+        print('pre-selection from %s down to %s halos' % (
+            len(data['halos']), len(halos)))
 
     # load blocks needed in order to avoid cluttering the progress bar
     if snap is not None:
@@ -547,40 +560,41 @@ def generate_Rockstar_halos(fname, snap, exclude=None, nosubs=True, data=None,
             mask = (parts['external_haloid'] == h['id'])
             if nosubs:
                 mask &= (parts['internal_haloid'] ==
-                            parts['assigned_internal_haloid'])
+                         parts['assigned_internal_haloid'])
 
             # enrich the halo properties (e.g. by units)
-            prop = { dt[0]:val for dt,val in zip(_ROCKSTAR_HALO_DTYPES,h) }
-            for name in ['x','y','z','vx','vy','vz','Jx','Jy','Jz']:
+            prop = {dt[0]: val for dt, val in zip(_ROCKSTAR_HALO_DTYPES, h)}
+            for name in ['x', 'y', 'z', 'vx', 'vy', 'vz', 'Jx', 'Jy', 'Jz']:
                 del prop[name]
-            prop.update( {
-                'mvir':       UnitArr(h['mvir'], 'Msol/h_0'),
+            prop.update({
+                'mvir': UnitArr(h['mvir'], 'Msol/h_0'),
                 'mbound_vir': UnitArr(h['mbound_vir'], 'Msol/h_0'),
-                'center':     UnitArr([h['x'],h['y'],h['z']],'cMpc/h_0'),
-                'vel':        UnitArr([h['vx'],h['vy'],h['vz']],'km/s'),
-                'vmax':       UnitArr(h['vmax'],'km/s'),
-                'rvmax':      UnitArr(h['rvmax'],'km/s'),
-                'vrms':       UnitArr(h['vrms'],'km/s'),
-                'J':          UnitArr([h['Jx'],h['Jy'],h['Jz']],
-                                      'Msol/h_0 * Mpc/h_0 * km/s'),
-                'energy':     UnitArr(h['energy'], 'Msol/h_0 * (km/s)**2'),
-            } )
-            #TODO: are these quantities those?
-            #prop['mass'] = prop['mvir']
-            #prop['com']  = prop['center']
+                'center': UnitArr([h['x'], h['y'], h['z']], 'cMpc/h_0'),
+                'vel': UnitArr([h['vx'], h['vy'], h['vz']], 'km/s'),
+                'vmax': UnitArr(h['vmax'], 'km/s'),
+                'rvmax': UnitArr(h['rvmax'], 'km/s'),
+                'vrms': UnitArr(h['vrms'], 'km/s'),
+                'J': UnitArr([h['Jx'], h['Jy'], h['Jz']],
+                             'Msol/h_0 * Mpc/h_0 * km/s'),
+                'energy': UnitArr(h['energy'], 'Msol/h_0 * (km/s)**2'),
+            })
+            # TODO: are these quantities those?
+            # prop['mass'] = prop['mvir']
+            # prop['com']  = prop['center']
             # (over-)write specified properties
-            prop.update( properties )
+            prop.update(properties)
 
             halo = Halo(IDs=parts['particle_id'][mask], root=snap,
                         properties=prop, **kwargs)
-            halo_classes.append( halo )
+            halo_classes.append(halo)
     duration = time.time() - start_time
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'created a list of %s halos in %s' % (
-                nice_big_num_str(len(halo_classes)), sec_to_nice_str(duration))
+        print('created a list of %s halos in %s' % (
+            nice_big_num_str(len(halo_classes)), sec_to_nice_str(duration)))
 
     return halo_classes
+
 
 class Halo(object):
     '''
@@ -613,46 +627,45 @@ class Halo(object):
                                     consistency checks.
     '''
     __long_name_prop__ = {
-            'mass':     'total mass',
-            'Mstars':   'total stellar mass',
-            'Mgas':     'total gas mass',
-            'Mdm':      'total dark matter mass',
-            'parts':    'number of particles per species',
-            'com':      'center of mass',
-            'ssc':      'shrinking sphere center',
-            'vel':          'mass-weighted velocity',
-            'vel_sigma':    'mass-weighted velocity dispersion',
-            'Rmax':         'maximum distance of a particle from com',
-            'lowres_part':  'number of low-resolution particles',
-            'lowres_mass':  'mass of low-resolution particles',
+        'mass': 'total mass',
+        'Mstars': 'total stellar mass',
+        'Mgas': 'total gas mass',
+        'Mdm': 'total dark matter mass',
+        'parts': 'number of particles per species',
+        'com': 'center of mass',
+        'ssc': 'shrinking sphere center',
+        'vel': 'mass-weighted velocity',
+        'vel_sigma': 'mass-weighted velocity dispersion',
+        'Rmax': 'maximum distance of a particle from com',
+        'lowres_part': 'number of low-resolution particles',
+        'lowres_mass': 'mass of low-resolution particles',
     }
 
     for odens in ['vir', '200', '500']:
-        prop = 'R'+odens
-        __long_name_prop__[prop+'_FoF'] = \
-                '%s (Mo+ 2002): (3*M / (4*pi * %s * rho_c))**(1/3.)' % (
-                        prop, '18*pi**2' if odens=='vir' else odens)
+        prop = 'R' + odens
+        __long_name_prop__[prop + '_FoF'] = \
+            '%s (Mo+ 2002): (3*M / (4*pi * %s * rho_c))**(1/3.)' % (
+                prop, '18*pi**2' if odens == 'vir' else odens)
         if odens == 'vir':
             continue
         for qty in ['R', 'M']:
-            prop = qty+odens
-            __long_name_prop__[prop+'_ssc'] = \
-                    'spherical %s with `virial_info` with ssc as center' % prop
-            __long_name_prop__[prop+'_com'] = \
-                    'spherical %s with `virial_info` with com as center' % prop
+            prop = qty + odens
+            __long_name_prop__[prop + '_ssc'] = \
+                'spherical %s with `virial_info` with ssc as center' % prop
+            __long_name_prop__[prop + '_com'] = \
+                'spherical %s with `virial_info` with com as center' % prop
         del prop, qty
     del odens
 
     @staticmethod
     def calculable_props():
         '''A list of the properties that can be calculated.'''
-        return Halo.__long_name_prop__.keys()
+        return list(Halo.__long_name_prop__.keys())
 
     @staticmethod
     def prop_descr(name):
         '''Long description of a property.'''
         return Halo.__long_name_prop__.get(name, '<unknown>')
-
 
     def __init__(self, IDs=None, halo=None,
                  calc=None, root=None,
@@ -670,8 +683,8 @@ class Halo(object):
 
         # add the predefined properties
         if properties is not None:
-            for prop, val in properties.iteritems():
-                self._props[prop.replace(' ','_')] = val
+            for prop, val in properties.items():
+                self._props[prop.replace(' ', '_')] = val
 
         # some testing for consistency
         if testing:
@@ -685,11 +698,11 @@ class Halo(object):
             if root is not halo.root:
                 raise ValueError('`halo` and `root` are inconsistent!')
             if len(IDset - set(root['ID'])) > 0:
-                print >> sys.stderr, 'WARNING: Not all IDs are in the ' + \
-                                     'root snapshot!'
+                print('WARNING: Not all IDs are in the ' + \
+                      'root snapshot!', file=sys.stderr)
         if halo is not None and len(halo) != len(self._IDs):
-            print >> sys.stderr, 'WARNING: The given halo does not ' + \
-                                 'contain all specified IDs!'
+            print('WARNING: The given halo does not ' + \
+                  'contain all specified IDs!', file=sys.stderr)
 
         # calculate the properties asked for
 
@@ -700,12 +713,12 @@ class Halo(object):
                 raise ValueError('Need `halo` or `root` to calculate properties!')
             halo = root[IDMask(self._IDs)]
             if len(halo) != len(self._IDs):
-                print >> sys.stderr, 'WARNING: The given snapshot does not ' + \
-                                     'contain all specified IDs!'
+                print('WARNING: The given snapshot does not ' + \
+                      'contain all specified IDs!', file=sys.stderr)
         elif root is not None and testing:
             if root is not halo.root:
-                print >> sys.stderr, 'WARNING: `halo` and `root` are ' + \
-                                     'inconsistent!'
+                print('WARNING: `halo` and `root` are ' + \
+                      'inconsistent!', file=sys.stderr)
         if root is None:
             root = halo.root
 
@@ -734,9 +747,9 @@ class Halo(object):
         return self._props.copy()
 
     def __dir__(self):
-        return self.__dict__.keys() + self._props.keys() + \
-                [k for k in self.__class__.__dict__.keys()
-                        if not k.startswith('_')]
+        return list(self.__dict__.keys()) + list(self._props.keys()) + \
+               [k for k in list(self.__class__.__dict__.keys())
+                if not k.startswith('_')]
 
     def __getattr__(self, name):
         if name.startswith('__'):
@@ -794,21 +807,21 @@ class Halo(object):
                             is returned.
         '''
         # preparation
-        if not recompute and (isinstance(prop,(str,unicode)) and prop!='all'
-                                    and prop in self._props):
+        if not recompute and (isinstance(prop, str) and prop != 'all'
+                              and prop in self._props):
             return self._props[prop]
         if halo is None:
             halo = root[self.mask]
         elif root is None:
             root = halo.root
-        args = {'halo':halo, 'root':root, 'recompute':recompute}
+        args = {'halo': halo, 'root': root, 'recompute': recompute}
 
         # handle special cases
         if prop == 'all':
             for p in Halo.calculable_props():
                 self.calc_prop(p, **args)
             return self.props
-        if isinstance(prop, (list,tuple,np.ndarray)):
+        if isinstance(prop, (list, tuple, np.ndarray)):
             for p in prop:
                 self.calc_prop(p, **args)
             return self.props
@@ -819,7 +832,7 @@ class Halo(object):
         elif prop == 'com':
             val = center_of_mass(halo)
         elif prop == 'parts':
-            val = tuple(halo.parts)   # shall not change!
+            val = tuple(halo.parts)  # shall not change!
         elif prop in ['Mstars', 'Mgas', 'Mdm']:
             sub = getattr(halo, prop[1:], None)
             if sub is None:
@@ -830,7 +843,7 @@ class Halo(object):
             val = mass_weighted_mean(halo, 'vel')
         elif prop == 'vel_sigma':
             v0 = mass_weighted_mean(halo, 'vel')
-            val = np.sqrt(np.sum(mass_weighted_mean(halo,'vel**2') - v0**2))
+            val = np.sqrt(np.sum(mass_weighted_mean(halo, 'vel**2') - v0 ** 2))
         elif prop == 'ssc':
             com = self._get('com', **args)
             R_max = np.percentile(periodic_distance_to(halo['pos'],
@@ -842,32 +855,32 @@ class Halo(object):
         elif prop == 'Rmax':
             val = periodic_distance_to(halo['pos'], self._get('com', **args),
                                        halo.boxsize).max()
-        elif prop[0] in ['R','M'] and len(prop)>4 and \
-                (prop[1:4]=='vir' or prop[1:4].isdigit()) and prop[4]=='_':
+        elif prop[0] in ['R', 'M'] and len(prop) > 4 and \
+                (prop[1:4] == 'vir' or prop[1:4].isdigit()) and prop[4] == '_':
             qty = prop[0]
             odens_n = prop[1:4]
             scheme = prop[5:]
-            odens = 18.*np.pi**2 if odens_n=='vir' else float(odens_n)
+            odens = 18. * np.pi ** 2 if odens_n == 'vir' else float(odens_n)
             if scheme == 'FoF':
-                rho_crit = halo.cosmology.rho_crit( z=halo.redshift )
-                rho_crit.convert_to(halo['mass'].units/halo['pos'].units**3,
+                rho_crit = halo.cosmology.rho_crit(z=halo.redshift)
+                rho_crit.convert_to(halo['mass'].units / halo['pos'].units ** 3,
                                     subs=halo)
                 mass = self._get('mass', **args)
-                r3 = 3.0 * mass / (4.0*np.pi * odens*rho_crit)
-                val = r3 ** Fraction(1,3)
+                r3 = 3.0 * mass / (4.0 * np.pi * odens * rho_crit)
+                val = r3 ** Fraction(1, 3)
             else:
                 if scheme not in ['com', 'ssc']:
                     raise ValueError('Unknown scheme for property "%s"!' % prop)
                 center = self._get(scheme, **args)
                 Rodens, Modens = virial_info(root, center=center, odens=odens)
-                val = Rodens if qty=='R' else Modens
+                val = Rodens if qty == 'R' else Modens
                 # don't waste the additional information!
                 for qty in ['R', 'M']:
-                    name = qty+odens_n+'_'+scheme
+                    name = qty + odens_n + '_' + scheme
                     # if we recompute some property, it might be requested to keep
                     # old values...
                     if not recompute and name not in self._props:
-                        self._props[name] = Rodens if qty=='R' else Modens
+                        self._props[name] = Rodens if qty == 'R' else Modens
         elif prop == 'lowres_part':
             low = getattr(halo, 'lowres', None)
             val = 0 if low is None else len(low)
@@ -882,6 +895,7 @@ class Halo(object):
 
         self._props[prop] = val
         return val
+
 
 def nxt_ngb_dist_perc(s, q, N=1000, tree=None, ret_sample=False, verbose=None):
     '''
@@ -907,23 +921,24 @@ def nxt_ngb_dist_perc(s, q, N=1000, tree=None, ret_sample=False, verbose=None):
     boxsize = s.boxsize.in_units_of(s['pos'].units)
     if tree is None:
         if verbose >= environment.VERBOSE_NORMAL:
-            print 'building the octree...'
+            print('building the octree...')
         tree = octree.cOctree(pos)
     if verbose >= environment.VERBOSE_NORMAL:
-        print 'preparing...'
+        print('preparing...')
     d = np.empty(N, dtype=float)
     cond = np.ones(len(s), dtype=np.int32)
-    with ProgressBar(np.random.randint(len(s),size=N), label='sampling') as pbar:
+    with ProgressBar(np.random.randint(len(s), size=N), label='sampling') as pbar:
         for i in pbar:
             cond[i] = 0
             i_next = tree.find_next_ngb(pos[i], pos, periodic=boxsize, cond=cond)
             cond[i] = 1
-            d[pbar.iteration-1] = dist(pos[i], pos[i_next])
+            d[pbar.iteration - 1] = dist(pos[i], pos[i_next])
     if ret_sample:
-        return UnitArr( np.percentile(d,q), s['pos'].units), \
-               UnitArr( d, s['pos'].units )
+        return UnitArr(np.percentile(d, q), s['pos'].units), \
+               UnitArr(d, s['pos'].units)
     else:
-        return UnitArr( np.percentile(d,q), s['pos'].units)
+        return UnitArr(np.percentile(d, q), s['pos'].units)
+
 
 def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
                            max_halos=None, ret_FoFs=False, verbose=None,
@@ -962,7 +977,7 @@ def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
     Returns:
         halos (list):       A list of all the groups as Halo instances. (Sorted in
                             mass, it not `sort=False` in the `kwargs`.)
-        
+
         if ret_FoFs==True:
         FoF (np.array):     The FoF group IDs for each particle; particles with no
                             group have ID = NO_FOF_GROUP_ID (cf. `FoF` argument
@@ -973,38 +988,37 @@ def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
         verbose = environment.verbose
     if FoF is None:
         if l is None:
-            l = ( 1500. * s.cosmology.rho_crit(s.redshift)
-                        / np.median(s['mass']) )**Fraction(-1,3)
+            l = (1500. * s.cosmology.rho_crit(s.redshift)
+                 / np.median(s['mass'])) ** Fraction(-1, 3)
         FoF, N_FoF = find_FoF_groups(s, l=l, verbose=verbose, **kwargs)
     else:
         N_FoF = len(set(FoF)) - 1
 
-
     from ..utils import ProgressBar, DevNull
-    if verbose>=environment.VERBOSE_NORMAL and progressbar:
+    if verbose >= environment.VERBOSE_NORMAL and progressbar:
         outfile = sys.stdout
     else:
         outfile = DevNull()
     halos = []
     with ProgressBar(
-                xrange( min(N_FoF,max_halos) if exclude is None else N_FoF ),
-                show_eta=False,
-                show_percent=False,
-                label='initialize halos',
-                file=outfile) as pbar:
+            range(min(N_FoF, max_halos) if exclude is None else N_FoF),
+            show_eta=False,
+            show_percent=False,
+            label='initialize halos',
+            file=outfile) as pbar:
         if not progressbar:
-            print 'initialize halos from FoF group IDs...'
+            print('initialize halos from FoF group IDs...')
             sys.stdout.flush()
         for i in pbar:
-            h = Halo(halo=s[FoF==i], root=s, calc=calc)
+            h = Halo(halo=s[FoF == i], root=s, calc=calc)
             h.linking_length = l
-            if exclude is None or not exclude(h,s):
-                halos.append( h )
-            if len(halos)==max_halos:
+            if exclude is None or not exclude(h, s):
+                halos.append(h)
+            if len(halos) == max_halos:
                 break
 
     if verbose >= environment.VERBOSE_NORMAL:
-        print 'initialized %d halos.' % (len(halos))
+        print('initialized %d halos.' % (len(halos)))
         sys.stdout.flush()
 
     if ret_FoFs:
@@ -1013,10 +1027,13 @@ def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
         del FoF
         return halos
 
+
 def _common_mass(h1, h2, s):
     # access private attribute for speed
     ID_both = set(h1._IDs) & set(h2._IDs)
     return s[IDMask(ID_both)]['mass'].sum()
+
+
 def find_most_massive_progenitor(s, halos, h0):
     '''
     Find the halo with the most mass in common.
@@ -1041,7 +1058,7 @@ def find_most_massive_progenitor(s, halos, h0):
     min_mass = 0.1 * h0_mass
     min_mass.convert_to(halos[0].mass.units, subs=s)
     h0_com = h0.com.in_units_of(halos[0].com.units, subs=s)
-    for i in xrange(3):
+    for i in range(3):
         close = None
         close_d = np.inf
         for h in halos:
@@ -1053,20 +1070,20 @@ def find_most_massive_progenitor(s, halos, h0):
                 close = h
                 close_d = d
         if close is not None:
-            closest.append( close )
+            closest.append(close)
 
     # if any of them has more than 50% of the mass, we are done
     com_mass = []
     for h in closest:
-        com_mass.append( _common_mass(h, h0, s) )
+        com_mass.append(_common_mass(h, h0, s))
         if com_mass[-1] / h0_mass > 0.5:
             return h
 
     # if no other halo can have more mass than the most massive of the closest, it
     # is this one
     if closest:
-        mm_closest, cm = max(zip(closest, com_mass), key=lambda p: p[1])
-        if h0_mass-sum(com_mass) < cm:
+        mm_closest, cm = max(list(zip(closest, com_mass)), key=lambda p: p[1])
+        if h0_mass - sum(com_mass) < cm:
             return mm_closest
 
     # iterate and find the most massive progenitor
@@ -1074,5 +1091,5 @@ def find_most_massive_progenitor(s, halos, h0):
     # mass for *all* halos and, hence, is slow
     mmp = max(halos,
               key=lambda h: _common_mass(h, h0, s))
-    return mmp if _common_mass(mmp, h0, s)>0 else None
+    return mmp if _common_mass(mmp, h0, s) > 0 else None
 

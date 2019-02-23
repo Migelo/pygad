@@ -7,15 +7,16 @@ __all__ = ['read_info_file', 'prepare_zoom', 'fill_star_from_info',
            'read_traced_gas', 'fill_gas_from_traced',
            'fill_derived_gas_trace_qty', 'read_pyigm_COS_halos_EWs']
 
-from snapshot import *
-from units import *
-from utils import *
-from analysis import *
-from transformation import *
-import environment
+from .snapshot import *
+from .units import *
+from .utils import *
+from .analysis import *
+from .transformation import *
+from . import environment
 import re
 import sys
 import os
+
 
 def read_info_file(filename):
     '''
@@ -46,19 +47,19 @@ def read_info_file(filename):
                     value = UnitArr(float(value.rsplit('[')[0].strip()),
                                     units=blocks[0])
                 elif len(blocks) == 2:
-                    value = UnitArr(map(lambda s: float(s.strip(', ')),
-                                        blocks[0].split()),
-                                    units=None if blocks[1]=='None' \
-                                            else blocks[1])
+                    value = UnitArr([float(s.strip(', ')) for s in blocks[0].split()],
+                                    units=None if blocks[1] == 'None' \
+                                        else blocks[1])
                 if name in info:
-                    print >> sys.stderr, 'WARNING: "%s" occures ' % name + \
-                                         'multiple times in info file ' + \
-                                         '"%s"! First one used.' % filename
+                    print('WARNING: "%s" occures ' % name + \
+                          'multiple times in info file ' + \
+                          '"%s"! First one used.' % filename, file=sys.stderr)
                 info[name] = value
             except ValueError as e:
                 if e.message[-6:] != 'unpack':
                     raise
     return info
+
 
 def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
                  linking_length=None, linking_vel='200 km/s', ret_FoF=False,
@@ -167,8 +168,9 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
         gal (SubSnap):      The central galaxy of the halo as defined by
                             `gal_R200`.
     '''
+
     def get_shrink_on_sub(snap, shrink_on):
-        if isinstance(shrink_on, (str,unicode)):
+        if isinstance(shrink_on, str):
             shrink_on = str(shrink_on)
             if shrink_on == 'all':
                 return snap
@@ -179,22 +181,22 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
         else:
             raise ValueError('`shrink_on` must be a family name or a list ' + \
                              'of particle types, but was: %s' % (shrink_on,))
+
     def FoF_exclude(h, s, threshold=1e-2):
         M_lowres = h.lowres_mass
         M = h.mass
-        return M_lowres/M > threshold
-            
+        return M_lowres / M > threshold
 
     if 'gastrace' in kwargs:
         raise ValueError("You passed 'gastrace'. Did you mean 'gas_trace'?")
     if 'starform' in kwargs:
         raise ValueError("You passed 'starform'. Did you mean 'star_form'?")
 
-    if isinstance(s, (str,unicode)):
+    if isinstance(s, str):
         s = Snap(s, load_double_prec=load_double_prec)
     gal_R200 = float(gal_R200)
     if environment.verbose >= environment.VERBOSE_TACITURN:
-        print 'prepare zoomed-in', s
+        print('prepare zoomed-in', s)
 
     # read info file (if required)
     if mode in ['auto', 'info']:
@@ -203,18 +205,18 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
                 snap = int(os.path.basename(s.filename).split('.')[0][-3:])
                 info = os.path.dirname(s.filename) + '/trace/info_%03d.txt' % snap
             except:
-                print >> sys.stderr, 'WARNING: could not deduce the path to ' + \
-                                     'the trace file!'
+                print('WARNING: could not deduce the path to ' + \
+                      'the trace file!', file=sys.stderr)
                 info = None
-        if isinstance(info, (str,unicode)):
+        if isinstance(info, str):
             info = os.path.expanduser(info)
             if not os.path.exists(info):
-                print >> sys.stderr, 'WARNING: There is no info file named ' + \
-                                     '"%s"' % info
+                print('WARNING: There is no info file named ' + \
+                      '"%s"' % info, file=sys.stderr)
                 info = None
             else:
                 if environment.verbose >= environment.VERBOSE_TACITURN:
-                    print 'read info file from:', info
+                    print('read info file from:', info)
                 info = read_info_file(info)
         if info is None:
             if mode == 'auto':
@@ -234,23 +236,23 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
     elif mode in ['ssc', 'FoF']:
         if mode == 'FoF':
             halos = generate_FoF_catalogue(
-                    s,
-                    l = linking_length,
-                    exclude = FoF_exclude,
-                    calc = ['mass', 'lowres_mass'],
-                    max_halos = 10,
-                    progressbar = False,
-                    **kwargs
+                s,
+                l=linking_length,
+                exclude=FoF_exclude,
+                calc=['mass', 'lowres_mass'],
+                max_halos=10,
+                progressbar=False,
+                **kwargs
             )
             if shrink_on not in ['all', 'highres']:
                 galaxies = generate_FoF_catalogue(
-                        get_shrink_on_sub(s,shrink_on),
-                        l = linking_length,
-                        dvmax = linking_vel,
-                        calc = ['mass', 'com'],
-                        max_halos = 10,
-                        progressbar = False,
-                        **kwargs
+                    get_shrink_on_sub(s, shrink_on),
+                    l=linking_length,
+                    dvmax=linking_vel,
+                    calc=['mass', 'com'],
+                    max_halos=10,
+                    progressbar=False,
+                    **kwargs
                 )
                 # The most massive galaxy does not have to be in a halo with litle
                 # low resolution elements! Find the most massive galaxy living in a
@@ -276,8 +278,8 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
             else:
                 shrink_on = s[halos[0]]
         elif mode == 'ssc':
-            shrink_on = get_shrink_on_sub(s,shrink_on)
-        if shrink_on is not None and len(shrink_on)>0:
+            shrink_on = get_shrink_on_sub(s, shrink_on)
+        if shrink_on is not None and len(shrink_on) > 0:
             com = center_of_mass(s)
             R = np.max(periodic_distance_to(s['pos'], com, s.boxsize))
             center = shrinking_sphere(shrink_on, com, R)
@@ -289,15 +291,15 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
     # center in space
     if center is None:
         if environment.verbose >= environment.VERBOSE_TACITURN:
-            print 'no center found -- do not center'
+            print('no center found -- do not center')
     else:
         if environment.verbose >= environment.VERBOSE_NORMAL:
-            print 'center at:', center
+            print('center at:', center)
         Translation(-center).apply(s)
         # center the velocities
-        vel_center = mass_weighted_mean(s[s['r']<'1 kpc'], 'vel')
+        vel_center = mass_weighted_mean(s[s['r'] < '1 kpc'], 'vel')
         if environment.verbose >= environment.VERBOSE_NORMAL:
-            print 'center velocities at:', vel_center
+            print('center velocities at:', vel_center)
         s['vel'] -= vel_center
 
     # cut the halo (<R200)
@@ -306,66 +308,66 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
         M200 = info['M200']
     else:
         if environment.verbose >= environment.VERBOSE_NORMAL:
-            print 'derive virial information'
+            print('derive virial information')
         R200, M200 = virial_info(s)
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'R200:', R200
-        print 'M200:', M200
+        print('R200:', R200)
+        print('M200:', M200)
     halo = s[BallMask(R200, sph_overlap=sph_overlap_mask)]
 
     # orientate at the reduced inertia tensor of the baryons wihtin 10 kpc
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'orientate',
+        print('orientate', end=' ')
     if mode == 'info':
         if 'I_red(gal)' in info:
             redI = info['I_red(gal)']
             if redI is not None:
-                redI = redI.reshape((3,3))
+                redI = redI.reshape((3, 3))
             if environment.verbose >= environment.VERBOSE_NORMAL:
-                print 'at the galactic red. inertia tensor from info file'
+                print('at the galactic red. inertia tensor from info file')
             if environment.verbose >= environment.VERBOSE_TALKY:
-                print redI
+                print(redI)
             mode, qty = 'red I', redI
         else:
             if environment.verbose >= environment.VERBOSE_NORMAL:
-                print 'at angular momentum of the galaxtic baryons from info file:'
+                print('at angular momentum of the galaxtic baryons from info file:')
             mode, qty = 'vec', info['L_baryons']
         orientate_at(s, mode, qty=qty, total=True)
     else:
         if environment.verbose >= environment.VERBOSE_NORMAL:
-            print 'at red. inertia tensor of the baryons within %.3f*R200' % gal_R200
-        orientate_at(s[BallMask(gal_R200*R200, sph_overlap=False)].baryons,
+            print('at red. inertia tensor of the baryons within %.3f*R200' % gal_R200)
+        orientate_at(s[BallMask(gal_R200 * R200, sph_overlap=False)].baryons,
                      'red I',
                      total=True
-        )
+                     )
 
     # cut the inner part as the galaxy
-    gal = s[BallMask(gal_R200*R200, sph_overlap=sph_overlap_mask)]
+    gal = s[BallMask(gal_R200 * R200, sph_overlap=sph_overlap_mask)]
     Ms = gal.stars['mass'].sum()
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'M*:  ', Ms
+        print('M*:  ', Ms)
 
-    if len(gal)==0:
+    if len(gal) == 0:
         gal = None
-    if len(halo)==0:
+    if len(halo) == 0:
         halo = None
 
     if star_form == 'deduce':
         try:
             star_form = os.path.dirname(s.filename) + '/trace/star_form.ascii'
         except:
-            print >> sys.stderr, 'WARNING: could not deduce the path to the ' + \
-                                 'star formation file!'
+            print('WARNING: could not deduce the path to the ' + \
+                  'star formation file!', file=sys.stderr)
             star_form = None
-    if isinstance(star_form, (str,unicode)):
+    if isinstance(star_form, str):
         star_form = os.path.expanduser(star_form)
         if not os.path.exists(star_form):
-            print >> sys.stderr, 'WARNING: There is no star formation file ' + \
-                                 'named "%s"' % star_form
+            print('WARNING: There is no star formation file ' + \
+                  'named "%s"' % star_form, file=sys.stderr)
             star_form = None
         else:
             if environment.verbose >= environment.VERBOSE_NORMAL:
-                print 'read star formation file from:', star_form
+                print('read star formation file from:', star_form)
             fill_star_from_info(s, star_form,
                                 fill_undefined_nan=fill_undefined_nan)
 
@@ -381,28 +383,29 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
             else:
                 raise RuntimeError('too many candidates!')
         except:
-            print >> sys.stderr, 'WARNING: could not deduce the path to the ' + \
-                                 'gas tracing file!'
+            print('WARNING: could not deduce the path to the ' + \
+                  'gas tracing file!', file=sys.stderr)
             gas_trace = None
-    if isinstance(gas_trace, (str,unicode)):
+    if isinstance(gas_trace, str):
         gas_trace = os.path.expanduser(gas_trace)
         if not os.path.exists(gas_trace):
-            print >> sys.stderr, 'WARNING: There is no gas trace file named ' + \
-                                 '"%s"' % gas_trace
+            print('WARNING: There is no gas trace file named ' + \
+                  '"%s"' % gas_trace, file=sys.stderr)
             gas_trace = None
         else:
             if environment.verbose >= environment.VERBOSE_NORMAL:
-                print 'read gas trace file from:', gas_trace
+                print('read gas trace file from:', gas_trace)
             if gas_traced_dervied_blocks is None:
-                gas_traced_dervied_blocks = (gas_traced_blocks=='all')
+                gas_traced_dervied_blocks = (gas_traced_blocks == 'all')
             fill_gas_from_traced(s, gas_trace,
                                  add_blocks=gas_traced_blocks,
                                  add_derived=gas_traced_dervied_blocks)
 
-    if mode=='FoF' and ret_FoF:
+    if mode == 'FoF' and ret_FoF:
         return s, halo, gal, halos
     else:
         return s, halo, gal
+
 
 def fill_star_from_info(snap, fname, fill_undefined_nan=True, dtypes=None,
                         units=None):
@@ -418,7 +421,7 @@ def fill_star_from_info(snap, fname, fill_undefined_nan=True, dtypes=None,
         snap (Snap):    The snapshot to fill with the data (has to be the one at
                         z=0 of the simulation used to create the star_form.ascii).
         fname (str):    The path to the star_form.ascii file.
-        fill_undefined_nan (bool):  
+        fill_undefined_nan (bool):
                         Fill data with NaN for stars that are not listed in the
                         formation file.
         dtypes (np.dtypes):
@@ -436,21 +439,21 @@ def fill_star_from_info(snap, fname, fill_undefined_nan=True, dtypes=None,
     stars = snap.root.stars
 
     if environment.verbose >= environment.VERBOSE_TACITURN:
-        print 'reading the star formation information from %s...' % fname
+        print('reading the star formation information from %s...' % fname)
     # prepare the type of data
     if dtypes is None:
-        dtypes = [('ID',np.uint64), ('aform',float), ('rform',float),
-                  ('rR200form',float), ('Zform',float)]
+        dtypes = [('ID', np.uint64), ('aform', float), ('rform', float),
+                  ('rR200form', float), ('Zform', float)]
     dtypes = np.dtype(dtypes)
     if 'ID' not in dtypes.fields:
         raise ValueError('The `dtypes` need to have a field "ID"!')
     if units is None:
-        units = {'aform':'a_form', 'rform':'kpc'}
+        units = {'aform': 'a_form', 'rform': 'kpc'}
     # load the data
     SFI = np.loadtxt(fname, skiprows=1, dtype=dtypes)
 
     if environment.verbose >= environment.VERBOSE_TALKY:
-        print 'testing if the IDs match the (root) snapshot...'
+        print('testing if the IDs match the (root) snapshot...')
     SFI_IDs = SFI['ID']
     # test uniqueness
     if not stars.IDs_unique():
@@ -458,42 +461,43 @@ def fill_star_from_info(snap, fname, fill_undefined_nan=True, dtypes=None,
     if len(np.unique(SFI_IDs)) != len(SFI_IDs):
         raise RuntimeError('IDs in the star formation file are not unique!')
     # there might be too many or not enough IDs in the file
-    if len(np.setdiff1d( stars['ID'], SFI_IDs, assume_unique=True )):
-        missing = np.setdiff1d( stars['ID'], SFI_IDs, assume_unique=True )
+    if len(np.setdiff1d(stars['ID'], SFI_IDs, assume_unique=True)):
+        missing = np.setdiff1d(stars['ID'], SFI_IDs, assume_unique=True)
         if fill_undefined_nan:
-            print 'WARNING: There are %d stellar IDs missing ' % len(missing) + \
-                  'in the formation file! Fill them with NaN\'s.'
-            add = np.array([(ID,)+(np.NaN,)*(len(dtypes)-1) for ID in missing],
+            print('WARNING: There are %d stellar IDs missing ' % len(missing) + \
+                  'in the formation file! Fill them with NaN\'s.')
+            add = np.array([(ID,) + (np.NaN,) * (len(dtypes) - 1) for ID in missing],
                            dtype=dtypes)
-            SFI = np.concatenate( (SFI,add) )
+            SFI = np.concatenate((SFI, add))
             del add
             SFI_IDs = SFI['ID']
         else:
             raise RuntimeError('Some stars do not have a match in the ' + \
-                               'formation file "%s" (missing: %d)!' % ( fname,
-                                   len(np.setdiff1d( stars['ID'], SFI_IDs,
-                                                     assume_unique=True )) )
-                              )
-    if len(np.setdiff1d( SFI_IDs, stars['ID'], assume_unique=True )):
+                               'formation file "%s" (missing: %d)!' % (fname,
+                                                                       len(np.setdiff1d(stars['ID'], SFI_IDs,
+                                                                                        assume_unique=True)))
+                               )
+    if len(np.setdiff1d(SFI_IDs, stars['ID'], assume_unique=True)):
         raise RuntimeError('Some formation file IDs do not have a match in ' + \
                            'the snapshot (missing: %d)!' % (
-                               len(np.setdiff1d( SFI_IDs, stars['ID'],
-                                                 assume_unique=True )) )
-                          )
+                               len(np.setdiff1d(SFI_IDs, stars['ID'],
+                                                assume_unique=True)))
+                           )
 
     # adding the data as blocks
-    sfiididx = np.argsort( SFI_IDs )
-    sididx = np.argsort( stars['ID'] )
+    sfiididx = np.argsort(SFI_IDs)
+    sididx = np.argsort(stars['ID'])
     for name in dtypes.names:
         if name == 'ID':
             continue
         if environment.verbose >= environment.VERBOSE_NORMAL:
-            print 'adding the new block "%s" (units:%s, type:%s)...' % (
-                    name,units.get(name,None),dtypes[name])
-        stars[name] = UnitArr( np.empty(len(stars)),
-                               dtype=dtypes[name],
-                               units=units.get(name,None) )
+            print('adding the new block "%s" (units:%s, type:%s)...' % (
+                name, units.get(name, None), dtypes[name]))
+        stars[name] = UnitArr(np.empty(len(stars)),
+                              dtype=dtypes[name],
+                              units=units.get(name, None))
         stars[name][sididx] = SFI[name][sfiididx]
+
 
 def read_traced_gas(filename, types=None):
     '''
@@ -529,7 +533,7 @@ def read_traced_gas(filename, types=None):
                             data is:
                                 [ [type, n],
                                   np.ndarray of first enter event,
-                                  np.ndarray leaving event,          \ 
+                                  np.ndarray leaving event,          \
                                   np.ndarray of traced being out,     >  n times
                                   np.ndarray of re-entering,         /
                                   events of leaving + out,          \  depending
@@ -540,21 +544,21 @@ def read_traced_gas(filename, types=None):
     '''
     filename = os.path.expanduser(filename)
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'read gas trace file "%s"...' % filename
+        print('read gas trace file "%s"...' % filename)
         sys.stdout.flush()
-    import cPickle as pickle
+    import pickle as pickle
     with file(filename, 'rb') as f:
         tr = pickle.load(f)
 
-    #sort type
-    if types is None or types=='all':
+    # sort type
+    if types is None or types == 'all':
         types = {1, 2, 3, 4}
     else:
-        if isinstance(types,int):
+        if isinstance(types, int):
             types = [types]
         types = set(types)
     if environment.verbose >= environment.VERBOSE_TALKY:
-        print 'restructure by type...'
+        print('restructure by type...')
         sys.stdout.flush()
     # structure the data into sub-lists
     # (re-)enter:   5 elements
@@ -566,33 +570,33 @@ def read_traced_gas(filename, types=None):
     #    out:           5 + n*15 + 6 + 4        = 15 + n*15
     #    SF in region:  5 + n*15 + 4            =  9 + n*15
     #    SF outside:    5 + n*15 + 6 + 4 + 4    = 19 + n*15
-    t_to_type = {5:1, 15:2, 9:3, 19:4}
-    for ID in tr.keys():
+    t_to_type = {5: 1, 15: 2, 9: 3, 19: 4}
+    for ID in list(tr.keys()):
         e = tr[ID]
         t = len(e) % 15
-        if t in [0,4]: t += 15
+        if t in [0, 4]: t += 15
         tt = t_to_type[t]
         if tt not in types:
-            print >> sys.stderr, 'ERROR: could not process particle ID %d' % ID
-            print >> sys.stderr, '       skip: %s' % e
+            print('ERROR: could not process particle ID %d' % ID, file=sys.stderr)
+            print('       skip: %s' % e, file=sys.stderr)
             del tr[ID]
             continue
-        sub = e[ 5 : {5:None,15:-10,9:-4,19:-14}[t] ]
-        #assert len(sub) % 15 == 0
-        new = [[tt, len(sub)/15]]
+        sub = e[5: {5: None, 15: -10, 9: -4, 19: -14}[t]]
+        # assert len(sub) % 15 == 0
+        new = [[tt, len(sub) / 15]]
         new += [e[:5]]
-        for re in np.array(sub).reshape(((len(e)-t)/15,15)):
+        for re in np.array(sub).reshape(((len(e) - t) / 15, 15)):
             new += [re[:6]]
             new += [re[6:10]]
             new += [re[10:]]
-        if t == 5:      # gas in region (with possible recycles)
+        if t == 5:  # gas in region (with possible recycles)
             pass
-        elif t == 9:    # turned in the region into a star
+        elif t == 9:  # turned in the region into a star
             new += [e[-4:]]
-        elif t == 15:   # left region, but is still a gas particle
-            new += [e[-10:-4],e[-4:]]
-        elif t == 19:   # left region and turned into a star
-            new += [e[-14:-8],e[-8:-4],e[-4]]
+        elif t == 15:  # left region, but is still a gas particle
+            new += [e[-10:-4], e[-4:]]
+        elif t == 19:  # left region and turned into a star
+            new += [e[-14:-8], e[-8:-4], e[-4]]
         else:
             raise RuntimeError('Structure in "%s" ' % filename + \
                                'is not as expected!')
@@ -654,8 +658,8 @@ def fill_gas_from_traced(snap, data, add_blocks='all', add_derived=True,
                       "ejection_a", "ejection_time",
                       "mass_at_ejection", "metals_at_ejection", "jz_at_ejection", "T_at_ejection",
                       "cycle_r_max_at", "cycle_r_max", "cycle_z_max_at", "cycle_z_max",
-        ]
-    if isinstance(add_blocks, (str,unicode)):
+                      ]
+    if isinstance(add_blocks, str):
         add_blocks = (add_blocks,)
     if units is None:
         # TODO: angmom units
@@ -664,64 +668,63 @@ def fill_gas_from_traced(snap, data, add_blocks='all', add_derived=True,
     gas = snap.root.gas
     environment.gc_full_collect()
 
-    if isinstance(data, (str,unicode)):
+    if isinstance(data, str):
         filename = data
         if environment.verbose >= environment.VERBOSE_TACITURN:
-            print 'reading the gas trace information from %s...' % filename
+            print('reading the gas trace information from %s...' % filename)
         data = read_traced_gas(data)
     else:
         filename = '<given data>'
 
     # filter to gas only
     gas_type = {1, 2}
-    data = dict( filter(lambda i:i[1][0][0] in gas_type,
-                        data.iteritems() ) )
+    data = dict([i for i in iter(data.items()) if i[1][0][0] in gas_type])
 
     if environment.verbose >= environment.VERBOSE_TALKY:
-        print 'test IDs and find matching IDs...'
-    if len(set(data.keys())-set(gas['ID'])) > 0:
+        print('test IDs and find matching IDs...')
+    if len(set(data.keys()) - set(gas['ID'])) > 0:
         raise RuntimeError('Traced gas IDs in "%s" have ' % filename +
                            '%s ' % nice_big_num_str(len(
-                               set(data.keys())-set(gas['ID']))) +
+            set(data.keys()) - set(gas['ID']))) +
                            'elements that are not in the snapshot!')
     tracedIDs = (set(data.keys()) & set(gas['ID']))
 
-    trmask = np.array( [(ID in tracedIDs) for ID in gas['ID']], dtype=bool)
+    trmask = np.array([(ID in tracedIDs) for ID in gas['ID']], dtype=bool)
     if environment.verbose >= environment.VERBOSE_TALKY:
-        print '  found %s (of %s)' % (nice_big_num_str(len(tracedIDs)),
-                                      nice_big_num_str(len(data))),
-        print 'traced IDs that are in the snapshot'
+        print('  found %s (of %s)' % (nice_big_num_str(len(tracedIDs)),
+                                      nice_big_num_str(len(data))), end=' ')
+        print('traced IDs that are in the snapshot')
 
     def add_block(name, block):
         if name in add_blocks:
             if environment.verbose >= environment.VERBOSE_NORMAL:
-                print '  "%s"' % name
+                print('  "%s"' % name)
             gas[name] = block
-    if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'adding the blocks:'
 
-    trididx = np.argsort( data.keys() )
-    gididx = np.argsort( gas['ID'] )
+    if environment.verbose >= environment.VERBOSE_NORMAL:
+        print('adding the blocks:')
+
+    trididx = np.argsort(list(data.keys()))
+    gididx = np.argsort(gas['ID'])
     gididx_traced = gididx[trmask[gididx]]
 
     # type: not traced (0), in region (1), out of region (2)
     # number of full cycles (out and in)
 
-    trace_type = UnitArr( np.zeros(len(gas), dtype=int) )
-    trtype = np.array( [i[0][0] for i in data.itervalues()] )
+    trace_type = UnitArr(np.zeros(len(gas), dtype=int))
+    trtype = np.array([i[0][0] for i in data.values()])
     trace_type[gididx_traced] = trtype[trididx]
     add_block('trace_type', trace_type)
     del trace_type
 
-    n_cyc = np.array( [i[0][1] for i in data.itervalues()] )
-    num_recycled = UnitArr( np.empty(len(gas), dtype=n_cyc.dtype) )
+    n_cyc = np.array([i[0][1] for i in data.values()])
+    num_recycled = UnitArr(np.empty(len(gas), dtype=n_cyc.dtype))
     num_recycled[~trmask] = -1
     num_recycled[gididx_traced] = n_cyc[trididx]
     add_block('num_recycled', num_recycled)
     set_N_cycles = set(n_cyc)
     if environment.verbose >= environment.VERBOSE_TALKY:
-        print '  +++ number of recycles that occured:', set_N_cycles, '+++'
-
+        print('  +++ number of recycles that occured:', set_N_cycles, '+++')
 
     # Create blocks with shape (N, max(recycl)+1) for traced quantities at the
     # events of entering the region. N is the number of the gas particles. Each
@@ -729,21 +732,21 @@ def fill_gas_from_traced(snap, data, add_blocks='all', add_derived=True,
     # not exists, get filled with `invalid`.
 
     max_N_cycle = max(set_N_cycles)
-    infall_t = np.array( [[e[0] for e in i[1:1+3*n+1:3]] + [invalid]*(max_N_cycle-n)
-                          for n,i in zip(n_cyc, data.values())] )
-    infall_a = UnitArr( np.empty((len(gas),max_N_cycle+1),
-                        dtype=infall_t.dtype), units=units['TIME'] )
+    infall_t = np.array([[e[0] for e in i[1:1 + 3 * n + 1:3]] + [invalid] * (max_N_cycle - n)
+                         for n, i in zip(n_cyc, list(data.values()))])
+    infall_a = UnitArr(np.empty((len(gas), max_N_cycle + 1),
+                                dtype=infall_t.dtype), units=units['TIME'])
     infall_a[~trmask] = invalid
     infall_a[gididx_traced] = infall_t[trididx]
     add_block('infall_a', infall_a)
     del infall_t
     environment.gc_full_collect()
 
-    from snapshot import age_from_form
+    from .snapshot import age_from_form
     # only convert reasonable values & ensure not to overwrite blocks
-    mask = (infall_a!=invalid) & np.isfinite(infall_a)
+    mask = (infall_a != invalid) & np.isfinite(infall_a)
     infall_time = infall_a.copy()
-    new = gas.cosmic_time() - age_from_form(infall_time[mask],subs=gas)
+    new = gas.cosmic_time() - age_from_form(infall_time[mask], subs=gas)
     infall_time.units = new.units
     infall_time[mask] = new
     del new
@@ -751,89 +754,87 @@ def fill_gas_from_traced(snap, data, add_blocks='all', add_derived=True,
     del infall_time
     environment.gc_full_collect()
 
-    for name,idx,unit in [('mass_at_infall',   1, units['MASS']),
-                          ('metals_at_infall', 2, units['MASS']),
-                          ('jz_at_infall',     3, units['ANGMOM']),
-                          ('T_at_infall',      4, units['TEMP'])]:
+    for name, idx, unit in [('mass_at_infall', 1, units['MASS']),
+                            ('metals_at_infall', 2, units['MASS']),
+                            ('jz_at_infall', 3, units['ANGMOM']),
+                            ('T_at_infall', 4, units['TEMP'])]:
         if name not in add_blocks:
             continue
-        infall_Q = np.array( [[e[idx] for e in i[1:1+3*n+1:3]] +
-                                    [invalid]*(max_N_cycle-n)
-                              for n,i in zip(n_cyc, data.values())] )
-        block = UnitArr( np.empty((len(gas),max_N_cycle+1),
-                                dtype=infall_Q.dtype),
-                         units=unit )
+        infall_Q = np.array([[e[idx] for e in i[1:1 + 3 * n + 1:3]] +
+                             [invalid] * (max_N_cycle - n)
+                             for n, i in zip(n_cyc, list(data.values()))])
+        block = UnitArr(np.empty((len(gas), max_N_cycle + 1),
+                                 dtype=infall_Q.dtype),
+                        units=unit)
         block[~trmask] = invalid
         block[gididx_traced] = infall_Q[trididx]
         add_block(name, block)
         del infall_Q, block
         environment.gc_full_collect()
 
-
     # Create blocks with shape (N, max(recycl)+1) for traced quantities at the
     # events of ejection / leaving the region. N is the number of the gas
     # particles. Each particle has entries for each of their ejection events,
     # those events that do not exists, get filled with `invalid`.
     max_N_cycle = max(set_N_cycles)
-    eject_t = np.array( [[e[0] for e in i[2:2+3*n:3]] +
-                            [i[2+3*n][0] if t==2 else invalid] +
-                            [invalid]*(max_N_cycle-n)
-                         for n,t,i in zip(n_cyc, trtype, data.values())] )
-    ejection_a = UnitArr( np.empty((len(gas),max_N_cycle+1),
-                                    dtype=eject_t.dtype),
-                          units=units['TIME'] )
+    eject_t = np.array([[e[0] for e in i[2:2 + 3 * n:3]] +
+                        [i[2 + 3 * n][0] if t == 2 else invalid] +
+                        [invalid] * (max_N_cycle - n)
+                        for n, t, i in zip(n_cyc, trtype, list(data.values()))])
+    ejection_a = UnitArr(np.empty((len(gas), max_N_cycle + 1),
+                                  dtype=eject_t.dtype),
+                         units=units['TIME'])
     ejection_a[~trmask] = invalid
     ejection_a[gididx_traced] = eject_t[trididx]
     del eject_t
     add_block('ejection_a', ejection_a)
     environment.gc_full_collect()
 
-    from snapshot import age_from_form
+    from .snapshot import age_from_form
     # only convert reasonable values & ensure not to overwrite blocks
-    mask = (ejection_a!=invalid) & np.isfinite(ejection_a)
+    mask = (ejection_a != invalid) & np.isfinite(ejection_a)
     ejection_time = ejection_a.copy()
-    new = gas.cosmic_time() - age_from_form(ejection_time[mask],subs=gas)
+    new = gas.cosmic_time() - age_from_form(ejection_time[mask], subs=gas)
     ejection_time.units = new.units
     ejection_time[mask] = new
     del new
     add_block('ejection_time', ejection_time)
     environment.gc_full_collect()
 
-    for name,idx,unit in [('mass_at_ejection',   1, units['MASS']),
-                          ('metals_at_ejection', 2, units['MASS']),
-                          ('jz_at_ejection',     3, units['ANGMOM']),
-                          ('T_at_ejection',      4, units['TEMP'])]:
+    for name, idx, unit in [('mass_at_ejection', 1, units['MASS']),
+                            ('metals_at_ejection', 2, units['MASS']),
+                            ('jz_at_ejection', 3, units['ANGMOM']),
+                            ('T_at_ejection', 4, units['TEMP'])]:
         if name not in add_blocks:
             continue
-        eject_Q = np.array( [[e[idx] for e in i[2:2+3*n:3]] +
-                                [i[2+3*n][idx] if t==2 else invalid] +
-                                [invalid]*(max_N_cycle-n)
-                             for n,t,i in zip(n_cyc, trtype, data.values())] )
-        block = UnitArr( np.empty((len(gas),max_N_cycle+1),
-                                dtype=eject_Q.dtype),
-                         units=unit )
+        eject_Q = np.array([[e[idx] for e in i[2:2 + 3 * n:3]] +
+                            [i[2 + 3 * n][idx] if t == 2 else invalid] +
+                            [invalid] * (max_N_cycle - n)
+                            for n, t, i in zip(n_cyc, trtype, list(data.values()))])
+        block = UnitArr(np.empty((len(gas), max_N_cycle + 1),
+                                 dtype=eject_Q.dtype),
+                        units=unit)
         block[~trmask] = invalid
         block[gididx_traced] = eject_Q[trididx]
         add_block(name, block)
         del eject_Q, block
         environment.gc_full_collect()
 
-
     # for each cycle ther is a maximum travel distance, plus one more for those
     # particles that are outside the region: store them
-    for name,idx,unit in [('cycle_r_max_at', 0, units['TIME']),
-                          ('cycle_r_max',    1, units['POS']),
-                          ('cycle_z_max_at', 2, units['TIME']),
-                          ('cycle_z_max',    3, units['POS'])]:
+    for name, idx, unit in [('cycle_r_max_at', 0, units['TIME']),
+                            ('cycle_r_max', 1, units['POS']),
+                            ('cycle_z_max_at', 2, units['TIME']),
+                            ('cycle_z_max', 3, units['POS'])]:
         if name not in add_blocks:
             continue
-        pos = np.array( [[e[idx] for e in i[3:3+3*n:3]] +
-                            [i[3+3*n][idx] if t==2 else invalid] +
-                            [invalid]*(max_N_cycle-n)
-                         for n,t,i in zip(n_cyc, trtype, data.values())] )
-        block = UnitArr( np.empty((len(gas),max_N_cycle+1),
-                                dtype=pos.dtype),
-                         units=unit )
+        pos = np.array([[e[idx] for e in i[3:3 + 3 * n:3]] +
+                        [i[3 + 3 * n][idx] if t == 2 else invalid] +
+                        [invalid] * (max_N_cycle - n)
+                        for n, t, i in zip(n_cyc, trtype, list(data.values()))])
+        block = UnitArr(np.empty((len(gas), max_N_cycle + 1),
+                                 dtype=pos.dtype),
+                        units=unit)
         block[~trmask] = invalid
         block[gididx_traced] = pos[trididx]
         add_block(name, block)
@@ -876,7 +877,7 @@ def fill_derived_gas_trace_qty(snap, units=None, invalid=0.0):
         units = dict(TIME='a_form', MASS='Msol', TEMP='K',
                      ANGMOM=None, POS='kpc')
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'adding blocks that can be derived from the gas trace blocks:'
+        print('adding blocks that can be derived from the gas trace blocks:')
 
     gas = snap.gas
 
@@ -885,27 +886,26 @@ def fill_derived_gas_trace_qty(snap, units=None, invalid=0.0):
     max_N_cycle = max(set_N_cycles)
 
     # each (full) cycle takes some given time
-    if max_N_cycle>0:
+    if max_N_cycle > 0:
         if environment.verbose >= environment.VERBOSE_NORMAL:
-            print '  "out_time",'
-        ejected = gas['ejection_time'][:,:-1]
-        infall = gas['infall_time'][:,1:]
+            print('  "out_time",')
+        ejected = gas['ejection_time'][:, :-1]
+        infall = gas['infall_time'][:, 1:]
         gas['out_time'] = infall - ejected
-        mask = (ejected==invalid) | ~np.isfinite(ejected)
+        mask = (ejected == invalid) | ~np.isfinite(ejected)
         del ejected
         environment.gc_full_collect()
         gas['out_time'][mask] = invalid
-        mask = (infall==invalid) | ~np.isfinite(infall)
+        mask = (infall == invalid) | ~np.isfinite(infall)
         del infall
         environment.gc_full_collect()
         gas['out_time'][mask] = invalid
     environment.gc_full_collect()
 
-
     # The events of the last infall and the last ejection are a bit messy to
     # access. Create extra blocks:
-    #last_infall_idx = np.sum(~np.isnan(gas['infall_a']), axis=-1) - 1
-    last_infall_idx = np.sum(gas['infall_a']!=invalid, axis=-1) - 1
+    # last_infall_idx = np.sum(~np.isnan(gas['infall_a']), axis=-1) - 1
+    last_infall_idx = np.sum(gas['infall_a'] != invalid, axis=-1) - 1
     last_infall_idx = np.arange(len(last_infall_idx)), last_infall_idx
     for last, alle in [('last_infall_a', 'infall_a'),
                        ('last_infall_time', 'infall_time'),
@@ -914,7 +914,7 @@ def fill_derived_gas_trace_qty(snap, units=None, invalid=0.0):
                        ('jz_at_last_infall', 'jz_at_infall'),
                        ('T_at_last_infall', 'T_at_infall')]:
         if environment.verbose >= environment.VERBOSE_NORMAL:
-            print '  "%s"' % last
+            print('  "%s"' % last)
         gas[last] = UnitArr(np.empty(len(gas), dtype=gas[alle].dtype),
                             units=gas[alle].units)
         gas[last][~trmask] = invalid
@@ -922,8 +922,8 @@ def fill_derived_gas_trace_qty(snap, units=None, invalid=0.0):
     del last_infall_idx
     environment.gc_full_collect()
 
-    #last_ejection_idx = np.sum(~np.isnan(gas['ejection_a']), axis=-1) - 1
-    last_ejection_idx = np.sum(gas['ejection_a']!=invalid, axis=-1) - 1
+    # last_ejection_idx = np.sum(~np.isnan(gas['ejection_a']), axis=-1) - 1
+    last_ejection_idx = np.sum(gas['ejection_a'] != invalid, axis=-1) - 1
     last_ejection_idx = np.arange(len(last_ejection_idx)), last_ejection_idx
     for last, alle in [('last_ejection_a', 'ejection_a'),
                        ('last_ejection_time', 'ejection_time'),
@@ -932,14 +932,13 @@ def fill_derived_gas_trace_qty(snap, units=None, invalid=0.0):
                        ('jz_at_last_ejection', 'jz_at_ejection'),
                        ('T_at_last_ejection', 'T_at_ejection')]:
         if environment.verbose >= environment.VERBOSE_NORMAL:
-            print '  "%s"' % last
+            print('  "%s"' % last)
         gas[last] = UnitArr(np.empty(len(gas), dtype=gas[alle].dtype),
                             units=gas[alle].units)
         gas[last][~trmask] = invalid
         gas[last][trmask] = gas[alle][last_ejection_idx][trmask]
     del last_ejection_idx
     environment.gc_full_collect()
-
 
     """
     inmask  = (gas['trace_type'] == 1)
@@ -1000,6 +999,7 @@ def fill_derived_gas_trace_qty(snap, units=None, invalid=0.0):
     gas['metal_gain_in'].convert_to(gas['metals'].units)
     """
 
+
 def read_pyigm_COS_halos_EWs(transitions=('HI 1215', 'MgII 2796', 'MgII 2803', 'CIV 1548',
                                           'CIV 1550', 'OVI 1031', 'OVI 1037')):
     '''
@@ -1024,33 +1024,33 @@ def read_pyigm_COS_halos_EWs(transitions=('HI 1215', 'MgII 2796', 'MgII 2803', '
     import pyigm
     from pyigm.cgm import cos_halos
     cos_halos = cos_halos.COSHalos()
-    data = {trans:[] for trans in transitions}
+    data = {trans: [] for trans in transitions}
     for sys in cos_halos:
         sys = sys.to_dict()
-        Mhalo  = sys['galaxy']['halo_mass']
+        Mhalo = sys['galaxy']['halo_mass']
         Mstars = sys['galaxy']['stellar_mass']
-        sSFR   = sys['galaxy']['ssfr']
-        Rvir   = sys['galaxy']['rvir']
+        sSFR = sys['galaxy']['ssfr']
+        Rvir = sys['galaxy']['rvir']
         for component in sys['igm_sys']['components']:
             for line in sys['igm_sys']['components'][component]['lines']:
                 tname = sys['igm_sys']['components'][component]['lines'][line]['name']
                 if tname in transitions:
                     EW = sys['igm_sys']['components'][component]['lines'][line]['attrib']['EW']['value']
-                    data[tname].append( [sys['z'], sys['rho'], EW,
-                                         Mhalo, Mstars, sSFR, Rvir] )
-    for trans,d in data.iteritems():
+                    data[tname].append([sys['z'], sys['rho'], EW,
+                                        Mhalo, Mstars, sSFR, Rvir])
+    for trans, d in data.items():
         if len(d) == 0:
             raise RuntimeError('transition "%s" not found' % trans)
 
-    data = { trans:np.array(d) for trans,d in data.iteritems() }
-    return { trans:{
-            'z':        UnitArr(d[:,0]),
-            'rho':      UnitArr(d[:,1], 'kpc'),
-            #'EW':       UnitArr(10.**d[:,2], 'Angstrom'),
-            'EW':       UnitArr(d[:,2], 'Angstrom'),
-            'Mhalo':    UnitArr(10.**d[:,3], 'Msol'),
-            'Mstars':   UnitArr(10.**d[:,4], 'Msol'),
-            'sSFR':     UnitArr(d[:,5]),
-            'Rvir':     UnitArr(d[:,6], 'kpc'),
-    } for trans,d in data.iteritems() }
+    data = {trans: np.array(d) for trans, d in data.items()}
+    return {trans: {
+        'z': UnitArr(d[:, 0]),
+        'rho': UnitArr(d[:, 1], 'kpc'),
+        # 'EW':       UnitArr(10.**d[:,2], 'Angstrom'),
+        'EW': UnitArr(d[:, 2], 'Angstrom'),
+        'Mhalo': UnitArr(10. ** d[:, 3], 'Msol'),
+        'Mstars': UnitArr(10. ** d[:, 4], 'Msol'),
+        'sSFR': UnitArr(d[:, 5]),
+        'Rvir': UnitArr(d[:, 6], 'kpc'),
+    } for trans, d in data.items()}
 

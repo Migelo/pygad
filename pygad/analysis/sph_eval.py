@@ -38,7 +38,7 @@ Examples:
     >>> if np.max(np.abs(v1-v2)/v1) > 1e-6:
     ...     print v1
     ...     print v2
-       
+
 '''
 __all__ = ['kernel_weighted', 'SPH_qty_at', 'scatter_gas_qty_to_stars']
 
@@ -46,20 +46,23 @@ import numpy as np
 from ..units import *
 from ..utils import dist
 
+
 def _calc_ys(qty, all_gas_pos, gas_pos, hsml, kernel):
-    y = np.empty( (len(gas_pos),)+qty.shape[1:] )
-    for i in xrange(len(gas_pos)):
+    y = np.empty((len(gas_pos),) + qty.shape[1:])
+    for i in range(len(gas_pos)):
         hi = hsml[i]
         d = dist(all_gas_pos, gas_pos[i]) / hi
         mask = d < 1.0
-        y[i] = np.sum((qty[mask].T * (kernel(d[mask]) / hi**3)).T,
+        y[i] = np.sum((qty[mask].T * (kernel(d[mask]) / hi ** 3)).T,
                       axis=0)
     return y
+
+
 def kernel_weighted(s, qty, units=None, kernel=None, parallel=None):
     '''
     Calculate a kernel weighted SPH quantity for all the gas particles:
              N
-            ___         /  \ 
+            ___         /  \
       y  =  \    x  W  | h  |
        i    /__   j  ij \ i/
             j=1
@@ -80,7 +83,7 @@ def kernel_weighted(s, qty, units=None, kernel=None, parallel=None):
     '''
     # TODO: find ways to speed it up! -- parallelisation very inefficient
     gas = s.gas
-    if isinstance(qty, (str,unicode)):
+    if isinstance(qty, str):
         qty = gas.get(qty)
     else:
         if len(qty) != len(gas):
@@ -89,11 +92,11 @@ def kernel_weighted(s, qty, units=None, kernel=None, parallel=None):
                                '(%s) does not ' % nice_big_num_str(len(qty)) + \
                                'match the number of gas ' + \
                                '(%s)!' % nice_big_num_str(len(gas)))
-    units = getattr(qty,'units',None) if units is None else Unit(units)
+    units = getattr(qty, 'units', None) if units is None else Unit(units)
     qty = np.asarray(qty)
 
     gas_pos = gas['pos'].view(np.ndarray)
-    hsml = gas['hsml'].in_units_of(s['pos'].units,subs=s).view(np.ndarray)
+    hsml = gas['hsml'].in_units_of(s['pos'].units, subs=s).view(np.ndarray)
 
     if kernel is None:
         from ..gadget import config
@@ -108,26 +111,27 @@ def kernel_weighted(s, qty, units=None, kernel=None, parallel=None):
         N_threads = cpu_count()
         pool = Pool(N_threads)
         res = [None] * N_threads
-        chunk = [[i*len(gas)/N_threads, (i+1)*len(gas)/N_threads]
-                    for i in xrange(N_threads)]
+        chunk = [[i * len(gas) / N_threads, (i + 1) * len(gas) / N_threads]
+                 for i in range(N_threads)]
         import warnings
         with warnings.catch_warnings():
             # warnings.catch_warnings doesn't work in parallel
             # environment...
-            warnings.simplefilter("ignore") # for _z2Gyr_vec
-            for i in xrange(N_threads):
+            warnings.simplefilter("ignore")  # for _z2Gyr_vec
+            for i in range(N_threads):
                 res[i] = pool.apply_async(_calc_ys,
-                        (qty, gas_pos,
-                         gas_pos[chunk[i][0]:chunk[i][1]],
-                         hsml[chunk[i][0]:chunk[i][1]],
-                         kernel))
-        y = np.empty( (len(gas_pos),)+qty.shape[1:] )
-        for i in xrange(N_threads):
+                                          (qty, gas_pos,
+                                           gas_pos[chunk[i][0]:chunk[i][1]],
+                                           hsml[chunk[i][0]:chunk[i][1]],
+                                           kernel))
+        y = np.empty((len(gas_pos),) + qty.shape[1:])
+        for i in range(N_threads):
             y[chunk[i][0]:chunk[i][1]] = res[i].get()
     else:
         y = _calc_ys(qty, gas_pos, gas_pos, hsml, kernel)
 
     return UnitArr(y, units)
+
 
 def SPH_qty_at(s, qty, r, units=None, kernel=None, dV='dV'):
     '''
@@ -150,9 +154,9 @@ def SPH_qty_at(s, qty, r, units=None, kernel=None, dV='dV'):
         Q (UnitArr):            The SPH property at the given position.
     '''
     r = UnitQty(r, s['pos'].units, subs=s)
-    if not (r.shape==(3,) or (r.shape[1:]==(3,) and len(r.shape)==2)):
+    if not (r.shape == (3,) or (r.shape[1:] == (3,) and len(r.shape) == 2)):
         raise ValueError('Position `r` needs to have shape (3,) or (N,3)!')
-    if isinstance(qty, (str,unicode)):
+    if isinstance(qty, str):
         qty = s.gas.get(qty)
     else:
         if len(qty) != len(s.gas):
@@ -161,13 +165,13 @@ def SPH_qty_at(s, qty, r, units=None, kernel=None, dV='dV'):
                                '(%s) does not ' % nice_big_num_str(len(qty)) + \
                                'match the number of gas ' + \
                                '(%s)!' % nice_big_num_str(len(s.gas)))
-    units = getattr(qty,'units',None) if units is None else Unit(units)
+    units = getattr(qty, 'units', None) if units is None else Unit(units)
     qty = np.asarray(qty)
 
     r = r.view(np.ndarray)
     gas_pos = s.gas['pos'].view(np.ndarray)
-    hsml = s.gas['hsml'].in_units_of(s['pos'].units,subs=s).view(np.ndarray)
-    dV = s.gas.get(dV).in_units_of(s['pos'].units**3,subs=s).view(np.ndarray)
+    hsml = s.gas['hsml'].in_units_of(s['pos'].units, subs=s).view(np.ndarray)
+    dV = s.gas.get(dV).in_units_of(s['pos'].units ** 3, subs=s).view(np.ndarray)
 
     if kernel is None:
         from ..gadget import config
@@ -179,16 +183,16 @@ def SPH_qty_at(s, qty, r, units=None, kernel=None, dV='dV'):
         d = dist(gas_pos, r) / hsml
         mask = d < 1.0
         Q = np.sum((qty[mask].T * (kernel_func(d[mask]) * dV[mask] /
-                                        hsml[mask]**3)).T,
+                                   hsml[mask] ** 3)).T,
                    axis=0)
     elif len(r) < 100:
-        dV_hsml3 = dV / hsml**3
-        Q = np.empty( (len(r),)+qty.shape[1:], dtype=qty.dtype )
-        for i,x in enumerate(r):
+        dV_hsml3 = dV / hsml ** 3
+        Q = np.empty((len(r),) + qty.shape[1:], dtype=qty.dtype)
+        for i, x in enumerate(r):
             d = dist(gas_pos, x) / hsml
             mask = d < 1.0
             Q[i] = np.sum((qty[mask].T * (kernel_func(d[mask]) *
-                                            dV_hsml3[mask])).T,
+                                          dV_hsml3[mask])).T,
                           axis=0)
     else:
         from .. import C
@@ -204,45 +208,45 @@ def SPH_qty_at(s, qty, r, units=None, kernel=None, dV='dV'):
             gas_pos = gas_pos.copy()
             hsml = hsml.copy()
             dV = dV.copy()
-        #TODO: handle different types than double
-        if len(qty.shape)==1:
-            Q = np.empty( len(r), dtype=np.float64 )
+        # TODO: handle different types than double
+        if len(qty.shape) == 1:
+            Q = np.empty(len(r), dtype=np.float64)
             if qty.base is not None:
                 qty = qty.copy()
             C.cpygad.eval_sph_at(
-                    C.c_size_t(len(r)),
-                    C.c_void_p(r.ctypes.data),
-                    C.c_void_p(Q.ctypes.data),
-                    C.c_size_t(len(gas_pos)),
-                    C.c_void_p(gas_pos.ctypes.data),
-                    C.c_void_p(hsml.ctypes.data),
-                    C.c_void_p(dV.ctypes.data),
-                    C.c_void_p(qty.ctypes.data),
-                    C.create_string_buffer(kernel),
-                    None    # build new tree
+                C.c_size_t(len(r)),
+                C.c_void_p(r.ctypes.data),
+                C.c_void_p(Q.ctypes.data),
+                C.c_size_t(len(gas_pos)),
+                C.c_void_p(gas_pos.ctypes.data),
+                C.c_void_p(hsml.ctypes.data),
+                C.c_void_p(dV.ctypes.data),
+                C.c_void_p(qty.ctypes.data),
+                C.create_string_buffer(kernel),
+                None  # build new tree
             )
-        elif len(qty.shape)==2:
+        elif len(qty.shape) == 2:
             # C function needs contiquous arrays and cannot deal with
             # mutli-dimenensional ones...
-            Q = np.empty( (qty.shape[1],len(r)), dtype=np.float64 )
+            Q = np.empty((qty.shape[1], len(r)), dtype=np.float64)
             qty = qty.T
             if qty.base is not None:
                 qty = qty.copy()
             # avoid the reconstruction of the octree
             from ..octree import cOctree
             tree = cOctree(gas_pos, hsml)
-            for k in xrange(Q.shape[0]):
+            for k in range(Q.shape[0]):
                 C.cpygad.eval_sph_at(
-                        C.c_size_t(len(r)),
-                        C.c_void_p(r.ctypes.data),
-                        C.c_void_p(Q[k].ctypes.data),
-                        C.c_size_t(len(gas_pos)),
-                        C.c_void_p(gas_pos.ctypes.data),
-                        C.c_void_p(hsml.ctypes.data),
-                        C.c_void_p(dV.ctypes.data),
-                        C.c_void_p(qty[k].ctypes.data),
-                        C.create_string_buffer(kernel),
-                        C.c_void_p(tree._cOctree__node_ptr),
+                    C.c_size_t(len(r)),
+                    C.c_void_p(r.ctypes.data),
+                    C.c_void_p(Q[k].ctypes.data),
+                    C.c_size_t(len(gas_pos)),
+                    C.c_void_p(gas_pos.ctypes.data),
+                    C.c_void_p(hsml.ctypes.data),
+                    C.c_void_p(dV.ctypes.data),
+                    C.c_void_p(qty[k].ctypes.data),
+                    C.create_string_buffer(kernel),
+                    C.c_void_p(tree._cOctree__node_ptr),
                 )
             del tree
             Q = Q.T
@@ -250,6 +254,7 @@ def SPH_qty_at(s, qty, r, units=None, kernel=None, dV='dV'):
             raise ValueError('Cannot handle more than two dimension in qty!')
 
     return UnitArr(Q, units)
+
 
 def scatter_gas_qty_to_stars(s, qty, name=None, units=None, kernel=None, dV='dV'):
     '''
@@ -292,7 +297,7 @@ def scatter_gas_qty_to_stars(s, qty, name=None, units=None, kernel=None, dV='dV'
         KeyError:           If there already exists a block of that name.
     '''
     if name is None:
-        if isinstance(qty, (str,unicode)):
+        if isinstance(qty, str):
             name = qty
         else:
             raise RuntimeError('No name for the quantity is given!')

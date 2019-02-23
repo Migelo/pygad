@@ -12,12 +12,14 @@ import numpy as np
 import re
 import scipy.spatial.distance
 import sys
-from term import *
+from .term import *
 import time
 import numbers
 
+
 class DevNull():
     '''A always open write-only null file object.'''
+
     def __init__(self, *args, **kwargs):
         self.closed = False
         self.mode = "w"
@@ -26,30 +28,43 @@ class DevNull():
         self.errors = None
         self.newlines = None
         self.softspace = 0
+
     def close(self):
         pass
+
     def flush(self):
         pass
-    def next(self):
+
+    def __next__(self):
         raise IOError("Invalid operation")
-    def read(size = 0):
+
+    def read(size=0):
         raise IOError("Invalid operation")
+
     def readline(self):
         raise IOError("Invalid operation")
+
     def readlines(self):
         raise IOError("Invalid operation")
+
     def xreadlines(self):
         raise IOError("Invalid operation")
+
     def seek(self):
         raise IOError("Invalid operation")
+
     def tell(self):
         return 0
+
     def truncate(self):
         pass
+
     def write(self, *args, **kwargs):
         pass
+
     def writelines(self, *args, **kwargs):
         pass
+
 
 def static_vars(**kwargs):
     '''
@@ -67,11 +82,14 @@ def static_vars(**kwargs):
         >>> foo()
         foo got called the 3. time
     '''
+
     def decorate(func):
         for k in kwargs:
             setattr(func, k, kwargs[k])
         return func
+
     return decorate
+
 
 def nice_big_num_str(n, separator=','):
     '''
@@ -99,6 +117,7 @@ def nice_big_num_str(n, separator=','):
         s = "%s%03d%s" % (separator, r, s)
     return "%d%s" % (n, s)
 
+
 def float_to_nice_latex(x, dec=None):
     '''
     Convert a number to a nice latex representation.
@@ -116,7 +135,7 @@ def float_to_nice_latex(x, dec=None):
         >>> float_to_nice_latex(1e10)
         '10^{10}'
     '''
-    s = ('%g' if dec is None else '%%.%dg' % (dec+1)) % x
+    s = ('%g' if dec is None else '%%.%dg' % (dec + 1)) % x
     if 'e' in s:
         # two backslashes in raw-string, because it is a regex
         # replace 'e+'
@@ -128,6 +147,7 @@ def float_to_nice_latex(x, dec=None):
         if s.startswith(r'1 '):
             s = s[9:]
     return s
+
 
 def perm_inv(perm):
     '''
@@ -149,11 +169,13 @@ def perm_inv(perm):
     '''
     return perm.argsort()
 
+
 def _ndarray_periodic_distance_to(pos, center, boxsize):
     '''periodic_distance_to assuming np.ndarray's as arguments. (for speed)'''
     min_dists = np.minimum((pos - center) % boxsize,
                            (center - pos) % boxsize)
-    return np.sqrt((min_dists**2).sum(axis=1))
+    return np.sqrt((min_dists ** 2).sum(axis=1))
+
 
 def periodic_distance_to(pos, center, boxsize):
     '''
@@ -185,7 +207,7 @@ def periodic_distance_to(pos, center, boxsize):
     '''
     from ..units import UnitArr
 
-    if isinstance(boxsize, (str,unicode)):
+    if isinstance(boxsize, str):
         from ..units import Unit
         boxsize = Unit(boxsize)
 
@@ -227,10 +249,11 @@ def periodic_distance_to(pos, center, boxsize):
     r.units = unit
     return r
 
+
 def sane_slice(s, N, forward=True):
     '''
     Convert a slice into an equivalent "sane" one.
-    
+
     The new slice is equivalent in the sense, that it yields the same values when
     applied. These are, however, reverted with respect to the original slice, if
     it had a negative step and `forward` is True.
@@ -290,23 +313,24 @@ def sane_slice(s, N, forward=True):
 
     # get number of steps & remaining
     n, r = divmod(stop - start, step)
-    if n < 0 or (n==0 and r==0):
-        return slice(0,0,1)
+    if n < 0 or (n == 0 and r == 0):
+        return slice(0, 0, 1)
     if r != 0:  # it's a "stop index", not the last index
         n += 1
 
     if step < 0:
         if forward:
-            start, stop, step = start+(n-1)*step, start-step, -step
+            start, stop, step = start + (n - 1) * step, start - step, -step
             stop = min(stop, N)
         else:
-            stop = start+n*step
+            stop = start + n * step
             if stop < 0:
                 stop = None
-    else: # step > 0, step == 0 is not allowed
-        stop = min(start+n*step, N)
+    else:  # step > 0, step == 0 is not allowed
+        stop = min(start + n * step, N)
 
     return slice(start, stop, step)
+
 
 def is_consecutive(l):
     '''
@@ -315,7 +339,7 @@ def is_consecutive(l):
     Args:
         l (iterable):   Some iterable, that supports indexing for which
                         list(l) == [l[i] for i in range(len(l))]
-    
+
     Examples:
         >>> is_consecutive([1,2,3])
         True
@@ -330,7 +354,8 @@ def is_consecutive(l):
     '''
     if isinstance(l, dict):
         raise TypeError('Cannot check whether a dict has consecutive values!')
-    return np.all( np.arange(len(l)) + l[0] == list(l) )
+    return np.all(np.arange(len(l)) + l[0] == list(l))
+
 
 def rand_dir(dim=3):
     '''
@@ -357,15 +382,16 @@ def rand_dir(dim=3):
         raise ValueError('Can only create vectors with at least one dimension!')
     length = 2.
     while length > 1.0 or length < 1e-4:
-        r = np.random.uniform(-1.,1., size=dim)
+        r = np.random.uniform(-1., 1., size=dim)
         length = np.linalg.norm(r)
     return r / length
+
 
 class ProgressBar(object):
     '''
     This function creates an iterable context manager that can be used to iterate
     over something while showing a progress bar.
-    
+
     It will either iterate over the `iterable` or `length` items (that are counted
     up). While iteration happens, this function will print a rendered progress bar
     to the given `file` (defaults to stdout) and will attempt to calculate
@@ -443,12 +469,12 @@ class ProgressBar(object):
                  bar_template='%(label)s  [%(bar)s]  %(info)s',
                  info_sep='  ', file=sys.stdout, label=None,
                  width=36, eta_average_over=20):
-        if iterable is None and isinstance(length,int):
+        if iterable is None and isinstance(length, int):
             self._length = length
-            self._iterable = xrange(length)
+            self._iterable = range(length)
         else:
-            if isinstance(iterable,int):
-                iterable = xrange(iterable)
+            if isinstance(iterable, int):
+                iterable = range(iterable)
             self._length = int(length) if length else len(iterable)
             self._iterable = iter(iterable)
         self.show_eta = bool(show_eta)
@@ -456,7 +482,7 @@ class ProgressBar(object):
         self.show_iteration = bool(show_iteration)
         self.fill_char = str(fill_char)
         self.empty_char = str(empty_char)
-        if len(self.fill_char)!=1 or len(self.empty_char)!=1:
+        if len(self.fill_char) != 1 or len(self.empty_char) != 1:
             raise ValueError("The fill and the empty char both must have length 1.")
         self.bar_template = str(bar_template)
         self.info_sep = str(info_sep)
@@ -493,7 +519,7 @@ class ProgressBar(object):
         self.render()
         return self
 
-    def next(self):
+    def __next__(self):
         try:
             rv = next(self._iterable)
             self._current_item = rv
@@ -511,6 +537,7 @@ class ProgressBar(object):
     @property
     def auto_width(self):
         return self._auto_width
+
     @auto_width.setter
     def auto_width(self, value):
         self._auto_width = bool(value)
@@ -518,6 +545,7 @@ class ProgressBar(object):
     @property
     def width(self):
         return self._width
+
     @width.setter
     def width(self, value):
         if value is None:
@@ -620,7 +648,7 @@ class ProgressBar(object):
 
         buf.append(' ' * (clear_width - line_len))
         line = ''.join(buf)
-        
+
         if line != self._last_line:
             self._last_line = line
             self._file.write(line)
@@ -658,8 +686,9 @@ class ProgressBar(object):
         self._last_eta = t
         self._it_times = self._it_times[-self._eta_average_over:] + [t]
         self._it_time_its = self._it_time_its[-self._eta_average_over:] + \
-                                [self._it]
+                            [self._it]
         self._eta_known = True
+
 
 def time_from_color_str(time, units='s'):
     '''
@@ -675,8 +704,9 @@ def time_from_color_str(time, units='s'):
     nums = time.split(':')
     t = 0
     for val in nums:
-        t = 60*t + float(val)
-    return UnitArr(t,'s').in_units_of(units)
+        t = 60 * t + float(val)
+    return UnitArr(t, 's').in_units_of(units)
+
 
 def time_to_nice_str(time, colon=False, opt_hour=False, prec=None, days=None):
     '''
@@ -716,9 +746,10 @@ def time_to_nice_str(time, colon=False, opt_hour=False, prec=None, days=None):
     from ..units import UnitScalar
     time = UnitScalar(time, 's')
     if prec is None:
-        if abs(time)>1 and abs(time-int(time))<1e-12:
+        if abs(time) > 1 and abs(time - int(time)) < 1e-12:
             prec = 0
     return sec_to_nice_str(float(time), colon=colon, opt_hour=opt_hour, prec=prec, days=days)
+
 
 def sec_to_nice_str(secs, colon=False, opt_hour=False, prec=None, days=None):
     '''
@@ -777,24 +808,24 @@ def sec_to_nice_str(secs, colon=False, opt_hour=False, prec=None, days=None):
     '''
     if secs < 0:
         raise ValueError("Negative durations are not supported!")
-    if not (prec is None or (isinstance(prec,int) and prec>=0)):
+    if not (prec is None or (isinstance(prec, int) and prec >= 0)):
         raise ValueError("Precision needs to be a positive integer!")
 
     m, s = divmod(secs, 60)
     m = int(m)
     h, m = divmod(m, 60)
 
-    if isinstance(secs,numbers.Integral):
+    if isinstance(secs, numbers.Integral):
         tformat = '%dh %dm %ds'
         prec = 0
     else:
         if prec is None:
-            prec = 3 if secs>1 else min(9,3-np.log10(secs))
+            prec = 3 if secs > 1 else min(9, 3 - np.log10(secs))
         tformat = '%%dh %%dm %%.%dfs' % prec
     if colon:
-        tformat = tformat[:-1].replace('h ',':').replace('m ',':')
-        tformat = tformat.replace('%d','%02d')
-        tformat = tformat.replace('%.','%%0%d.'%(2+(prec>0)+prec))
+        tformat = tformat[:-1].replace('h ', ':').replace('m ', ':')
+        tformat = tformat.replace('%d', '%02d')
+        tformat = tformat.replace('%.', '%%0%d.' % (2 + (prec > 0) + prec))
 
     if days or (days is None and h >= 24):
         d, h = divmod(h, 24)
@@ -803,16 +834,17 @@ def sec_to_nice_str(secs, colon=False, opt_hour=False, prec=None, days=None):
         d = None
         string = tformat % (h, m, s)
 
-    if opt_hour and (d is None or d==0) and h==0:
+    if opt_hour and (d is None or d == 0) and h == 0:
         if colon:
-            string = string[string.find(':')+1:]
+            string = string[string.find(':') + 1:]
         else:
-            string = string[string.find(' ')+1:]
+            string = string[string.find(' ') + 1:]
         string = string.lstrip('0')
         if string[0] == ':':
-            string = '0'+string
+            string = '0' + string
 
     return string
+
 
 def weighted_percentile(qty, perc, weights=None, values_sorted=False,
                         ignore_nan=False, new_style=False):
@@ -855,17 +887,17 @@ def weighted_percentile(qty, perc, weights=None, values_sorted=False,
     '''
     if not isinstance(qty, np.ndarray):
         qty = np.array(qty)
-    perc = np.array(perc,dtype=float) / 100.
+    perc = np.array(perc, dtype=float) / 100.
     if np.any(perc < 0) or np.any(perc > 100):
         raise ValueError('Percentiles need to be be in [0,100]!')
     if weights is None:
         weights = np.ones(len(qty))
-    weights = np.array(weights,dtype=float)
+    weights = np.array(weights, dtype=float)
     if len(weights) != len(qty):
         raise ValueError('Weights need to be the same length as `qty`!')
 
     if ignore_nan:
-        not_nan = ~( np.isnan(qty) | np.isnan(weights) )
+        not_nan = ~(np.isnan(qty) | np.isnan(weights))
         qty = qty[not_nan]
         weights = weights[not_nan]
 

@@ -10,9 +10,9 @@ Also doctest other parts of this sub-module:
 
     handler module is implicitly tested in the snapshot module...
 '''
-from config import *
-import lowlevel_file
-from handler import *
+from .config import *
+from . import lowlevel_file
+from .handler import *
 import os
 
 from ..environment import module_dir

@@ -92,16 +92,16 @@ def profile(s, Rmax, qty, av=None, units=None, dens=True, proj=None,
                   fontsize=labelsize)
     if ylabel is None:
         name = ''
-        if isinstance(av,(str,unicode)):
+        if isinstance(av,str):
             name += str(av) + '-weighted '
         if dens:
             name = r'$\Sigma' if proj else r'$\rho'
-            if isinstance(qty,(str,unicode)) and qty!='mass':
+            if isinstance(qty,str) and qty!='mass':
                 name += r'_\mathrm{%s}$' % str(qty)
             else:
                 name += r'$'
         else:
-            name += str(qty) if isinstance(qty,(str,unicode)) else ''
+            name += str(qty) if isinstance(qty,str) else ''
         ylabel = r'%s [$%s$]' % (name, prof.units.latex())
     ax.set_ylabel(ylabel, fontsize=labelsize)
 
@@ -153,7 +153,7 @@ def history(s, qty, time=None, av=None, units=None, diff=False, N=50,
         ax (AxesSubplot):       The axis plotted on.
     '''
     now = s.cosmic_time()
-    if isinstance(qty, (str,unicode)):
+    if isinstance(qty, str):
         Q = s.get(qty)
     else:
         Q = qty
@@ -163,7 +163,7 @@ def history(s, qty, time=None, av=None, units=None, diff=False, N=50,
                          'does not match the length of the stellar ' +
                          '(sub-)snapshot (%s)!' % utils.nice_big_num_str(len(s)))
     if av is not None:
-        if isinstance(av, (str,unicode)):
+        if isinstance(av, str):
             AV = s.get(av)
         if len(s) != len(AV):
             raise ValueError('The length of the averaging quantity array ' +
@@ -176,7 +176,7 @@ def history(s, qty, time=None, av=None, units=None, diff=False, N=50,
             time = 'cosmic_time()-age'
         else:
             raise ValueError('Time quantity is not defined!')
-    if isinstance(time, (str,unicode)):
+    if isinstance(time, str):
         time = s.get(time)
     if str(time.units).endswith('_form]'):
         from ..snapshot import age_from_form
@@ -226,9 +226,9 @@ def history(s, qty, time=None, av=None, units=None, diff=False, N=50,
         z_minor = np.array([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
                             1, 1.5, 2, 3, 4, 5, 6, 7, 8, 9, 10])
         z_major = np.array([0, 0.5, 1, 2, 3, 4, 10])
-        t_major = map(lambda z: universe_age-s.cosmology.lookback_time(z), z_major)
+        t_major = [universe_age-s.cosmology.lookback_time(z) for z in z_major]
         t_major = UnitArr(t_major, t_major[0].units).in_units_of(t.units)
-        t_minor = map(lambda z: universe_age-s.cosmology.lookback_time(z), z_minor)
+        t_minor = [universe_age-s.cosmology.lookback_time(z) for z in z_minor]
         t_minor = UnitArr(t_minor, t_minor[0].units).in_units_of(t.units)
         ax_z = ax.twiny()
         ax_z.set_xlim(ax.get_xlim())
@@ -236,7 +236,7 @@ def history(s, qty, time=None, av=None, units=None, diff=False, N=50,
         ax_z.xaxis.set_tick_params(which='major', size=7, width=1.5)
         ax_z.set_xticks(t_minor, minor=True)
         ax_z.set_xticks(t_major)
-        ax_z.set_xticklabels(map(lambda z: '%g'%z, z_major))
+        ax_z.set_xticklabels(['%g'%z for z in z_major])
         ax_z.set_xlabel(r'redshift $z$', fontsize=labelsize)
         for tl in ax_z.get_xticklabels():
             tl.set_fontsize(0.8*labelsize)
@@ -254,9 +254,9 @@ def history(s, qty, time=None, av=None, units=None, diff=False, N=50,
                   fontsize=labelsize)
     if ylabel is None:
         name = ''
-        if isinstance(av, (str,unicode)):
+        if isinstance(av, str):
             name += str(av) + '-weighted '
-        name += str(qty) if isinstance(qty,(str,unicode)) else ''
+        name += str(qty) if isinstance(qty,str) else ''
         ylabel = r'%s [$%s$]' % (name, Q_hist.units.latex())
     ax.set_ylabel(ylabel, fontsize=labelsize)
 
@@ -337,8 +337,8 @@ def flow_history(s, qty='mass', inout='infall', recycles='first/re',
     kwargs['linewidth'] = kwargs.get('linewidth', 2)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'calculate the total %s rates...' % ('inflow' if inout=='infall'
-                                                   else 'outflow')
+        print('calculate the total %s rates...' % ('inflow' if inout=='infall'
+                                                   else 'outflow'))
         sys.stdout.flush()
     max_N_cycle = min( np.max(g['num_recycled']), max_cycle )
     t_edges = np.linspace(0, g.cosmology.universe_age(), kwargs['N']+1)
@@ -356,7 +356,7 @@ def flow_history(s, qty='mass', inout='infall', recycles='first/re',
                      g.cosmology.universe_age().units)
     mass = UnitArr(np.zeros(kwargs['N'], dtype=float), g[qty+'_at_'+inout].units)
     from ..binning import gridbin
-    for n in xrange(max_N_cycle+1):
+    for n in range(max_N_cycle+1):
         if n>1:
             sub = g[ (g['cycle_z_max'][:,n] > z_max_min) &
                      (g['out_time'][:,n-1] > t_out_min) ]
@@ -372,11 +372,11 @@ def flow_history(s, qty='mass', inout='infall', recycles='first/re',
         mass += binned
 
     t = (t_edges[:-1]+t_edges[1:]) / 2.
-    dt = t_edges[1:]-t_edges[:-1] 
+    dt = t_edges[1:]-t_edges[:-1]
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'calculate the individual %s rates and plot...' % ('inflow'
-                if inout=='infall' else 'outflow')
+        print('calculate the individual %s rates and plot...' % ('inflow'
+                if inout=='infall' else 'outflow'))
         sys.stdout.flush()
     if 'ax' in kwargs:
         ax = kwargs['ax']
@@ -396,7 +396,7 @@ def flow_history(s, qty='mass', inout='infall', recycles='first/re',
     if recycles is 'all':
         recycles = max_N_cycle
     if isinstance(recycles,int):
-        for n in xrange(max_N_cycle+1):
+        for n in range(max_N_cycle+1):
             if n>1:
                 sub = g[ (g['cycle_z_max'][:,n] > z_max_min) &
                          (g['out_time'][:,n-1] > t_out_min) ]

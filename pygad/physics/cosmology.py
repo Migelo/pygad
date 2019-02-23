@@ -17,7 +17,8 @@ __all__ = ['a2z', 'z2a', 'Planck2013', 'WMAP7', 'FLRWCosmo']
 
 import numpy as np
 from ..units import *
-from quantities import *
+from .quantities import *
+
 
 def a2z(a):
     """
@@ -36,7 +37,8 @@ def a2z(a):
         >>> round( np.log10( a2z(0) ), 3 )
         15.0
     """
-    return (1.0 - a) / (a+1e-15)
+    return (1.0 - a) / (a + 1e-15)
+
 
 def z2a(z):
     """
@@ -51,6 +53,7 @@ def z2a(z):
         0.363
     """
     return 1.0 / (1.0 + z)
+
 
 def _rho_crit(H, G):
     '''
@@ -70,7 +73,8 @@ def _rho_crit(H, G):
         >>> _rho_crit(H=2.2815e-18, G=6.67384e-8)
         9.309932895584995e-30
     '''
-    return 3.0 * H**2 / (8.0 * np.pi * G)
+    return 3.0 * H ** 2 / (8.0 * np.pi * G)
+
 
 def Planck2013():
     '''
@@ -92,6 +96,7 @@ def Planck2013():
     return FLRWCosmo(h_0=0.6777, Omega_Lambda=0.683, Omega_m=0.307,
                      Omega_b=0.04825, sigma_8=0.8288, n_s=0.9611)
 
+
 def WMAP7():
     '''
     Create a FLRW cosmology with the parameters of the 7-year Wilkinson Microwave
@@ -110,6 +115,7 @@ def WMAP7():
     '''
     return FLRWCosmo(h_0=0.704, Omega_Lambda=0.728, Omega_m=0.272, Omega_b=0.0455,
                      sigma_8=0.810, n_s=0.967)
+
 
 class FLRWCosmo(object):
     '''
@@ -166,12 +172,12 @@ class FLRWCosmo(object):
                  n_s=None):
         if sigma_8:
             assert sigma_8 > 0
-        self._h_0          = h_0
+        self._h_0 = h_0
         self._Omega_Lambda = Omega_Lambda
-        self._Omega_m      = Omega_m
-        self._Omega_b      = 0.16*Omega_m if Omega_b is None else Omega_b
-        self._sigma_8      = sigma_8
-        self._n_s          = n_s    # not used by now
+        self._Omega_m = Omega_m
+        self._Omega_b = 0.16 * Omega_m if Omega_b is None else Omega_b
+        self._sigma_8 = sigma_8
+        self._n_s = n_s  # not used by now
 
     def __repr__(self):
         return 'FLRWCosmo(h_0=%.4g, ' % self._h_0 + \
@@ -179,7 +185,7 @@ class FLRWCosmo(object):
                'O_m=%.4g, ' % self._Omega_m + \
                'O_b=%.4g, ' % self._Omega_b + \
                'sigma_8=%s, ' % ('None' if self._sigma_8 is None \
-                                    else '%.4g' % self._sigma_8) + \
+                                     else '%.4g' % self._sigma_8) + \
                'n_s=%s)' % ('None' if self._n_s is None else '%.4g' % self._n_s)
 
     def __str__(self):
@@ -287,8 +293,8 @@ class FLRWCosmo(object):
         FLRWCosmo.lookback_time().'''
         if z < -1:
             raise ValueError('Redshift cannot be smaller -1.')
-        return np.sqrt(  self._Omega_m * (1.0 + z)**3
-                       + self.Omega_k * (1.0 + z)**2
+        return np.sqrt(self._Omega_m * (1.0 + z) ** 3
+                       + self.Omega_k * (1.0 + z) ** 2
                        + self._Omega_Lambda)
 
     def h(self, z=0.0):
@@ -297,7 +303,7 @@ class FLRWCosmo(object):
 
     def H(self, z=0.0):
         '''Calculate the Hubble parameter at redshift z.'''
-        return UnitArr(100.0*self.h(z=z), 'km/s / Mpc')
+        return UnitArr(100.0 * self.h(z=z), 'km/s / Mpc')
 
     def rho_crit(self, z=0.0):
         '''
@@ -314,7 +320,7 @@ class FLRWCosmo(object):
                                 'Msol / kpc**3').
         '''
         from ..snapshot.snapshot import _Snap
-        rho_crit = 3.0*self.H(z)**2 / (8.0*np.pi*G)
+        rho_crit = 3.0 * self.H(z) ** 2 / (8.0 * np.pi * G)
         rho_crit.convert_to('Msol / kpc**3')
         return rho_crit
 
@@ -331,7 +337,7 @@ class FLRWCosmo(object):
 
         if z <= -1:
             raise ValueError('Redshift cannot be smaller -1.')
-        t, err = quad(lambda zz: 1.0/((1.0+zz)*self._E(zz)), 0.0, z)
+        t, err = quad(lambda zz: 1.0 / ((1.0 + zz) * self._E(zz)), 0.0, z)
         # divide by H to get t in units of 1/(km s**-1 Mpc**-1)
         t /= 100.0 * self._h_0
         # 978.461942380137 Gyr = 1 / (km*s**-1 * Mpc**-1)
@@ -343,10 +349,10 @@ class FLRWCosmo(object):
 
         Note:
             Internally this function uses self.lookback_time_in_Gyr.
-        
+
         Args:
             z (float):  The redshift to calculate the lookback time for.
-        
+
         Returns:
             lookback_time (UnitArr):    Lookback time.
         '''
@@ -355,7 +361,7 @@ class FLRWCosmo(object):
     def universe_age(self):
         '''
         The present day age of the universe.
-        
+
         Note:
             The function calls FLRWCosmo.lookback_time(z=oo) in the back.
         '''
@@ -366,7 +372,7 @@ class FLRWCosmo(object):
         The cosmic time at a given redshift.
 
         Args:
-            z (float):  The redshift to calculate the cosmic time for. 
+            z (float):  The redshift to calculate the cosmic time for.
         '''
         return self.lookback_time(z=np.inf) - self.lookback_time(z=z)
 
@@ -390,8 +396,8 @@ class FLRWCosmo(object):
 
         if self.universe_age() < t:
             raise ValueError('Lookback time (%s) is larger than the age ' % t + \
-                              'of the universe (%s). ' % self.universe_age() + \
-                              'Cannot convert to redshift.')
+                             'of the universe (%s). ' % self.universe_age() + \
+                             'Cannot convert to redshift.')
         if t < 0:
             raise ValueError('Does not support negative lookback times.')
         t = float(t.in_units_of('Gyr'))
@@ -405,7 +411,7 @@ class FLRWCosmo(object):
         Args:
             z (float):          The redshift to calculate the distance for.
             units (str, Unit):  The units to return the distance in.
-        
+
         Returns:
             comoving_distance (UnitArr):    Comoving distance.
         '''
@@ -413,13 +419,13 @@ class FLRWCosmo(object):
 
         if z <= -1:
             raise ValueError('Redshift cannot be smaller -1.')
-        d_c, err = quad(lambda zz: 1.0/self._E(zz), 0.0, z)
+        d_c, err = quad(lambda zz: 1.0 / self._E(zz), 0.0, z)
         # divide by H to get d_c (com. dist. over speed of light) in units of
         # 1/(km s**-1 Mpc**-1)
         d_c /= 100.0 * self._h_0
         # 978.461942380137 Gyr = 1 / (km*s**-1 * Mpc**-1)
         d_c *= 978.461942380137
-        return (c * UnitArr(d_c,'Gyr')).in_units_of(units, subs={'a':1.0})
+        return (c * UnitArr(d_c, 'Gyr')).in_units_of(units, subs={'a': 1.0})
 
     def trans_comoving_distance(self, z, units='Gpc'):
         '''
@@ -435,7 +441,7 @@ class FLRWCosmo(object):
         if self.Omega_k > 0.0:
             sqrt_Ok = np.sqrt(self.Omega_k)
             return dh / sqrt_Ok * np.sinh(sqrt_Ok * dc / dh)
-        else:   # self.Omega_k < 0.0
+        else:  # self.Omega_k < 0.0
             sqrt_Ok = np.sqrt(-self.Omega_k)
             return dh / sqrt_Ok * np.sin(sqrt_Ok * dc / dh)
 
@@ -445,7 +451,7 @@ class FLRWCosmo(object):
 
         Args and Returns as in comoving_distance.
         '''
-        return self.trans_comoving_distance(z, units=units) / (1.0+z)
+        return self.trans_comoving_distance(z, units=units) / (1.0 + z)
 
     def luminosity_distance(self, z, units='Gpc'):
         '''
@@ -453,7 +459,7 @@ class FLRWCosmo(object):
 
         Args and Returns as in comoving_distance.
         '''
-        return (1.0+z) * self.trans_comoving_distance(z, units=units)
+        return (1.0 + z) * self.trans_comoving_distance(z, units=units)
 
     def apparent_angle(self, l, z, units='arcsec'):
         '''
@@ -471,7 +477,7 @@ class FLRWCosmo(object):
         '''
         l = UnitScalar(l)
         dA = self.angular_diameter_distance(z, units=l.units)
-        theta = UnitArr(float(l/dA), 'rad')
+        theta = UnitArr(float(l / dA), 'rad')
         return theta.in_units_of(units)
 
     def angle_to_length(self, theta, z, units='kpc'):

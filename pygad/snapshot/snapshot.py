@@ -119,7 +119,7 @@ Example:
     SimArr([[ 48074.32421875,  49335.85546875,  46081.39453125],
             [ 48074.0234375 ,  49335.78515625,  46080.9921875 ],
             [ 48073.97265625,  49335.9453125 ,  46081.22265625],
-            ..., 
+            ...,
             [ 48067.1953125 ,  49359.1796875 ,  46065.84375   ],
             [ 48067.49609375,  49357.2578125 ,  46066.24609375],
             [ 48066.18359375,  49357.8046875 ,  46066.4296875 ]],
@@ -254,7 +254,7 @@ Example:
     SimArr([[ 34613.515625  ,  35521.81640625,  33178.60546875],
             [ 34613.296875  ,  35521.765625  ,  33178.31640625],
             [ 34613.26171875,  35521.8828125 ,  33178.48046875],
-            ..., 
+            ...,
             [ 34608.3828125 ,  35538.609375  ,  33167.41015625],
             [ 34608.59765625,  35537.2265625 ,  33167.69921875],
             [ 34607.65234375,  35537.62109375,  33167.83203125]],
@@ -290,7 +290,7 @@ import numpy as np
 import warnings
 import ast
 import weakref
-import derived
+from . import derived
 import fnmatch
 
 def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
@@ -324,7 +324,7 @@ def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
         RuntimeError:       If the information could not be infered or if the
                             given dtype of the given family is unknown.
     '''
-    from sim_arr import SimArr
+    from .sim_arr import SimArr
     filename = os.path.expandvars(filename)
     filename = os.path.expanduser(filename)
     # handle different filenames, e.g. cases where the snapshot is distributed
@@ -349,7 +349,7 @@ def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
             for block in greader.infos()
             if block.dtype is not None }
 
-    s._N_part   = map(int, greader.header['N_part_all'])
+    s._N_part   = list(map(int, greader.header['N_part_all']))
     s._time     = greader.header['time']
     s._redshift = greader.header['redshift']
     s._boxsize  = SimArr(greader.header['boxsize'],
@@ -359,7 +359,7 @@ def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
                     h_0          = greader.header['h_0'],
                     Omega_Lambda = greader.header['Omega_Lambda'],
                     Omega_m      = greader.header['Omega_m'])
-    s._properties = { k:v for k,v in greader.header.iteritems()
+    s._properties = { k:v for k,v in greader.header.items()
             if k not in ['N_part', 'mass', 'time', 'redshift', 'N_part_all',
                          'N_files', 'h_0', 'Omega_Lambda', 'Omega_m', 'boxsize',
                          'unused'] }
@@ -375,13 +375,13 @@ def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
     if greader.header['N_files'] > 1:
         s._descriptor += '.0-'+str(greader.header['N_files'])
         # enshure Python int's to avoid overflows
-        N_part = map( int, greader.header['N_part'] )
-        for n in xrange(1, greader.header['N_files']): # first already done
+        N_part = list(map( int, greader.header['N_part'] ))
+        for n in range(1, greader.header['N_files']): # first already done
             filename = base + '.' + str(n) + suffix
             greader = gadget.FileReader(filename, unclear_blocks=unclear_blocks)
             s._file_handlers.append( greader )
             # enshure Python int's to avoid overflows
-            for i in xrange(6): N_part[i] += int(greader.header['N_part'][i])
+            for i in range(6): N_part[i] += int(greader.header['N_part'][i])
             # update loadable blocks:
             for block in greader.infos():
                 if block.name in s._block_avail:
@@ -396,7 +396,7 @@ def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
     # Process block names: make standard names lower case (except ID) and replace
     # spaces with underscores for HDF5 names. Also strip names
     s._load_name = {}
-    for name, block in s._block_avail.items():
+    for name, block in list(s._block_avail.items()):
         if s._file_handlers[0]._format == 3 \
                 and '%-4s'%name not in gadget.std_name_to_HDF5:
             new_name = name.strip()
@@ -414,7 +414,7 @@ def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
         if name != new_name:
             if environment.verbose >= environment.VERBOSE_TALKY \
                     and new_name.lower() != name.strip().lower():
-                print 'renamed block "%s" to %s' % (name, new_name)
+                print('renamed block "%s" to %s' % (name, new_name))
             del s._block_avail[name]    # blocks should not appear twice
     # now the mass block is named 'mass' for all cases (HDF5 or other)
     s._block_avail['mass'] = [n>0 for n in s._N_part]
@@ -618,7 +618,7 @@ class _Snap(object):
         '''Return the names of the particle families (at least partly) present in
         this snapshot.'''
         families = set()
-        for name, ptypes in gadget.families.iteritems():
+        for name, ptypes in gadget.families.items():
             if sum(self._N_part[pt] for pt in ptypes):
                 families.add(name)
         return list(families)
@@ -627,20 +627,20 @@ class _Snap(object):
         '''The names of the blocks that are available for all particle types of
         this snapshot.'''
         return [ name for name, ptypes
-                in self._root._block_avail.iteritems()
+                in self._root._block_avail.items()
                 if all([(Np==0 or s) for s,Np in zip(ptypes,self._N_part)]) ]
 
     def loadable_blocks(self):
         '''The names of all blocks of this snapshot.'''
-        return self._root._load_name.keys()
+        return list(self._root._load_name.keys())
 
     def deriveable_blocks(self):
         '''The names of all blocks of this snapshot.'''
-        return self._root._derive_rule_deps.keys()
+        return list(self._root._derive_rule_deps.keys())
 
     def all_blocks(self):
         '''The names of all blocks of this snapshot.'''
-        return self._root._block_avail.keys()
+        return list(self._root._block_avail.keys())
 
     def cosmic_time(self):
         '''The cosmic time (i.e. the current universe age).'''
@@ -673,7 +673,7 @@ class _Snap(object):
         rules = rules.copy()
 
         if clear_old:
-            for name in self._derive_rule_deps.iterkeys():
+            for name in self._derive_rule_deps.keys():
                 self._block_avail.pop(name,None)
             self._derive_rule_deps = {}
 
@@ -685,7 +685,7 @@ class _Snap(object):
                 rules['dV'] = '%s / kernel_weighted(gas,%s)' % (x,x)
 
         # remove derived blocks that can be loaded
-        for name in rules.keys():
+        for name in list(rules.keys()):
             if name in self._load_name:
                 del rules[name]
 
@@ -693,7 +693,7 @@ class _Snap(object):
         changed = True
         while changed:
             changed = False
-            for name, rule in rules.iteritems():
+            for name, rule in rules.items():
                 if name in self._load_name:
                     continue    # this derived block can actually be loaded
                 ptypes, deps = derived.ptypes_and_deps(rule, self)
@@ -711,23 +711,23 @@ class _Snap(object):
         removed = -1
         while removed != len(not_available):
             removed = len(not_available)
-            for name, (rule, deps) in self._derive_rule_deps.iteritems():
+            for name, (rule, deps) in self._derive_rule_deps.items():
                 if not (any(self._block_avail[name]) and (deps-not_available)):
                     not_available.add(name)
             for name in not_available:
                 self._block_avail.pop(name,None)
                 self._derive_rule_deps.pop(name,None)
 
-        self._always_cache = set(self._derive_rule_deps.iterkeys()) \
+        self._always_cache = set(self._derive_rule_deps.keys()) \
                             & derived.general['always_cache']
 
     def __dir__(self):
         # Add the families available such that they occure in tab completion in
         # iPython, for instance.
         # The other list added here seems to include excatly the properties.
-        return [k for k in self.__dict__.keys()
+        return [k for k in list(self.__dict__.keys())
                         if not k.startswith('_')] + \
-                [k for k in self._root.__class__.__dict__.keys()
+                [k for k in list(self._root.__class__.__dict__.keys())
                         if not k.startswith('_')] + \
                 self.families()
 
@@ -750,15 +750,15 @@ class _Snap(object):
         # It might happen, that a block is tagged as present for some particle
         # types that does not exist at all. Hence, the following:
         avail = root._block_avail[block_name]
-        ptypes = [pt for pt in xrange(6) if (avail[pt] and parts[pt])]
+        ptypes = [pt for pt in range(6) if (avail[pt] and parts[pt])]
 
         # block available for all families? -> root
-        if not any( [parts[pt] for pt in xrange(6) if pt not in ptypes] ):
+        if not any( [parts[pt] for pt in range(6) if pt not in ptypes] ):
             return root
 
         # find biggest family sub-snapshot (that is an attribute of root) which has
         # the block
-        for fam, fptypes in gadget.families.iteritems():
+        for fam, fptypes in gadget.families.items():
             if fptypes == ptypes:
                 return getattr(root, fam)
 
@@ -788,9 +788,9 @@ class _Snap(object):
         '''
         done = set()
         if forthis:
-            names = self._blocks.iterkeys() if present else self.available_blocks()
+            names = iter(self._blocks.keys()) if present else self.available_blocks()
         else:
-            names = self._root._block_avail.iterkeys()
+            names = iter(self._root._block_avail.keys())
         for block_name in names:
             if block_name in done:
                 continue
@@ -847,7 +847,7 @@ class _Snap(object):
                 raise KeyError('(Sub-)Snapshot %r has no block "%s".' % (
                                     self, key))
         # postprone the import to here to speed up the access to blocks
-        from masks import SnapMask
+        from .masks import SnapMask
         from ..analysis.halo import Halo
         if isinstance(key, (slice,np.ndarray,list,SnapMask,Halo,tuple)):
             # Handling of the index is fully done by the factory function.
@@ -862,7 +862,7 @@ class _Snap(object):
                 warnings.warn('Need to load/derive an available blocks before ' +
                               'overwriting it to some custom value!')
                 old = self[key]
-            from sim_arr import SimArr
+            from .sim_arr import SimArr
             if not isinstance(value, SimArr):
                 value = SimArr(value, snap=self)
             if value.shape != old.shape:
@@ -915,7 +915,7 @@ class _Snap(object):
         Returns:
             block (SimArr):     The (entire) block.
         '''
-        from sim_arr import SimArr
+        from .sim_arr import SimArr
 
         root = self._root
         if not root._file_handlers:
@@ -924,9 +924,9 @@ class _Snap(object):
             raise ValueError("There is no block '%s' to load!" % name)
 
         if environment.verbose >= environment.VERBOSE_NORMAL:
-            print 'load block %s%s...' % ('"%s" as '%root._load_name[name]
+            print('load block %s%s...' % ('"%s" as '%root._load_name[name]
                     if environment.verbose >= environment.VERBOSE_TALKY else '',
-                    name),
+                    name), end=' ')
             sys.stdout.flush()
 
         block_name = root._load_name[name]
@@ -945,10 +945,10 @@ class _Snap(object):
                 if first:
                     blocks = [read[int(np.sum(reader.header['N_part'][:pt]))
                                     :np.sum(reader.header['N_part'][:pt+1])] \
-                                for pt in xrange(6)]
+                                for pt in range(6)]
                     first = False
                 else:
-                    for pt in xrange(6):
+                    for pt in range(6):
                         if not reader.header['N_part'][pt]:
                             continue
                         read_pt = read[int(np.sum(reader.header['N_part'][:pt]))
@@ -962,17 +962,17 @@ class _Snap(object):
         block = block.view(SimArr)
         block._snap = weakref.ref(self)
         if environment.verbose >= environment.VERBOSE_NORMAL:
-            print 'done.'
+            print('done.')
             sys.stdout.flush()
 
         if self.load_double_prec and block.dtype.kind == 'f' \
                 and block.dtype != 'float64':
             if environment.verbose >= environment.VERBOSE_TALKY:
-                print 'convert to double precision...',
+                print('convert to double precision...', end=' ')
                 sys.stdout.flush()
             block = block.astype(np.float64)
             if environment.verbose >= environment.VERBOSE_TALKY:
-                print 'done.'
+                print('done.')
                 sys.stdout.flush()
 
         if root._phys_units_requested:
@@ -984,17 +984,17 @@ class _Snap(object):
         for trans in root._trans_at_load:
             if name in trans._change:
                 if environment.verbose >= environment.VERBOSE_NORMAL:
-                    print 'apply stored %s to block %s...' % (
-                        trans.__class__.__name__, name),
+                    print('apply stored %s to block %s...' % (
+                        trans.__class__.__name__, name), end=' ')
                     sys.stdout.flush()
                 trans.apply_to_block(name,host)
                 if environment.verbose >= environment.VERBOSE_NORMAL:
-                    print 'done.'
+                    print('done.')
                     sys.stdout.flush()
 
         # if there are still dependent blocks, add them as dependencies and
         # invalidate them
-        for derived_name, (rule, deps) in root._derive_rule_deps.iteritems():
+        for derived_name, (rule, deps) in root._derive_rule_deps.items():
             if name in deps:
                 host = self.get_host_subsnap(derived_name)
                 if derived_name in host._blocks:
@@ -1047,8 +1047,8 @@ class _Snap(object):
                     dep_blocks[dep] = host._host_derive_block(dep, False)
 
         if environment.verbose >= environment.VERBOSE_NORMAL:
-            print 'derive block %s%s...' % (name, ' := "%s"'%rule \
-                    if environment.verbose >= environment.VERBOSE_TALKY else ''),
+            print('derive block %s%s...' % (name, ' := "%s"'%rule \
+                    if environment.verbose >= environment.VERBOSE_TALKY else ''), end=' ')
             sys.stdout.flush()
         block = host.get(rule, namespace=None if self._root._cache_derived else dep_blocks)
         if self._root._cache_derived:
@@ -1056,7 +1056,7 @@ class _Snap(object):
                 host[dep].dependencies.add(name)
             host._blocks[name] = block
         if environment.verbose >= environment.VERBOSE_NORMAL:
-            print 'done.'
+            print('done.')
             sys.stdout.flush()
 
         self._root._cache_derived = orig_caching_state
@@ -1094,15 +1094,15 @@ class _Snap(object):
         self._root._block_avail[name] = list(ptypes)
         host = self.get_host_subsnap(name)
         if host is not self:
-            print >> sys.stderr, "name:", name
-            print >> sys.stderr, "for particle types:", self._root._block_avail[name]
-            print >> sys.stderr, "self:", self
-            print >> sys.stderr, "host:", host
+            print("name:", name, file=sys.stderr)
+            print("for particle types:", self._root._block_avail[name], file=sys.stderr)
+            print("self:", self, file=sys.stderr)
+            print("host:", host, file=sys.stderr)
             del self._root._block_avail[name]
             raise RuntimeError('Can only set new blocks for entire family '
                                'sub-snapshots or the root.')
 
-        from sim_arr import SimArr
+        from .sim_arr import SimArr
         host._blocks[name] = SimArr(data,snap=host)
 
     def _host_get_block(self, name):
@@ -1139,11 +1139,11 @@ class _Snap(object):
             if environment.verbose >= environment.VERBOSE_TALKY or (
                     environment.verbose >= environment.VERBOSE_NORMAL
                     and name=='age'):
-                print 'convert block %s to physical units...' % name,
+                print('convert block %s to physical units...' % name, end=' ')
                 sys.stdout.flush()
             block.convert_to(phys_units, subs=self)
             if environment.verbose >= environment.VERBOSE_TALKY:
-                print 'done.'
+                print('done.')
                 sys.stdout.flush()
 
     def to_physical_units(self, on_load=True):
@@ -1178,12 +1178,12 @@ class _Snap(object):
 
         # convert the boxsize
         if environment.verbose >= environment.VERBOSE_TALKY:
-            print 'convert boxsize to physical units...',
+            print('convert boxsize to physical units...', end=' ')
             sys.stdout.flush()
         root._boxsize.convert_to(
                 root._boxsize.units.free_of_factors(['a','h_0']), subs=root)
         if environment.verbose >= environment.VERBOSE_TALKY:
-            print 'done.'
+            print('done.')
             sys.stdout.flush()
 
     def load_all_blocks(self):
@@ -1207,7 +1207,7 @@ class _Snap(object):
             loaded = True
 
         if derived:
-            for name, (rule, deps) in self._root._derive_rule_deps.iteritems():
+            for name, (rule, deps) in self._root._derive_rule_deps.items():
                 host = self.get_host_subsnap(name)
                 if name in host._blocks:
                     del host[name]
@@ -1236,7 +1236,7 @@ class _Snap(object):
         Returns:
             res (SimArr):       The result.
         '''
-        from sim_arr import SimArr
+        from .sim_arr import SimArr
         from ..ssp import inter_bc_qty, lum_to_mag
 
         # prepare evaluator
@@ -1255,7 +1255,7 @@ class _Snap(object):
                            'kernel_weighted':analysis.kernel_weighted,
                            'len':len, 'module_dir':module_dir}
         )
-        import derive_rules
+        from . import derive_rules
         for n,obj in [(n,getattr(derive_rules,n)) for n in dir(derive_rules)]:
             if hasattr(obj, '__call__'):
                 namespace[n] = obj
@@ -1529,7 +1529,7 @@ class _SubSnap(_Snap):
                 # Now restrict all the masks of sub[1] though sub[N] and self to
                 # the particle types of the host and apply the masks to the block.
                 #################################################################
-                ptypes = [pt for pt in xrange(6) if host._N_part[pt]]
+                ptypes = [pt for pt in range(6) if host._N_part[pt]]
                 masks = []
                 sub = self
                 subs = []
@@ -1600,7 +1600,7 @@ def SubSnap(base, mask):
     Raises:
         KeyError:           If the mask was not understood.
     '''
-    from masks import SnapMask
+    from .masks import SnapMask
     from ..analysis.halo import Halo
 
     if isinstance(mask,slice) \
@@ -1611,14 +1611,14 @@ def SubSnap(base, mask):
     elif isinstance(mask,list):
         ptypes = sorted(set(mask))
         # precalculating N_part is faster than the standard way in _SubSnap
-        N_part = [(base._N_part[pt] if pt in ptypes else 0) for pt in xrange(6)]
+        N_part = [(base._N_part[pt] if pt in ptypes else 0) for pt in range(6)]
         if utils.is_consecutive(ptypes):
             # slicing is faster than masking!
             sub = slice(sum(base._N_part[:ptypes[0]   ]),
                         sum(base._N_part[:ptypes[-1]+1]))
         else:
             l = [(np.ones(base._N_part[pt],bool) if pt in ptypes
-                    else np.zeros(base._N_part[pt],bool)) for pt in xrange(6)]
+                    else np.zeros(base._N_part[pt],bool)) for pt in range(6)]
             sub = np.concatenate(l)
         sub = _SubSnap(base, sub, N_part)
         sub._descriptor = base._descriptor + ':pts=' + str(ptypes).replace(' ','')
@@ -1639,9 +1639,9 @@ def SubSnap(base, mask):
         warnings.warn('Indexed snapshot masking does not reorder!')
         idx_set = set(mask)
         if len(idx_set) < len(mask):
-            print >> sys.stderr, "WARNING: lost %d" % (len(mask)-len(idx_set)) + \
-                                 " particles in snapshot masking!"
-        mask = np.array( [ (i in idx_set) for i in xrange(len(base)) ] )
+            print("WARNING: lost %d" % (len(mask)-len(idx_set)) + \
+                                 " particles in snapshot masking!", file=sys.stderr)
+        mask = np.array( [ (i in idx_set) for i in range(len(base)) ] )
         return _SubSnap(base, mask)
 
     elif isinstance(mask,tuple) and len(mask)==1 \

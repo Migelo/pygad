@@ -29,7 +29,7 @@ __all__ = ['families', 'elements', 'default_gadget_units', 'block_units',
            'std_name_to_HDF5', 'HDF5_to_std_name', 'read_config',
            'get_block_units', 'general', 'block_infos']
 
-from ConfigParser import SafeConfigParser
+from configparser import SafeConfigParser
 from ..units import *
 from os.path import exists, expanduser
 from .. import environment
@@ -96,7 +96,7 @@ def read_config(config):
         raise IOError('Config file "%s" does not exist!' % config)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'reading config file "%s"' % filename
+        print('reading config file "%s"' % filename)
 
     cfg = SafeConfigParser(allow_no_value=True)
     cfg.optionxform = str
@@ -115,11 +115,10 @@ def read_config(config):
 
     while block_order: block_order.pop()
     if cfg.has_option('general', 'block order'):
-        block_order += map(lambda s: '%-4s'%s.strip(),
-                           cfg.get('general','block order').split(','))
+        block_order += ['%-4s'%s.strip() for s in cfg.get('general','block order').split(',')]
     while elements: elements.pop()
     if cfg.has_option('general', 'elements'):
-        elements += map(str.strip, cfg.get('general', 'elements').split(','))
+        elements += list(map(str.strip, cfg.get('general', 'elements').split(',')))
     kernel = cfg.get('general', 'kernel')
     if kernel not in kernels.kernels:
         raise ValueError('Kernel "%s" is unknown!' % kernel)
@@ -160,7 +159,7 @@ def read_config(config):
                 in cfg.items('hdf5 names') } )
     HDF5_to_std_name.clear()
     HDF5_to_std_name.update( { HDF5:std for std,HDF5 \
-            in std_name_to_HDF5.iteritems() } )
+            in std_name_to_HDF5.items() } )
 
 def get_block_units(block, gad_units=None):
     '''
@@ -185,8 +184,8 @@ def get_block_units(block, gad_units=None):
     gad_units['TIME'] = gad_units['LENGTH'] + ' / (' + gad_units['VELOCITY'] + ')'
 
     u = block_units[block]
-    for dimension, unit in gad_units.iteritems():
-        if isinstance(unit, (str,unicode)):
+    for dimension, unit in gad_units.items():
+        if isinstance(unit, str):
             u = u.replace(dimension, '('+str(unit)+')')
         else:
             u = u.replace(dimension, '('+str(Unit(unit))[1:-1]+')')

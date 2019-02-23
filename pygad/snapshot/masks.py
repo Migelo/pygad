@@ -104,11 +104,13 @@ __all__ = ['SnapMask', 'BallMask', 'BoxMask', 'DiscMask', 'IDMask', 'ExprMask']
 import numpy as np
 from ..units import *
 from .. import gadget
-from snapshot import SubSnap
+from .snapshot import SubSnap
 import operator
+
 
 class SnapMask(object):
     '''The base class for more complicated masks.'''
+
     def __init__(self, inverse=False):
         self._inverse = bool(inverse)
 
@@ -149,10 +151,13 @@ class SnapMask(object):
 
     def __and__(self, other):
         return CompoundMask(self, operator.and_, other)
+
     def __or__(self, other):
         return CompoundMask(self, operator.or_, other)
+
     def __xor__(self, other):
         return CompoundMask(self, operator.xor, other)
+
 
 class BallMask(SnapMask):
     '''
@@ -167,8 +172,9 @@ class BallMask(SnapMask):
         periodic_snap (bool):   Whether to consider the snapshot to be masked
                                 periodic with its boxside or not.
     '''
+
     def __init__(self, R, center=None, sph_overlap=False, periodic_snap=True):
-        super(BallMask,self).__init__()
+        super(BallMask, self).__init__()
         self.R = R
         self.center = center
         self.sph_overlap = sph_overlap
@@ -196,12 +202,12 @@ class BallMask(SnapMask):
         if value is not None:
             self._center = UnitQty(value).copy()
         else:
-            self._center = UnitQty([0]*3)
+            self._center = UnitQty([0] * 3)
 
     def __str__(self):
         s = '~' if self._inverse else ''
         s += 'Ball('
-        if not np.all(self._center==0):
+        if not np.all(self._center == 0):
             s += 'center=%s,' % self._center
         s += 'r=%s' % self._R
         if not self.sph_overlap:
@@ -210,27 +216,28 @@ class BallMask(SnapMask):
 
     def _get_mask_for(self, s):
         from ..utils import periodic_distance_to
-        R = self._R.in_units_of(s['r'].units,subs=s)
-        center = self._center.in_units_of(s['r'].units,subs=s)
+        R = self._R.in_units_of(s['r'].units, subs=s)
+        center = self._center.in_units_of(s['r'].units, subs=s)
 
         if self.periodic_snap:
-            r = periodic_distance_to(s['pos'],center,s.boxsize)
+            r = periodic_distance_to(s['pos'], center, s.boxsize)
         else:
-            r = dist(s['pos'],center) if not np.all(center==0) else s['r']
+            r = dist(s['pos'], center) if not np.all(center == 0) else s['r']
         mask = r < R
 
         if self.sph_overlap and 'gas' in s:
             for pt in gadget.families['gas']:
                 sub = SubSnap(s, [pt])
                 if self.periodic_snap:
-                    r = periodic_distance_to(sub['pos'],center,s.boxsize)
+                    r = periodic_distance_to(sub['pos'], center, s.boxsize)
                 else:
-                    r = dist(sub['pos'],center) if not np.all(center==0) \
-                            else sub['r']
-                mask[sum(s.parts[:pt]):sum(s.parts[:pt+1])] |= \
-                        r-sub['hsml'] < R
+                    r = dist(sub['pos'], center) if not np.all(center == 0) \
+                        else sub['r']
+                mask[sum(s.parts[:pt]):sum(s.parts[:pt + 1])] |= \
+                    r - sub['hsml'] < R
 
         return mask.view(np.ndarray)
+
 
 class BoxMask(SnapMask):
     '''
@@ -246,10 +253,11 @@ class BoxMask(SnapMask):
                                 lie outside of the box, but they are smoothed
                                 into it.
     '''
+
     def __init__(self, extent, center=None, sph_overlap=False):
-        super(BoxMask,self).__init__()
+        super(BoxMask, self).__init__()
         # might be needed for calculation of self.center in setting self.extent:
-        self._extent = UnitArr([[-1,1]]*3)
+        self._extent = UnitArr([[-1, 1]] * 3)
         self.extent = extent
         if center is not None:
             self.center += center
@@ -270,57 +278,58 @@ class BoxMask(SnapMask):
         if extent.shape in [(), (3,)]:
             L = extent
             center = self.center
-            extent = UnitArr(np.empty((3,2),dtype=np.float64), extent.units)
-            extent[:,0] = center - L/2.0
-            extent[:,1] = center + L/2.0
-        if extent.shape != (3,2):
+            extent = UnitArr(np.empty((3, 2), dtype=np.float64), extent.units)
+            extent[:, 0] = center - L / 2.0
+            extent[:, 1] = center + L / 2.0
+        if extent.shape != (3, 2):
             raise ValueError('Extent has to ba a scalar or an array of shape ' +
                              '(3,) or (3,2), but got shape %s!' % (extent.shape,))
         self._extent = extent
 
     @property
     def center(self):
-        return (self._extent[:,1] + self._extent[:,0]) / 2.0
+        return (self._extent[:, 1] + self._extent[:, 0]) / 2.0
 
     @center.setter
     def center(self, value):
         center_new = UnitQty(value, self._extent.units).copy()
         if center_new.shape != (3,):
             raise ValueError('Center has to have shape (3,)!')
-        diff = center_new - (self._extent[:,1]+self._extent[:,0])/2.0
-        extent[:,0] += diff
-        extent[:,1] += diff
+        diff = center_new - (self._extent[:, 1] + self._extent[:, 0]) / 2.0
+        extent[:, 0] += diff
+        extent[:, 1] += diff
 
     def __str__(self):
         s = '~' if self._inverse else ''
         s += 'Box(['
-        for i in xrange(3):
+        for i in range(3):
             s += '[%.4g,%.4g]%s' % (tuple(self._extent[i]) +
-                                        ('' if i==2 else ',',))
+                                    ('' if i == 2 else ',',))
         s += '] %s' % self._extent.units
         if not self.sph_overlap:
             s += ',strict'
         return s + ')'
 
     def _get_mask_for(self, s):
-        ext = self._extent.in_units_of(s['pos'].units,subs=s)
+        ext = self._extent.in_units_of(s['pos'].units, subs=s)
 
-        mask = (ext[0,0]<=s['pos'][:,0]) & (s['pos'][:,0]<=ext[0,1]) & \
-               (ext[1,0]<=s['pos'][:,1]) & (s['pos'][:,1]<=ext[1,1]) & \
-               (ext[2,0]<=s['pos'][:,2]) & (s['pos'][:,2]<=ext[2,1])
+        mask = (ext[0, 0] <= s['pos'][:, 0]) & (s['pos'][:, 0] <= ext[0, 1]) & \
+               (ext[1, 0] <= s['pos'][:, 1]) & (s['pos'][:, 1] <= ext[1, 1]) & \
+               (ext[2, 0] <= s['pos'][:, 2]) & (s['pos'][:, 2] <= ext[2, 1])
 
         if self.sph_overlap and 'gas' in s:
             for pt in gadget.families['gas']:
                 sub = SubSnap(s, [pt])
-                mask[sum(s.parts[:pt]):sum(s.parts[:pt+1])] |= \
-                        (ext[0,0] <= sub['pos'][:,0]+sub['hsml']) & \
-                            (sub['pos'][:,0]-sub['hsml'] <= ext[0,1]) & \
-                        (ext[1,0] <= sub['pos'][:,1]+sub['hsml']) & \
-                            (sub['pos'][:,1]-sub['hsml'] <= ext[1,1]) & \
-                        (ext[2,0] <= sub['pos'][:,2]+sub['hsml']) & \
-                            (sub['pos'][:,2]-sub['hsml'] <= ext[2,1])
+                mask[sum(s.parts[:pt]):sum(s.parts[:pt + 1])] |= \
+                    (ext[0, 0] <= sub['pos'][:, 0] + sub['hsml']) & \
+                    (sub['pos'][:, 0] - sub['hsml'] <= ext[0, 1]) & \
+                    (ext[1, 0] <= sub['pos'][:, 1] + sub['hsml']) & \
+                    (sub['pos'][:, 1] - sub['hsml'] <= ext[1, 1]) & \
+                    (ext[2, 0] <= sub['pos'][:, 2] + sub['hsml']) & \
+                    (sub['pos'][:, 2] - sub['hsml'] <= ext[2, 1])
 
         return mask.view(np.ndarray)
+
 
 class DiscMask(SnapMask):
     '''
@@ -343,8 +352,9 @@ class DiscMask(SnapMask):
         zmax (UnitScalar):  An additional requirement on the z-coordinate. If
                             None, this requirement is ignored.
     '''
+
     def __init__(self, jzjc_min=0.85, rmax='50 kpc', zmax='5 kpc'):
-        super(DiscMask,self).__init__()
+        super(DiscMask, self).__init__()
         self.jzjc_min = jzjc_min
         self.rmax = rmax
         self.zmax = zmax
@@ -388,11 +398,11 @@ class DiscMask(SnapMask):
     def _get_mask_for(self, s):
         mask = s['jzjc'] > np.sign(np.mean(s['jzjc'])) * self.jzjc_min
         if self._rmax is not None:
-            rmax = self._rmax.in_units_of(s['rcyl'].units,subs=s)
+            rmax = self._rmax.in_units_of(s['rcyl'].units, subs=s)
             mask &= s['rcyl'] < rmax
         if self._zmax is not None:
-            zmax = self._zmax.in_units_of(s['pos'].units,subs=s)
-            mask &= np.abs(s['pos'][:,2]) < zmax
+            zmax = self._zmax.in_units_of(s['pos'].units, subs=s)
+            mask &= np.abs(s['pos'][:, 2]) < zmax
         return mask
 
 
@@ -403,18 +413,18 @@ class IDMask(SnapMask):
     The given IDs do not all have to be present in the snapshot to be masked; the
     masked one, though does contain all those and only those partilces which IDs
     are given and present.
-    
+
     Args:
         IDs (array-like):   IDs from previous snapshot to mask the current one.
     '''
-    
+
     def __init__(self, IDs):
-        super(IDMask,self).__init__()
+        super(IDMask, self).__init__()
         if isinstance(IDs, set):
             self._IDs = np.array(list(IDs))
         else:
             self._IDs = np.array(IDs, copy=True)
-        
+
     def inverted(self):
         inv = IDMask(self._IDs)
         inv._inverse = not self._inverse
@@ -423,14 +433,15 @@ class IDMask(SnapMask):
     @property
     def IDs(self):
         return set(self._IDs)
-        
+
     def _get_mask_for(self, s):
         IDs = self._IDs
         if IDs.dtype != s['ID'].dtype:
             raise RuntimeError("You cannot mask with IDs of different type "
-                    "(%s) than those of the snapshot (%s)!" % (
-                        IDs.dtype, s['ID'].dtype))
+                               "(%s) than those of the snapshot (%s)!" % (
+                                   IDs.dtype, s['ID'].dtype))
         return np.in1d(s['ID'], IDs)
+
 
 class ExprMask(SnapMask):
     '''
@@ -445,7 +456,7 @@ class ExprMask(SnapMask):
     '''
 
     def __init__(self, expr):
-        super(ExprMask,self).__init__()
+        super(ExprMask, self).__init__()
         self.expr = expr
 
     @property
@@ -454,7 +465,7 @@ class ExprMask(SnapMask):
 
     @expr.setter
     def expr(self, expr):
-        if not isinstance(expr, (str,unicode)):
+        if not isinstance(expr, str):
             raise ValueError('`expr` must be a string')
         self._expr = expr.strip()
 
@@ -472,6 +483,7 @@ class ExprMask(SnapMask):
         mask = s.get(self._expr)
         return mask.view(np.ndarray)
 
+
 class CompoundMask(SnapMask):
     '''
     A snapshot mask built from combining two others. Normally this class is not
@@ -485,8 +497,8 @@ class CompoundMask(SnapMask):
     '''
 
     def __init__(self, m1, op, m2):
-        super(CompoundMask,self).__init__()
-        for m in (m1,m2):
+        super(CompoundMask, self).__init__()
+        for m in (m1, m2):
             if not isinstance(m, SnapMask):
                 raise ValueError('"%s" is not a SnapMask!' % m)
         if op not in (operator.and_, operator.or_, operator.xor):
@@ -507,16 +519,16 @@ class CompoundMask(SnapMask):
     def __str__(self):
         s = '~' if self._inverse else ''
         s += 'CompoundMask(%s %s %s)' % (
-                self._masks[0],
-                {   operator.and_:  '&',
-                    operator.or_:   '|',
-                    operator.xor:   '^',
-                }.get(self._op, str(self._op)),
-                self._masks[1],
+            self._masks[0],
+            {operator.and_: '&',
+             operator.or_: '|',
+             operator.xor: '^',
+             }.get(self._op, str(self._op)),
+            self._masks[1],
         )
         return s
 
     def _get_mask_for(self, s):
-        m1, m2 = map(lambda m:m.get_mask_for(s), self._masks)
-        return self._op(m1,m2)
+        m1, m2 = [m.get_mask_for(s) for m in self._masks]
+        return self._op(m1, m2)
 

@@ -138,13 +138,14 @@ __all__ = ['UnitArr', 'UnitQty', 'UnitScalar']
 
 import numpy as np
 import numpy.core.umath_tests
-import units
-from units import *
-from units import _UnitClass
+from . import units
+from .units import *
+from .units import _UnitClass
 from fractions import Fraction
 import warnings
 import functools
 import numbers
+
 
 def UnitQty(obj, units=None, subs=None, dtype=None, copy=False):
     '''
@@ -205,6 +206,7 @@ def UnitQty(obj, units=None, subs=None, dtype=None, copy=False):
             return obj
     return UnitArr(obj, units=units, subs=subs, dtype=dtype, copy=True)
 
+
 def UnitScalar(obj, units=None, subs=None, dtype=None):
     '''
     Convert to a UnitArr with enshured units of a single number.
@@ -241,20 +243,24 @@ def UnitScalar(obj, units=None, subs=None, dtype=None):
         raise ValueError('object is not a scalar!')
     return obj
 
+
 def with_own_units(func):
     '''Decorate a function return value with the units of the first argument.'''
+
     def u_func(self, *args, **kwargs):
         a = UnitQty(func(self.view(np.ndarray), *args, **kwargs))
         a._set_units_and_carrier_on_base(self.units)
         return a
+
     u_func.__name__ = func.__name__
     u_func.__doc__ = func.__doc__
     return u_func
 
+
 class UnitArr(np.ndarray):
     '''
     A numpy array decorated with units.
-    
+
     Args:
         data (array-like):  Either 'raw data' passed to the underlying numpy
                             array or a UnitArr. In the latter case, units are
@@ -272,7 +278,7 @@ class UnitArr(np.ndarray):
 
     def __new__(subtype, data, units=None, subs=None, **kwargs):
         # handle cases where `obj` is a string of a unit:
-        if isinstance(data, (str,unicode)):
+        if isinstance(data, str):
             data = Unit(data)
         if isinstance(data, _UnitClass):
             if units is None:
@@ -389,8 +395,8 @@ class UnitArr(np.ndarray):
         if not self.shape and self.dtype.kind == 'f':
             r = 'UnitArr('
             if val is None:
-                f = float(self.view(np.ndarray)) # avoid conversion of units!
-                r += str(f) if (1e-3<=f<=1e3) else ('%e' % f)
+                f = float(self.view(np.ndarray))  # avoid conversion of units!
+                r += str(f) if (1e-3 <= f <= 1e3) else ('%e' % f)
             else:
                 r += str(val)
             if self.dtype not in ['int', 'float']:
@@ -403,24 +409,24 @@ class UnitArr(np.ndarray):
             else:
                 r = '(' + str(val) + ')'
             r = 'UnitArr' + r
-        if hasattr(self,'units'):
+        if hasattr(self, 'units'):
             if self.units is not None and self.units != 1:
                 r = r[:-1] + (', units="%s")' % str(self.units)[1:-1])
-                if len(r)-r.rfind('\n')>82:
+                if len(r) - r.rfind('\n') > 82:
                     right = r.find('dtype=')
                     if right == -1:
                         right = r.find('units=')
-                    arr_end = r.rfind('],')+2
-                    if arr_end == 1: arr_end = r.find(',')+1
-                    r = r[:arr_end]+'\n'+' '*8+r[right:]
+                    arr_end = r.rfind('],') + 2
+                    if arr_end == 1: arr_end = r.find(',') + 1
+                    r = r[:arr_end] + '\n' + ' ' * 8 + r[right:]
         else:
             r = r[:-1] + ', no units!)'
         return r
 
     def __str__(self):
         if not self.shape and self.dtype.kind == 'f':
-            f = float(self.view(np.ndarray))    # avoid conversion of units!
-            s = str(f) if (1e-3<=f<=1e3) else ('%e' % f)
+            f = float(self.view(np.ndarray))  # avoid conversion of units!
+            s = str(f) if (1e-3 <= f <= 1e3) else ('%e' % f)
         else:
             s = str(self.view(np.ndarray))
         if self.units is not None and self.units != 1:
@@ -515,7 +521,7 @@ class UnitArr(np.ndarray):
             UnitError:          In case the current units and the target units are
                                 not convertable.
         '''
-        if not isinstance(units, (_UnitClass,str,unicode,numbers.Number)):
+        if not isinstance(units, (_UnitClass, str, numbers.Number)):
             raise TypeError('Cannot convert type %s to units!' % \
                             type(units).__name__)
         units = Unit(units)
@@ -545,7 +551,6 @@ class UnitArr(np.ndarray):
         units = self.units.standardize().free_of_factors()
         return self.in_units_of(units, subs=subs, copy=copy)
 
-
     def __setitem__(self, i, value):
         # if both value and self have units and they are different,
         # take care of them
@@ -559,7 +564,7 @@ class UnitArr(np.ndarray):
             np.ndarray.__setitem__(self, i, value)
 
     def __setslice__(self, a, b, value):
-        self.__setitem__(slice(a,b), value)
+        self.__setitem__(slice(a, b), value)
 
     @staticmethod
     def ufunc_rule(for_ufunc):
@@ -570,7 +575,7 @@ class UnitArr(np.ndarray):
         return x
 
     def _generic_add(self, x, op):
-        return op(self, UnitQty(x,self.units))
+        return op(self, UnitQty(x, self.units))
 
     def __add__(self, x):
         return self._generic_add(x, op=np.add)
@@ -597,7 +602,7 @@ class UnitArr(np.ndarray):
         return np.floor_divide(self, UnitQty(x))
 
     def __mod__(self, x):
-        return np.remainder(self, UnitQty(x,self.units))
+        return np.remainder(self, UnitQty(x, self.units))
 
     def __imul__(self, x):
         x = UnitQty(x)
@@ -644,20 +649,20 @@ class UnitArr(np.ndarray):
         return self
 
     def __pow__(self, x):
-        if isinstance(x,Fraction) and self.dtype.kind=='f':
+        if isinstance(x, Fraction) and self.dtype.kind == 'f':
             # way faster to use floats:
-            res = np.ndarray.__pow__(self.view(np.ndarray),float(x))
-            res = UnitQty(res, units=self.units**x)
+            res = np.ndarray.__pow__(self.view(np.ndarray), float(x))
+            res = UnitQty(res, units=self.units ** x)
         else:
-            res = np.ndarray.__pow__(self,x)
+            res = np.ndarray.__pow__(self, x)
         return res
 
     def __ipow__(self, x):
-        if isinstance(x,Fraction) and self.dtype.kind=='f':
+        if isinstance(x, Fraction) and self.dtype.kind == 'f':
             # way faster to use floats:
-            np.ndarray.__ipow__(self.view(np.ndarray),float(x))
+            np.ndarray.__ipow__(self.view(np.ndarray), float(x))
         else:
-            np.ndarray.__ipow__(self,x)
+            np.ndarray.__ipow__(self, x)
         self.units **= x
         return self
 
@@ -677,7 +682,7 @@ class UnitArr(np.ndarray):
     def var(self, *args, **kwargs):
         x = np.ndarray.var(self, *args, **kwargs).view(UnitArr)
         if self.units is not None:
-            x.units = self.units**2
+            x.units = self.units ** 2
         return x
 
     @with_own_units
@@ -734,6 +739,7 @@ class UnitArr(np.ndarray):
     def argsort(self, *args, **kwargs):
         return np.ndarray.argsort(self.view(np.ndarray), *args, **kwargs)
 
+
 for f in (np.ndarray.__lt__, np.ndarray.__le__, np.ndarray.__eq__,
           np.ndarray.__ne__, np.ndarray.__gt__, np.ndarray.__ge__):
     # N.B. cannot use functools.partial because it doesn't implement the
@@ -741,7 +747,7 @@ for f in (np.ndarray.__lt__, np.ndarray.__le__, np.ndarray.__eq__,
     @functools.wraps(f, assigned=("__name__", "__doc__"))
     def wrapper_function(self, other, comparison_op=f):
         try:
-            if hasattr(self,'snap'):    # e.g. for SimArr
+            if hasattr(self, 'snap'):  # e.g. for SimArr
                 other = UnitQty(other, self.units, subs=self.snap)
             else:
                 other = UnitQty(other, self.units)
@@ -757,7 +763,9 @@ for f in (np.ndarray.__lt__, np.ndarray.__le__, np.ndarray.__eq__,
         res = comparison_op(self, other)
         return res
 
+
     setattr(UnitArr, f.__name__, wrapper_function)
+
 
 @UnitArr.ufunc_rule(np.add)
 @UnitArr.ufunc_rule(np.subtract)
@@ -777,12 +785,13 @@ def _same_units_binary(a, b):
     else:
         return a_units if a_units is not None else b_units
 
+
 @UnitArr.ufunc_rule(np.negative)
 @UnitArr.ufunc_rule(np.abs)
 @UnitArr.ufunc_rule(np.floor)
 @UnitArr.ufunc_rule(np.ceil)
 @UnitArr.ufunc_rule(np.trunc)
-@UnitArr.ufunc_rule(np.round)   # TODO: does not work, since the
+@UnitArr.ufunc_rule(np.round)  # TODO: does not work, since the
 @UnitArr.ufunc_rule(np.around)  # function does something more inbetween
 @UnitArr.ufunc_rule(np.round_)  # than others (and calls np.rint)
 @UnitArr.ufunc_rule(np.rint)
@@ -791,6 +800,7 @@ def _same_units_binary(a, b):
 @UnitArr.ufunc_rule(np.conjugate)
 def _same_units_unary(a):
     return a.units
+
 
 @UnitArr.ufunc_rule(np.multiply)
 @UnitArr.ufunc_rule(np.cross)
@@ -807,6 +817,7 @@ def _mul_units(a, b):
     else:
         return b_units
 
+
 @UnitArr.ufunc_rule(np.divide)
 @UnitArr.ufunc_rule(np.true_divide)
 @UnitArr.ufunc_rule(np.floor_divide)
@@ -819,14 +830,16 @@ def _div_units(a, b):
     elif a_units is not None:
         return a_units
     else:
-        return 1/b_units
+        return 1 / b_units
+
 
 @UnitArr.ufunc_rule(np.reciprocal)
 def _inv_units(a):
     if a.units is not None:
-        return a.units**-1
+        return a.units ** -1
     else:
         return None
+
 
 @UnitArr.ufunc_rule(np.remainder)
 def _remainder_units(a, b):
@@ -839,19 +852,22 @@ def _remainder_units(a, b):
                               'function or convert manually.')
     return a_units
 
+
 @UnitArr.ufunc_rule(np.sqrt)
 def _sqrt_units(a):
     if a.units is not None:
-        return a.units**Fraction(1,2)
+        return a.units ** Fraction(1, 2)
     else:
         return None
+
 
 @UnitArr.ufunc_rule(np.square)
 def _square_units(a):
     if a.units is not None:
-        return a.units**2
+        return a.units ** 2
     else:
         return None
+
 
 @UnitArr.ufunc_rule(np.greater)
 @UnitArr.ufunc_rule(np.greater_equal)
@@ -866,6 +882,7 @@ def _square_units(a):
 def _comparison_units(a, b):
     return None
 
+
 @UnitArr.ufunc_rule(np.bitwise_and)
 @UnitArr.ufunc_rule(np.bitwise_or)
 @UnitArr.ufunc_rule(np.bitwise_xor)
@@ -873,12 +890,14 @@ def _comparison_units(a, b):
 def _bitwise_op_units(a, b):
     return None
 
+
 @UnitArr.ufunc_rule(np.power)
 def _pow_units(a, b):
-    if getattr(a,'units',None) is not None:
-        return a.units**b
+    if getattr(a, 'units', None) is not None:
+        return a.units ** b
     else:
         return None
+
 
 @UnitArr.ufunc_rule(np.arctan)
 @UnitArr.ufunc_rule(np.arctan2)
@@ -896,6 +915,7 @@ def _pow_units(a, b):
 def _trig_units(*a):
     return None
 
+
 @UnitArr.ufunc_rule(np.exp)
 @UnitArr.ufunc_rule(np.log)
 @UnitArr.ufunc_rule(np.log2)
@@ -903,9 +923,11 @@ def _trig_units(*a):
 def _exp_log_units(*a):
     return None
 
+
 @UnitArr.ufunc_rule(np.sign)
 def _no_units(*a):
     return None
+
 
 @UnitArr.ufunc_rule(np.isinf)
 @UnitArr.ufunc_rule(np.isneginf)

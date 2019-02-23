@@ -64,21 +64,21 @@ For development:
     Similar is required for the submodules.
 '''
 # import all modules
-import utils
-import environment
-import units
-import physics
-import kernels
-import gadget
-import transformation
-import snapshot
-import octree
-import ssp
-import binning
-import analysis
-import tools
-import cloudy
-import plotting
+from . import utils
+from . import environment
+from . import units
+from . import physics
+from . import kernels
+from . import gadget
+from . import transformation
+from . import snapshot
+from . import octree
+from . import ssp
+from . import binning
+from . import analysis
+from . import tools
+from . import cloudy
+from . import plotting
 
 # the version of this pygad
 # this line gets changed by setup.py during installation, and hence is different
@@ -88,19 +88,19 @@ import plotting
 #   - in the installed version
 #       a string holding the value of above's function call at the moment of
 #       installation via setup.py
-version = environment.git_descr( environment.module_dir, PEP440=True )
+version = 'v0.9'
 if environment.verbose >= environment.VERBOSE_TACITURN:
-    print 'imported pygad', version
+    print('imported pygad', version, "- Python3")
 
 # make some chosen elements directly visible
-from environment import gc_full_collect
-from units import Unit, Units, UnitArr, UnitQty, UnitScalar, Fraction
-from physics import cosmology
-from physics import G, m_p, solar
-from transformation import Translation, Rotation
-from snapshot import Snap, BallMask, BoxMask, DiscMask, IDMask, ExprMask
-from binning import gridbin2d, gridbin, smooth
-from tools import prepare_zoom, read_info_file
+from .environment import gc_full_collect
+from .units import Unit, Units, UnitArr, UnitQty, UnitScalar, Fraction
+from .physics import cosmology
+from .physics import G, m_p, solar
+from .transformation import Translation, Rotation
+from .snapshot import Snap, BallMask, BoxMask, DiscMask, IDMask, ExprMask
+from .binning import gridbin2d, gridbin, smooth
+from .tools import prepare_zoom, read_info_file
 
 import gc
 # default seems to be (700, 10, 10)

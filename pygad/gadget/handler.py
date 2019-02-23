@@ -9,9 +9,9 @@ import os
 from .. import environment
 from ..environment import secure_get_h5py
 h5py = secure_get_h5py()
-from lowlevel_file import *
+from .lowlevel_file import *
 from ..units import *
-import config
+from . import config
 import numpy as np
 import warnings
 import sys
@@ -80,11 +80,11 @@ class FileReader(object):
 
     def infos(self):
         '''Return a sorted list of the block informations.'''
-        return sorted(self._info.values(), key=lambda e: e.start_pos)
+        return sorted(list(self._info.values()), key=lambda e: e.start_pos)
 
     def block_names(self):
         '''Return a list of all available blocks.'''
-        return self._info.keys()
+        return list(self._info.keys())
 
     def has_block(self, name):
         '''Check whether there is a block with the asked name.'''
@@ -106,7 +106,7 @@ class FileReader(object):
             block (UnitArr):    The loaded block.
         '''
         block = self._info[name]
-        N = sum(self._header['N_part'][pt] for pt in xrange(6)
+        N = sum(self._header['N_part'][pt] for pt in range(6)
                 if block.ptypes[pt])
 
         if self._format == 3:
@@ -116,7 +116,7 @@ class FileReader(object):
                 if block.dimension > 1:
                     data = data.reshape( (N,block.dimension) )
                 off = 0
-                for pt in xrange(6):
+                for pt in range(6):
                     if block.ptypes[pt]:
                         ds = gfile['PartType%d' % pt][HDF5_name]
                         data[off:off+ds.shape[0]] = ds[:]   # actually load data
@@ -133,7 +133,7 @@ class FileReader(object):
 
         if block.name == 'MASS':
             pos = 0
-            for pt in xrange(6):
+            for pt in range(6):
                 if self._header['mass'][pt]:
                     data = np.insert(data,
                                      pos,
@@ -254,7 +254,7 @@ def write(snap, filename, blocks=None, gformat=2, endianness='native',
         blocks = snap.loadable_blocks()
         tmp = []
         for name in config.block_order:
-            for attrname, lname in snap._root._load_name.iteritems():
+            for attrname, lname in snap._root._load_name.items():
                 if name == lname:
                     name = attrname
                     break
@@ -315,7 +315,7 @@ def write(snap, filename, blocks=None, gformat=2, endianness='native',
                                   'are converted!')
                 if gformat == 3:
                     data[name] = [None] * 6
-                    for pt in xrange(6):
+                    for pt in range(6):
                         if sub._N_part[pt]:
                             data[name][pt] = sub[[pt]][name] \
                                                 .astype(info[name].dtype) \
@@ -329,19 +329,19 @@ def write(snap, filename, blocks=None, gformat=2, endianness='native',
     # blocks are actually present (e.g. it does not contain gas though the root
     # does)
     for name in set(blocks)-set(data.keys()):
-        print >> sys.stderr, 'WARNING: block "%s" is not present for ' % name + \
-                             'this (sub-)snapshot and, hence, not written!'
+        print('WARNING: block "%s" is not present for ' % name + \
+                             'this (sub-)snapshot and, hence, not written!', file=sys.stderr)
         blocks.remove(name)
 
     if gformat == 3:
         with h5py.File(filename, 'w') as gfile:
             write_header(gfile, header, gformat, endianness)
-            for pt in xrange(6):
+            for pt in range(6):
                 gfile.create_group('PartType%d' % pt)
 
             for name in blocks:
                 d = data[name]
-                for pt in xrange(6):
+                for pt in range(6):
                     if d[pt] is not None:
                         units = d[pt].units
                 hdf5name = snap._root._load_name.get(name)
@@ -351,10 +351,10 @@ def write(snap, filename, blocks=None, gformat=2, endianness='native',
                     hdf5name = name
 
                 if environment.verbose >= environment.VERBOSE_NORMAL:
-                    print 'writing block', hdf5name,
-                    print '(dtype=%s, units=%s)...' % (info[name].dtype, units),
+                    print('writing block', hdf5name, end=' ')
+                    print('(dtype=%s, units=%s)...' % (info[name].dtype, units), end=' ')
                     sys.stdout.flush()
-                for pt in xrange(6):
+                for pt in range(6):
                     if not snap._root._block_avail[name][pt]:
                         continue
                     group = gfile['PartType%d' % pt]
@@ -364,7 +364,7 @@ def write(snap, filename, blocks=None, gformat=2, endianness='native',
                             d[pt].dtype)
                     gf_block[...] = d[pt]
                 if environment.verbose >= environment.VERBOSE_NORMAL:
-                    print 'done.'
+                    print('done.')
                     sys.stdout.flush()
     else:
         with open(os.path.expanduser(filename), 'wb') as gfile:
@@ -375,14 +375,14 @@ def write(snap, filename, blocks=None, gformat=2, endianness='native',
                 if gformat == 2:
                     info[name].start_pos += 4+8+4
                 if environment.verbose >= environment.VERBOSE_NORMAL:
-                    print 'writing block', block_name,
-                    print '(dtype=%s, units=%s)...' % (info[name].dtype,
-                            data[name].units),
+                    print('writing block', block_name, end=' ')
+                    print('(dtype=%s, units=%s)...' % (info[name].dtype,
+                            data[name].units), end=' ')
                     sys.stdout.flush()
                 sys.stdout.flush()
                 write_block(gfile, block_name, data[name], gformat, endianness)
                 if environment.verbose >= environment.VERBOSE_NORMAL:
-                    print 'done.'
+                    print('done.')
                     sys.stdout.flush()
-            info = sorted(info.values(), key=lambda x: x.start_pos)
+            info = sorted(list(info.values()), key=lambda x: x.start_pos)
             write_info(gfile, info, gformat, endianness)

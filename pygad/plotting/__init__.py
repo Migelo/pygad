@@ -7,10 +7,10 @@ Also doctest other parts of this sub-module:
     TestResults(failed=0, attempted=1)
 '''
 
-from colormaps import *
-from general import *
-from maps import *
-from profiles import *
+from .colormaps import *
+from .general import *
+from .maps import *
+from .profiles import *
 
 def show_FoF_groups(s, groups, colors='rand', plot_center=True, plot_parts=False,
                     plot_hull=True, pointsize=20, alpha=0.02, linewidth=1,
@@ -53,7 +53,7 @@ def show_FoF_groups(s, groups, colors='rand', plot_center=True, plot_parts=False
 
     xaxis = plotargs.get('xaxis', 0)
     yaxis = plotargs.get('yaxis', 1)
-    if not isinstance(colors, (str,unicode)):
+    if not isinstance(colors, str):
         colors = np.asarray(colors)
 
     fig, ax, im, cbar = image(s, **plotargs)
@@ -63,7 +63,7 @@ def show_FoF_groups(s, groups, colors='rand', plot_center=True, plot_parts=False
     for i, group in enumerate(groups):
         if colors == 'rand':
             color = mpl.colors.hsv_to_rgb( [np.random.rand(), 1, 1] )
-        elif isinstance(colors,(str,unicode)) or colors.dtype in (str,unicode) \
+        elif isinstance(colors,str) or colors.dtype in (str,str) \
                 or colors.shape==(3,):
             color = colors
         else:

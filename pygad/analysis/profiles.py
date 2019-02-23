@@ -70,12 +70,12 @@ def radially_binned(s, qty, av=None, r_edges=None, proj=None, center=None):
     Returns:
         Q (UnitArr):            The binned quantity.
     '''
-    if isinstance(qty, (str,unicode)):
+    if isinstance(qty, str):
         qty = s.get(qty)
     else:
         qty = UnitQty(qty)
     if av is not None:
-        if isinstance(av, (str,unicode)):
+        if isinstance(av, str):
             av = s.get(av)
         else:
             av = UnitQty(av)
@@ -87,7 +87,7 @@ def radially_binned(s, qty, av=None, r_edges=None, proj=None, center=None):
     if proj is None:
         r = s['r'] if np.all(center==0) else dist(s['pos'],center)
     else:
-        if proj not in range(3):
+        if proj not in list(range(3)):
             raise ValueError('Have to project along 0, 1, or 2!')
         if np.all(center==0) and proj==2:
             r = s['rcyl']
@@ -108,7 +108,7 @@ def radially_binned(s, qty, av=None, r_edges=None, proj=None, center=None):
         sorted_av = av[r_ind]
         sorted_qty = sorted_qty * sorted_av
     Q = []
-    for i in xrange(1, len(r_edges)):
+    for i in range(1, len(r_edges)):
         val = sorted_qty[ind_edges[i-1]:ind_edges[i]].sum()
         if av is not None:
             val /= sorted_av[ind_edges[i-1]:ind_edges[i]].sum()
@@ -171,7 +171,7 @@ def NFW(r, rho0, Rs):
 def _NFW_log10(lr, lrho0, lRs):
     '''
     The logarithmic version of the NFW profile for fitting.
-    
+
     Doctests:
         >>> assert abs(_NFW_log10(-1,1.23,0.12)
         ...             - np.log10(NFW(0.1,10**1.23,10**0.12))) < 1e-5

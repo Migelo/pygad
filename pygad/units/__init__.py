@@ -8,8 +8,8 @@ Also doctest other parts of this sub-module:
     >>> doctest.testmod(unit_arr)
     TestResults(failed=0, attempted=85)
 '''
-from units import *
-from unit_arr import *
+from .units import *
+from .unit_arr import *
 import os
 
 from ..environment import module_dir

@@ -9,6 +9,6 @@ Also doctest other parts of this sub-module:
     TestResults(failed=0, attempted=9)
 '''
 
-from definitions import *
-from integral import *
+from .definitions import *
+from .integral import *
 

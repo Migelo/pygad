@@ -6,5 +6,5 @@ Also doctest other parts of this sub-module:
     >>> doctest.testmod(bc_ssp)
     TestResults(failed=0, attempted=13)
 '''
-from bc_ssp import *
+from .bc_ssp import *
 

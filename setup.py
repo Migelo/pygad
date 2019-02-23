@@ -36,7 +36,7 @@ for root, dirs, files in os.walk(setup_dir):
 
 # compile the C part (has to be done before importing
 if not uninstall:
-    print 'compiling the fast C parts of pygad'
+    print('compiling the fast C parts of pygad')
     subprocess.check_call(['make'], cwd=setup_dir+'/pygad/C')
 
 # get version for setup and fix version in module's `pygad.version`
@@ -60,7 +60,7 @@ try:
           author = 'Bernhard Roettgers',
           author_email = 'broett@mpa-garching.mpg.de',
           url = 'https://bitbucket.org/broett/pygad',
-          packages = map(str,modules),
+          packages = list(map(str,modules)),
           package_data = package_data,
           scripts=scripts,
          )
@@ -69,4 +69,3 @@ except:
 finally:
     # restore the dynamic git version of the development's pygad
     os.rename(init_tmp, init_file)
-

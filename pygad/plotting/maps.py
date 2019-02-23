@@ -9,7 +9,7 @@ __all__ = ['plot_map', 'image', 'phase_diagram', 'over_plot_species_phases', 've
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from general import *
+from .general import *
 from ..units import *
 from ..binning import *
 from ..gadget import config
@@ -133,15 +133,15 @@ def plot_map(m, colors=None, extent=None, vlim=None, clim=None,
         extent.convert_to(scaleunits, subs=subs)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'plot a map - paramters:'
-        print '  Npx:           ', m.Npx
-        print '  colors:        ', (colors is not None)
-        print '  extent:        ', repr(extent).replace('\n        ', '')
-        print '  surface_dens:  ', surface_dens
-        print '  csurf_dens:    ', csurf_dens
-        print '  logscale:      ', logscale
-        print '  clogscale:     ', clogscale
-        print '  [...]'
+        print('plot a map - paramters:')
+        print('  Npx:           ', m.Npx)
+        print('  colors:        ', (colors is not None))
+        print('  extent:        ', repr(extent).replace('\n        ', ''))
+        print('  surface_dens:  ', surface_dens)
+        print('  csurf_dens:    ', csurf_dens)
+        print('  logscale:      ', logscale)
+        print('  clogscale:     ', clogscale)
+        print('  [...]')
 
     if surface_dens:
         m = m / np.prod(res)
@@ -155,7 +155,7 @@ def plot_map(m, colors=None, extent=None, vlim=None, clim=None,
     if logscale:
         m = np.log10(m)
         if vlim is not None:
-            vlim = map(np.log10, vlim)
+            vlim = list(map(np.log10, vlim))
     if vlim is None:
         tmp = m[np.isfinite(m)]
         if len(tmp)==0:
@@ -177,7 +177,7 @@ def plot_map(m, colors=None, extent=None, vlim=None, clim=None,
             clim = np.percentile(colors[np.isfinite(colors)], [0.1,99.99])
         if clogscale:
             colors = np.log10(colors)
-            clim = map(np.log10, clim)
+            clim = list(map(np.log10, clim))
         if normcmaplum:
             cmap = isolum_cmap(cmap, desat=desat)
         im = color_code(m, colors, cmap=cmap, vlim=vlim, clim=clim,
@@ -439,37 +439,37 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         scaleunits = Unit(scaleunits)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'plot a map - paramters:'
-        if isinstance(qty,(str,unicode)) or qty is None:
-            print '  qty:         ', qty
+        print('plot a map - paramters:')
+        if isinstance(qty,str) or qty is None:
+            print('  qty:         ', qty)
         else:
-            print '  qty:         ', type(qty)
-        if isinstance(av,(str,unicode)) or av is None:
-            print '  av:          ', av
+            print('  qty:         ', type(qty))
+        if isinstance(av,str) or av is None:
+            print('  av:          ', av)
         else:
-            print '  av:          ', type(av)
-        if isinstance(colors,(str,unicode)) or colors is None:
-            print '  colors:      ', colors
+            print('  av:          ', type(av))
+        if isinstance(colors,str) or colors is None:
+            print('  colors:      ', colors)
         else:
-            print '  colors:      ', type(colors)
-        if isinstance(colors_av,(str,unicode)) or colors_av is None:
-            print '  colors_av:   ', colors_av
+            print('  colors:      ', type(colors))
+        if isinstance(colors_av,str) or colors_av is None:
+            print('  colors_av:   ', colors_av)
         else:
-            print '  colors_av:   ', type(colors_av)
+            print('  colors_av:   ', type(colors_av))
         if reduction is None:
-            print '  field:       ', field
-            print '  surface_dens:', surface_dens
+            print('  field:       ', field)
+            print('  surface_dens:', surface_dens)
         else:
-            print '  field:       ', 'ignored'
-            print '  surface_dens:', 'ignored'
-        print '  logscale:    ', logscale
-        print '  clogscale:   ', clogscale
-        print '  reduction:   ', reduction
-        print '  [...]'
+            print('  field:       ', 'ignored')
+            print('  surface_dens:', 'ignored')
+        print('  logscale:    ', logscale)
+        print('  clogscale:   ', clogscale)
+        print('  reduction:   ', reduction)
+        print('  [...]')
 
     # create luminance map
     if len(s) == 0:
-        if isinstance(qty,(str,unicode)) and units is None:
+        if isinstance(qty,str) and units is None:
             raise RuntimeError('Snapshot is empty and no units for the image are '
                                'given -- cannot create an empty map of correct '
                                'units!')
@@ -482,10 +482,10 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         im_lum = map_qty(s, extent=extent, field=field, qty=qty, av=av,
                          reduction=reduction, Npx=Npx,
                          xaxis=xaxis, yaxis=yaxis, **kwargs)
-    if logscale and isinstance(qty,(str,unicode)) and 'log' in qty:
+    if logscale and isinstance(qty,str) and 'log' in qty:
         import sys
-        print >> sys.stderr, 'WARNING: in log-scale, but "qty" already ' + \
-                             'contains "log"!'
+        print('WARNING: in log-scale, but "qty" already ' + \
+                             'contains "log"!', file=sys.stderr)
     if maps is not None:
         maps['qty'] = im_lum
 
@@ -505,7 +505,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
     if showcbar and cbartitle is None:
         cqty = colors if colors is not None else qty
         cav  = colors_av if colors is not None else av
-        if isinstance(cqty,(str,unicode)):
+        if isinstance(cqty,str):
             cname = cqty
             if reduction is not None:
                 cname = '%s(%s)' % (reduction, cname)
@@ -683,7 +683,7 @@ def over_plot_species_phases(s, species=None, extent=None, enclose=0.8,
     if not hasattr(colors,'__getitem__'):
         colors = [colors]
     if linestyles is None:
-        linestyles = [ ls for ls in mpl.lines.lineStyles.keys()
+        linestyles = [ ls for ls in list(mpl.lines.lineStyles.keys())
                         if ls not in ['',' ','None'] ]
     if isinstance(linestyles, str):
         linestyles = [linestyles]
@@ -691,13 +691,13 @@ def over_plot_species_phases(s, species=None, extent=None, enclose=0.8,
         phase_kwargs = dict()
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'plot temperature-density distribution of:'
-        print '  ', species
-        print '...'
+        print('plot temperature-density distribution of:')
+        print('  ', species)
+        print('...')
 
     if ax is None:
         if environment.verbose >= environment.VERBOSE_NORMAL:
-            print 'plot underlying overall phase-diagram...'
+            print('plot underlying overall phase-diagram...')
         if 'qty' not in phase_kwargs:       phase_kwargs['qty'] = 'mass'
         if 'showcbar' not in phase_kwargs:  phase_kwargs['showcbar'] = True
         if 'cmap' not in phase_kwargs:      phase_kwargs['cmap'] = 'gray_r'
@@ -718,7 +718,7 @@ def over_plot_species_phases(s, species=None, extent=None, enclose=0.8,
     for n,spec in enumerate(species):
         label = species_labels[n]
         if environment.verbose >= environment.VERBOSE_NORMAL:
-            print 'plot distribution of %s...' % label
+            print('plot distribution of %s...' % label)
         c = colors[n%len(colors)]
         ls = linestyles[n%len(linestyles)]
         sub = s.gas.get(spec)
@@ -745,7 +745,7 @@ def over_plot_species_phases(s, species=None, extent=None, enclose=0.8,
             txt_pos += 0.12
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'all done'
+        print('all done')
     return fig, ax
 
 def vec_field(s, qty, extent, field=False, av=None, reduction=None,
@@ -804,7 +804,7 @@ def vec_field(s, qty, extent, field=False, av=None, reduction=None,
     if reduction is not None:
         field = False
 
-    if isinstance(qty,(str,unicode)):
+    if isinstance(qty,str):
         qty_x = s.get('%s[:,%d]' % (qty,xaxis))
         qty_y = s.get('%s[:,%d]' % (qty,yaxis))
     else:
@@ -876,11 +876,11 @@ def correlation_chart(variables, labels=None, title='correlations', bins=30,
         if labels is not None:
             if y == N-1:      ax.set_xlabel(labels[x], fontsize=14)
             if x==0 and y!=0: ax.set_ylabel(labels[y], fontsize=14)
-    for x in xrange(N):
+    for x in range(N):
         y = N-1
         axs[x,y] = fig.add_subplot(gs[y,x])
         plot(x,y)
-        for y in xrange(N-2,x-1,-1):
+        for y in range(N-2,x-1,-1):
             axs[x,y] = fig.add_subplot(gs[y,x], sharex=axs[N-1,y])
             plot(x,y)
     plt.setp([ax.get_yticklabels() for ax in axs[1:,:].flat  if ax is not None],

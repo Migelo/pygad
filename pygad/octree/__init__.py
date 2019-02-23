@@ -9,6 +9,6 @@ Also doctest other parts of this sub-module:
     TestResults(failed=0, attempted=29)
 '''
 
-from coctree import *
-from octree import *
+from .coctree import *
+from .octree import *
 

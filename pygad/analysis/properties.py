@@ -117,6 +117,7 @@ from ..transformation import *
 from pygad import physics
 import sys
 
+
 def mass_weighted_mean(s, qty, mass='mass'):
     '''
     Calculate the mass weighted mean of some quantity, i.e.
@@ -134,13 +135,13 @@ def mass_weighted_mean(s, qty, mass='mass'):
     Returns:
         mean (UnitArr):     The mass weighted mean.
     '''
-    if isinstance(qty, (str,unicode)):
+    if isinstance(qty, str):
         qty = s.get(qty)
     else:
         qty = UnitArr(qty)
     if len(s) == 0:
-        return UnitArr([0]*qty.shape[-1], units=qty.units, dtype=qty.dtype)
-    if isinstance(mass, (str,unicode)):
+        return UnitArr([0] * qty.shape[-1], units=qty.units, dtype=qty.dtype)
+    if isinstance(mass, str):
         mass = s.get(mass)
     else:
         mass = UnitArr(mass)
@@ -149,9 +150,11 @@ def mass_weighted_mean(s, qty, mass='mass'):
     normalized_mwgt = mwgt / float(mass.sum())
     return UnitArr(normalized_mwgt, qty.units)
 
+
 def center_of_mass(snap):
     '''Calculate and return the center of mass of this snapshot.'''
     return mass_weighted_mean(snap, 'pos')
+
 
 def reduced_inertia_tensor(s):
     '''
@@ -169,7 +172,7 @@ def reduced_inertia_tensor(s):
                         be s['mass'].units/s['pos'].units.)
     '''
     # a bit faster with the np.ndarray views
-    r2 = (s['r']**2).view(np.ndarray)
+    r2 = (s['r'] ** 2).view(np.ndarray)
     m = s['mass'].view(np.ndarray)
     pos = s['pos'].view(np.ndarray)
 
@@ -181,16 +184,17 @@ def reduced_inertia_tensor(s):
         m = m[rzero]
         pos = pos[rzero]
 
-    I_xx = np.sum(m * pos[:,0]**2 / r2)
-    I_yy = np.sum(m * pos[:,1]**2 / r2)
-    I_zz = np.sum(m * pos[:,2]**2 / r2)
-    I_xy = np.sum(m * pos[:,0]*pos[:,1] / r2)
-    I_xz = np.sum(m * pos[:,0]*pos[:,2] / r2)
-    I_yz = np.sum(m * pos[:,1]*pos[:,2] / r2)
+    I_xx = np.sum(m * pos[:, 0] ** 2 / r2)
+    I_yy = np.sum(m * pos[:, 1] ** 2 / r2)
+    I_zz = np.sum(m * pos[:, 2] ** 2 / r2)
+    I_xy = np.sum(m * pos[:, 0] * pos[:, 1] / r2)
+    I_xz = np.sum(m * pos[:, 0] * pos[:, 2] / r2)
+    I_yz = np.sum(m * pos[:, 1] * pos[:, 2] / r2)
     I = np.matrix([[I_xx, I_xy, I_xz], \
                    [I_xy, I_yy, I_yz], \
                    [I_xz, I_yz, I_zz]], dtype=np.float64)
     return I
+
 
 def orientate_at(s, mode, qty=None, total=False, remember=True):
     '''
@@ -231,23 +235,24 @@ def orientate_at(s, mode, qty=None, total=False, remember=True):
     if mode in ['vec', 'L']:
         T = rot_to_z(qty)
     elif mode in ['tensor', 'red I']:
-        qty = np.matrix( qty )
-        if np.max(np.abs(qty.H-qty)) > 1e-6:
+        qty = np.matrix(qty)
+        if np.max(np.abs(qty.H - qty)) > 1e-6:
             raise ValueError('The matrix passed as qty has to be Hermitian!')
         vals, vecs = np.linalg.eigh(qty)
         i = np.argsort(vals)[::-1]
         try:
-            T = Rotation(vecs[:,i].T)
+            T = Rotation(vecs[:, i].T)
         except ValueError:
             # probably not a proper rotation... (not right-handed)
-            vecs[:,i[1]] *= -1
-            T = Rotation(vecs[:,i].T)
+            vecs[:, i[1]] *= -1
+            T = Rotation(vecs[:, i].T)
         except:
             raise
     else:
         raise ValueError('unknown orientation mode \'%s\'' % what)
 
     T.apply(s, total=total, remember=remember)
+
 
 def half_qty_radius(s, qty, Qtot=None, center=None, proj=None):
     '''
@@ -271,25 +276,25 @@ def half_qty_radius(s, qty, Qtot=None, center=None, proj=None):
         return UnitArr(0.0, s['pos'].units)
 
     if center is None:
-        center = UnitQty([0]*3)
+        center = UnitQty([0] * 3)
     center = UnitQty(center, s['pos'].units, subs=s)
 
-    if isinstance(proj,int):
-        proj_mask = [i for i in xrange(3) if i!=proj]
-        if len(center)==3:
+    if isinstance(proj, int):
+        proj_mask = [i for i in range(3) if i != proj]
+        if len(center) == 3:
             center = center[proj_mask]
 
-    if np.all(center==0):
-        if isinstance(proj,int):
-            r = s['rcyl'] if proj==2 else dist(s['pos'][:,proj_mask])
+    if np.all(center == 0):
+        if isinstance(proj, int):
+            r = s['rcyl'] if proj == 2 else dist(s['pos'][:, proj_mask])
         else:
             r = s['r']
     else:
-        r = dist(s['pos'][:,proj_mask],center) if isinstance(proj,int) \
-                else dist(s['pos'],center)
+        r = dist(s['pos'][:, proj_mask], center) if isinstance(proj, int) \
+            else dist(s['pos'], center)
     r_ind = r.argsort()
 
-    if isinstance(qty,(str,unicode)):
+    if isinstance(qty, str):
         qty = s.get(qty)
     else:
         qty = UnitQty(qty)
@@ -298,16 +303,17 @@ def half_qty_radius(s, qty, Qtot=None, center=None, proj=None):
     if Qtot is None:
         Qtot = Q[-1]
     else:
-        Qtot = UnitScalar(Qtot,qty.units,subs=s,dtype=float)
+        Qtot = UnitScalar(Qtot, qty.units, subs=s, dtype=float)
 
-    Q_half_ind = np.abs(Q - Qtot/2.).argmin()
-    if Q_half_ind == len(Q)-1:
-        print >> sys.stderr, 'WARNING: The half-qty radius is larger than ' + \
-                             'the (sub-)snapshot passed!'
+    Q_half_ind = np.abs(Q - Qtot / 2.).argmin()
+    if Q_half_ind == len(Q) - 1:
+        print('WARNING: The half-qty radius is larger than ' + \
+              'the (sub-)snapshot passed!', file=sys.stderr)
     elif Q_half_ind < 10:
-        print >> sys.stderr, 'WARNING: The half-qty radius is not resolved ' + \
-                             'for %s!' % s
+        print('WARNING: The half-qty radius is not resolved ' + \
+              'for %s!' % s, file=sys.stderr)
     return UnitArr(r[r_ind][Q_half_ind], s['pos'].units)
+
 
 def half_mass_radius(s, M=None, center=None, proj=None):
     '''
@@ -326,6 +332,7 @@ def half_mass_radius(s, M=None, center=None, proj=None):
         r12 (UnitArr):          The half-mass-radius.
     '''
     return half_qty_radius(s, qty='mass', Qtot=M, center=center, proj=proj)
+
 
 def eff_radius(s, band=None, L=None, center=None, proj=2):
     '''
@@ -351,10 +358,11 @@ def eff_radius(s, band=None, L=None, center=None, proj=2):
         qty += '_' + band.lower()
     return half_qty_radius(s.stars, qty=qty, Qtot=L, center=center, proj=proj)
 
+
 def shell_flow_rates(s, Rlim, qty='mass', direction='both', units='Msol/yr'):
     '''
     Estimate flow rate in spherical shell.
-    
+
     The estimation is done by caluculating m*v/d on a particle base, where d is
     the thickness of the shell.
 
@@ -375,38 +383,39 @@ def shell_flow_rates(s, Rlim, qty='mass', direction='both', units='Msol/yr'):
     Rlim = UnitQty(Rlim, s['r'].units)
     if not Rlim.shape == (2,):
         raise ValueError('Rlim must have shape (2,)!')
-    shell = s[(Rlim[0]<s['r']) & (s['r']<Rlim[1])]
+    shell = s[(Rlim[0] < s['r']) & (s['r'] < Rlim[1])]
 
-    if direction=='both':
+    if direction == 'both':
         pass
-    elif direction=='in':
+    elif direction == 'in':
         shell = shell[shell['vrad'] < 0]
-    elif direction=='out':
+    elif direction == 'out':
         shell = shell[shell['vrad'] > 0]
     else:
         raise RuntimeError('unknown direction %s!' % direction)
 
-    if isinstance(qty, (str,unicode)):
+    if isinstance(qty, str):
         qty = shell.get(qty)
     else:
         qty = UnitArr(qty, 'Msol', subs=s)
 
-    flow = np.sum(qty * shell['vrad'] / UnitArr(Rlim[1]-Rlim[0], Rlim.units))
+    flow = np.sum(qty * shell['vrad'] / UnitArr(Rlim[1] - Rlim[0], Rlim.units))
     flow.convert_to(units, subs=s)
     return flow
 
+
 def flow_rates(s, R, qty='mass', dt='3 Myr'):
     '''
-    Estimate in- and outflow rates of a given quantity (default: mass) 
+    Estimate in- and outflow rates of a given quantity (default: mass)
     through a given radius.
-    
+
     The estimation is done by propagating the positions with constant current
     velocities, i.e. pos_new = pos_old + vel*dt. Then counting the mass that
     passed the shell of radius R.
 
     Args:
         s (Snap):               The (sub-)snapshot to use.
-        qty (str):              The quantity to calculate the flow-rates of 
+        qty (str):              The quantity to calculate the flow-rates of
                                 (default: 'mass')
         R (UnitScalar):         The radius of the shell through which the flow is
                                 estimated.
@@ -422,17 +431,18 @@ def flow_rates(s, R, qty='mass', dt='3 Myr'):
     dt = UnitScalar(dt, units='Myr', subs=s)
 
     # predicted particle distances from center in dt
-    dt.convert_to(s['r'].units/s['vel'].units,subs=s)   # avoid conversions of
-                                                        # entire arrays
-    rpred = s['r'] + s['vrad']*dt
+    dt.convert_to(s['r'].units / s['vel'].units, subs=s)  # avoid conversions of
+    # entire arrays
+    rpred = s['r'] + s['vrad'] * dt
     of_mass = s[qty][(s['r'] < R) & (rpred >= R)]
     if_mass = s[qty][(s['r'] >= R) & (rpred < R)]
 
-    dt.convert_to('yr',subs=s)  # to more intuitive units again
+    dt.convert_to('yr', subs=s)  # to more intuitive units again
     ofr = np.sum(of_mass) / dt
     ifr = np.sum(if_mass) / dt
 
     return ifr, ofr
+
 
 def los_velocity_dispersion(s, proj=2):
     '''
@@ -443,11 +453,12 @@ def los_velocity_dispersion(s, proj=2):
         proj (int):     The line of sight is along this axis (0=x, 1=y, 2=z).
     '''
     # array of los velocities
-    v = s['vel'][:,proj].ravel()
+    v = s['vel'][:, proj].ravel()
     av_v = mass_weighted_mean(s, v)
-    sigma_v = np.sqrt( mass_weighted_mean(s, (v-av_v)**2) )
+    sigma_v = np.sqrt(mass_weighted_mean(s, (v - av_v) ** 2))
 
     return sigma_v
+
 
 def x_ray_luminosity(s, lumtable='em.dat', tempbin=None, lx0bin=None, dlxbin=None,
                      Zref=0.4, z_table=0.001):
@@ -466,7 +477,7 @@ def x_ray_luminosity(s, lumtable='em.dat', tempbin=None, lx0bin=None, dlxbin=Non
         Zref (float):           The reference metallicity used for the XSPEC
                                 table.
         z_table (float):        The redshift assumed for the XSPEC table.
-                                
+
     Returns:
         lx (UnitArr):           X-ray luminosities of the gas particles
     '''
@@ -477,39 +488,39 @@ def x_ray_luminosity(s, lumtable='em.dat', tempbin=None, lx0bin=None, dlxbin=Non
     # Read in temperature bins and corresponding Lx0(T,Z=Zref) and (dLx/dZ)(T)
     # (both in 1e44 erg/s (per Zsol))
     if tempbin == None:
-        tempbin, lx0bin, dlxbin = np.loadtxt(lumtable, usecols=(0,3,5), unpack=True)
+        tempbin, lx0bin, dlxbin = np.loadtxt(lumtable, usecols=(0, 3, 5), unpack=True)
     else:
         tempbin = np.asarray(tempbin)
 
-    tlow = tempbin[0] - 0.5*(tempbin[1]-tempbin[0]) # lower temperature bin limit
-    Z = s.gas['metallicity'] / physics.solar.Z()    # metallicity in solar units
-    mp = physics.m_p.in_units_of('g')               # proton mass
+    tlow = tempbin[0] - 0.5 * (tempbin[1] - tempbin[0])  # lower temperature bin limit
+    Z = s.gas['metallicity'] / physics.solar.Z()  # metallicity in solar units
+    mp = physics.m_p.in_units_of('g')  # proton mass
     # emission measure of gas particles (n_e * n_H * V)
-    em = np.float64(s.gas['ne']) * np.float64(s.gas['H']).in_units_of('g')**2 * \
+    em = np.float64(s.gas['ne']) * np.float64(s.gas['H']).in_units_of('g') ** 2 * \
          np.float64(s.gas['rho']).in_units_of('g/cm**3') / \
-         (np.float64(s.gas['mass']).in_units_of('g')*mp**2)
+         (np.float64(s.gas['mass']).in_units_of('g') * mp ** 2)
     # rescaling factor for precomputed luminosities
     Da = s.cosmology.angular_diameter_distance(z_table, 'cm')
-    norm = UnitArr(1e-14,units='cm**5') * em / (4 * np.pi * (Da*(1+z_table))**2)
+    norm = UnitArr(1e-14, units='cm**5') * em / (4 * np.pi * (Da * (1 + z_table)) ** 2)
     norm = norm.view(np.ndarray)
-    lx = np.zeros(s.gas['rho'].shape[0])         # array for X-ray luminosity
+    lx = np.zeros(s.gas['rho'].shape[0])  # array for X-ray luminosity
     kB_T = (s.gas['temp'] * physics.kB).in_units_of('keV').view(np.ndarray)
-    indices = np.zeros(s.gas['rho'].shape[0])    # array for fitting tempbin
-                                                 # indices for gas particles
-    dtemp = np.zeros(s.gas['rho'].shape[0])+1e30 # minimal differences of gas
-                                  # particle temperature and binned temperatures
+    indices = np.zeros(s.gas['rho'].shape[0])  # array for fitting tempbin
+    # indices for gas particles
+    dtemp = np.zeros(s.gas['rho'].shape[0]) + 1e30  # minimal differences of gas
+    # particle temperature and binned temperatures
 
     # loop over tempbin array to find nearest tempbin for all gas particle
     # temperatures
-    for i in xrange(0,tempbin.shape[0]):
-        dtemp[np.where(np.abs(kB_T-tempbin[i]) < dtemp)] = \
-                np.abs(kB_T[np.where(np.abs(kB_T-tempbin[i])<dtemp)] - tempbin[i])
-        indices[np.where(np.abs(kB_T-tempbin[i]) == dtemp)] = i
+    for i in range(0, tempbin.shape[0]):
+        dtemp[np.where(np.abs(kB_T - tempbin[i]) < dtemp)] = \
+            np.abs(kB_T[np.where(np.abs(kB_T - tempbin[i]) < dtemp)] - tempbin[i])
+        indices[np.where(np.abs(kB_T - tempbin[i]) == dtemp)] = i
 
     # calculate X-ray luminosities for all gas particles
-    for i in xrange(0,tempbin.shape[0]):
+    for i in range(0, tempbin.shape[0]):
         lx[np.where(indices == i)] = lx0bin[i] + \
-                (Z[np.where(indices==i)] - Zref) * dlxbin[i]
-    lx[np.where(kB_T < tlow)] = 0   # particles below threshold temperature do not
-                                    # contribute to Lx
-    return UnitArr(lx * norm * 1e44, 'erg/s') # luminosities of all gas particles [erg/s]
+                                     (Z[np.where(indices == i)] - Zref) * dlxbin[i]
+    lx[np.where(kB_T < tlow)] = 0  # particles below threshold temperature do not
+    # contribute to Lx
+    return UnitArr(lx * norm * 1e44, 'erg/s')  # luminosities of all gas particles [erg/s]

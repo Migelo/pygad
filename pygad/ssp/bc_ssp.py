@@ -133,7 +133,7 @@ table_names = {
                                 'V-F606w', 'V-F675w', 'V-F814w', 'V-U', 'V-B',
                                 'V-R', 'V-I', 'V-J', 'V-K', 'V-L'],
     }
-available_qty = set(np.sum(table_names.values())) - set(['log-age-yr', 'log-age'])
+available_qty = set(np.sum(list(table_names.values()))) - set(['log-age-yr', 'log-age'])
 
 table_base_name = {
         'Kroupa': 'bc2003_hr_stelib_%s_kroup_ssp',
@@ -185,7 +185,7 @@ def load_table(qty, metal_code, folder=None, base=None, ending=None, IMF=None):
 
     found = False
     if ending is None:
-        for ending, columns in table_names.iteritems():
+        for ending, columns in table_names.items():
             if qty in columns:
                 tbl = np.loadtxt(folder + '/' + (base%metal_code) + '.' + ending)
                 found = True
@@ -227,7 +227,7 @@ def inter_bc_qty(age, Z, qty, units=None, IMF=None):
                             fit eachother.
     '''
     if environment.verbose >= environment.VERBOSE_TALKY:
-        print 'interpolate SSP tables for qty "%s"...' % qty
+        print('interpolate SSP tables for qty "%s"...' % qty)
 
     age = np.log10(UnitQty(age, 'yr')).view(np.ndarray)
     Z = UnitQty(Z).view(np.ndarray)
@@ -245,28 +245,28 @@ def inter_bc_qty(age, Z, qty, units=None, IMF=None):
                          'the length!')
 
     if environment.verbose >= environment.VERBOSE_TALKY:
-        print 'read SSP tables...'
+        print('read SSP tables...')
         sys.stdout.flush()
     # load all tables (just a few MB)
     tbls = {}
-    for mtl in metallicity_name.keys():
+    for mtl in list(metallicity_name.keys()):
         age_bins, tbls[mtl] = load_table(qty, metallicity_name[mtl], IMF=IMF)
 
     if environment.verbose >= environment.VERBOSE_TALKY:
-        print 'table limits:'
-        print '  age [yr]:    %.2e - %.2e' % (10**age_bins.min(),
-                                              10**age_bins.max())
-        print '  metallicity: %.2e - %.2e' % (min(metallicity_name.keys()),
-                                              max(metallicity_name.keys()))
+        print('table limits:')
+        print('  age [yr]:    %.2e - %.2e' % (10**age_bins.min(),
+                                              10**age_bins.max()))
+        print('  metallicity: %.2e - %.2e' % (min(metallicity_name.keys()),
+                                              max(metallicity_name.keys())))
 
     if environment.verbose >= environment.VERBOSE_TALKY:
-        print 'interpolate in age...'
+        print('interpolate in age...')
         sys.stdout.flush()
     # interpolate in age in all metallicities simultaneously (creating blocks for
     # each tabled metallicity for each particle, i.e. len(metallicity_name) entire
     # blocks -- there are much less metallcity bins than age bins!):
-    Q_mtl = {mtl:np.empty(len(age)) for mtl in metallicity_name.iterkeys()}
-    for k in xrange(len(age_bins)+1):
+    Q_mtl = {mtl:np.empty(len(age)) for mtl in metallicity_name.keys()}
+    for k in range(len(age_bins)+1):
         if k == 0:
             age_mask = age<age_bins[0]
             n = [0, 0]
@@ -280,26 +280,26 @@ def inter_bc_qty(age, Z, qty, units=None, IMF=None):
             n = [k-1, k]
             a_age = (age[age_mask] - age_bins[n[0]]) / (age_bins[n[1]] - age_bins[n[0]])
 
-        for mtl in metallicity_name.iterkeys():
+        for mtl in metallicity_name.keys():
             tbl = tbls[mtl]
             Q_mtl[mtl][age_mask] = a_age*tbl[n[1]] + (1.0-a_age)*tbl[n[0]]
 
     if environment.verbose >= environment.VERBOSE_TALKY:
-        print 'interpolate in metallicity...'
+        print('interpolate in metallicity...')
         sys.stdout.flush()
     # now interpolate in metallicity:
     Q = np.empty(len(age))
-    for i in xrange(len(metallicity_name)+1):
+    for i in range(len(metallicity_name)+1):
         if i == 0:
-            z = metallicity_name.keys()[0]
+            z = list(metallicity_name.keys())[0]
             Z_mask = Z<z
             Q[Z_mask] = Q_mtl[z][Z_mask]
         elif i == len(metallicity_name):
-            z = metallicity_name.keys()[-1]
+            z = list(metallicity_name.keys())[-1]
             Z_mask = z<=Z
             Q[Z_mask] = Q_mtl[z][Z_mask]
         else:
-            z = [metallicity_name.keys()[i-1], metallicity_name.keys()[i]]
+            z = [list(metallicity_name.keys())[i-1], list(metallicity_name.keys())[i]]
             Z_mask = (z[0]<=Z) & (Z<z[1])
             a_Z = (Z[Z_mask] - z[0]) / (z[1] - z[0])
             Q[Z_mask] = a_Z * Q_mtl[z[1]][Z_mask] + \

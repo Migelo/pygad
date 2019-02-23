@@ -7,7 +7,7 @@ __all__ = ['git_descr', 'interactive', 'module_dir', 'can_use_h5py',
 
 import sys
 import os
-from utils import *
+from .utils import *
 import gc
 
 module_dir = os.path.dirname(__file__)+'/'
@@ -81,7 +81,7 @@ VERBOSE_QUIET       = 0
 VERBOSE_TACITURN    = 1
 VERBOSE_NORMAL      = 2
 VERBOSE_TALKY       = 3
-verbose = VERBOSE_NORMAL if interactive else VERBOSE_QUIET
+verbose = VERBOSE_NORMAL if interactive else VERBOSE_TALKY
 allow_parallel_conversion = interactive
 
 class _h5py_dummy(object):
@@ -119,8 +119,8 @@ def secure_get_h5py():
         return h5py
     except:
         if not secure_get_h5py._called:
-            print >> sys.stderr, 'WARNING: Could not import h5py -- format 3 ' + \
-                                 'Gadget files are, hence, not supported.'
+            print('WARNING: Could not import h5py -- format 3 ' + \
+                                 'Gadget files are, hence, not supported.', file=sys.stderr)
             secure_get_h5py._called = True
         return _h5py_dummy
 
@@ -134,6 +134,6 @@ def gc_full_collect():
         pass
     gc.set_threshold(*old_thresholds)
     if len(gc.garbage) > 0:
-        print >> sys.stderr, 'WARNING: there is uncollectable garbage after a ' + \
-                             'call of `gc_full_collect`!'
+        print('WARNING: there is uncollectable garbage after a ' + \
+                             'call of `gc_full_collect`!', file=sys.stderr)
 

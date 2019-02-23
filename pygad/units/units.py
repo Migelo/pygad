@@ -92,11 +92,12 @@ __all__ = ['UnitError', 'define', 'set_latex_repr', 'undefine', 'undefine_all',
 
 from numbers import Number
 from fractions import Fraction
+import numpy
 import math
 from ..utils import *
 from keyword import iskeyword
 import re
-from ConfigParser import SafeConfigParser
+from configparser import SafeConfigParser
 import sys
 import ast
 import operator as op
@@ -278,7 +279,7 @@ class _UnitClass(object):
         return self.__pow__(Fraction(1,2))
 
     def __pow__(self, power):
-        if not isinstance(power, (int, Fraction)):
+        if not isinstance(power, (int, Fraction, numpy.int32, numpy.int64)):
             raise UnitError('Units can only be raised to integer of fractional '
                             'powers!')
         '''
@@ -421,8 +422,8 @@ def define(name, u=None, latex=None, allow_redef=True, warn=True):
     if name in _unit_definitions:
         if allow_redef:
             if warn and _unit_definitions[name] != u:
-                print >> sys.stderr, 'WARNING: Changing definition of ' + \
-                        '"%s": %s -> %s)!' % (name, _unit_definitions[name], u)
+                print('WARNING: Changing definition of ' + \
+                        '"%s": %s -> %s)!' % (name, _unit_definitions[name], u), file=sys.stderr)
         else:
             raise UnitError('There is already a unit defined as "%s"!' % name)
     _unit_definitions[name] = u
@@ -437,14 +438,14 @@ def set_latex_repr(name, latex):
                        'set its LaTeX representation!')
     if name in _unit_latex:
         if _unit_latex[name] != latex:
-            print >> sys.stderr, 'WARNING: Changing LaTeX representation of ' + \
-                    '"%s": %s -> %s)!' % (name, _unit_latex[name], latex)
+            print('WARNING: Changing LaTeX representation of ' + \
+                    '"%s": %s -> %s)!' % (name, _unit_latex[name], latex), file=sys.stderr)
     _unit_latex[name] = latex
 
 def undefine(name):
     '''Delete the definition of a unit.'''
     if name not in _unit_definitions:
-        print >> sys.stderr, 'WARNING: Tried to undefine not defined unit "%s"!' % (name)
+        print('WARNING: Tried to undefine not defined unit "%s"!' % (name), file=sys.stderr)
         return
     del _unit_definitions[name]
     if name in _unit_latex:
@@ -458,7 +459,7 @@ def undefine_all():
 
 def defined_units():
     '''Return a list of the names of all defined units.'''
-    return _unit_definitions.keys()
+    return list(_unit_definitions.keys())
 
 def define_from_cfg(config, allow_redef=False, warn=True, undefine_old=True):
     '''
@@ -539,7 +540,7 @@ def define_from_cfg(config, allow_redef=False, warn=True, undefine_old=True):
         raise IOError('Config file "%s" does not exist!' % config)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'reading units definitions from "%s"' % filename
+        print('reading units definitions from "%s"' % filename)
 
     cfg = SafeConfigParser(allow_no_value=True)
     cfg.optionxform = str
@@ -569,7 +570,7 @@ def define_from_cfg(config, allow_redef=False, warn=True, undefine_old=True):
         defined = True  # just to enter the loop
         while defined:
             defined = []
-            for name, definition in to_define.items():
+            for name, definition in list(to_define.items()):
                 try:
                     define(name, Unit(definition), allow_redef=allow_redef,
                            warn=warn)
@@ -583,9 +584,9 @@ def define_from_cfg(config, allow_redef=False, warn=True, undefine_old=True):
             if prefixes:
                 apply_prefixes(defined, prefixes)
         if to_define:
-            print >> sys.stderr, 'Undefinable units:'
-            for name, definition in to_define.iteritems():
-                print >> sys.stderr, '  %-10s = %s' % (name, definition)
+            print('Undefinable units:', file=sys.stderr)
+            for name, definition in to_define.items():
+                print('  %-10s = %s' % (name, definition), file=sys.stderr)
             raise RuntimeError('There are %d not well-defined ' % len(to_define) +
                                'units in the unit config file "%s"!' % config)
 
@@ -595,9 +596,9 @@ def define_from_cfg(config, allow_redef=False, warn=True, undefine_old=True):
 
 _re_mul_space = re.compile(r'(?<=\w|\)|\.)\s+(?=[A-Za-z_]|\()')
 _re_ident = re.compile(r'[A-Za-z_][\w]*')
-_re_frac_power = map(re.compile,
+_re_frac_power = list(map(re.compile,
                      [r'\*\*(?P<nom>\d+)/(?P<den>\d+)(?=[^(e|\.)]|$)',
-                      r'\*\*\(\s*(?P<nom>\d+)\s*/\s*(?P<den>\d+)\s*\)'])
+                      r'\*\*\(\s*(?P<nom>\d+)\s*/\s*(?P<den>\d+)\s*\)']))
 _unit_evaluator = Evaluator({'Fraction':Fraction}, my_math=math)
 def Unit(x, allow_undefined=False):
     '''
@@ -632,7 +633,7 @@ def Unit(x, allow_undefined=False):
         return _UnitClass(float(x), [])
     elif isinstance(x, _UnitClass):
         return x
-    elif not isinstance(x, (str,unicode)):
+    elif not isinstance(x, str):
         raise TypeError(x.__class__.__name__ + ' cannot be converted into ' +
                         'a unit.')
     # x is a string...!
@@ -648,12 +649,11 @@ def Unit(x, allow_undefined=False):
         variables = { n:_UnitClass(1.,[[n,1]]) for n in _unit_definitions }
         if allow_undefined:
             if allow_undefined == 'debug':
-                print 'Parsing the string: "%s"' % x
+                print('Parsing the string: "%s"' % x)
                 if len(variables) != len(_unit_definitions):
                     undef = set(variables)-set(_unit_definitions)
-                    print >> sys.stderr, \
-                        'WARNING: there are %d undefined units:' % len(undef)
-                    print >> sys.stderr,' ', list(undef)
+                    print('WARNING: there are %d undefined units:' % len(undef), file=sys.stderr)
+                    print(' ', list(undef), file=sys.stderr)
             variables.update( { n:_UnitClass(1.,[[n,1]])
                     for n in re.findall(_re_ident, x)
                     if not n in _unit_evaluator.namespace } )
@@ -687,10 +687,10 @@ def Units(l, allow_undefined=False):
     Returns:
         units (list):           A list of the construct units.
     '''
-    if isinstance(l, (str,unicode)):
+    if isinstance(l, str):
         l = str(l).replace(';',',')
         if ',' in l:
-            return Units(map(str.strip,l.split(',')), allow_undefined)
+            return Units(list(map(str.strip,l.split(','))), allow_undefined)
         return [Unit(l, allow_undefined)]
     return [Unit(n, allow_undefined) for n in l]
 

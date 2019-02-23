@@ -103,7 +103,7 @@ def profile_from_map(m, extent, av=None, Nbins=None, reduction='sum',
             red_func = getattr(np, reduction)
         else:
             raise ValueError("Unknown reduction method '%s'!" % reduction)
-        profile = [ red_func(m[idx==i]) for i in xrange(1,Nbins+1) ]
+        profile = [ red_func(m[idx==i]) for i in range(1,Nbins+1) ]
     else:
         if reduction == 'mean':
             red_func = lambda q,a: np.average(q,weights=a)
@@ -114,7 +114,7 @@ def profile_from_map(m, extent, av=None, Nbins=None, reduction='sum',
                              "'%s'!" % reduction)
         else:
             raise ValueError("Unknown reduction method '%s'!" % reduction)
-        profile = [ red_func(m[idx==i],av[idx==i]) for i in xrange(1,Nbins+1) ]
+        profile = [ red_func(m[idx==i],av[idx==i]) for i in range(1,Nbins+1) ]
     profile = UnitArr(profile, m.units)
 
     if surface_dens:

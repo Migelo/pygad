@@ -5,7 +5,7 @@ Example:
     >>> from ..analysis import *
     >>> from ..transformation import *
     >>> s = Snap('snaps/snap_M1196_4x_470', physical=True)
-    >>> Translation(UnitArr([-48087.1,-49337.1,-46084.3],'kpc')).apply(s)    
+    >>> Translation(UnitArr([-48087.1,-49337.1,-46084.3],'kpc')).apply(s)
     >>> s['vel'] -= UnitArr([-42.75,-15.60,-112.20],'km s**-1')
     load block vel... done.
     >>> orientate_at(s[s['r'] < '10 kpc'].baryons, 'L', total=True)
@@ -41,7 +41,7 @@ __all__ = ['map_qty']
 
 from ..units import *
 from ..snapshot import *
-from core import *
+from .core import *
 from ..gadget import *
 from ..kernels import *
 from .. import environment
@@ -99,11 +99,11 @@ def map_qty(s, extent, field, qty, av=None, reduction=None, Npx=256,
     if kernel is None:
         kernel = general['kernel']
 
-    if isinstance(qty, (str,unicode)):
+    if isinstance(qty, str):
         qty = s.get(qty)
 
     if av is not None:
-        if isinstance(av, (str,unicode)):
+        if isinstance(av, str):
             av = s.get(av)
         if reduction is None:
             grid = map_qty(s, extent, field, av*qty, av=None, Npx=Npx,
@@ -125,9 +125,9 @@ def map_qty(s, extent, field, qty, av=None, reduction=None, Npx=256,
         softening = UnitQty(softening, s['pos'].units, subs=s)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print 'create a %d x %d map (%.4g x %.4g %s)...' % (tuple(Npx) + \
+        print('create a %d x %d map (%.4g x %.4g %s)...' % (tuple(Npx) + \
                 (extent[0,1]-extent[0,0],
-                 extent[1,1]-extent[1,0], extent.units))
+                 extent[1,1]-extent[1,0], extent.units)))
 
     grid = np.zeros(Npx)
     if isinstance(qty, UnitArr):
@@ -141,11 +141,11 @@ def map_qty(s, extent, field, qty, av=None, reduction=None, Npx=256,
         sph = s.gas
         sph_qty = qty[s.gas._mask]
         if len(sph) != 0:
-            if isinstance(dV, (str,unicode)):
+            if isinstance(dV, str):
                 dV = s.gas.get(dV)
             dV = UnitQty(dV, sph['pos'].units**3)
             if reduction is not None:
-                from cbinning import SPH_to_2Dgrid_by_particle
+                from .cbinning import SPH_to_2Dgrid_by_particle
                 sph_binned = SPH_to_2Dgrid_by_particle(sph, qty=sph_qty,
                                                        av=av, dV=dV,
                                                        extent=extent,
@@ -155,7 +155,7 @@ def map_qty(s, extent, field, qty, av=None, reduction=None, Npx=256,
                                                        yaxis=yaxis,
                                                        kernel=kernel)
             else:
-                from cbinning import SPH_to_2Dgrid
+                from .cbinning import SPH_to_2Dgrid
                 sph_binned = SPH_to_2Dgrid(sph,
                                            qty = sph_qty if field
                                                        else sph_qty/dV,
@@ -170,7 +170,7 @@ def map_qty(s, extent, field, qty, av=None, reduction=None, Npx=256,
     if sph:
         ptypes = list(set(range(6))-set(families['gas']))
     else:
-        ptypes = range(6)
+        ptypes = list(range(6))
     proj_kernel = project_kernel(kernel)
     for pt in ptypes:
         sub = SubSnap(s, [pt])

@@ -50,7 +50,7 @@ Examples and doctests:
 __all__ = ['project_kernel', 'integrate_kernel', 'rand_kernel_r']
 
 import numpy as np
-from definitions import *
+from .definitions import *
 from ..utils import static_vars
 
 def project_kernel(kernel, N=100, inter_kind='quadratic'):
@@ -91,7 +91,7 @@ def integrate_kernel(kernel, N=100, inter_kind='quadratic'):
 
     The kernel w gets integrated as:
 
-      /\ 
+      /\
       |            2
       |  dx  4 pi x  w(x)
       |

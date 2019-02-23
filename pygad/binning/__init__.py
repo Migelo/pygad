@@ -13,8 +13,8 @@ Also doctest other parts of this sub-module:
     TestResults(failed=0, attempted=10)
 '''
 
-from core import *
-from cbinning import *
-from mapping import *
-from oneDbinning import *
+from .core import *
+from .cbinning import *
+from .mapping import *
+from .oneDbinning import *
 

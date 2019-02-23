@@ -145,9 +145,9 @@ class IonisationTable(object):
         '''
         if abs(s.redshift - self._redshift) > 0.01:
             import sys
-            print >> sys.stderr, 'WARNING: the snapshot\'s redshift ' + \
+            print('WARNING: the snapshot\'s redshift ' + \
                                  '(%.3f) does not match the ' % s.redshift + \
-                                 'table\'s redshift (%.3f)!' % self._redshift
+                                 'table\'s redshift (%.3f)!' % self._redshift, file=sys.stderr)
         return self.interp_parts(ion, s.get(nH), s.get(T), selfshield, subs=s,
                                  warn_outofbounds=warn_outofbounds)
 
@@ -196,7 +196,7 @@ class IonisationTable(object):
         if len(nH) != len(T):
             raise ValueError('Lengths of nH (%d) and T (%d) do not match!' % (
                                 len(nH),len(T)))
-        if isinstance(ion,(str,unicode)):
+        if isinstance(ion,str):
             ion = self._ions.index(str(ion))
         if ion<0 or self._table.shape[-1]<=ion:
             raise ValueError('Ion index (%d) out of bounds!' % ion)
@@ -221,7 +221,7 @@ class IonisationTable(object):
                     cosmo = physics.Planck2013()
                     fbaryon = cosmo.Omega_b / cosmo.Omega_m
                     import sys
-                    print >> sys.stderr, 'WARNING: fbaryon was not given, using', fbaryon
+                    print('WARNING: fbaryon was not given, using', fbaryon, file=sys.stderr)
             fG = Rahmati_fGamma_HI(z, nH, T, fbaryon, UVB=UVB,
                                    flux_factor=self.flux_factor, subs=subs)
             # limit the attenuation in very dense gas (assuming not all of the
@@ -244,10 +244,10 @@ class IonisationTable(object):
         N_nH = len(self._nH_vals)
         N_T  = len(self._T_vals)
         k_nH = -np.ones(len(nH), dtype=int)
-        for k in xrange( N_nH ):
+        for k in range( N_nH ):
             k_nH[ self._nH_vals[k] < nH ] = k
         l_T = -np.ones(len(T), dtype=int)
-        for l in xrange( N_T ):
+        for l in range( N_T ):
             l_T[ self._T_vals[l] < T ] = l
 
         # do bilinear interpolation
@@ -261,8 +261,8 @@ class IonisationTable(object):
             if out_of_bounds:
                 import sys
                 from .. import utils
-                print >> sys.stderr, 'WARNING: %s particles out of bounds!' % \
-                        utils.nice_big_num_str(out_of_bounds)
+                print('WARNING: %s particles out of bounds!' % \
+                        utils.nice_big_num_str(out_of_bounds), file=sys.stderr)
         # avoid invalid indices in the following (masking would slow down and be
         # not very readable):
         k_nH[ low_nH  ] = 0
@@ -329,7 +329,7 @@ class IonisationTable(object):
                 abb_el, state = ion[:i], ion[i:]
                 # element name might be abbreviated, if ion name is to long otherwise
                 el = None
-                for full_el, short in physics.cooling.SHORT_ELEMENT_NAME.iteritems():
+                for full_el, short in physics.cooling.SHORT_ELEMENT_NAME.items():
                     if full_el[:len(abb_el)] == abb_el:
                         el = short
                         break
@@ -366,7 +366,7 @@ class IonisationTable(object):
             raise RuntimeError('No Cloudy tables in the given directory ' +
                                '("%s")!' % self._tabledir)
         # get the two closest tables and interpolate between
-        avail_z = np.array( sorted(tables.iterkeys()) )
+        avail_z = np.array( sorted(tables.keys()) )
         i = np.argmin( np.abs( avail_z - self._redshift ) )
         z = avail_z[i]
         if (i==0 and self._redshift<=z) or \
@@ -380,8 +380,8 @@ class IonisationTable(object):
         if z1==z2 or z1==self._redshift or z2==self._redshift:
             z = z2 if z2 == self._redshift else z1
             if environment.verbose >= environment.VERBOSE_NORMAL:
-                print 'load table:'
-                print '  "%s" (z=%.3f)' % (tables[z], z)
+                print('load table:')
+                print('  "%s" (z=%.3f)' % (tables[z], z))
             redshift, nH_vals, T_vals, ions, table = \
                     self._read_cloudy_table(tables[z])
             if self._style == 'Oppenheimer new':
@@ -391,9 +391,9 @@ class IonisationTable(object):
                 self._ions = ions
         else:
             if environment.verbose >= environment.VERBOSE_NORMAL:
-                print 'load tables:'
-                print '  "%s" (z=%.3f)' % (tables[z1], z1)
-                print '  "%s" (z=%.3f)' % (tables[z2], z2)
+                print('load tables:')
+                print('  "%s" (z=%.3f)' % (tables[z1], z1))
+                print('  "%s" (z=%.3f)' % (tables[z2], z2))
             redshift1, nH_vals1, T_vals1, ions1, table1 = \
                     self._read_cloudy_table(tables[z1])
             redshift2, nH_vals2, T_vals2, ions2, table2 = \
@@ -439,7 +439,7 @@ class IonisationTable(object):
                 plts.append( self.show_table(ion, cmap=cmap) )
             return plts
         ionname = 'ion'
-        if isinstance(ion, (str,unicode)):
+        if isinstance(ion, str):
             ion = str(ion)
             ionname = ion
             ion = self._ions.index(ion)

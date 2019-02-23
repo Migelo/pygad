@@ -93,6 +93,7 @@ from ..units import *
 from scipy.stats import binned_statistic_dd
 from scipy.ndimage.filters import convolve
 
+
 def gridbin2d(x, y, qty=None, bins=50, extent=None, normed=False, stats=None,
               nanval=None):
     '''
@@ -101,8 +102,9 @@ def gridbin2d(x, y, qty=None, bins=50, extent=None, normed=False, stats=None,
     This calls gridbin with x and y combined to pnts. See gridbin for more
     information!
     '''
-    return gridbin(np.array([x,y]).T, qty=qty, bins=bins, extent=extent,
+    return gridbin(np.array([x, y]).T, qty=qty, bins=bins, extent=extent,
                    normed=normed, stats=stats, nanval=nanval)
+
 
 def gridbin1d(x, qty=None, bins=50, extent=None, normed=False, stats=None,
               nanval=None):
@@ -113,15 +115,16 @@ def gridbin1d(x, qty=None, bins=50, extent=None, normed=False, stats=None,
     '''
     extent = np.asarray(extent)
     if extent.shape == (2,):
-        extent = extent.reshape((1,2))
-    return gridbin(np.array(x).reshape((len(x),1)), qty=qty, bins=bins, extent=extent,
+        extent = extent.reshape((1, 2))
+    return gridbin(np.array(x).reshape((len(x), 1)), qty=qty, bins=bins, extent=extent,
                    normed=normed, stats=stats, nanval=nanval)
+
 
 def gridbin(pnts, qty=None, bins=50, extent=None, normed=False, stats=None,
             nanval=None):
     '''
     Bin data on a grid.
-    
+
     It can used to speed-up scatter plots, for instance.
 
     It basically is a wrapper for binned_statistic_dd for a little more
@@ -150,34 +153,34 @@ def gridbin(pnts, qty=None, bins=50, extent=None, normed=False, stats=None,
         gridded (Map):      The (N,...,N)-array of the binned data.
     '''
     known_stats = ['count', 'sum', 'mean', 'median']
-    if isinstance(stats,str) and stats not in known_stats:
+    if isinstance(stats, str) and stats not in known_stats:
         raise ValueError('Unknown statistic. Choose from: %s' % known_stats)
     pnts = np.asanyarray(pnts)
     if len(pnts.shape) != 2:
         raise ValueError('The points array has to have shape (N,D)!')
 
     if qty is None:
-        if stats is None or stats=='count':
+        if stats is None or stats == 'count':
             stats = 'count'
         else:
-            qty = np.ones(len(pnts),int)
+            qty = np.ones(len(pnts), int)
     else:
         if stats is None:
             stats = 'sum'
         qty = np.asanyarray(qty)
 
-    if isinstance(extent,UnitArr) and isinstance(pnts,UnitArr):
+    if isinstance(extent, UnitArr) and isinstance(pnts, UnitArr):
         extent = extent.in_units_of(pnts.units)
 
     gridded, edges, binnum = binned_statistic_dd(pnts, qty, range=extent,
                                                  statistic=stats, bins=bins)
     if extent is None:
-        extent = np.array( [[e[0],e[-1]] for e in edges] )
+        extent = np.array([[e[0], e[-1]] for e in edges])
 
     gridded = UnitArr(gridded)
     # if the values to bin have units, the result should as well
-    if isinstance(qty,UnitArr) and not stats=='count':
-        if isinstance(stats,str):
+    if isinstance(qty, UnitArr) and not stats == 'count':
+        if isinstance(stats, str):
             gridded.units = qty.units
         else:
             if stats in UnitArr._ufunc_registry:
@@ -195,6 +198,7 @@ def gridbin(pnts, qty=None, bins=50, extent=None, normed=False, stats=None,
         gridded[np.isnan(gridded)] = nanval
 
     return Map(gridded, extent=extent)
+
 
 def grid_props(extent, Npx=256, dim=None):
     '''
@@ -230,30 +234,31 @@ def grid_props(extent, Npx=256, dim=None):
         else:
             raise ValueError('Number of dimensions not given and cannot be inferred!')
     for v in (extent, Npx):
-        if v is not None and v.ndim!=0:
+        if v is not None and v.ndim != 0:
             if len(v) != dim:
                 raise ValueError('Dimension mismatch of the parameters!')
 
     if extent.shape == ():
-        widths = UnitQty([extent]*dim, getattr(extent,'units',None))
+        widths = UnitQty([extent] * dim, getattr(extent, 'units', None))
         w2 = extent / 2.
-        extent = UnitArr([[-w2,w2]]*dim, getattr(w2,'units',None))
+        extent = UnitArr([[-w2, w2]] * dim, getattr(w2, 'units', None))
     elif extent.ndim == 1:
         widths = extent
         w2s = extent / 2.
-        extent = UnitArr([[-w2,w2] for w2 in w2s], getattr(w2s,'units',None))
+        extent = UnitArr([[-w2, w2] for w2 in w2s], getattr(w2s, 'units', None))
     else:
-        extent = extent.reshape((dim,2,))
-        widths = UnitArr(extent[:,1]-extent[:,0])
+        extent = extent.reshape((dim, 2,))
+        widths = UnitArr(extent[:, 1] - extent[:, 0])
     # now extent is in final form and widths is defined
 
     if Npx.shape == ():
-        Npx = np.array([Npx]*dim)
+        Npx = np.array([Npx] * dim)
     # now also Npx is in final form (of shape (dim,))
 
     res = widths / Npx
 
     return extent, Npx, res
+
 
 class Map(UnitArr):
     """
@@ -280,7 +285,7 @@ class Map(UnitArr):
             kwargs['copy'] = False
         m = UnitArr(grid, **kwargs).view(cls)
         m._extent, Npx, res = grid_props(extent=extent,
-                Npx=m.shape if Npx is None else Npx)
+                                         Npx=m.shape if Npx is None else Npx)
 
         Npx = tuple(Npx)
         if m.shape != Npx:
@@ -290,7 +295,7 @@ class Map(UnitArr):
 
     def __array_finalize__(self, obj):
         UnitArr.__array_finalize__(self, obj)
-        self._extent = getattr(obj, '_extent', [[0,0]]*len(self.shape))
+        self._extent = getattr(obj, '_extent', [[0, 0]] * len(self.shape))
 
     def __array_wrap__(self, array, context=None):
         return UnitArr.__array_wrap__(self, array, context)
@@ -298,18 +303,18 @@ class Map(UnitArr):
     def __getitem__(self, key):
         item = super(Map, self).__getitem__(key)
         if item.ndim != self.ndim:
-            if (isinstance(key,np.ndarray) and key.dtype==bool) or \
-                    (not isinstance(key,slice) and
-                            all(isinstance(k,bool) for k in key)):
-                #TODO: handle: boolean masking, that turned out to mask out a dim'
+            if (isinstance(key, np.ndarray) and key.dtype == bool) or \
+                    (not isinstance(key, slice) and
+                     all(isinstance(k, bool) for k in key)):
+                # TODO: handle: boolean masking, that turned out to mask out a dim'
                 pass
             else:
-                #TODO: how to handle np.newaxis/None?
-                if not isinstance(key, (slice,tuple,list,np.ndarray)):
+                # TODO: how to handle np.newaxis/None?
+                if not isinstance(key, (slice, tuple, list, np.ndarray)):
                     raise NotImplementedError("key/index is not of type 'tuple',"
-                            " but '%s'" % type(key))
-                take = map(lambda s: isinstance(s,(slice,tuple,list,np.ndarray)), key) + \
-                        [True]*(self.ndim-len(key))
+                                              " but '%s'" % type(key))
+                take = [isinstance(s, (slice, tuple, list, np.ndarray)) for s in key] + \
+                       [True] * (self.ndim - len(key))
                 item._extent = self._extent[take]
         return item
 
@@ -317,8 +322,8 @@ class Map(UnitArr):
         r = self.view(UnitArr).__repr__(val='')
         r = r.replace('UnitArr(,', '<Map at 0x%x;' % id(self))
         r = r[:-1] + ', Npx=%s>' % (self.Npx,)
-        #V = self.vol_tot()
-        #r = r[:-1] + ', V=%g %s>' % (V, V.units)
+        # V = self.vol_tot()
+        # r = r[:-1] + ', V=%g %s>' % (V, V.units)
         return r
 
     def __str__(self):
@@ -353,11 +358,11 @@ class Map(UnitArr):
 
     def vol_voxel(self):
         """The voxel volume."""
-        return np.prod( self.res() )
+        return np.prod(self.res())
 
     def vol_tot(self):
         """The total grid volume."""
-        return np.prod( self.extent.ptp(axis=1) )
+        return np.prod(self.extent.ptp(axis=1))
 
     def __copy__(self, *a):
         if a:
@@ -388,9 +393,10 @@ def scale01(arr, lims):
         arr (array-like):   The scaled array.
     '''
     arr = (arr - float(lims[0])) / (lims[1] - lims[0])
-    arr[arr>1.0] = 1.0
-    arr[arr<0.0] = 0.0
+    arr[arr > 1.0] = 1.0
+    arr[arr < 0.0] = 0.0
     return arr
+
 
 def smooth(grid, sml, kernel, bndrymode='constant'):
     '''
@@ -423,18 +429,18 @@ def smooth(grid, sml, kernel, bndrymode='constant'):
 
     from ..kernels import kernels, vector_kernels
 
-    pxs = int(2*np.ceil(sml)+1)
-    x = np.linspace(-(pxs-1)/2., (pxs-1)/2., pxs) / sml
+    pxs = int(2 * np.ceil(sml) + 1)
+    x = np.linspace(-(pxs - 1) / 2., (pxs - 1) / 2., pxs) / sml
     D = len(grid.shape)
-    x = np.meshgrid(*(x,)*D)
+    x = np.meshgrid(*(x,) * D)
     x = np.array(x)
-    dists = np.sqrt(np.sum(x**2,axis=0))
+    dists = np.sqrt(np.sum(x ** 2, axis=0))
     conv_grid = kernel(dists.ravel())
-    conv_grid = conv_grid.reshape((pxs,pxs))
+    conv_grid = conv_grid.reshape((pxs, pxs))
     conv_grid /= np.sum(conv_grid)
     smooth = convolve(grid, conv_grid, mode=bndrymode)
 
-    if isinstance(grid,UnitArr):
-        smooth = UnitArr(smooth,grid.units)
+    if isinstance(grid, UnitArr):
+        smooth = UnitArr(smooth, grid.units)
     return smooth
 

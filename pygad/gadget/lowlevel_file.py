@@ -44,7 +44,7 @@ import sys
 from ..environment import secure_get_h5py
 h5py = secure_get_h5py()
 import struct
-import config
+from . import config
 import numpy as np
 from itertools import combinations
 
@@ -182,28 +182,28 @@ def write_header(gfile, header, gformat, endianness):
 
     if gformat == 3:
         hat = gfile.create_group('Header').attrs
-        hat[u'NumPart_ThisFile'] = np.array(header['N_part'], dtype=np.int32)
-        hat[u'MassTable'] = np.array(header['mass'], dtype=np.float64)
-        hat[u'Time'] = header['time']
-        hat[u'Redshift'] = header['redshift']
-        hat[u'Flag_Sfr'] = header['flg_sfr']
-        hat[u'Flag_Feedback'] = header['flg_feedback']
-        hat[u'NumPart_Total'] = np.array(header['N_part_all'], dtype=np.uint32)
-        hat[u'NumPart_Total_HighWord'] = np.array(np.array(header['N_part_all'],
+        hat['NumPart_ThisFile'] = np.array(header['N_part'], dtype=np.int32)
+        hat['MassTable'] = np.array(header['mass'], dtype=np.float64)
+        hat['Time'] = header['time']
+        hat['Redshift'] = header['redshift']
+        hat['Flag_Sfr'] = header['flg_sfr']
+        hat['Flag_Feedback'] = header['flg_feedback']
+        hat['NumPart_Total'] = np.array(header['N_part_all'], dtype=np.uint32)
+        hat['NumPart_Total_HighWord'] = np.array(np.array(header['N_part_all'],
                                                            dtype=np.uint64) >> 32,
                                                   np.uint32)
-        hat[u'Flag_Cooling'] = header['flg_cool']
-        hat[u'NumFilesPerSnapshot'] = header['N_files']
-        hat[u'BoxSize'] = header['boxsize']
-        hat[u'Omega0'] = header['Omega_m']
-        hat[u'OmegaLambda'] = header['Omega_Lambda']
-        hat[u'HubbleParam'] = header['h_0']
-        hat[u'Flag_StellarAge'] = header['flg_age']
-        hat[u'Flag_Metals'] = header['flg_metals']
+        hat['Flag_Cooling'] = header['flg_cool']
+        hat['NumFilesPerSnapshot'] = header['N_files']
+        hat['BoxSize'] = header['boxsize']
+        hat['Omega0'] = header['Omega_m']
+        hat['OmegaLambda'] = header['Omega_Lambda']
+        hat['HubbleParam'] = header['h_0']
+        hat['Flag_StellarAge'] = header['flg_age']
+        hat['Flag_Metals'] = header['flg_metals']
         #hat['???'] = header['flg_entropy_instead_u']
-        hat[u'Flag_DoublePrecision'] = header['flg_doubleprecision']
+        hat['Flag_DoublePrecision'] = header['flg_doubleprecision']
         if header['flg_ic_info'] is not None:
-            hat[u'Flag_IC_Info'] = header['flg_ic_info']
+            hat['Flag_IC_Info'] = header['flg_ic_info']
         #hat['???'] = header['lpt_scalingfactor']
         #header['unused']
     else:
@@ -277,7 +277,7 @@ class BlockInfo(object):
     @property
     def Gadget_type_name(self):
         Gadget_name = {n:g for g,n
-                        in BlockInfo._np_type_name.iteritems()}[self._dtype.name]
+                        in BlockInfo._np_type_name.items()}[self._dtype.name]
         if self.dimension > 1:
             Gadget_name += 'N'
         return Gadget_name
@@ -317,14 +317,14 @@ def _read_info(gfile, header, start_pos, block_sizes, info_pos, endianness):
     '''
     info = {}
     gfile.seek(info_pos)
-    for i in xrange(len(start_pos)):
+    for i in range(len(start_pos)):
         if i == 0:                      # HEAD
             pass
         elif start_pos[i] == info_pos:  # INFO block itself
             pass
         else:                           # read info for this block
-            name        = struct.unpack(endianness + '4s', gfile.read(4))[0]
-            type_name   = struct.unpack(endianness + '8s', gfile.read(8))[0].strip()
+            name        = struct.unpack(endianness + '4s', gfile.read(4))[0].decode('ascii')
+            type_name   = struct.unpack(endianness + '8s', gfile.read(8))[0].strip().decode('ascii')
             dimension   = struct.unpack(endianness + 'i',  gfile.read(4))[0]
             ptypes      = [ n==1 for n in
                     struct.unpack(endianness + '6i', gfile.read(6*4)) ]
@@ -373,7 +373,7 @@ def write_info(gfile, info, gformat, endianness):
         gfile.write(struct.pack(endianness + '8s',
                                 '%-8s' % block.Gadget_type_name))
         gfile.write(struct.pack(endianness + 'i',  block.dimension))
-        gfile.write(struct.pack(endianness + '6i', *map(int,block.ptypes)))
+        gfile.write(struct.pack(endianness + '6i', *list(map(int,block.ptypes))))
 
     assert gfile.tell() - start_pos == size
     gfile.write(struct.pack(endianness + 'i', size))
@@ -414,9 +414,9 @@ def _fill_block_with_known(block, header):
             block.dtype = None
         else:
             try:
-                fam = range(6) if info[2]=='all' else config.families[info[2]]
+                fam = list(range(6)) if info[2]=='all' else config.families[info[2]]
                 block.ptypes = [(i in fam and header['N_part'][i]>0)
-                                    for i in xrange(6)]
+                                    for i in range(6)]
             except KeyError:
                 raise RuntimeError('unknown family "%s" for block ' % info[2] +
                                    '"%s"!' % block.name)
@@ -476,8 +476,8 @@ def _block_inferring(block, header):
             else:
                 divisor, max_el_size = 4, 20*8
         possible_ptype_combi = []
-        for num_ptypes in xrange(1,7):
-            for combi in combinations(range(6), num_ptypes):
+        for num_ptypes in range(1,7):
+            for combi in combinations(list(range(6)), num_ptypes):
                 if any(header['N_part'][i] == 0 for i in combi):
                     # avoid N == 0 and multiple combinations with and without
                     # particle types that are not present in this file
@@ -494,7 +494,7 @@ def _block_inferring(block, header):
                         possible_ptype_combi.append(combi)
         # if the combinatorics yield a definit combination, store it
         if len(possible_ptype_combi) == 1:
-            block.ptypes = [(i in possible_ptype_combi[0]) for i in xrange(6)]
+            block.ptypes = [(i in possible_ptype_combi[0]) for i in range(6)]
         elif len(possible_ptype_combi) > 1:
             return possible_ptype_combi
         else:
@@ -505,7 +505,7 @@ def _block_inferring(block, header):
     if block.dimension is not None and block.dtype is not None:
         return  # all known
 
-    N = sum(header['N_part'][i] for i in xrange(6) if block.ptypes[i])
+    N = sum(header['N_part'][i] for i in range(6) if block.ptypes[i])
     if N == 0:
         # most likely a empty mass block (with masses in header)
         return 'delete'
@@ -597,7 +597,7 @@ def _infer_info(gfile, header, gformat, endianness, start_pos, block_sizes,
                          'function is not needed for those.')
 
     info = {}
-    for i in xrange(len(start_pos)):
+    for i in range(len(start_pos)):
         if i == 0:      # HEAD
             continue
         elif block_sizes[i] == (len(block_sizes)-2)*40:
@@ -623,11 +623,11 @@ def _infer_info(gfile, header, gformat, endianness, start_pos, block_sizes,
                     raise IOError('Cannot infere info for block "%s"!' %
                             block.name)
                 elif unclear_blocks == 'warning':
-                    print >> sys.stderr, 'WARNING: cannot infere info for ' + \
+                    print('WARNING: cannot infere info for ' + \
                                          'block "%s"!\n' % block.name + \
                                          '  possible combinations for the ' + \
                                          'particles types are: ' + \
-                                         ', '.join(str(combi) for combi in combis)
+                                         ', '.join(str(combi) for combi in combis), file=sys.stderr)
                 elif unclear_blocks == 'ignore':
                     pass
                 else:
@@ -641,7 +641,7 @@ def get_block_info(gfile, gformat, endianness, header, unclear_blocks):
     '''
     Get info (like position in file, if not HDF5) about all blocks in a single
     Gadget file.
-    
+
     This function utilizes the INFO block of a Gadget file, if (format 1 or 2 and)
     there is a INFO block.
     Otherwise it locates all blocks, does some guessing on the names, if it is a
@@ -677,7 +677,7 @@ def get_block_info(gfile, gformat, endianness, header, unclear_blocks):
 
     if gformat == 3:
         info = {}
-        for name, group in gfile.iteritems():
+        for name, group in gfile.items():
             if not name.startswith('PartType'):
                 continue
             ptype = int(name[-1])   # name is e.g. 'PartType3'
@@ -685,7 +685,7 @@ def get_block_info(gfile, gformat, endianness, header, unclear_blocks):
             # data! For instance, ds.dtype does not require to load the data (a
             # h5py datastructure is not a np.ndarray!), only actually accessing
             # data within the array (like ds[:] or ds[0]) would load it.
-            for ds_name, ds in group.iteritems():
+            for ds_name, ds in group.items():
                 # for the EAGLE simulations, it happens that there are
                 # sub-groups (e.g. for the different element abundancies), hence:
                 if not isinstance(ds, h5py.Dataset):
@@ -750,7 +750,7 @@ def get_block_info(gfile, gformat, endianness, header, unclear_blocks):
             pos = None
         else:
             pos = info['ID  '].start_pos + info['ID  '].size + \
-                    (info['ID  '].start_pos - 
+                    (info['ID  '].start_pos -
                             info['VEL '].start_pos + info['VEL '].size)
         info['MASS'] = BlockInfo(
                 name='MASS',
@@ -802,7 +802,7 @@ def write_block(gfile, block_name, data, gformat, endianness='=',
         warn_msg = "Your are writing the block '%s' in other " % block_name + \
                    "units ('%s') than the default units " % data.unit + \
                    "('%s')!" % config.get_block_units(block_name,gad_units)
-        print >> sys.stderr, 'WARNING:', warn_msg
+        print('WARNING:', warn_msg, file=sys.stderr)
     # reduce data to the numpy array
     if not isinstance(data, np.ndarray):
         data = np.array(data)

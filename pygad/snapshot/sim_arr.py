@@ -44,9 +44,10 @@ Examples:
 
 import numpy as np
 from ..units import *
-from snapshot import _Snap
+from .snapshot import _Snap
 import functools
 import weakref
+
 
 class SimArr(UnitArr):
     '''
@@ -59,12 +60,12 @@ class SimArr(UnitArr):
 
     def __new__(subtype, data, units=None, snap=None, subs=None, **kwargs):
         ua = UnitArr(data, units=units, subs=subs, **kwargs)
-        
+
         new = ua.view(subtype)
         if snap is not None:
             new._snap = weakref.ref(snap)
         else:
-            new._snap = getattr(data,'_snap',lambda: None)
+            new._snap = getattr(data, '_snap', lambda: None)
         new._dependencies = getattr(data, '_dependencies', set())
 
         return new
@@ -79,10 +80,10 @@ class SimArr(UnitArr):
         Change this instance (inplace) into a UnitArr and remove all (also hidden)
         references to the snapshot (even though they are weakref's).
         '''
-        a  = self
+        a = self
         while a is not None:
-            if isinstance(a, SimArr):   # this might be problematic
-                a.__class__ = UnitArr   # to port to Python 3.x ?!
+            if isinstance(a, SimArr):  # this might be problematic
+                a.__class__ = UnitArr  # to port to Python 3.x ?!
             if hasattr(a, '_snap'):         del a._snap
             if hasattr(a, '_dependencies'): del a._dependencies
             a = a.base
@@ -112,15 +113,15 @@ class SimArr(UnitArr):
         r = r.replace('UnitArr', 'SimArr').replace('\n ', '\n')
         if self.snap is not None:
             r = r[:-1] + (', snap=%s)' % self.snap.descriptor)
-            if len(r)-r.rfind('\n')>80:
+            if len(r) - r.rfind('\n') > 80:
                 right = r.find('dtype=')
                 if right == -1:
                     right = r.find('units=')
                     if right == -1:
                         right = r.find('snap=')
-                arr_end = r.rfind('],')+2
-                if arr_end == 1: arr_end = r.find(',')+1
-                r = r[:arr_end]+'\n'+' '*7+r[right:]
+                arr_end = r.rfind('],') + 2
+                if arr_end == 1: arr_end = r.find(',') + 1
+                r = r[:arr_end] + '\n' + ' ' * 7 + r[right:]
         return r
 
     def __copy__(self, *a):
@@ -142,7 +143,7 @@ class SimArr(UnitArr):
         '''See UnitArr for documentation.'''
         if subs is None:
             subs = self.snap
-        #super(SimArr, self).convert_to(units, subs=subs)
+        # super(SimArr, self).convert_to(units, subs=subs)
         UnitArr.convert_to(self, units, subs=subs)
 
     def in_units_of(self, units, subs=None, copy=False):
@@ -169,19 +170,24 @@ class SimArr(UnitArr):
             if dep in host._blocks:
                 del host[dep]
 
+
 # __i*__ functions shall not erase the _snap and _dependencies attributes and
 # shall invalidate all dependent SimArr's
 def _ichange_wrapper(f):
     def ichange__(self, other):
         self.invalidate_dependencies()
         return f(self, other)
+
     ichange__.__name__ = f.__name__
     return ichange__
+
+
 for fn in ('__iadd__', '__isub__', '__imul__', '__idiv__',
            '__itruediv__', '__ifloordiv__', '__imod__',
            '__ipow__', '__ilshift__', '__irshift__',
            '__iand__', '__ior__', '__ixor__'):
-    setattr(SimArr, fn, _ichange_wrapper(getattr(UnitArr,fn)))
+    setattr(SimArr, fn, _ichange_wrapper(getattr(UnitArr, fn)))
+
 
 # __set*__ functions shall invalidate all dependant SimArr's
 def _set_wrapper(f):
@@ -191,8 +197,11 @@ def _set_wrapper(f):
             f(self, *y, **kw)
         else:
             f(self, *y)
+
     set__.__name__ = f.__name__
     return set__
+
+
 for fn in ('__setitem__', '__setslice__'):
-    setattr(SimArr, fn, _set_wrapper(getattr(UnitArr,fn)))
+    setattr(SimArr, fn, _set_wrapper(getattr(UnitArr, fn)))
 

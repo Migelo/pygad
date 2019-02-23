@@ -141,7 +141,7 @@ class Transformation(object):
     @property
     def changes(self):
         '''The names of the blocks that are changed, if applied to a snapshot.'''
-        return self._change.keys()
+        return list(self._change.keys())
 
     def _apply_to_block(self, block, snap=None):
         raise NotImplementedError('This is just an interface / a virtual base '
@@ -189,7 +189,7 @@ class Transformation(object):
                             also applies it to newly loaded blocks.
             fams (bool):    Whether to include the blocks that are only available
                             for some of the particle types.
-            exclude (set, list, tuple): 
+            exclude (set, list, tuple):
                             Some object that supports the operator 'in'. Block
                             names that are in exclude are skipped.
         '''
@@ -214,12 +214,12 @@ class Transformation(object):
                 if name not in snap.get_host_subsnap(name)._blocks:
                     continue
             if environment.verbose >= environment.VERBOSE_NORMAL:
-                print 'apply %s to "%s" of %s...' % (self.__class__.__name__,
-                                                     name, snap.descriptor),
+                print('apply %s to "%s" of %s...' % (self.__class__.__name__,
+                                                     name, snap.descriptor), end=' ')
                 sys.stdout.flush()
             self._change[name](name,snap)
             if environment.verbose >= environment.VERBOSE_NORMAL:
-                print 'done.'
+                print('done.')
                 sys.stdout.flush()
             done.add(name)
 
@@ -449,7 +449,7 @@ def rot_from_axis_angle(u, angle):
         >>> np.sqrt(1**2+2**2+3**2)*R.axis(), R.angle()
         (array([ 1.,  2.,  3.]), 1.234)
     '''
-    if isinstance(angle, (str,unicode,UnitArr)):
+    if isinstance(angle, (str,UnitArr)):
         angle = UnitScalar(angle, 'rad')
     angle = float(angle)
     u = np.array(u, dtype=float)
