@@ -157,10 +157,11 @@ class Evaluator(object):
         elif isinstance(node, ast.UnaryOp):
             return self.un_op[type(node.op)](self._eval(node.operand))
         elif isinstance(node, ast.Call):
-#            if node.kwargs:
-#                raise NotImplementedError('kwargs are not supported')
-#            if node.starargs:
-#                raise NotImplementedError('starargs are not supported')
+#           the following lines are removed: incompatible since Pyhton 3.5
+#           if node.kwargs:
+#               raise NotImplementedError('kwargs are not supported')
+#           if node.starargs:
+#               raise NotImplementedError('starargs are not supported')
             kwargs = { kw.arg: self._eval(kw.value) for kw in node.keywords }
             posargs = [self._eval(arg) for arg in node.args]
             return self._eval(node.func)(*posargs,**kwargs)

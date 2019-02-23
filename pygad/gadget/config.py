@@ -98,7 +98,9 @@ def read_config(config):
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print('reading config file "%s"' % filename)
 
-    cfg = SafeConfigParser(allow_no_value=True)
+    # The SafeConfigParser class has been renamed to ConfigParser in Python 3.2, not yet removed for compatibility
+    cfg = SafeConfigParser(allow_no_value=True,
+                           inline_comment_prefixes = ('#', ';') ) # new to python3. ignores comments at end of values
     cfg.optionxform = str
     cfg.read(filename)
 
