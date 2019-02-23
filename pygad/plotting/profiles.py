@@ -17,7 +17,7 @@ import sys
 
 def profile(s, Rmax, qty, av=None, units=None, dens=True, proj=None,
             N=50, logbin=False, minlog=None, logscale=True, ylabel=None,
-            labelsize=14, ignoreZeros=False, ax=None, **kwargs):
+            labelsize=14, ax=None, **kwargs):
     '''
     Plot a profile.
 
@@ -46,7 +46,6 @@ def profile(s, Rmax, qty, av=None, units=None, dens=True, proj=None,
                             adjusted accordingly.
         ax (AxesSubplot):   The axis object to plot on. If None, a new one is
                             created by plt.subplots().
-        ignoreZeros:        if set to True zero values are replaced by numpy.NaN
         **kwargs:           Further keyword arguments are passed to ax.plot (e.g.
                             'linewidth', 'color', or 'label').
 
@@ -81,8 +80,6 @@ def profile(s, Rmax, qty, av=None, units=None, dens=True, proj=None,
     else:
         fig = ax.get_figure()
 
-    if ignoreZeros:
-        prof[prof==0] = np.NaN
     ax.plot(r, prof, **kwargs)
 
     if logbin:
