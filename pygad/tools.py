@@ -38,26 +38,27 @@ def read_info_file(filename):
     with open(os.path.expanduser(filename), 'r') as finfo:
         for line in finfo:
             try:
-                name, value = line.split(':', 1)
-                name, value = name.strip(), value.strip()
-                blocks = re.findall('\[(.*?)\]', value)
-                if len(blocks) == 0:
-                    value = float(value) if value != 'None' else None
-                elif len(blocks) == 1:
-                    value = UnitArr(float(value.rsplit('[')[0].strip()),
-                                    units=blocks[0])
-                elif len(blocks) == 2:
-                    value = UnitArr([float(s.strip(', ')) for s in blocks[0].split()],
-                                    units=None if blocks[1] == 'None' \
-                                        else blocks[1])
-                if name in info:
-                    print('WARNING: "%s" occures ' % name + \
-                          'multiple times in info file ' + \
-                          '"%s"! First one used.' % filename, file=sys.stderr)
-                info[name] = value
+                cols = line.split(':', 1)
+                if len(cols) > 1:           # otherwise no value given, avoid ValueError
+                    name = cols[0].strip()
+                    value = cols[1].strip()
+                    blocks = re.findall('\[(.*?)\]', value)
+                    if len(blocks) == 0:
+                        value = float(value) if value != 'None' else None
+                    elif len(blocks) == 1:
+                        value = UnitArr(float(value.rsplit('[')[0].strip()),
+                                        units=blocks[0])
+                    elif len(blocks) == 2:
+                        value = UnitArr([float(s.strip(', ')) for s in blocks[0].split()],
+                                        units=None if blocks[1] == 'None' else blocks[1])
+                    if name in info:
+                        print('WARNING: "%s" occures ' % name + \
+                              'multiple times in info file ' + \
+                              '"%s"! First one used.' % filename, file=sys.stderr)
+                    info[name] = value
             except ValueError as e:
-                if e.message[-6:] != 'unpack':
-                    raise
+                continue    # ignore error continue loading
+
     return info
 
 
