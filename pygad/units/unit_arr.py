@@ -486,8 +486,8 @@ class UnitArr(np.ndarray):
             self.units = units
             return
 
-        from ..snapshot.snapshot import _Snap
-        if isinstance(subs, _Snap):
+        from ..snapshot.snapshot import Snapshot
+        if isinstance(subs, Snapshot):
             snap, subs = subs, {}
             subs['a'] = snap.scale_factor
             subs['z'] = snap.redshift

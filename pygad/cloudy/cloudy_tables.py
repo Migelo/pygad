@@ -206,9 +206,9 @@ class IonisationTable(object):
 
         if selfshield:
             # with Rahmati+ (2013) description
-            from ..snapshot.snapshot import _Snap
+            from ..snapshot.snapshot import Snapshot
             from ..cloudy import Rahmati_fGamma_HI
-            if isinstance(subs,_Snap):
+            if isinstance(subs,Snapshot):
                 if z is None:
                     z = subs.redshift
                 if fbaryon is None:

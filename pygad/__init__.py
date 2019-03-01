@@ -98,7 +98,7 @@ from .units import Unit, Units, UnitArr, UnitQty, UnitScalar, Fraction
 from .physics import cosmology
 from .physics import G, m_p, solar
 from .transformation import Translation, Rotation
-from .snapshot import Snap, BallMask, BoxMask, DiscMask, IDMask, ExprMask
+from .snapshot import Snapshot, SubSnapshot, Snap, BallMask, BoxMask, DiscMask, IDMask, ExprMask
 from .binning import gridbin2d, gridbin, smooth
 from .tools import prepare_zoom, read_info_file
 

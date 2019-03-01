@@ -239,8 +239,8 @@ def Octree(pos_data, idx=None, center=None, world_size=None):
     Returns:
         root (OctNode):     The root node of the octree built.
     '''
-    from ..snapshot.snapshot import _Snap
-    if isinstance(pos_data, _Snap):
+    from ..snapshot.snapshot import Snapshot
+    if isinstance(pos_data, Snapshot):
         s = pos_data
         bz = float(s.boxsize.in_units_of(s['pos'].units, copy=False))
         return Octree(s['pos'], center=[bz / 2.] * 3, world_size=bz)

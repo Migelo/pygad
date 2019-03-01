@@ -274,7 +274,7 @@ Example:
     >>> SubSnap(s, [0,2,4]).parts
     [921708, 0, 56796, 0, 79764, 0]
 '''
-__all__ = ['Snap', 'SubSnap', 'FamilySubSnap', 'write']
+__all__ = ['Snap', 'SubSnap', 'FamilySubSnap', 'write', 'Snapshot', 'SubSnapshot']
 
 import sys
 import os.path
@@ -337,7 +337,7 @@ def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
         if not os.path.exists(filename):
             raise IOError('Snapshot "%s%s" does not exist!' % (base, suffix))
 
-    s = _Snap(gad_units=gad_units, physical=physical, cosmological=cosmological)
+    s = Snapshot(gad_units=gad_units, physical=physical, cosmological=cosmological)
     s._filename   = os.path.abspath(base+suffix)
     s._descriptor = os.path.basename(base)+suffix
     # need first (maybe only) file for basic information
@@ -426,7 +426,7 @@ def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
     return s
 
 
-class _Snap(object):
+class Snapshot(object):
     '''
     A class holding a Gadget snapshot.
 
@@ -1289,7 +1289,7 @@ class _Snap(object):
         '''Check whether the IDs (of this (sub-)snapshot) are unique.'''
         return len(np.unique(self['ID'])) == len(self)
 
-class _SubSnap(_Snap):
+class SubSnapshot(Snapshot):
     '''
     A class for "sub-snapshots", that slice or mask an underlying (sub-)snapshot
     as a whole.
@@ -1405,6 +1405,7 @@ class _SubSnap(_Snap):
                                                  N_cum_base)]
 
     def __init__(self, base, mask, N_part=None):
+        #Snapshot.__init__(self, gad_units=None, physical=False, cosmological=None)
         self._base      = base
         self._root      = base._root
         self._blocks    = {}
@@ -1606,7 +1607,7 @@ def SubSnap(base, mask):
     if isinstance(mask,slice) \
             or (isinstance(mask,np.ndarray) and mask.dtype==bool):
         # slices and masks are handled directly by _SubSnap
-        return _SubSnap(base, mask)
+        return SubSnapshot(base, mask)
 
     elif isinstance(mask,list):
         ptypes = sorted(set(mask))
@@ -1620,14 +1621,14 @@ def SubSnap(base, mask):
             l = [(np.ones(base._N_part[pt],bool) if pt in ptypes
                     else np.zeros(base._N_part[pt],bool)) for pt in range(6)]
             sub = np.concatenate(l)
-        sub = _SubSnap(base, sub, N_part)
+        sub = SubSnapshot(base, sub, N_part)
         sub._descriptor = base._descriptor + ':pts=' + str(ptypes).replace(' ','')
         return sub
 
     elif isinstance(mask,SnapMask) or isinstance(mask,Halo):
         if isinstance(mask,Halo):
             mask = mask.mask
-        sub = SubSnap(base, mask.get_mask_for(base))
+        sub = SubSnapshot(base, mask.get_mask_for(base))
         sub._descriptor = base._descriptor + ':' + str(mask)
         return sub
 
@@ -1642,11 +1643,11 @@ def SubSnap(base, mask):
             print("WARNING: lost %d" % (len(mask)-len(idx_set)) + \
                                  " particles in snapshot masking!", file=sys.stderr)
         mask = np.array( [ (i in idx_set) for i in range(len(base)) ] )
-        return _SubSnap(base, mask)
+        return SubSnapshot(base, mask)
 
     elif isinstance(mask,tuple) and len(mask)==1 \
             and isinstance(mask[0],np.ndarray) and mask[0].dtype.kind=='i':
-        return SubSnap(base, mask[0])
+        return SubSnapshot(base, mask[0])
 
     else:
         raise KeyError('Mask of type %s not understood.' % type(mask).__name__)

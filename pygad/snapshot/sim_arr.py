@@ -44,7 +44,7 @@ Examples:
 
 import numpy as np
 from ..units import *
-from .snapshot import _Snap
+from .snapshot import Snapshot
 import functools
 import weakref
 

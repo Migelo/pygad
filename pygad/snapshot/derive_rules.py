@@ -147,10 +147,10 @@ def age_from_form(form, subs, cosmic_time=None, cosmo=None, units='Gyr', paralle
         ...               units='Myr')
         UnitArr([ 4697.05769369,  2100.        ,   801.47115316], units="Myr")
     '''
-    from ..snapshot.snapshot import _Snap
+    from ..snapshot.snapshot import Snapshot
     if subs is None:
         subs = {}
-    elif isinstance(subs, _Snap):
+    elif isinstance(subs, Snapshot):
         snap, subs = subs, {}
         subs['a'] = snap.scale_factor
         subs['z'] = snap.redshift

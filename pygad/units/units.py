@@ -331,8 +331,8 @@ class _UnitClass(object):
         Returns:
             substituted (Unit): The new unit.
         '''
-        from ..snapshot.snapshot import _Snap
-        if isinstance(subs, _Snap):
+        from ..snapshot.snapshot import Snapshot
+        if isinstance(subs, Snapshot):
             subs = {'a': subs.scale_factor,
                     'z': subs.redshift,
                     'h_0': subs.cosmology.h_0}
