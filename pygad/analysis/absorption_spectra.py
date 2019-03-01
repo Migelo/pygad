@@ -4,7 +4,7 @@ Produce mock absorption spectra for given line transition(s) and line-of-sight(s
 Doctests:
     >>> from ..environment import module_dir
     >>> from ..snapshot import Snap
-    >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=False)
+    >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_320', physical=False)
 
     >>> vs = UnitArr([1,1e3,1e5], 'km/s')
     >>> print velocities_to_redshifts(vs, 0.1)

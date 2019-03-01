@@ -7,7 +7,7 @@ Examples:
     >>> from ..snapshot import Snap
     >>> from ..transformation import *
     >>> from ..analysis import *
-    >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470', physical=False)
+    >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_470', physical=False)
     >>> Translation(-shrinking_sphere(s.stars, [s.boxsize/2]*3,
     ...                               np.sqrt(3)*s.boxsize)).apply(s)
     load block pos... done.
@@ -33,7 +33,7 @@ Examples:
     <Snap "snap_M1196_4x_470":Ball(r=60.0 [kpc]); N=198,250; z=0.000>
     >>> if abs(sub['r'].max().in_units_of('Mpc',subs=s) - 9.905) > 0.01:
     ...     print sub['r'].max().in_units_of('Mpc',subs=s)
-    >>> no_gas_max_r = SubSnap(sub,list(set(range(6))-set(gadget.families['gas'])))['r'].max()
+    >>> no_gas_max_r = sub.SubSnap(list(set(range(6))-set(gadget.families['gas'])))['r'].max()
     >>> if abs( no_gas_max_r.in_units_of('kpc',subs=s)  -  60.0 ) > 0.01:
     ...     print no_gas_max_r
     >>> s.to_physical_units()
@@ -104,7 +104,7 @@ __all__ = ['SnapMask', 'BallMask', 'BoxMask', 'DiscMask', 'IDMask', 'ExprMask']
 import numpy as np
 from ..units import *
 from .. import gadget
-from .snapshot import SubSnap
+#from .snapshot import SubSnap, SubSnap is now method of Snapshot
 import operator
 
 
@@ -227,7 +227,7 @@ class BallMask(SnapMask):
 
         if self.sph_overlap and 'gas' in s:
             for pt in gadget.families['gas']:
-                sub = SubSnap(s, [pt])
+                sub = s.SubSnap([pt])
                 if self.periodic_snap:
                     r = periodic_distance_to(sub['pos'], center, s.boxsize)
                 else:
@@ -319,7 +319,7 @@ class BoxMask(SnapMask):
 
         if self.sph_overlap and 'gas' in s:
             for pt in gadget.families['gas']:
-                sub = SubSnap(s, [pt])
+                sub = s.SubSnap([pt])
                 mask[sum(s.parts[:pt]):sum(s.parts[:pt + 1])] |= \
                     (ext[0, 0] <= sub['pos'][:, 0] + sub['hsml']) & \
                     (sub['pos'][:, 0] - sub['hsml'] <= ext[0, 1]) & \

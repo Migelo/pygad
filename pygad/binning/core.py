@@ -46,7 +46,7 @@ Examples:
     >>> from ..snapshot import *
     >>> from ..analysis import *
     >>> from ..transformation import *
-    >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470')
+    >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_470')
     >>> Translation(UnitArr([-48087.1,-49337.1,-46084.3],'kpc')).apply(s)
     >>> s['vel'] -= mass_weighted_mean(s[s['r']<'1 kpc'], 'vel')
     load block vel... done.

@@ -12,7 +12,7 @@ Example:
     demonstrated.
 
     >>> snap_tmp_file = 'test.gdt'
-    >>> s = Snap(module_dir+'../snaps/AqA_ICs_C02_200_nm.gdt', physical=False,
+    >>> s = Snapshot(module_dir+'../snaps/AqA_ICs_C02_200_nm.gdt', physical=False,
     ...          gad_units={'LENGTH':'cMpc/h_0'})
     >>> s
     <Snap "AqA_ICs_C02_200_nm.gdt.0-8"; N=2,951,686; z=127.000>
@@ -58,7 +58,7 @@ Example:
     np.ndarray of bools (for more information see SubSnap).
     In fact, in order to access blocks that are only for certains families, one has
     to restrict the snapshot to appropiately.
-    >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470', physical=False)
+    >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_470', physical=False)
     >>> s.gas['rho']
     load block rho... done.
     SimArr([  2.13930360e-03,   8.17492546e-04,   9.48364788e-04, ...,
@@ -165,7 +165,7 @@ Example:
     writing block ID   (dtype=uint32, units=[1])... done.
     writing block MASS (dtype=float32, units=[1e+10 Msol h_0**-1])... done.
     writing block R    (dtype=float32, units=[kpc])... done.
-    >>> sub_copy = Snap(dest_file, physical=True)
+    >>> sub_copy = Snapshot(dest_file, physical=True)
     >>> sub_copy['r'].units = 'kpc' # notice: block r gets *loaded*!
     ...                             # the units are those from before!
     ...                             # and are not in the config!
@@ -178,7 +178,7 @@ Example:
     >>> import os
     >>> os.remove(dest_file)
     >>> del sub, sub_copy
-    >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470', physical=False)
+    >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_470', physical=False)
     >>> gadget.write(s, dest_file)  # doctest:+ELLIPSIS
     load block pos... done.
     load block vel... done.
@@ -192,7 +192,7 @@ Example:
     writing block MASS (dtype=float32, units=[1e+10 Msol h_0**-1])... done.
     writing block NH   (dtype=float32, units=[1])... done.
     ...
-    >>> s2 = Snap(dest_file, physical=False)
+    >>> s2 = Snapshot(dest_file, physical=False)
     >>> s2.load_all_blocks()    # doctest:+ELLIPSIS
     load block ... done.
     ...
@@ -214,7 +214,7 @@ Example:
     writing block MASS (dtype=float32, units=[1e+10 Msol h_0**-1])... done.
     writing block NH   (dtype=float32, units=[1])... done.
     ...
-    >>> tmp = Snap(dest_file_hdf5, physical=False)
+    >>> tmp = Snapshot(dest_file_hdf5, physical=False)
     >>> gadget.write(tmp, dest_file)    # doctest:+ELLIPSIS
     load block pos... done.
     load block vel... done.
@@ -230,7 +230,7 @@ Example:
     ...
     >>> del tmp
     >>> os.remove(dest_file_hdf5)
-    >>> s2 = Snap(dest_file, physical=False)
+    >>> s2 = Snapshot(dest_file, physical=False)
     >>> for name in s.loadable_blocks():    # doctest:+ELLIPSIS
     ...     b  = s.get_host_subsnap(name)[name]
     ...     b2 = s2.get_host_subsnap(name)[name]
@@ -244,7 +244,7 @@ Example:
     >>> del s2
 
     Some basic testing for (reading) HDF5 snapshots:
-    >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_conv_470.hdf5', physical=False)
+    >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_conv_470.hdf5', physical=False)
     >>> s
     <Snap "snap_M1196_4x_conv_470.hdf5"; N=2,079,055; z=0.000>
     >>> s.cosmology
@@ -266,15 +266,15 @@ Example:
            units="ckpc h_0**-1", snap="snap_M1196_4x_conv_470.hdf5")
     >>> s.parts
     [921708, 1001472, 56796, 19315, 79764, 0]
-    >>> sub = SubSnap(s, [0,1,2,4,5])
+    >>> sub = s.SubSnap([0,1,2,4,5])
     >>> sub
     <Snap "snap_M1196_4x_conv_470.hdf5":pts=[0,1,2,4,5]; N=2,059,740; z=0.000>
     >>> sub.parts
     [921708, 1001472, 56796, 0, 79764, 0]
-    >>> SubSnap(s, [0,2,4]).parts
+    >>> s.SubSnap([0,2,4]).parts
     [921708, 0, 56796, 0, 79764, 0]
 '''
-__all__ = ['Snap', 'SubSnap', 'FamilySubSnap', 'write', 'Snapshot', 'SubSnapshot']
+__all__ = ['write', 'Snapshot', 'SubSnapshot']
 
 import sys
 import os.path
@@ -293,137 +293,7 @@ import weakref
 from . import derived
 import fnmatch
 
-def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
-         gad_units=None, unclear_blocks=None):
-    '''
-    Create a snapshot from file (without loading the blocks, yet).
 
-    Args:
-        filename (str):         The path to the snapshot. If it is distributed
-                                over several files, you shall omit the trailing
-                                (of inbetween in case of an HDF5 file) '.0'.
-        physical (bool):        Whether to convert to physical units on loading.
-        load_double_prec (bool):Force to load all blocks in double precision.
-                                Equivalent with setting the snapshots attribute.
-        cosmological (bool):    Explicitly tell if the simulation is a
-                                cosmological one.
-        gad_units (dict):       Alternative base units (LENGTH, VELOCITY, MASS)
-                                for this snapshot. The default base units units
-                                are updated, meaning one can also just change one
-                                them.
-        unclear_blocks (str):   What to do the blocks for which the block info is
-                                unclear (cannot be infered). Possible modes are:
-                                * exception:    raise an IOError
-                                * warning:      print a warning to the stderr
-                                * ignore:       guess what
-                                If it is None, the value from the `gadget.cfg` is
-                                taken.
-
-    Raises:
-        IOError:            If the snapshot does not exist.
-        RuntimeError:       If the information could not be infered or if the
-                            given dtype of the given family is unknown.
-    '''
-    from .sim_arr import SimArr
-    filename = os.path.expandvars(filename)
-    filename = os.path.expanduser(filename)
-    # handle different filenames, e.g. cases where the snapshot is distributed
-    # over severale files
-    base, suffix = os.path.splitext(filename)
-    if suffix != '.hdf5':
-        base, suffix = filename, ''
-    if not os.path.exists(filename):
-        filename = base + '.0' + suffix
-        if not os.path.exists(filename):
-            raise IOError('Snapshot "%s%s" does not exist!' % (base, suffix))
-
-    s = Snapshot(gad_units=gad_units, physical=physical, cosmological=cosmological)
-    s._filename   = os.path.abspath(base+suffix)
-    s._descriptor = os.path.basename(base)+suffix
-    # need first (maybe only) file for basic information
-    greader = gadget.FileReader(filename, unclear_blocks=unclear_blocks)
-    s._file_handlers = [greader]
-
-    s._block_avail = {
-            block.name:block.ptypes
-            for block in greader.infos()
-            if block.dtype is not None }
-
-    s._N_part   = list(map(int, greader.header['N_part_all']))
-    s._time     = greader.header['time']
-    s._redshift = greader.header['redshift']
-    s._boxsize  = SimArr(greader.header['boxsize'],
-                         units=s._gad_units['LENGTH'],
-                         snap=s)
-    s._cosmology = physics.FLRWCosmo(              # Note: Omega_b at default!
-                    h_0          = greader.header['h_0'],
-                    Omega_Lambda = greader.header['Omega_Lambda'],
-                    Omega_m      = greader.header['Omega_m'])
-    s._properties = { k:v for k,v in greader.header.items()
-            if k not in ['N_part', 'mass', 'time', 'redshift', 'N_part_all',
-                         'N_files', 'h_0', 'Omega_Lambda', 'Omega_m', 'boxsize',
-                         'unused'] }
-    if s._cosmological is None:
-        s._cosmological = abs(s.scale_factor-s.time) < 1e-6
-    s._load_double_prec = bool(load_double_prec)
-
-    if physical:
-        s._boxsize.convert_to(s._boxsize.units.free_of_factors(['a','h_0']),
-                              subs=s)
-
-
-    if greader.header['N_files'] > 1:
-        s._descriptor += '.0-'+str(greader.header['N_files'])
-        # enshure Python int's to avoid overflows
-        N_part = list(map( int, greader.header['N_part'] ))
-        for n in range(1, greader.header['N_files']): # first already done
-            filename = base + '.' + str(n) + suffix
-            greader = gadget.FileReader(filename, unclear_blocks=unclear_blocks)
-            s._file_handlers.append( greader )
-            # enshure Python int's to avoid overflows
-            for i in range(6): N_part[i] += int(greader.header['N_part'][i])
-            # update loadable blocks:
-            for block in greader.infos():
-                if block.name in s._block_avail:
-                    s._block_avail[block.name] = [ (o or n) for o,n \
-                            in zip(s._block_avail[block.name], block.ptypes)]
-                else:
-                    s._block_avail[block.name] = block.ptypes
-        if N_part != s._N_part:
-            # more particles than fit into a native int
-            s._N_part = N_part
-
-    # Process block names: make standard names lower case (except ID) and replace
-    # spaces with underscores for HDF5 names. Also strip names
-    s._load_name = {}
-    for name, block in list(s._block_avail.items()):
-        if s._file_handlers[0]._format == 3 \
-                and '%-4s'%name not in gadget.std_name_to_HDF5:
-            new_name = name.strip()
-        else:
-            new_name = name.strip().lower()
-
-        # some renaming
-        if new_name in ['id', 'z']:
-            new_name = new_name.upper()
-        elif new_name == 'age':
-            new_name = 'form_time'
-
-        s._load_name[new_name] = name
-        s._block_avail[new_name] = s._block_avail[name]
-        if name != new_name:
-            if environment.verbose >= environment.VERBOSE_TALKY \
-                    and new_name.lower() != name.strip().lower():
-                print('renamed block "%s" to %s' % (name, new_name))
-            del s._block_avail[name]    # blocks should not appear twice
-    # now the mass block is named 'mass' for all cases (HDF5 or other)
-    s._block_avail['mass'] = [n>0 for n in s._N_part]
-
-    s.fill_derived_rules()
-
-    s._descriptor = '"' + s._descriptor + '"'
-
-    return s
 
 
 class Snapshot(object):
@@ -436,10 +306,142 @@ class Snapshot(object):
         gad_units (dict):   Alternative base units (LENGTH, VELOCITY, MASS) for
                             this snapshot.
     '''
-    def __init__(self, physical, cosmological, gad_units=None):
-        # Actual initialization is done in the factory function Snap. Just do some
-        # basic setting of the attributes to enshure that even snapshot created by
-        # just _Snap are somewhat functioning.
+
+    def _initsnap(self, filename, base, suffix, physical=False, load_double_prec=False, cosmological=None,
+                  gad_units=None, unclear_blocks=None):
+        '''
+        Create a snapshot from file (without loading the blocks, yet).
+
+        Args:
+            filename (str):         The path to the snapshot. If it is distributed
+                                    over several files, you shall omit the trailing
+                                    (of inbetween in case of an HDF5 file) '.0'.
+            physical (bool):        Whether to convert to physical units on loading.
+            load_double_prec (bool):Force to load all blocks in double precision.
+                                    Equivalent with setting the snapshots attribute.
+            cosmological (bool):    Explicitly tell if the simulation is a
+                                    cosmological one.
+            gad_units (dict):       Alternative base units (LENGTH, VELOCITY, MASS)
+                                    for this snapshot. The default base units units
+                                    are updated, meaning one can also just change one
+                                    them.
+            unclear_blocks (str):   What to do the blocks for which the block info is
+                                    unclear (cannot be infered). Possible modes are:
+                                    * exception:    raise an IOError
+                                    * warning:      print a warning to the stderr
+                                    * ignore:       guess what
+                                    If it is None, the value from the `gadget.cfg` is
+                                    taken.
+
+        Raises:
+            IOError:            If the snapshot does not exist.
+            RuntimeError:       If the information could not be infered or if the
+                                given dtype of the given family is unknown.
+        '''
+
+        from .sim_arr import SimArr
+        s = self
+        s._filename = os.path.abspath(base + suffix)
+        s._descriptor = os.path.basename(base) + suffix
+        # need first (maybe only) file for basic information
+        greader = gadget.FileReader(filename, unclear_blocks=unclear_blocks)
+        s._file_handlers = [greader]
+
+        s._block_avail = {
+            block.name: block.ptypes
+            for block in greader.infos()
+            if block.dtype is not None}
+
+        s._N_part = list(map(int, greader.header['N_part_all']))
+        s._time = greader.header['time']
+        s._redshift = greader.header['redshift']
+        s._boxsize = SimArr(greader.header['boxsize'],
+                            units=s._gad_units['LENGTH'],
+                            snap=s)
+        s._cosmology = physics.FLRWCosmo(  # Note: Omega_b at default!
+            h_0=greader.header['h_0'],
+            Omega_Lambda=greader.header['Omega_Lambda'],
+            Omega_m=greader.header['Omega_m'])
+        s._properties = {k: v for k, v in greader.header.items()
+                         if k not in ['N_part', 'mass', 'time', 'redshift', 'N_part_all',
+                                      'N_files', 'h_0', 'Omega_Lambda', 'Omega_m', 'boxsize',
+                                      'unused']}
+        if s._cosmological is None:
+            s._cosmological = abs(s.scale_factor - s.time) < 1e-6
+        s._load_double_prec = bool(load_double_prec)
+
+        if physical:
+            s._boxsize.convert_to(s._boxsize.units.free_of_factors(['a', 'h_0']),
+                                  subs=s)
+
+        if greader.header['N_files'] > 1:
+            s._descriptor += '.0-' + str(greader.header['N_files'])
+            # enshure Python int's to avoid overflows
+            N_part = list(map(int, greader.header['N_part']))
+            for n in range(1, greader.header['N_files']):  # first already done
+                filename = base + '.' + str(n) + suffix
+                greader = gadget.FileReader(filename, unclear_blocks=unclear_blocks)
+                s._file_handlers.append(greader)
+                # enshure Python int's to avoid overflows
+                for i in range(6): N_part[i] += int(greader.header['N_part'][i])
+                # update loadable blocks:
+                for block in greader.infos():
+                    if block.name in s._block_avail:
+                        s._block_avail[block.name] = [(o or n) for o, n \
+                                                      in zip(s._block_avail[block.name], block.ptypes)]
+                    else:
+                        s._block_avail[block.name] = block.ptypes
+            if N_part != s._N_part:
+                # more particles than fit into a native int
+                s._N_part = N_part
+
+        # Process block names: make standard names lower case (except ID) and replace
+        # spaces with underscores for HDF5 names. Also strip names
+        s._load_name = {}
+        for name, block in list(s._block_avail.items()):
+            if s._file_handlers[0]._format == 3 \
+                    and '%-4s' % name not in gadget.std_name_to_HDF5:
+                new_name = name.strip()
+            else:
+                new_name = name.strip().lower()
+
+            # some renaming
+            if new_name in ['id', 'z']:
+                new_name = new_name.upper()
+            elif new_name == 'age':
+                new_name = 'form_time'
+
+            s._load_name[new_name] = name
+            s._block_avail[new_name] = s._block_avail[name]
+            if name != new_name:
+                if environment.verbose >= environment.VERBOSE_TALKY \
+                        and new_name.lower() != name.strip().lower():
+                    print('renamed block "%s" to %s' % (name, new_name))
+                del s._block_avail[name]  # blocks should not appear twice
+        # now the mass block is named 'mass' for all cases (HDF5 or other)
+        s._block_avail['mass'] = [n > 0 for n in s._N_part]
+
+        s.fill_derived_rules()
+
+        s._descriptor = '"' + s._descriptor + '"'
+
+        return s
+
+    def __init__(self, filename, physical=False, load_double_prec=False, cosmological=None,
+                                 gad_units=None, unclear_blocks=None):
+
+        filename = os.path.expandvars(filename)
+        filename = os.path.expanduser(filename)
+        # handle different filenames, e.g. cases where the snapshot is distributed
+        # over severale files
+        base, suffix = os.path.splitext(filename)
+        if suffix != '.hdf5':
+            base, suffix = filename, ''
+        if not os.path.exists(filename):
+            filename = base + '.0' + suffix
+            if not os.path.exists(filename):
+                raise IOError('Snapshot "%s%s" does not exist!' % (base, suffix))
+
         self._filename              = '<none>'
         self._descriptor            = 'new'
         self._file_handlers         = []
@@ -468,6 +470,11 @@ class Snapshot(object):
         self._always_cache          = set() # _derive_rule_deps is empty; gets
                                             # filled in Snap() with
                                             # derived.general['always_cache']
+        # Actual initialization is done in the factory function Snap. Just do some
+        # basic setting of the attributes to enshure that even snapshot created by
+        # just _Snap are somewhat functioning.
+        self._initsnap(filename, base, suffix, physical=physical, load_double_prec=load_double_prec, cosmological=cosmological,
+                  gad_units=gad_units, unclear_blocks=unclear_blocks)
 
     @property
     def filename(self):
@@ -586,6 +593,117 @@ class Snapshot(object):
         to also be correct in the case of non-cosmological simulations.
         '''
         return physics.z2a(self.redshift)
+
+    def SubSnap(self, mask):
+        '''
+        A factory function for creating masked/sliced sub-snapshots.
+
+        Sub-snapshots should always be instantiated with this function or the bracket
+        notation (or FamilySubSnap).
+
+        Args:
+            base (Snap):    The snapshot to create the sub-snapshot from.
+
+            mask:           The mask to use. It can be:
+
+                            * slice:
+                                Slice the entire snapshot as one would do with
+                                np.ndarray's. Blocks are then slices of the base
+                                snapshot. It is taken care of those which are now
+                                available, but were not for the base.
+
+                            * np.ndarray[bool]:
+                                Has to have the length of the snapshot. The
+                                sub-snapshot then consists of all the particles for
+                                which the entry is True. Otherwise the same as for a
+                                slice.
+
+                            * particle types (list):
+                                Create a sub-snapshot of the specified particle types
+                                only.
+
+                            * mask class (SnapMask):
+                                Create a sub-snapshot according to the mask.
+
+                            * mask class (Halo):
+                                Create a sub-snapshot according to the mask of the
+                                halo (an IDMask).
+
+                            * index list (np.ndarray[int]):
+                                This can in fact also be a tuple with one element,
+                                which is such a index list, as returned by np.where.
+                                This is similar to passing a boolean mask, but here
+                                the indices (not the IDs) are passed explicitly.
+
+                                With contrast to passing this directly to the block
+                                arrays, the particles are *not reordered* here and
+                                every particle can only *occur once*, since in the
+                                back, this converts the mask to a boolean one with the
+                                use of sets. I did this for a combination of little
+                                effort in writing code (reusing) and speed (using
+                                sets).
+                                TODO:
+                                    - Change this behaviour?
+                                    - Really keep this option?
+
+        Returns:
+            sub (_SubSnap):     The sub-snapshot.
+
+        Raises:
+            KeyError:           If the mask was not understood.
+        '''
+        from .masks import SnapMask
+        from ..analysis.halo import Halo
+
+        base = self
+
+        if isinstance(mask, slice) \
+                or (isinstance(mask, np.ndarray) and mask.dtype == bool):
+            # slices and masks are handled directly by _SubSnap
+            return SubSnapshot(base, mask)
+
+        elif isinstance(mask, list):
+            ptypes = sorted(set(mask))
+            # precalculating N_part is faster than the standard way in _SubSnap
+            N_part = [(base._N_part[pt] if pt in ptypes else 0) for pt in range(6)]
+            if utils.is_consecutive(ptypes):
+                # slicing is faster than masking!
+                sub = slice(sum(base._N_part[:ptypes[0]]),
+                            sum(base._N_part[:ptypes[-1] + 1]))
+            else:
+                l = [(np.ones(base._N_part[pt], bool) if pt in ptypes
+                      else np.zeros(base._N_part[pt], bool)) for pt in range(6)]
+                sub = np.concatenate(l)
+            sub = SubSnapshot(base, sub, N_part)
+            sub._descriptor = base._descriptor + ':pts=' + str(ptypes).replace(' ', '')
+            return sub
+
+        elif isinstance(mask, SnapMask) or isinstance(mask, Halo):
+            if isinstance(mask, Halo):
+                mask = mask.mask
+            sub = SubSnapshot(base, mask.get_mask_for(base))
+            sub._descriptor = base._descriptor + ':' + str(mask)
+            return sub
+
+        elif isinstance(mask, np.ndarray) and mask.dtype.kind == 'i':
+            # I probably do not want to keep this. Increases backward compability,
+            # though.
+            warnings.warn('Consider using the faster boolean masks!')
+            # is convering into boolean array the best choice?
+            warnings.warn('Indexed snapshot masking does not reorder!')
+            idx_set = set(mask)
+            if len(idx_set) < len(mask):
+                print("WARNING: lost %d" % (len(mask) - len(idx_set)) + \
+                      " particles in snapshot masking!", file=sys.stderr)
+            mask = np.array([(i in idx_set) for i in range(len(base))])
+            return SubSnapshot(base, mask)
+
+        elif isinstance(mask, tuple) and len(mask) == 1 \
+                and isinstance(mask[0], np.ndarray) and mask[0].dtype.kind == 'i':
+            return SubSnapshot(base, mask[0])
+
+        else:
+            raise KeyError('Mask of type %s not understood.' % type(mask).__name__)
 
     def write(self, filename, **kwargs):
         '''
@@ -822,7 +940,7 @@ class Snapshot(object):
     def __getattr__(self, name):
         # Create a family sub-snapshot and set it as attribute.
         if name in gadget.families:
-            fam_snap = FamilySubSnap(self, name)
+            fam_snap = _FamilySubSnap(self, name)
             setattr(self, name, fam_snap)
             return fam_snap
         # Explicitly set attributes (like self.redshift and self.gas), member
@@ -851,7 +969,7 @@ class Snapshot(object):
         from ..analysis.halo import Halo
         if isinstance(key, (slice,np.ndarray,list,SnapMask,Halo,tuple)):
             # Handling of the index is fully done by the factory function.
-            return SubSnap(self, key)
+            return self.SubSnap(key)
         else:
             raise KeyError(repr(key))
 
@@ -1543,116 +1661,8 @@ class SubSnapshot(Snapshot):
                 # do not store the masked snapshot, but only the base one
                 return block
 
-def SubSnap(base, mask):
-    '''
-    A factory function for creating masked/sliced sub-snapshots.
 
-    Sub-snapshots should always be instantiated with this function or the bracket
-    notation (or FamilySubSnap).
-
-    Args:
-        base (Snap):    The snapshot to create the sub-snapshot from.
-
-        mask:           The mask to use. It can be:
-
-                        * slice:
-                            Slice the entire snapshot as one would do with
-                            np.ndarray's. Blocks are then slices of the base
-                            snapshot. It is taken care of those which are now
-                            available, but were not for the base.
-
-                        * np.ndarray[bool]:
-                            Has to have the length of the snapshot. The
-                            sub-snapshot then consists of all the particles for
-                            which the entry is True. Otherwise the same as for a
-                            slice.
-
-                        * particle types (list):
-                            Create a sub-snapshot of the specified particle types
-                            only.
-
-                        * mask class (SnapMask):
-                            Create a sub-snapshot according to the mask.
-
-                        * mask class (Halo):
-                            Create a sub-snapshot according to the mask of the
-                            halo (an IDMask).
-
-                        * index list (np.ndarray[int]):
-                            This can in fact also be a tuple with one element,
-                            which is such a index list, as returned by np.where.
-                            This is similar to passing a boolean mask, but here
-                            the indices (not the IDs) are passed explicitly.
-
-                            With contrast to passing this directly to the block
-                            arrays, the particles are *not reordered* here and
-                            every particle can only *occur once*, since in the
-                            back, this converts the mask to a boolean one with the
-                            use of sets. I did this for a combination of little
-                            effort in writing code (reusing) and speed (using
-                            sets).
-                            TODO:
-                                - Change this behaviour?
-                                - Really keep this option?
-
-    Returns:
-        sub (_SubSnap):     The sub-snapshot.
-
-    Raises:
-        KeyError:           If the mask was not understood.
-    '''
-    from .masks import SnapMask
-    from ..analysis.halo import Halo
-
-    if isinstance(mask,slice) \
-            or (isinstance(mask,np.ndarray) and mask.dtype==bool):
-        # slices and masks are handled directly by _SubSnap
-        return SubSnapshot(base, mask)
-
-    elif isinstance(mask,list):
-        ptypes = sorted(set(mask))
-        # precalculating N_part is faster than the standard way in _SubSnap
-        N_part = [(base._N_part[pt] if pt in ptypes else 0) for pt in range(6)]
-        if utils.is_consecutive(ptypes):
-            # slicing is faster than masking!
-            sub = slice(sum(base._N_part[:ptypes[0]   ]),
-                        sum(base._N_part[:ptypes[-1]+1]))
-        else:
-            l = [(np.ones(base._N_part[pt],bool) if pt in ptypes
-                    else np.zeros(base._N_part[pt],bool)) for pt in range(6)]
-            sub = np.concatenate(l)
-        sub = SubSnapshot(base, sub, N_part)
-        sub._descriptor = base._descriptor + ':pts=' + str(ptypes).replace(' ','')
-        return sub
-
-    elif isinstance(mask,SnapMask) or isinstance(mask,Halo):
-        if isinstance(mask,Halo):
-            mask = mask.mask
-        sub = SubSnapshot(base, mask.get_mask_for(base))
-        sub._descriptor = base._descriptor + ':' + str(mask)
-        return sub
-
-    elif isinstance(mask,np.ndarray) and mask.dtype.kind=='i':
-        # I probably do not want to keep this. Increases backward compability,
-        # though.
-        warnings.warn('Consider using the faster boolean masks!')
-        # is convering into boolean array the best choice?
-        warnings.warn('Indexed snapshot masking does not reorder!')
-        idx_set = set(mask)
-        if len(idx_set) < len(mask):
-            print("WARNING: lost %d" % (len(mask)-len(idx_set)) + \
-                                 " particles in snapshot masking!", file=sys.stderr)
-        mask = np.array( [ (i in idx_set) for i in range(len(base)) ] )
-        return SubSnapshot(base, mask)
-
-    elif isinstance(mask,tuple) and len(mask)==1 \
-            and isinstance(mask[0],np.ndarray) and mask[0].dtype.kind=='i':
-        return SubSnapshot(base, mask[0])
-
-    else:
-        raise KeyError('Mask of type %s not understood.' % type(mask).__name__)
-
-def FamilySubSnap(base, fam):
+def _FamilySubSnap(base, fam):
     '''
     A factory function for creating a sub-snapshot of all the particles of the
     given family of the base snapshot.
@@ -1673,6 +1683,6 @@ def FamilySubSnap(base, fam):
         raise ValueError('Unknown familiy "%s"!' % fam)
 
     # family sub-snapshot
-    family_s = SubSnap(base, gadget.families[fam])
+    family_s = base.SubSnap(gadget.families[fam])
     family_s._descriptor = base._descriptor + ':' + fam
     return family_s

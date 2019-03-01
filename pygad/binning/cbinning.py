@@ -4,7 +4,7 @@ Interface to the C implementations of binning.
 Testing:
     >>> from ..environment import module_dir
     >>> from ..snapshot import Snap
-    >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=True)
+    >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_320', physical=True)
     >>> from ..transformation import Translation
     >>> Translation(-UnitArr([34.7828, 35.5898, 33.6147], 'cMpc/h_0')).apply(s)
     >>> extent = UnitArr([[-0.5,0.7],[-1.0,2.0],[-2.0,2.0]], 'Mpc')

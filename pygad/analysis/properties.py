@@ -4,7 +4,7 @@ A collection of (sub-)snapshot wide analysis functions.
 Example:
     >>> from ..environment import module_dir
     >>> from ..snapshot import Snap
-    >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=False)
+    >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_320', physical=False)
     >>> if np.linalg.norm(mass_weighted_mean(s,'pos') - center_of_mass(s)) > 1e-3:
     ...     print mass_weighted_mean(s,'pos')
     ...     print center_of_mass(s,)
@@ -85,7 +85,7 @@ Example:
     >>> if abs(eta - 2.0) > 0.2:
     ...     print 'mass loading:', eta
 
-    >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470', load_double_prec=True)
+    >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_470', load_double_prec=True)
     >>> s.gas['lx'] = x_ray_luminosity(s, lumtable=module_dir+'../snaps/em.dat')
     load block Z... done.
     derive block elements... done.

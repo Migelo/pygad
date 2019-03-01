@@ -194,7 +194,7 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
         raise ValueError("You passed 'starform'. Did you mean 'star_form'?")
 
     if isinstance(s, str):
-        s = Snap(s, load_double_prec=load_double_prec)
+        s = Snapshot(s, load_double_prec=load_double_prec)
     gal_R200 = float(gal_R200)
     if environment.verbose >= environment.VERBOSE_TACITURN:
         print('prepare zoomed-in', s)

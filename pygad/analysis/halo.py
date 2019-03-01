@@ -4,7 +4,7 @@ A collection of analysis functions that are somewhat connected to halo propertie
 Examples:
     >>> from ..environment import module_dir
     >>> from ..snapshot import Snap
-    >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=True)
+    >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_320', physical=True)
     >>> center = shrinking_sphere(s.stars, center=[s.boxsize/2]*3,
     ...                           R=s.boxsize*np.sqrt(3)) # doctest: +ELLIPSIS
     load block pos... done.

@@ -4,7 +4,7 @@ Evaluate SPH properties.
 Examples:
     >>> from ..environment import module_dir
     >>> from ..snapshot import Snap
-    >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=False)
+    >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_320', physical=False)
     >>> from ..transformation import Translation
     >>> Translation([-34792.2, -35584.8, -33617.9]).apply(s)
     >>> s.to_physical_units()

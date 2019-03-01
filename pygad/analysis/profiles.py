@@ -4,7 +4,7 @@ A collection of analysis functions to create profiles.
 Example:
     >>> from ..environment import module_dir
     >>> from ..snapshot import Snap
-    >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=True)
+    >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_320', physical=True)
     >>> center = UnitArr([33816.9, 34601.1, 32681.0], s['pos'].units)
     load block pos... done.
     >>> radially_binned(s.stars, 'Fe/mass', av='mass', center=center,

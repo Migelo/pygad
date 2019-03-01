@@ -4,7 +4,7 @@ Mapping quantities onto a 2D-grid.
 Example:
     >>> from ..analysis import *
     >>> from ..transformation import *
-    >>> s = Snap('snaps/snap_M1196_4x_470', physical=True)
+    >>> s = Snapshot('snaps/snap_M1196_4x_470', physical=True)
     >>> Translation(UnitArr([-48087.1,-49337.1,-46084.3],'kpc')).apply(s)
     >>> s['vel'] -= UnitArr([-42.75,-15.60,-112.20],'km s**-1')
     load block vel... done.
@@ -173,7 +173,7 @@ def map_qty(s, extent, field, qty, av=None, reduction=None, Npx=256,
         ptypes = list(range(6))
     proj_kernel = project_kernel(kernel)
     for pt in ptypes:
-        sub = SubSnap(s, [pt])
+        sub = s.SubSnap([pt])
         if len(sub) == 0:
             continue
 

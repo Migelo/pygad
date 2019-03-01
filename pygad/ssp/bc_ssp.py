@@ -20,7 +20,7 @@ Examples:
 
     >>> from ..environment import module_dir
     >>> from ..snapshot import Snap
-    >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_320', physical=True)
+    >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_320', physical=True)
     >>> inter_bc_qty(s.stars['age'], s.stars['metallicity'], qty='log Nly')
     load block form_time... done.
     derive block age... done.

@@ -14,7 +14,7 @@ Examples:
     {'ions': [], 'tabledir': 'pygad//../iontbls/tbls-i45', 'style': 'Oppenheimer new', 'selfshield': False, 'pattern': 'lt<z>f100_i45', 'flux_factor': 1.0, 'T_vals': [2.5, 0.05, 140], 'nH_vals': [-8, 0.05, 160]}
 
     >>> from snapshot import Snap
-    >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470')
+    >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_470')
     >>> ptypes_and_deps(rules['r'], s)
     ([True, True, True, True, True, False], set(['pos']))
     >>> ptypes_and_deps(rules['metallicity'], s) # derived from mass (for all
