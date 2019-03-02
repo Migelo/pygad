@@ -26,11 +26,35 @@ parser.add_argument('name_pattern',
 parser.add_argument('--command', '-c',
                     metavar='str',
                     default='',
-                    help='the path+name of the script to process the snapshots (default: "" ')
+                    help='the path+name of the script to process the snapshots (default: "") ')
+parser.add_argument('--par',
+                    metavar='str',
+                    default='',
+                    help='parameter to pass to --command (default: "") ')
+parser.add_argument('--par1',
+                    metavar='str',
+                    default='',
+                    help='parameter 1 to pass to --command (default: "") ')
+parser.add_argument('--par2',
+                    metavar='str',
+                    default='',
+                    help='parameter 2 to pass to --command (default: "") ')
+parser.add_argument('--par3',
+                    metavar='str',
+                    default='',
+                    help='parameter 3 to pass to --command (default: "") ')
+parser.add_argument('--par4',
+                    metavar='str',
+                    default='',
+                    help='parameter 4 to pass to --command (default: "") ')
+parser.add_argument('--par5',
+                    metavar='str',
+                    default='',
+                    help='parameter 5 to pass to --command (default: "") ')
 parser.add_argument('--profile', '-p',
                     metavar='str',
                     default='cache',
-                    help='the profile used to process the snapshots (default: "cache" ')
+                    help='the profile used to process the snapshots (default: "cache") ')
 parser.add_argument('--withplot',
                     action='store_true',
                     help='create a plot in the cache.')
@@ -217,7 +241,8 @@ def load_command(script_file):
                     command_str += intent + line
             myfile.close()
     except Exception as e:
-        pass
+        print('*** error loading script ', filename)
+        print(e)
 
     return command_str
 
@@ -445,9 +470,17 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
     snap_num = args.start
     snap_start = args.start
     snap_end = args.end
+    cmd_par = args.par
+    cmd_par1 = args.par1
+    cmd_par2 = args.par2
+    cmd_par3 = args.par3
+    cmd_par4 = args.par4
+    cmd_par5 = args.par5
 
     command_str = load_command(args.command)
     if command_str != '':
+        print("*** execute command ", args.command)
+        print("*** command parameter ", cmd_par)
         exec(command_str, globals(), locals())
 
     for snap_num in range(snap_start, snap_end-1, -args.step):
