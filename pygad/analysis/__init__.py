@@ -5,7 +5,7 @@ Also doctest other parts of this sub-module:
     >>> import doctest
     >>> doctest.testmod(sph_eval)
     TestResults(failed=0, attempted=15)
-    >>> doctest.testmod(properties)
+    >>> doctest.testmod(snapshot)
     TestResults(failed=0, attempted=34)
     >>> doctest.testmod(halo)
     TestResults(failed=0, attempted=29)
@@ -18,7 +18,7 @@ Also doctest other parts of this sub-module:
     #TestResults(failed=0, attempted=20)
 '''
 from .sph_eval import *
-from .properties import *
+from .snapshot import *
 from .halo import *
 from .profiles import *
 #from analysis import *

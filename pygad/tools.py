@@ -16,6 +16,7 @@ from . import environment
 import re
 import sys
 import os
+import numpy as np
 
 
 def read_info_file(filename):
@@ -548,7 +549,7 @@ def read_traced_gas(filename, types=None):
         print('read gas trace file "%s"...' % filename)
         sys.stdout.flush()
     import pickle as pickle
-    with file(filename, 'rb') as f:
+    with open(filename, 'rb') as f:
         tr = pickle.load(f)
 
     # sort type
@@ -709,7 +710,7 @@ def fill_gas_from_traced(snap, data, add_blocks='all', add_derived=True,
     gididx = np.argsort(gas['ID'])
     gididx_traced = gididx[trmask[gididx]]
 
-    # type: not traced (0), in region (1), out of region (2)
+    # type = not traced (0), in region (1), out of region (2)
     # number of full cycles (out and in)
 
     trace_type = UnitArr(np.zeros(len(gas), dtype=int))

@@ -3,7 +3,7 @@ A UnitArr that belongs to a snapshot and can have derived arrays, which are
 deleted from the snapshot, if the array changes.
 
 Examples:
-    >>> from snapshot import Snap
+    >>> #from snapshot import Snap
     >>> from ..environment import module_dir
     >>> snap = Snapshot(module_dir+'../snaps/snap_M1196_4x_470')
     >>> sa = SimArr([1,2,3], units='a kpc / h_0', dtype=float, snap=snap)
@@ -41,6 +41,8 @@ Examples:
     ...         assert not hasattr(a, '_dependencies')
     ...         a = a.base
 '''
+
+__all__ = ['SimArr']
 
 import numpy as np
 from ..units import *

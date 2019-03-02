@@ -18,8 +18,9 @@ Also doctest other parts of this sub-module:
     TestResults(failed=0, attempted=45)
 '''
 from .snapshot import *
-from .derive_rules import *
-from .derived import *
+from .snapshotcache import *
+#from .derive_rules import *
+from .derived import read_derived_rules
 from .sim_arr import *
 from .masks import *
 import os

@@ -45,6 +45,7 @@ from .core import *
 from ..gadget import *
 from ..kernels import *
 from .. import environment
+import numpy as np
 
 def map_qty(s, extent, field, qty, av=None, reduction=None, Npx=256,
             xaxis=0, yaxis=1, softening=None, sph=True, kernel=None, dV='dV'):

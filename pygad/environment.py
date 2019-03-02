@@ -84,6 +84,17 @@ VERBOSE_TALKY       = 3
 verbose = VERBOSE_NORMAL if interactive else VERBOSE_TALKY
 allow_parallel_conversion = interactive
 
+DEFAULT_Rvir_property = 'R200_com'      # Halo property to get virial radius
+DEFAULT_gx_radius = 0.1                 # fraction of Rvir to get galaxy radius
+DEFAULT_linking_length = 0.05           # linking length for FoF
+DEFAULT_linking_vel = '100 km/s'        # linking vel for FoF
+DEFAULT_lowres_threshold = 1e-2         # theshold for FoF
+
+# Plot parameters used by tool and utils
+PLOT_figx = 11
+PLOT_figy = 9
+PLOT_fontsize = 18
+
 class _h5py_dummy(object):
     '''
     Class holding some stuff to make pygad work even if there is no h5py

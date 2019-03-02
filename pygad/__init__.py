@@ -66,12 +66,12 @@ For development:
 # import all modules
 from . import utils
 from . import environment
-from . import units
+#from . import units            made visible directly below
 from . import physics
 from . import kernels
 from . import gadget
-from . import transformation
-from . import snapshot
+#from . import transformation   made visible directly below
+#from . import snapshot         made visible directly below
 from . import octree
 from . import ssp
 from . import binning
@@ -89,18 +89,25 @@ from . import plotting
 #       a string holding the value of above's function call at the moment of
 #       installation via setup.py
 version = 'v0.9'
-if environment.verbose >= environment.VERBOSE_TACITURN:
+if environment.verbose > environment.VERBOSE_QUIET:
     print('imported pygad', version, "- Python3")
 
 # make some chosen elements directly visible
 from .environment import gc_full_collect
-from .units import Unit, Units, UnitArr, UnitQty, UnitScalar, Fraction
-from .physics import cosmology
-from .physics import G, m_p, solar
-from .transformation import Translation, Rotation
-from .snapshot import Snapshot, SubSnapshot, BallMask, BoxMask, DiscMask, IDMask, ExprMask
-from .binning import gridbin2d, gridbin, smooth
-from .tools import prepare_zoom, read_info_file
+# from .units import Unit, Units, UnitArr, UnitQty, UnitScalar, Fraction
+# from .physics import cosmology
+# from .physics import G, m_p, solar
+# from .transformation import Translation, Rotation
+# from .snapshot import Snapshot, SubSnapshot, BallMask, BoxMask, DiscMask, IDMask, ExprMask, SimArr, SnapMask
+# from .binning import gridbin2d, gridbin, smooth
+# from .tools import prepare_zoom, read_info_file
+# ################################################
+# only import core objects to be visible on package level
+# functions to be used from sub-modules only
+# ################################################
+from .units import *
+from .transformation import *
+from .snapshot import *
 
 import gc
 # default seems to be (700, 10, 10)
