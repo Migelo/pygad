@@ -4,7 +4,7 @@ from PIL import Image
 import sys
 import re
 import time
-import pygad as pg
+import pygad as pg            # use absolute package loading
 from .. import environment
 
 __all__ = ["SnapshotCache", "SnapshotProperty"]
@@ -32,6 +32,7 @@ class SnapshotCache:
         self.__galaxy_all = None
         self.__family = None
         self.__center = None
+        self.__loaded = False
         # #########################################
         # pygad block-names
         # #########################################
@@ -397,6 +398,10 @@ class SnapshotCache:
         postfix_profile = self.__filename + '-profile.info'
         return self.__destination + "/" + postfix_profile
 
+    def get_profile_path(self):
+        profile_path = self.__destination + '/'
+        return profile_path
+
     def load_snapshot(self, useChache=True, forceCache=False, loadBinaryProperties=False):
         # type: (bool, bool) -> pg.snapshot
         filename = self.name
@@ -442,6 +447,7 @@ class SnapshotCache:
             print("*********************************************")
             print("loading complete Rvir=", self.Rvir)
             print("*********************************************")
+        self.__loaded = True
         return self.__data
 
     def write_chache(self, forceCache = False):
@@ -449,6 +455,109 @@ class SnapshotCache:
         self.__halo_properties._write_info_file(self.__get_halo_filename(), force=forceCache)
         self.__gx_properties._write_info_file(self.__get_gx_filename(), force=forceCache)
         self.__profile_properties._write_info_file(self.__get_profile_filename(), force=forceCache)
+        return
+
+    def execute_command(self, command, par=None, par1=None, par2=None, par3=None, par4=None, par5=None):
+
+        def load_command(script_file):
+            command_str = ''
+            if script_file == '':
+                return command_str
+            filename = script_file
+            if len(script_file) > 3 and script_file[:-3].lower() != '.py':
+                filename = filename + '.py'
+            try:
+                with open(filename, 'r') as myfile:
+                    command_str = ''
+                    ignore = True
+                    intent = ''
+                    for line in myfile:
+                        if len(line) >= 3 and line[:3] == "def": ignore = False
+                        if line.find('__name__') >= 0 and line.find('__main__'):
+                            ignore = False
+                        elif len(line) >= 15 and line[:15] == "# gcache3-init:":
+                            ignore = True
+                        elif len(line) >= 18 and line[:18] == "# gcache3-prepare:":
+                            command_str += "if snap_exec == 'prepare':\n"
+                            line = line.lstrip(' ')
+                            intent = '    '
+                            ignore = False
+                        elif len(line) >= 18 and line[:18] == "# gcache3-process:":
+                            command_str += "if snap_exec == 'process':\n"
+                            line = line.lstrip(' ')
+                            intent = '    '
+                            ignore = False
+                        elif len(line) >= 16 and line[:16] == "# gcache3-close:":
+                            command_str += "if snap_exec == 'close':\n"
+                            line = line.lstrip(' ')
+                            intent = '    '
+                            ignore = False
+                        elif len(line) >= 14 and line[:14] == "# gcache3-end:":
+                            ignore = True
+                        elif len(line) >= 1 and line[:1] == "#":
+                            line = ''
+                        if not ignore and line != "":
+                            command_str += intent + line
+                    myfile.close()
+            except Exception as e:
+                print('*** error loading script ', filename)
+                print(e)
+
+            return command_str
+
+        import numpy as np
+        import matplotlib.pyplot as plt
+
+        # processing as done in gCache, code should be shared instead of copied
+        if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
+            print('execute command on snapshot ' + self.__filename)
+            print("*** execute command ", command)
+            print("*** command parameter ", par)
+            print('*** prepare')
+        snap_num = 1
+        snap_start = 1
+        snap_end = 1
+        cmd_par = par
+        cmd_par1 = par1
+        cmd_par2 = par2
+        cmd_par3 = par3
+        cmd_par4 = par4
+        cmd_par5 = par5
+        if not self.__loaded:
+            self.load_snapshot()
+            if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
+                print('*** loaded')
+        #dfSnap = self
+        globalsParameter = globals().copy()
+        globalsParameter['np'] = np
+        globalsParameter['plt'] = plt
+
+        localsParameter = locals().copy()
+        localsParameter['dfSnap'] = self
+
+        command_str = load_command(command)
+        localsParameter['snap_exec'] = 'prepare'
+        if command_str != '':
+            exec(command_str, globalsParameter, localsParameter)
+
+        if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
+            print('*** process')
+        localsParameter['snap_exec'] = 'process'
+        if command_str != '':
+            exec(command_str, globalsParameter, localsParameter)
+
+        if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
+            print('*** writing cache')
+        self.write_chache()
+        if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
+            print('*** finished')
+
+        if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
+            print('*** close')
+        localsParameter['snap_exec'] = 'close'
+        if command_str != '':
+            exec(command_str, globalsParameter, localsParameter)
+
         return
 
     def __load_profile(self, profile):

@@ -243,6 +243,9 @@ def load_command(script_file):
     except Exception as e:
         print('*** error loading script ', filename)
         print(e)
+        if args.verbose:
+            print('ERROR: loading script', filename, file=sys.stderr)
+        sys.exit(1)
 
     return command_str
 
@@ -261,10 +264,6 @@ def plot_snapshot(sf, snapshot, title=None):
 
     pg.plotting.image(snapshot.stars, ax=ax)
     fig.legend(fontsize=fs)
-    #if CONFIG.figsave:
-    #    plt.savefig('fig-' + prefix + '-snapshot-' + str(title))
-    #if CONFIG.figshow:
-    #    plt.show()
     buf = io.BytesIO()
     plt.savefig(buf, format='png')
     plt.close()
@@ -272,82 +271,6 @@ def plot_snapshot(sf, snapshot, title=None):
     print("plotting complete")
     print("*********************************************")
     return buf
-
-# def write_star_form(snap, virinfo, last_snap, last_R200, args):
-#     '''Store the star formation information.'''
-#     if last_snap is not None:
-#         if args.verbose:
-#             print('gather newly formed stars...')
-#             sys.stdout.flush()
-#
-#         stars = last_snap.stars
-#         if len(stars) == 0:
-#             return
-#
-#         assert stars['form_time'].units == 'a_form'
-#         new_stars = stars[(snap.scale_factor < stars['form_time']) &
-#                           (stars['form_time'] <= last_snap.scale_factor)]
-#
-#         if args.verbose:
-#             print('  %d new star particles born' % len(new_stars))
-#
-#         last_R200_f = float(last_R200)
-#         this_R200_f = float(virinfo['R200'])
-#         last_a = float(last_snap.scale_factor)
-#         this_a = float(snap.scale_factor)
-#         IDs = new_stars['ID'].view(np.ndarray)
-#         r = new_stars['r'].view(np.ndarray)
-#         a = new_stars['form_time'].view(np.ndarray)
-#         x = (a - last_a) / (this_a - last_a)
-#         R200_a = x * this_R200_f + (1.0-x) * last_R200_f
-#         del x
-#         r_in_R200 = r / R200_a
-#         r_in_kpc = \
-#                 new_stars['r'].in_units_of('kpc',subs=last_snap).view(np.ndarray)
-#         Z = new_stars['metallicity'].view(np.ndarray)
-#         star_form_filename = args.destination + '/star_form.ascii'
-#         if args.verbose:
-#             print('  write their properties to "%s"...' % star_form_filename)
-#             sys.stdout.flush()
-#         with open(star_form_filename, 'a') as f:
-#             for i in range(len(new_stars)):
-#                 print('%-12d \t %-11.9f \t %-18.5g \t %-10.5g \t %-11.9f' % (
-#                             IDs[i], a[i], r_in_kpc[i], r_in_R200[i], Z[i]), file=f)
-
-# def write_halo_subsnap(args, snap, cut_R):
-#     '''Write the halo as a new snapshot.'''
-#     if cut_R:
-#         cut_filename = args.destination + ('/snap_cut_%03d.gdt' % snap_num)
-#         if args.verbose:
-#             print('write cutted region (< %s) to "%s"...' % (cut_R, cut_filename))
-#             sys.stdout.flush()
-#         if os.path.exists(cut_filename) and not args.overwrite:
-#             print('ERROR: file "%s" already ' % cut_filename + \
-#                                  'exists (consider "--overwrite")!', file=sys.stderr)
-#             sys.exit(1)
-#         pg.gadget.write(
-#                 snap[pg.BallMask(cut_R, sph_overlap=False)],
-#                 cut_filename,
-#                 blocks=None,    # -> all blocks
-#                 gformat=2, endianness='native',
-#                 infoblock=True,
-#                 double_prec=False,
-#                 gad_units={'LENGTH':args.length,
-#                            'MASS':args.mass,
-#                            'VELOCITY':args.velocity},
-#                 overwrite=args.overwrite,
-#         )
-#     else:
-#         if args.verbose: print('no halo to write')
-
-# # linking length to physical length
-# def linking_length_phys(s, Omega, ll):
-#     m = np.mean(s['mass'])                  # mean particle mass
-#     rho = Omega * s.cosmology.rho_crit(z=0) # mean density
-#     # mean particle separation:
-#     # (factor 2**(1/6) is assuming a densest sphere packing)
-#     d = 2**(1/6.) * (m / rho)**Fraction(1,3)
-#     return ll * d.in_units_of('ckpc', subs={'a':1.0,'h_0':s.cosmology.h_0})
 
 
 if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by command line script
@@ -470,6 +393,8 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
     snap_num = args.start
     snap_start = args.start
     snap_end = args.end
+    snap_overwrite = args.overwrite
+    last_snap = None
     cmd_par = args.par
     cmd_par1 = args.par1
     cmd_par2 = args.par2
@@ -492,17 +417,17 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
             print('process snapshot ', snap_fname)
             sys.stdout.flush()
 
-        dfSnap = pg.SnapshotCache(snap_fname, profile=args.profile)
+        snap_cache = pg.SnapshotCache(snap_fname, profile=args.profile)
         print('*** ', snap_num, ' process')
-        dfSnap.load_snapshot()
+        snap_cache.load_snapshot()
 
-        gx=dfSnap.galaxy
+        gx=snap_cache.galaxy
         if args.withplot:
-            if not 'galaxy-all' in dfSnap.gx_properties:
+            if not 'galaxy-all' in snap_cache.gx_properties:
                 if args.verbose:
                     print("plot particles in galaxy ", gx.parts)
-                buf = plot_snapshot(dfSnap, dfSnap.galaxy, 'Galaxy star particles')
-                dfSnap.gx_properties.append('galaxy-all', buf)
+                buf = plot_snapshot(snap_cache, snap_cache.galaxy, 'Galaxy star particles')
+                snap_cache.gx_properties.append('galaxy-all', buf)
             else:
                 if args.verbose:
                     print("plot exists already in cache")
@@ -512,8 +437,10 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
             exec(command_str, globals(), locals())
 
         print('*** ', snap_num, ' writing cache')
-        dfSnap.write_chache()
+        snap_cache.write_chache()
         print('*** ', snap_num, ' finished')
+
+        last_snap = snap_cache
 
         if args.verbose:
             print('writing restart file "%s"...' % RESTART_FILENAME)
