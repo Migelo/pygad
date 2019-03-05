@@ -259,7 +259,7 @@ def plot_snapshot(sf, snapshot, title=None):
     print("plotting snapshot ", snapshot.parts)
     print("prefix, title: ", prefix, ", ", title)
     fig, ax = plt.subplots(figsize=(figx, figy))
-    if not title is None:
+    if title is not None:
         ax.set_title(title + ' ('+ prefix + ')')
 
     pg.plotting.image(snapshot.stars, ax=ax)

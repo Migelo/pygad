@@ -46,6 +46,7 @@ general = {
     'IMF': '<undefined>',
     'SSP_dir': '<undefined>',
     'unclear_blocks': 'warning',
+    'Profile_dir': '',
     }
 block_infos = {}
 # def. units have to be strings - they are used as replacements
@@ -141,6 +142,8 @@ def read_config(config):
     if unclear_blocks not in ['exception', 'warning', 'ignore']:
         raise ValueError('Unclear block mode "%s" is unknown!' % unclear_blocks)
     general['unclear_blocks'] = unclear_blocks
+    if cfg.has_option('general', 'Profile_dir'):
+        general['Profile_dir'] = cfg.get('general', 'Profile_dir')
 
     default_gadget_units.clear()
     default_gadget_units.update( cfg.items('base units') )

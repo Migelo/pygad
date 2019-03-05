@@ -4,6 +4,7 @@ from PIL import Image
 import sys
 import re
 import time
+import numpy as np
 import pygad as pg            # use absolute package loading
 from .. import environment
 
@@ -16,7 +17,7 @@ class SnapshotCache:
         self.__data_file = snapfile_name
         self.__profile = ''
         self.__profile_properties = SnapshotProperty()
-        self.__load_profile(profile)
+        self._load_profile(profile)
 
         if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
             print("************************************************************************")
@@ -24,7 +25,7 @@ class SnapshotCache:
             print("************************************************************************")
 
         self.__results = dict()
-        self.__data = None
+        self.__snapshot = None
         self.__dm_halo = None
         self.__halo_properties = SnapshotProperty()
         self.__gx_properties = SnapshotProperty()
@@ -265,7 +266,7 @@ class SnapshotCache:
     @property
     def dm_halo(self):
         if self.__dm_halo is None:
-            self.__create_DM_halo()
+            self._create_DM_halo()          # $$$ prepare_zoom
         return self.__dm_halo
 
     @property
@@ -349,11 +350,11 @@ class SnapshotCache:
 
     @property
     def snapshot(self):
-        return self.__data
+        return self.__snapshot
 
     @snapshot.setter
     def snapshot(self, value):
-        self.__data = value
+        self.__snapshot = value
 
     @property
     def results(self):
@@ -395,14 +396,17 @@ class SnapshotCache:
         return self.__destination + "/" + postfix_gx
 
     def __get_profile_filename(self):
-        postfix_profile = self.__filename + '-profile.info'
-        return self.__destination + "/" + postfix_profile
+        postfix_profile = 'profile-' + self.__profile + '.info'
+        if self.__global_profile:
+            return pg.gadget.general['Profile_dir'] + '/' + postfix_profile
+        else:
+            return postfix_profile
 
     def get_profile_path(self):
         profile_path = self.__destination + '/'
         return profile_path
 
-    def load_snapshot(self, useChache=True, forceCache=False, loadBinaryProperties=False):
+    def load_snapshot(self, useChache=True, forceCache=False, loadBinaryProperties=False, findgxfast=False):
         # type: (bool, bool) -> pg.snapshot
         filename = self.name
         if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
@@ -411,7 +415,7 @@ class SnapshotCache:
             print("*********************************************")
         #snapshot = pg.Snap(filename, load_double_prec=True)
         snapshot = pg.Snapshot(filename, load_double_prec=True)
-        self.__data = snapshot
+        self.__snapshot = snapshot
 
         if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
             print("boxsize ", snapshot.boxsize)
@@ -424,22 +428,33 @@ class SnapshotCache:
         try:
             if not useChache or forceCache:
                 raise FileNotFoundError
+            # halo properties are found, re-tranlsate and re-orientate the halo, nothing else has to be done
             self.__halo_properties._read_info_file(self.__get_halo_filename())
-            self.__center_gx()
-            self.__gx_orientate()
+            self._center_gx()
+            self._gx_orientate()
             self.__gx_properties._read_info_file(self.__get_gx_filename())
             if loadBinaryProperties:        # only when reloading, as no binary data in generated automatically
                 self.halo_properties.load_binary_properties()
                 self.gx_properties.load_binary_properties()
                 self.profile_properties.load_binary_properties()
         except Exception as e:
-            self.__create_DM_halo()
+            halo = None
+            gx = None
+            if not findgxfast:
+                halo, gx, halos = self._prepare_zoom(mode='auto', shrink_on='stars', ret_FoF=True)
+                self._create_DM_halo(halos[0])
+                if gx is not None:
+                    self.__galaxy_all = gx
+                    self.__galaxy = gx
+            else:
+                self._create_DM_halo(None)
+                self._center_gx()
+                self._gx_orientate()
+
+            self._create_gx_properties()
+
             if useChache or forceCache:
                 self.__halo_properties._write_info_file(self.__get_halo_filename(), force=forceCache)
-            self.__center_gx()
-            self.__gx_orientate()
-            self.__create_gx_properties()
-            if useChache or forceCache:
                 self.__gx_properties._write_info_file(self.__get_gx_filename(), force=forceCache)
                 self.__profile_properties._write_info_file(self.__get_profile_filename(), force=forceCache)
 
@@ -448,10 +463,9 @@ class SnapshotCache:
             print("loading complete Rvir=", self.Rvir)
             print("*********************************************")
         self.__loaded = True
-        return self.__data
+        return self.__snapshot
 
     def write_chache(self, forceCache = False):
-        filename = self.name
         self.__halo_properties._write_info_file(self.__get_halo_filename(), force=forceCache)
         self.__gx_properties._write_info_file(self.__get_gx_filename(), force=forceCache)
         self.__profile_properties._write_info_file(self.__get_profile_filename(), force=forceCache)
@@ -524,16 +538,18 @@ class SnapshotCache:
         cmd_par4 = par4
         cmd_par5 = par5
         if not self.__loaded:
+            if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
+                print('*** load snapshot')
             self.load_snapshot()
             if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
-                print('*** loaded')
+                print('*** snapshot loaded')
         #dfSnap = self
         globalsParameter = globals().copy()
         globalsParameter['np'] = np
         globalsParameter['plt'] = plt
 
         localsParameter = locals().copy()
-        localsParameter['dfSnap'] = self
+        localsParameter['snap_cache'] = self
 
         command_str = load_command(command)
         localsParameter['snap_exec'] = 'prepare'
@@ -560,10 +576,15 @@ class SnapshotCache:
 
         return
 
-    def __load_profile(self, profile):
+    def _load_profile(self, profile):
+        self.__global_profile = False
         if profile == '':
             profile_name = 'cache'
         else:
+            if len(profile) > 1:
+                if profile[:1] == '$':
+                    profile = profile[1:]
+                    self.__global_profile = True
             profile_name = profile
 
         split_names = os.path.split(self.name)
@@ -595,7 +616,7 @@ class SnapshotCache:
 
         return
 
-    def __create_DM_halo(self):
+    def _create_DM_halo(self, halo):
         def convert_to_Units(prop):
             if isinstance(prop,tuple):
                 value = pg.UnitArr([s for s in prop], units=None)
@@ -603,21 +624,25 @@ class SnapshotCache:
             else:
                 return prop
 
-        if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
-            print("*********************************************")
-            print(("creating DM-halo ", self.__data.parts))
-            print("*********************************************")
+        if halo is not None:
+            dm_halo = halo
+        else:   # this part is used, when prepare_zoom is not used
+            if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
+                print("*********************************************")
+                print(("creating DM-halo ", self.__snapshot.parts))
+                print("*********************************************")
 
-        search_snap = self.__data.dm
+            search_snap = self.__snapshot.dm
 
-        if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
-            print("search_snap ", search_snap.parts)
+            if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
+                print("search_snap ", search_snap.parts)
 
-        FoF, N_FoF = pg.analysis.find_FoF_groups(search_snap, l='6 ckpc')
-        halos = pg.analysis.generate_FoF_catalogue(search_snap, max_halos=1, FoF=FoF,
-                                                       exlude=lambda h, s: h.lowres_mass / h.mass > 0.01)
-        dm_halo = halos[0]  # most massive halo
+            FoF, N_FoF = pg.analysis.find_FoF_groups(search_snap, l='6 ckpc')
+            halos = pg.analysis.generate_FoF_catalogue(search_snap, max_halos=1, FoF=FoF,
+                                                           exlude=lambda h, s: h.lowres_mass / h.mass > 0.01)
+            dm_halo = halos[0]  # most massive halo
 
+        # create halo properties
         if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
             print("DM-halo center ", dm_halo.ssc)
             print("DM-halo properties")
@@ -640,13 +665,13 @@ class SnapshotCache:
             print("*********************************************")
         return dm_halo
 
-    def __create_gx_properties(self):
+    def _create_gx_properties(self):
 
         info = SnapshotProperty()
         info.append("date-created", '"' + time.asctime( time.localtime(time.time()) ) + '"')
         info.append("profile-name", self.__profile)
         gx = self.__galaxy_all
-        halo = self.__data
+        halo = self.__snapshot
 
         R200 = float(self.halo_properties['R200_com'])
         M200 = float(self.halo_properties['M200_com'])
@@ -655,10 +680,10 @@ class SnapshotCache:
         M500 = float(self.halo_properties['M500_com'])
 
         # infos part 1
-        info['a'] = self.__data.scale_factor
-        info['cosmic_time'] = self.__data.cosmic_time()
-        info['redshift'] = self.__data.redshift
-        info['h'] = self.__data.cosmology.h(self.__data.redshift)
+        info['a'] = self.__snapshot.scale_factor
+        info['cosmic_time'] = self.__snapshot.cosmic_time()
+        info['redshift'] = self.__snapshot.redshift
+        info['h'] = self.__snapshot.cosmology.h(self.__snapshot.redshift)
         #            print('center:             ', center, file=f)
         info['center_com'] = pg.analysis.center_of_mass(gx) if gx is not None else None
         info['center_ssc)'] = pg.analysis.shrinking_sphere(gx,
@@ -674,10 +699,10 @@ class SnapshotCache:
         info['M500'] = M500
 
         # infos part 2
-        # h = self.__data[pg.BallMask(R200, center=self.__center, sph_overlap=False)]
+        # h = self.__snapshot[pg.BallMask(R200, center=self.__center, sph_overlap=False)]
         # h=halo?
         if halo:
-            info['M_stars'] = halo.stars['mass'].sum().in_units_of('Msol', subs=self.__data) \
+            info['M_stars'] = halo.stars['mass'].sum().in_units_of('Msol', subs=self.__snapshot) \
                                         if len(halo.stars) else None
             info['L_halo'] = halo['angmom'].sum(axis=0)
             info['L_baryons'] = halo.baryons['angmom'].sum(axis=0)
@@ -686,8 +711,8 @@ class SnapshotCache:
             info['L_halo'] = None
             info['L_baryons'] = None
         if gx:
-            info['M_stars'] = gx.stars['mass'].sum().in_units_of('Msol', subs=self.__data)
-            info['M_gas'] = gx.gas['mass'].sum().in_units_of('Msol', subs=self.__data)
+            info['M_stars'] = gx.stars['mass'].sum().in_units_of('Msol', subs=self.__snapshot)
+            info['M_gas'] = gx.gas['mass'].sum().in_units_of('Msol', subs=self.__snapshot)
             info['Z_stars'] = (gx.stars['mass'] * gx.stars['metallicity']).sum() / gx.stars['mass'].sum() \
                                     if len(gx.stars) else None
             info['Z_gas'] =  (gx.gas['mass'] * gx.gas['metallicity']).sum() / gx.gas['mass'].sum()
@@ -725,20 +750,24 @@ class SnapshotCache:
         return
 
 
-    def __center_gx(self):
+    def _center_gx(self):
         if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
             print("*********************************************")
             print("searching for galaxies - shrinking sphere...")
-        stars = self.__data.stars
+        stars = self.__snapshot.stars
         center = pg.analysis.shrinking_sphere(stars, center=[stars.boxsize / 2] * 3, R=stars.boxsize)
-        pg.Translation(-center).apply(self.__data, total=True)
+        pg.Translation(-center).apply(self.__snapshot, total=True)
         self.__center = center
+        vel_center = pg.analysis.mass_weighted_mean(self.__snapshot[self.__snapshot['r'] < '1 kpc'], 'vel')
+        if environment.verbose >= environment.VERBOSE_NORMAL:
+            print('center velocities at:', vel_center)
+        self.__snapshot['vel'] -= vel_center
 
         # Rvir_property = self.__snap_config.Rvir_property
         # Rvir = self.dm_halo.props[Rvir_property]
         Rgx = float(self.Rvir) * self.gx_radius
         mask = pg.BallMask(str(Rgx) + ' kpc h_0**-1', center=[0, 0 , 0])
-        snapshot_gx = self.__data[mask]
+        snapshot_gx = self.__snapshot[mask]
 
         if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
             print("searching for galaxies - complete")
@@ -749,7 +778,7 @@ class SnapshotCache:
         return
 
 
-    def __gx_orientate(self):
+    def _gx_orientate(self):
         if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
             print("*********************************************")
             print("orientate galaxy...")
@@ -761,6 +790,336 @@ class SnapshotCache:
             print("*********************************************")
         return
 
+    def _prepare_zoom(self, mode='auto', shrink_on='stars',
+                     linking_length=None, linking_vel='200 km/s', ret_FoF=False,
+                     sph_overlap_mask=False, gal_R200=0.10, star_form='deduce',
+                     gas_trace='deduce', to_physical=True, load_double_prec=False,
+                     fill_undefined_nan=True, gas_traced_blocks='all',
+                     gas_traced_dervied_blocks=None, **kwargs):
+        '''
+        A convenience function to load a snapshot from a zoomed-in simulation that is
+        not yet centered or oriented.
+
+        Args:
+            self (str, Snap):   The snapshot of a zoomed-in simulation to prepare.
+                                Either as an already loaded snapshot or a path to the
+                                snapshot.
+            mode (str):         The mode in which to prepare the snapshot. You can
+                                choose from:
+                                    * 'auto':   try 'info', if it does not work
+                                                fallback to 'FoF'
+                                    * 'info':   read the info file (from `info`) and
+                                                take the center and the reduced
+                                                inertia tensor (for orientation) with
+                                                fallback to angular momentum from this
+                                                file
+                                    * 'ssc':    center the snapshot using a
+                                                shrinking sphere method (shrinking on
+                                                the sub-snapshot specified by
+                                                `shrink_on`, see below)
+                                                ATTENTION: can easily center on a
+                                                non-resolved galaxy!
+                                    * 'FoF':    Do a FoF search on all particles and
+                                                generate a halo catalogue for all
+                                                those halos that have at most 1% mass
+                                                from "lowres" particles. Then find the
+                                                most massive FoF group of particles
+                                                defined by `shrink_on` therein and
+                                                finally perform a shrinking sphere on
+                                                them to find the center. If
+                                                `shrink_on` is 'all' or 'highres',
+                                                skip the second FoF search and do the
+                                                "ssc" on the most massive FoF group of
+                                                the first step. The linking length for
+                                                (both) the FoF finder is given by
+                                                `linking_length`.
+            info (str, dict):   Now gx_properties
+                                Path to info file or the dictionary as returned from
+                                `read_info_file`.
+                                However, if set to 'deduce', it is tried to deduce the
+                                path to the info file from the snapshot filename: it
+                                is assumed to be in a subfolder 'trace' that is in the
+                                same directory as the snapshot and named
+                                `info_%03d.txt`, where the `%03d` is filled with the
+                                snapshot number. The latter is taken as the last three
+                                characters of the first dot / the end of the filename.
+            shrink_on (str, list):
+                                Define the part of the snapshot to perform the
+                                shrinking sphere on, if there is no info file found or
+                                info==None. It can be 'all' (use the entire
+                                (sub-)snapshot `s`), a family name, or a list of
+                                particle types (e.g. [0,1,4]).
+            linking_length (UnitScalar):
+                                The linking length used for the FoF finder in mode
+                                "FoF" (if None, it defaults to
+                                ( 1500.*rho_crit / median(mass) )^(-1/3) as defined in
+                                `generate_FoF_catalogue`).
+            linking_vel (UnitScalar):
+                                The linking velocity used for the FoF finder in mode
+                                "FoF". Only used for defining the galaxy, not for the
+                                halo.
+            ret_FoF (bool):     Also return the FoF group catalogue created (if in
+                                mode "FoF").
+            sph_overlap_mask (bool):
+                                Whether to mask all particles that overlap into the
+                                halo region (that is also include SPH particles that
+                                are outside the virial radius, but their smoothing
+                                length reaches into it).
+            gal_R200 (float):   The radius to define the galaxy. Everything within
+                                <gal_R200>*R200 will be defined as the galaxy.
+
+            not clear how to use these parameters in first release, will be moved to cCache-commands
+            star_form (str):    Path to the star formation file as written by the
+                                program `gtrace`.
+                                If set to 'deduce', its path is tried to build from
+                                the snapshot filename by taking its directory and
+                                adding '/trace/star_form.ascii'.
+            gas_trace (str):    Path to the tracing file as written by the program
+                                `gtracegas`.
+                                If set to 'deduce', its path is tried to build from
+                                the snapshot filename by taking its directory and
+                                looking for files '/../*gastrace*'.
+            to_physical (bool): Whether to convert the snapshot to physical units.
+            load_double_prec (bool):
+                                Force to load all blocks in double precision.
+                                Equivalent with setting the snapshots attribute.
+            fill_undefined_nan (bool):
+                                Fill star formation info for IDs not listed in the
+                                `star_form` file. For more info see
+                                `fill_star_from_info`.
+            gas_traced_blocks (iterable, str):
+                                The blocks to add with `fill_gas_from_traced`.
+            gas_traced_dervied_blocks (bool):
+                                Passed to `fill_gas_from_traced` as `add_derived`.
+                                Defaults to `gas_traced_blocks=='all'` if None.
+            kwargs:             Passed to `generate_FoF_catalogue` in `mode='FoF'`.
+
+        Returns:
+            s (Snap):           The prepared snapshot.
+            halo (SubSnap):     The cut halo of the found structure.
+            gal (SubSnap):      The central galaxy of the halo as defined by
+                                `gal_R200`.
+        '''
+
+        def get_shrink_on_sub(snap, shrink_on):
+            if isinstance(shrink_on, str):
+                shrink_on = str(shrink_on)
+                if shrink_on == 'all':
+                    return snap
+                else:
+                    return getattr(s, shrink_on)
+            elif isinstance(shrink_on, list):
+                return s[shrink_on]
+            else:
+                raise ValueError('`shrink_on` must be a family name or a list ' + \
+                                 'of particle types, but was: %s' % (shrink_on,))
+
+        def FoF_exclude(h, s, threshold=1e-2):
+            M_lowres = h.lowres_mass
+            M = h.mass
+            return M_lowres / M > threshold
+
+        if 'gastrace' in kwargs:
+            raise ValueError("You passed 'gastrace'. Did you mean 'gas_trace'?")
+        if 'starform' in kwargs:
+            raise ValueError("You passed 'starform'. Did you mean 'star_form'?")
+
+        s = self.__snapshot
+
+        # if isinstance(s, str):
+        #     s = Snapshot(s, load_double_prec=load_double_prec)
+        gal_R200 = self.__profile_properties['gx_radius']
+        if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
+            print('prepare zoomed-in', s)
+
+        # read info file (if required)
+        if mode in ['auto', 'info']:
+            if len(self.__gx_properties) == 0:
+                if mode == 'auto':
+                    mode = 'FoF'
+                else:
+                    raise IOError('Could not read/find the info file (gx.info)!')
+            else:
+                if mode == 'auto':
+                    mode = 'info'
+
+        # if to_physical:
+        #     s.to_physical_units()
+
+        # find center
+        if mode == 'info':      # info file found an loaded into gx_properties
+            center = self.__gx_properties['center']
+        elif mode in ['ssc', 'FoF']:
+            if mode == 'FoF':
+                halos = pg.analysis.generate_FoF_catalogue(
+                    s,
+                    l=linking_length,
+                    exclude=FoF_exclude,
+                    #calc=['mass', 'lowres_mass'],       # generate all halo properties
+                    max_halos=1,                         #  take only 3 instead of 10, for performance
+                    progressbar=False,
+                    **kwargs
+                )
+                if shrink_on not in ['all', 'highres']:     # $$ shrink_on parameter nicht klar
+                    galaxies = pg.analysis.generate_FoF_catalogue(
+                        get_shrink_on_sub(s, shrink_on),
+                        l=linking_length,
+                        dvmax=linking_vel,
+                        calc=['mass', 'com'],
+                        max_halos=5,                    # take only 5 instead of 10
+                        progressbar=False,
+                        **kwargs
+                    )
+                    # The most massive galaxy does not have to be in a halo with little
+                    # low resolution elements! Find the most massive galaxy living in a
+                    # "resolved" halo:
+                    galaxy = None
+                    for gal in galaxies:
+                        # since the same linking lengths were used for the halos and
+                        # the galaxies (rethink that!), a galaxy in a halo is entirely
+                        # in that halo or not at all
+                        gal_ID_set = set(gal.IDs)
+                        for h in halos:
+                            if len(gal_ID_set - set(h.IDs)) == 0:
+                                galaxy = gal
+                                break
+                        del h, gal_ID_set
+                        if galaxy is not None:
+                            break
+                    del galaxies
+                    if galaxy is None:
+                        shrink_on = None
+                    else:
+                        shrink_on = s[galaxy]
+                else:
+                    shrink_on = s[halos[0]]
+            elif mode == 'ssc':
+                shrink_on = get_shrink_on_sub(s, shrink_on)
+
+            if shrink_on is not None and len(shrink_on) > 0:
+                com = pg.analysis.center_of_mass(s)
+                R = np.max(pg.utils.periodic_distance_to(s['pos'], com, s.boxsize))
+                center = pg.analysis.shrinking_sphere(shrink_on, com, R)
+            else:
+                center = None
+        else:
+            raise ValueError('Unkown mode "%s"!' % mode)
+
+        # center in space
+        if center is None:
+            if environment.verbose >= environment.VERBOSE_TACITURN:
+                print('no center found -- do not center')
+        else:
+            if environment.verbose >= environment.VERBOSE_NORMAL:
+                print('center at:', center)
+            pg.Translation(-center).apply(s, total=True)
+            self.__center = center
+            # center the velocities
+
+        # cut the halo (<R200)
+        if mode == 'info':
+            R200 = self.__gx_properties['center']['R200']
+            M200 = self.__gx_properties['center']['M200']
+        else:
+            if environment.verbose >= environment.VERBOSE_NORMAL:
+                print('derive virial information')
+            R200, M200 = pg.analysis.virial_info(s)
+        if environment.verbose >= environment.VERBOSE_NORMAL:
+            print('R200:', R200)
+            print('M200:', M200)
+        halo = s[pg.BallMask(R200, sph_overlap=sph_overlap_mask)]
+
+        # orientate at the reduced inertia tensor of the baryons wihtin 10 kpc
+        if environment.verbose >= environment.VERBOSE_NORMAL:
+            print('orientate', end=' ')
+        if mode == 'info':
+            if 'I_red' in self.__gx_properties:
+                redI = self.__gx_properties['I_red']
+                if redI is not None:
+                    redI = redI.reshape((3, 3))
+                if environment.verbose >= environment.VERBOSE_NORMAL:
+                    print('at the galactic red. inertia tensor from info file')
+                if environment.verbose >= environment.VERBOSE_TALKY:
+                    print(redI)
+                mode, qty = 'red I', redI
+            else:
+                if environment.verbose >= environment.VERBOSE_NORMAL:
+                    print('at angular momentum of the galaxtic baryons from info file:')
+                mode, qty = 'vec', self.__gx_properties['L_baryons']
+            s.orientate_at(s, mode, qty=qty, total=True)
+        else:
+            if environment.verbose >= environment.VERBOSE_NORMAL:
+                print('at red. inertia tensor of the baryons within %.3f*R200' % gal_R200)
+            pg.analysis.orientate_at(s[pg.BallMask(gal_R200 * R200, sph_overlap=False)].baryons,
+                         'red I',
+                         total=True
+                         )
+
+        # cut the inner part as the galaxy
+        gal = s[pg.BallMask(gal_R200 * R200, sph_overlap=sph_overlap_mask)]
+        Ms = gal.stars['mass'].sum()
+        if environment.verbose >= environment.VERBOSE_NORMAL:
+            print('M*:  ', Ms)
+
+        if len(gal) == 0:
+            gal = None
+        if len(halo) == 0:
+            halo = None
+
+        # these functions will be moved to gCache-commands (former gtracegas, gtrace)
+        # if star_form == 'deduce':
+        #     try:
+        #         star_form = os.path.dirname(s.filename) + '/trace/star_form.ascii'
+        #     except:
+        #         print('WARNING: could not deduce the path to the ' + \
+        #               'star formation file!', file=sys.stderr)
+        #         star_form = None
+        # if isinstance(star_form, str):
+        #     star_form = os.path.expanduser(star_form)
+        #     if not os.path.exists(star_form):
+        #         print('WARNING: There is no star formation file ' + \
+        #               'named "%s"' % star_form, file=sys.stderr)
+        #         star_form = None
+        #     else:
+        #         if environment.verbose >= environment.VERBOSE_NORMAL:
+        #             print('read star formation file from:', star_form)
+        #         fill_star_from_info(s, star_form,
+        #                             fill_undefined_nan=fill_undefined_nan)
+        #
+        # if gas_trace == 'deduce':
+        #     try:
+        #         directory = os.path.dirname(s.filename) + '/../'
+        #         candidates = []
+        #         for fname in os.listdir(directory):
+        #             if fname.startswith('gastrace'):
+        #                 candidates.append(fname)
+        #         if len(candidates) == 1:
+        #             gas_trace = directory + candidates[0]
+        #         else:
+        #             raise RuntimeError('too many candidates!')
+        #     except:
+        #         print('WARNING: could not deduce the path to the ' + \
+        #               'gas tracing file!', file=sys.stderr)
+        #         gas_trace = None
+        # if isinstance(gas_trace, str):
+        #     gas_trace = os.path.expanduser(gas_trace)
+        #     if not os.path.exists(gas_trace):
+        #         print('WARNING: There is no gas trace file named ' + \
+        #               '"%s"' % gas_trace, file=sys.stderr)
+        #         gas_trace = None
+        #     else:
+        #         if environment.verbose >= environment.VERBOSE_NORMAL:
+        #             print('read gas trace file from:', gas_trace)
+        #         if gas_traced_dervied_blocks is None:
+        #             gas_traced_dervied_blocks = (gas_traced_blocks == 'all')
+        #         fill_gas_from_traced(s, gas_trace,
+        #                              add_blocks=gas_traced_blocks,
+        #                              add_derived=gas_traced_dervied_blocks)
+
+        if mode == 'FoF' and ret_FoF:
+            return halo, gal, halos
+        else:
+            return  halo, gal
 
     def print_results(self):
         print(" ")

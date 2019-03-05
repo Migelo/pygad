@@ -19,7 +19,7 @@ Also doctest other parts of this sub-module:
 '''
 from .snapshot import *
 from .snapshotcache import *
-#from .derive_rules import *
+from .derive_rules import *     #   not clear how to import: are used often e.g. ege_from_form
 from .derived import read_derived_rules
 from .sim_arr import *
 from .masks import *

@@ -76,7 +76,7 @@ from . import octree
 from . import ssp
 from . import binning
 from . import analysis
-from . import tools
+#from . import tools            prepare zoom moved to SnapshotCache, others -> Cmd-scripts
 from . import cloudy
 from . import plotting
 
@@ -100,7 +100,7 @@ from .environment import gc_full_collect
 # from .transformation import Translation, Rotation
 # from .snapshot import Snapshot, SubSnapshot, BallMask, BoxMask, DiscMask, IDMask, ExprMask, SimArr, SnapMask
 # from .binning import gridbin2d, gridbin, smooth
-# from .tools import prepare_zoom, read_info_file
+# from .tools import prepare_zoom, read_info_file   # prepare_zoom moved to SnapshotCache, read_info_file to SnapshotProperty
 # ################################################
 # only import core objects to be visible on package level
 # functions to be used from sub-modules only
