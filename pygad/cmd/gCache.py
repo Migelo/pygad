@@ -1,4 +1,6 @@
 import argparse
+import glob
+import sys
 
 # # minimum number of particles required in the halos/galaxies
 # min_N = 100
@@ -7,7 +9,7 @@ import argparse
 # max_halos = 1
 # disc_def = dict() #jzjc_min=0.85, rmax='50 kpc', zmax='10 kpc')
 
-RESTART_FILENAME = 'restart.gcache3'
+RESTART_FILENAME_postfix = 'restart.gcache3'
 
 parser = argparse.ArgumentParser(
             description='Trace the most massive progenitor of the most massive '
@@ -70,7 +72,7 @@ parser.add_argument('--start', '-s',
                     default=None,
                     help='The number of the snapshot to start with (the ' +
                          'latest one). If there is a file called ' +
-                         '"%s" in the destination directory,' % RESTART_FILENAME +
+                         '"%s" in the destination directory,' % RESTART_FILENAME_postfix +
                          'restart the last run and ignore the start parameter. ' +
                          'By default it is looked for the highest consecutive ' +
                          'number in the snapshot filename pattern for which a ' +
@@ -123,6 +125,15 @@ parser.add_argument('--overwrite',
                     action='store_true',
                     help='Force to overwrite possibly existing files in the ' +
                          'trace folder.')
+parser.add_argument('--updatecache',
+                    action='store_true',
+                    help='Update profile cache at the end of processing ' +
+                         'otherwise results are temporary only.')
+# moved to profile properties
+# parser.add_argument('--findgxfast',
+#                     action='store_true',
+#                     help='use fast method to find central galaxy ' +
+#                          'otherwise full FoF search is used.')
 parser.add_argument('--verbose', '-v',
                     action='store_true',
                     help='Run in verbose mode.')
@@ -160,13 +171,28 @@ parser.add_argument('--verbose', '-v',
 #         center = old_center
 #     return center
 
-def find_last_snapshot(args):
+def get_snap_fname(dirname, pattern, num):
+    fparts = os.path.split(pattern)
+    nums = (num,) * args.name_pattern.count('%')
+    fname = dirname + '/' + fparts[1] % nums
+    return fname
+
+
+def find_last_snapshot(args, dirname):
     '''Find the highest (consecutive) snapshot number.'''
     i_max = int(1e4)
     for num in range(args.end, i_max):
-        nums = (num,) * args.name_pattern.count('%')
-        snap_fname = args.name_pattern % nums
-        if not os.path.exists(snap_fname):
+        fparts = os.path.split(args.name_pattern)
+        fname = dirname + '/' + fparts[1]
+        nums = (num,) * fname.count('%')
+        snap_fname = fname % nums
+        filelist = glob.glob(snap_fname)
+        if len(filelist) > 1:
+            print('ERROR: pattern "%s" invalid ' % args.name_pattern,
+                  'identifies more than one snapshot!', file=sys.stderr)
+            sys.exit(1)
+        if len(filelist) == 0:
+        #if not os.path.exists(snap_fname):
             if num == args.end:
                 snap_fname = os.path.basename(snap_fname)
                 print('ERROR: first snapshot "%s"' % snap_fname,
@@ -179,13 +205,22 @@ def find_last_snapshot(args):
                                  os.path.basename(args.name_pattern)), file=sys.stderr)
     sys.exit(1)
 
-def find_first_snapshot(args):
+
+def find_first_snapshot(args, dirname):
     '''Find the first snapshot number.'''
     i_max = int(1e4)
     for num in range(0, i_max):
-        nums = (num,) * args.name_pattern.count('%')
-        snap_fname = args.name_pattern % nums
-        if not os.path.exists(snap_fname):
+        fparts = os.path.split(args.name_pattern)
+        fname = dirname + '/' + fparts[1]
+        nums = (num,) * fname.count('%')
+        snap_fname = fname % nums
+        filelist = glob.glob(snap_fname)
+        if len(filelist) > 1:
+            print('ERROR: pattern "%s" invalid ' % args.name_pattern,
+                  'identifies more than one snapshot!', file=sys.stderr)
+            sys.exit(1)
+        if len(filelist) == 0:
+        #if not os.path.exists(snap_fname):
             if num == i_max:
                 snap_fname = os.path.basename(snap_fname)
                 print('ERROR: first snapshot "%s"' % snap_fname,
@@ -193,10 +228,14 @@ def find_first_snapshot(args):
                 sys.exit(1)
         else:
             return num
-
-    print('ERROR: did not find first snapshot number in',
+    if args.end is None:
+        print('ERROR: did not find first snapshot number in',
+              '[%d,%d] with pattern "%s"!' % (0, i_max,
+                                              args.name_pattern), file=sys.stderr)
+    else:
+        print('ERROR: did not find first snapshot number in',
                          '[%d,%d] with pattern "%s"!' % (args.end, i_max,
-                                 os.path.basename(args.name_pattern)), file=sys.stderr)
+                                 args.name_pattern), file=sys.stderr)
     sys.exit(1)
 
 
@@ -274,6 +313,9 @@ def plot_snapshot(sf, snapshot, title=None):
 
 
 if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by command line script
+    for cp in sys.argv[1:]:
+        print("gCache: argument ", cp)
+
     args = parser.parse_args()
 
     import sys
@@ -310,164 +352,186 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
                                  'will be the same name for all snapshots!', file=sys.stderr)
         sys.exit(1)
     # prepare arguments
-    if args.destination is None:
-        args.destination = os.path.dirname(args.name_pattern) + '/' + args.profile
 
-    # prepare trace folder
-    if not os.path.exists(args.destination):
-        if args.verbose: print('create profile folder: "%s"' % args.destination)
-        os.makedirs(args.destination)
-    if os.listdir(args.destination):
-        print('WARNING: profile is not empty!', file=sys.stderr)
-
-    RESTART_FILENAME = args.destination + '/' + RESTART_FILENAME
-    if args.overwrite and os.path.exists(RESTART_FILENAME):
-        os.remove(RESTART_FILENAME)
-    if os.path.exists(RESTART_FILENAME):
-        if args.verbose:
-            print('reading restart file "%s"...' % RESTART_FILENAME)
-            print('WARNING: ignoring --start=%s!' % args.start)
-            sys.stdout.flush()
-        with open(RESTART_FILENAME, 'rb') as f:
-            old_args, snap_num = pickle.load(f)
-        # check the compability of the arguments
-        new_args = vars(args).copy()
-        for not_cmp in ['start', 'step', 'command','withplot', 'end', 'tlimit', 'overwrite', 'verbose']:
-            old_args.pop(not_cmp)
-            new_args.pop(not_cmp)
-        if old_args != new_args:
-            print('ERROR: arguments are not compatible ' + \
-                                 'with the previous run!', file=sys.stderr)
-            print('Not matching these old arguments:', file=sys.stderr)
-            for arg, value in old_args.items():
-                if arg in new_args and new_args[arg] != value:
-                    print('  %-20s %s' % (arg+':', value), file=sys.stderr)
-            sys.exit(1)
-        del old_args, new_args
-        args.start = snap_num-args.step
-        if args.verbose:
-            print('done reading restart file')
-        if args.end is None:
-            args.end = find_first_snapshot(args)
-        if snap_num == args.end:
-            print('WARNING: no snapshot to process last =', snap_num, ' end =', args.end, file=sys.stderr)
-            exit(1)
-
-        print('restart: snapshot ', args.start, args.end)
-
+    if args.name_pattern.find('/') > -1:
+        dirname = os.path.dirname(args.name_pattern)
     else:
-        if args.end is None:
-            args.end = find_first_snapshot(args)
+        dirname = '.'
+    dirlist = glob.glob(dirname)
 
-        if args.start is None:
-            args.start = find_last_snapshot(args)
+    if len(dirlist) == 0:
+        print('WARNING: no snapshots directories found - stopping', file=sys.stderr)
+        exit(1)
 
-        # prepare starformation file
-        # star_form_filename = args.destination + '/star_form.ascii'
-        # if args.verbose:
-        #     print('====================================================')
-        #     print('prepare star formation file "%s"...' % star_form_filename)
-        #     sys.stdout.flush()
-        # if os.path.exists(star_form_filename) and not args.overwrite:
-        #     print('ERROR: file "%s" already ' % star_form_filename + \
-        #                          'exists (consider "--overwrite")!', file=sys.stderr)
-        #     sys.exit(1)
-        # with open( star_form_filename, 'w' ) as f:
-        #     print('%-12s \t %-11s \t %-18s \t %-10s \t %-11s' % (
-        #                 'ID', 'a_form', 'r [kpc]', 'r/R200(a)', 'Z'), file=f)
-        #
-        # snap_num = args.start
-        # print('prepare: snapshot ', snap_num, args.end)
-        #
-        # if args.verbose:
-        #     print('found halo & galaxy of interest in %f sec' % (
-        #             time.time() - start_time))
+    for snap_dir in dirlist:
+        args.destination = snap_dir + '/' + args.profile
 
+        print('*** process directory ', snap_dir)
 
-    # do tracing / loop over snapshot (in reverse order)
-    if args.verbose: start_time = time.time()
+        RESTART_FILENAME = args.destination + '/' + RESTART_FILENAME_postfix
+        if args.overwrite and os.path.exists(RESTART_FILENAME):
+            os.remove(RESTART_FILENAME)
+        if os.path.exists(RESTART_FILENAME):
+            if args.verbose:
+                print('reading restart file "%s"...' % RESTART_FILENAME)
+                print('WARNING: ignoring --start=%s!' % args.start)
+                sys.stdout.flush()
+            with open(RESTART_FILENAME, 'rb') as f:
+                old_args, snap_num = pickle.load(f)
+            # check the compability of the arguments
+            new_args = vars(args).copy()
+            for not_cmp in ['start', 'step', 'command','withplot', 'end', 'tlimit', 'overwrite', 'verbose']:
+                old_args.pop(not_cmp)
+                new_args.pop(not_cmp)
+            if old_args != new_args:
+                print('ERROR: arguments are not compatible ' + \
+                                     'with the previous run!', file=sys.stderr)
+                print('Not matching these old arguments:', file=sys.stderr)
+                for arg, value in old_args.items():
+                    if arg in new_args and new_args[arg] != value:
+                        print('  %-20s %s' % (arg+':', value), file=sys.stderr)
+                sys.exit(1)
+            del old_args, new_args
+            args.start = snap_num-args.step
+            if args.verbose:
+                print('done reading restart file')
+            if args.end is None:
+                args.end = find_first_snapshot(args)
+            if snap_num == args.end:
+                print('WARNING: no snapshot to process last =', snap_num, ' end =', args.end, file=sys.stderr)
+                exit(1)
 
-    print('*** process snapshots ', args.start, ' ... ', args.end)
-    print('*** prepare')
-    snap_exec = 'prepare'
-    snap_num = args.start
-    snap_start = args.start
-    snap_end = args.end
-    snap_overwrite = args.overwrite
-    last_snap = None
-    cmd_par = args.par
-    cmd_par1 = args.par1
-    cmd_par2 = args.par2
-    cmd_par3 = args.par3
-    cmd_par4 = args.par4
-    cmd_par5 = args.par5
+            print('restart: snapshot ', args.start, args.end)
 
-    command_str = load_command(args.command)
-    if command_str != '':
-        print("*** execute command ", args.command)
-        print("*** command parameter ", cmd_par)
-        exec(command_str, globals(), locals())
+        else:
+            if args.end is None:
+                args.end = find_first_snapshot(args, snap_dir)
 
-    for snap_num in range(snap_start, snap_end-1, -args.step):
-        nums = (snap_num,) * args.name_pattern.count('%')
-        snap_fname = args.name_pattern % snap_num
-        if args.verbose:
-            print('====================================================')
-            print('process snapshot #%03d' % snap_num)
-            print('process snapshot ', snap_fname)
-            sys.stdout.flush()
+            if args.start is None:
+                args.start = find_last_snapshot(args, snap_dir)
 
-        snap_cache = pg.SnapshotCache(snap_fname, profile=args.profile)
-        print('*** ', snap_num, ' process')
-        snap_cache.load_snapshot()
+            # prepare starformation file
+            # star_form_filename = args.destination + '/star_form.ascii'
+            # if args.verbose:
+            #     print('====================================================')
+            #     print('prepare star formation file "%s"...' % star_form_filename)
+            #     sys.stdout.flush()
+            # if os.path.exists(star_form_filename) and not args.overwrite:
+            #     print('ERROR: file "%s" already ' % star_form_filename + \
+            #                          'exists (consider "--overwrite")!', file=sys.stderr)
+            #     sys.exit(1)
+            # with open( star_form_filename, 'w' ) as f:
+            #     print('%-12s \t %-11s \t %-18s \t %-10s \t %-11s' % (
+            #                 'ID', 'a_form', 'r [kpc]', 'r/R200(a)', 'Z'), file=f)
+            #
+            # snap_num = args.start
+            # print('prepare: snapshot ', snap_num, args.end)
+            #
+            # if args.verbose:
+            #     print('found halo & galaxy of interest in %f sec' % (
+            #             time.time() - start_time))
 
-        gx=snap_cache.galaxy
-        if args.withplot:
-            if not 'galaxy-all' in snap_cache.gx_properties:
-                if args.verbose:
-                    print("plot particles in galaxy ", gx.parts)
-                buf = plot_snapshot(snap_cache, snap_cache.galaxy, 'Galaxy star particles')
-                snap_cache.gx_properties.append('galaxy-all', buf)
+        # prepare trace folder after checking that input files are found
+        if not os.path.exists(args.destination):
+            if args.verbose: print('create profile folder: "%s"' % args.destination)
+            os.makedirs(args.destination)
+        if os.listdir(args.destination):
+            print('WARNING: profile is not empty!', file=sys.stderr)
+
+        # do tracing / loop over snapshot (in reverse order)
+        if args.verbose: start_time = time.time()
+
+        print('*** process snapshots ', args.start, ' ... ', args.end)
+        print('*** prepare')
+        snap_exec = 'prepare'
+        snap_num = args.start
+        snap_start = args.start
+        snap_end = args.end
+        snap_overwrite = args.overwrite
+        last_snap = None
+        cmd_par = args.par
+        cmd_par1 = args.par1
+        cmd_par2 = args.par2
+        cmd_par3 = args.par3
+        cmd_par4 = args.par4
+        cmd_par5 = args.par5
+
+        command_str = load_command(args.command)
+        if command_str != '':
+            print("*** execute command ", args.command)
+            print("*** command parameter ", cmd_par)
+            exec(command_str, globals(), locals())
+
+        for snap_num in range(snap_start, snap_end-1, -args.step):
+            snap_fname = get_snap_fname(snap_dir, args.name_pattern, snap_num)
+            filelist = glob.glob(snap_fname)
+            if len(filelist) != 1:
+                print('ERROR: pattern "%s" invalid ' % args.name_pattern,
+                      'identifies more than one snapshot!', file=sys.stderr)
+                sys.exit(1)
             else:
-                if args.verbose:
-                    print("plot exists already in cache")
+                snap_fname = filelist[0]
+            if args.verbose:
+                print('====================================================')
+                print('process snapshot #%03d' % snap_num)
+                print('process snapshot ', snap_fname)
+                sys.stdout.flush()
 
-        snap_exec = 'process'
+            snap_cache = pg.SnapshotCache(snap_fname, profile=args.profile)
+            print('*** ', snap_num, ' process')
+            # if args.findgxfast:
+            #     snap_cache.load_snapshot(findgxfast=True)
+            # else:
+            snap_cache.load_snapshot()
+
+            gx=snap_cache.galaxy
+            if args.withplot:
+                if not 'galaxy-all' in snap_cache.gx_properties:
+                    if args.verbose:
+                        print("plot particles in galaxy ", gx.parts)
+                    buf = plot_snapshot(snap_cache, snap_cache.galaxy, 'Galaxy star particles')
+                    snap_cache.gx_properties.append('galaxy-all', buf)
+                else:
+                    if args.verbose:
+                        print("plot exists already in cache")
+
+            snap_exec = 'process'
+            if command_str != '':
+                exec(command_str, globals(), locals())
+
+            if args.updatecache:
+                print('*** ', snap_num, ' writing cache')
+                snap_cache.write_chache()
+                print('*** ', snap_num, ' finished')
+
+            last_snap = snap_cache
+
+            if args.verbose:
+                print('writing restart file "%s"...' % RESTART_FILENAME)
+                sys.stdout.flush()
+            with open(RESTART_FILENAME, 'wb') as f:
+                pickle.dump((vars(args),snap_num), f)
+
+            if args.verbose:
+                print('all done with snapshot #%03d in ' % snap_num + \
+                      '%f sec' % (time.time() - start_time))
+                start_time = time.time()
+                sys.stdout.flush()
+
+            if time.time()-t_start > pg.UnitScalar(args.tlimit, 's'):
+                if args.verbose:
+                    print()
+                    print('time limit (%s) exceeded -- stop!' % args.tlimit)
+                break
+
+        print('*** close')
+        snap_exec = 'close'
         if command_str != '':
             exec(command_str, globals(), locals())
 
-        print('*** ', snap_num, ' writing cache')
-        snap_cache.write_chache()
-        print('*** ', snap_num, ' finished')
-
-        last_snap = snap_cache
-
         if args.verbose:
-            print('writing restart file "%s"...' % RESTART_FILENAME)
-            sys.stdout.flush()
-        with open(RESTART_FILENAME, 'wb') as f:
-            pickle.dump((vars(args),snap_num), f)
-
-        if args.verbose:
-            print('all done with snapshot #%03d in ' % snap_num + \
-                  '%f sec' % (time.time() - start_time))
-            start_time = time.time()
-            sys.stdout.flush()
-
-        if time.time()-t_start > pg.UnitScalar(args.tlimit, 's'):
-            if args.verbose:
-                print()
-                print('time limit (%s) exceeded -- stop!' % args.tlimit)
-            break
-
-    print('*** close')
-    snap_exec = 'close'
-    if command_str != '':
-        exec(command_str, globals(), locals())
-
-    if args.verbose:
-        print()
-        print('finished.')
+            print()
+            print('finished.')
 
 else:
     print('unrecognized module name ', __name__ )

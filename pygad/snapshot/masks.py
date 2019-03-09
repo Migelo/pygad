@@ -215,7 +215,7 @@ class BallMask(SnapMask):
         return s + ')'
 
     def _get_mask_for(self, s):
-        from ..utils import periodic_distance_to
+        from ..utils import periodic_distance_to, dist
         R = self._R.in_units_of(s['r'].units, subs=s)
         center = self._center.in_units_of(s['r'].units, subs=s)
 
@@ -421,9 +421,14 @@ class IDMask(SnapMask):
     def __init__(self, IDs):
         super(IDMask, self).__init__()
         if isinstance(IDs, set):
-            self._IDs = np.array(list(IDs))
+            IDlist = list(IDs)
+            if len(IDs) == 0:
+                self._IDs = np.array(IDlist, dtype=np.uint64)
+            else:
+                self._IDs = np.array(IDlist)
         else:
             self._IDs = np.array(IDs, copy=True)
+        return
 
     def inverted(self):
         inv = IDMask(self._IDs)

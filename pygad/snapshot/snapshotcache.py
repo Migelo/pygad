@@ -406,7 +406,7 @@ class SnapshotCache:
         profile_path = self.__destination + '/'
         return profile_path
 
-    def load_snapshot(self, useChache=True, forceCache=False, loadBinaryProperties=False, findgxfast=False):
+    def load_snapshot(self, useChache=True, forceCache=False, loadBinaryProperties=False):
         # type: (bool, bool) -> pg.snapshot
         filename = self.name
         if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
@@ -416,6 +416,11 @@ class SnapshotCache:
         #snapshot = pg.Snap(filename, load_double_prec=True)
         snapshot = pg.Snapshot(filename, load_double_prec=True)
         self.__snapshot = snapshot
+
+        if 'findgxfast' in self.__profile_properties:
+            findgxfast = self.__profile_properties['findgxfast']
+        else:
+            findgxfast = False
 
         if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
             print("boxsize ", snapshot.boxsize)
@@ -430,9 +435,13 @@ class SnapshotCache:
                 raise FileNotFoundError
             # halo properties are found, re-tranlsate and re-orientate the halo, nothing else has to be done
             self.__halo_properties._read_info_file(self.__get_halo_filename())
-            self._center_gx()
-            self._gx_orientate()
             self.__gx_properties._read_info_file(self.__get_gx_filename())
+            if 'center_in_halo' in self.__gx_properties:
+                center_known = self.__gx_properties['center_in_halo']
+            else:
+                center_known = None
+            self._center_gx(center_known)
+            self._gx_orientate()
             if loadBinaryProperties:        # only when reloading, as no binary data in generated automatically
                 self.halo_properties.load_binary_properties()
                 self.gx_properties.load_binary_properties()
@@ -442,13 +451,13 @@ class SnapshotCache:
             gx = None
             if not findgxfast:
                 halo, gx, halos = self._prepare_zoom(mode='auto', shrink_on='stars', ret_FoF=True)
-                self._create_DM_halo(halos[0])
+                self._create_halo_properties(halos[0])
                 if gx is not None:
                     self.__galaxy_all = gx
                     self.__galaxy = gx
             else:
-                self._create_DM_halo(None)
-                self._center_gx()
+                self._create_halo_properties(None)
+                self._center_gx(None)
                 self._gx_orientate()
 
             self._create_gx_properties()
@@ -585,6 +594,9 @@ class SnapshotCache:
                 if profile[:1] == '$':
                     profile = profile[1:]
                     self.__global_profile = True
+                else:
+                    if not os.path.exists(profile):     # local profile not found
+                        self.__global_profile = True    # switch to global mode
             profile_name = profile
 
         split_names = os.path.split(self.name)
@@ -613,10 +625,14 @@ class SnapshotCache:
             self.__profile_properties.append("profile-name", profile_name)
             self.__profile_properties.append('Rvir_property', environment.DEFAULT_Rvir_property)
             self.__profile_properties.append('gx_radius', environment.DEFAULT_gx_radius)
+            self.__profile_properties.append('findgxfast', environment.DEFAULT_findgxfast)
+            self.__profile_properties.append('linking_length', environment.DEFAULT_linking_length)
+            self.__profile_properties.append('linking_vel', environment.DEFAULT_linking_vel)
+            self.__profile_properties.append('lowres_threshold', environment.DEFAULT_lowres_threshold)
 
         return
 
-    def _create_DM_halo(self, halo):
+    def _create_halo_properties(self, halo):
         def convert_to_Units(prop):
             if isinstance(prop,tuple):
                 value = pg.UnitArr([s for s in prop], units=None)
@@ -626,6 +642,7 @@ class SnapshotCache:
 
         if halo is not None:
             dm_halo = halo
+            dm_only = False
         else:   # this part is used, when prepare_zoom is not used
             if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
                 print("*********************************************")
@@ -633,13 +650,30 @@ class SnapshotCache:
                 print("*********************************************")
 
             search_snap = self.__snapshot.dm
+            dm_only = True
+            # old value 0.05
+            if 'lowres_threshold' in self.__profile_properties:
+                threshold = self.__profile_properties['lowres_threshold']
+            else:
+                threshold = pg.environment.DEFAULT_lowres_threshold
+            # default old parameter linking_length=6 ckpc
+            if 'linking_length' in self.__profile_properties:
+                linking_length = self.__profile_properties['linking_length']
+            else:
+                linking_length = pg.environment.DEFAULT_linking_length
 
             if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
                 print("search_snap ", search_snap.parts)
 
-            FoF, N_FoF = pg.analysis.find_FoF_groups(search_snap, l='6 ckpc')
-            halos = pg.analysis.generate_FoF_catalogue(search_snap, max_halos=1, FoF=FoF,
-                                                           exlude=lambda h, s: h.lowres_mass / h.mass > 0.01)
+            if linking_length is None:
+                linking_length = (1500. * search_snap.cosmology.rho_crit(search_snap.redshift)
+                     / np.median(search_snap['mass'])) ** pg.units.Fraction(-1, 3)
+
+                print("linking length assumed ", linking_length)
+
+            FoF, N_FoF = pg.analysis.find_FoF_groups(search_snap, l=linking_length)
+            halos = pg.analysis.generate_FoF_catalogue(search_snap, max_halos=1, FoF=FoF, progressbar=False,
+                                                           exlude=lambda h, s: h.lowres_mass / h.mass > threshold)
             dm_halo = halos[0]  # most massive halo
 
         # create halo properties
@@ -650,6 +684,7 @@ class SnapshotCache:
         halo_properties = SnapshotProperty()
         halo_properties.append("date-created", '"' + time.asctime( time.localtime(time.time()) ) + '"')
         halo_properties.append("profile-name", self.__profile)
+        halo_properties.append("dm_only", dm_only)
         for prop in dm_halo.props:
             v = convert_to_Units(dm_halo.props[prop])
             halo_properties[prop] = v
@@ -670,6 +705,23 @@ class SnapshotCache:
         info = SnapshotProperty()
         info.append("date-created", '"' + time.asctime( time.localtime(time.time()) ) + '"')
         info.append("profile-name", self.__profile)
+
+        # to document calculations copy values to gx-properties
+        # theses values should be used for recalculations instead of profile-values
+        Rvir_property = self.__profile_properties['Rvir_property']
+        gal_radius = self.__profile_properties['gx_radius']
+        findgxfast = self.__profile_properties['findgxfast']
+        linking_length = self.__profile_properties['linking_length']
+        linking_vel = self.__profile_properties['linking_vel']
+        lowres_threshold = self.__profile_properties['lowres_threshold']
+
+        info.append('Rvir_property', Rvir_property)
+        info.append('gx_radius', gal_radius)
+        info.append('findgxfast',findgxfast)
+        info.append('linking_length',linking_length)
+        info.append('linking_vel',linking_vel)
+        info.append('lowres_threshold',lowres_threshold)
+
         gx = self.__galaxy_all
         halo = self.__snapshot
 
@@ -685,14 +737,13 @@ class SnapshotCache:
         info['redshift'] = self.__snapshot.redshift
         info['h'] = self.__snapshot.cosmology.h(self.__snapshot.redshift)
         #            print('center:             ', center, file=f)
+        info['center_in_halo'] = self.__center           # the coord where the gx was found before translation
         info['center_com'] = pg.analysis.center_of_mass(gx) if gx is not None else None
-        info['center_ssc)'] = pg.analysis.shrinking_sphere(gx,
-                                                                   center=self.__center,
-                                                                   R=R200) if gx is not None else None
-        info['center_halo_com)'] = pg.analysis.center_of_mass(halo) if halo is not None else None
-        info['center_halo_ssc)'] = pg.analysis.shrinking_sphere(halo,
-                                                                   center=self.__center,
-                                                                   R=R200) if halo is not None else None
+        info['center_ssc'] = pg.analysis.shrinking_sphere(gx, center=[0] * 3,
+                                                          R=R200) if gx is not None else None
+        info['center_halo_com'] = pg.analysis.center_of_mass(halo) if halo is not None else None
+        info['center_halo_ssc'] = pg.analysis.shrinking_sphere(halo, center=[0] * 3,
+                                                               R=R200) if halo is not None else None
         info['R200'] = R200
         info['M200'] = M200
         info['R500'] = R500
@@ -750,14 +801,21 @@ class SnapshotCache:
         return
 
 
-    def _center_gx(self):
+    def _center_gx(self, center_known):
         if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
             print("*********************************************")
-            print("searching for galaxies - shrinking sphere...")
+            print("center on galaxy...")
         stars = self.__snapshot.stars
-        center = pg.analysis.shrinking_sphere(stars, center=[stars.boxsize / 2] * 3, R=stars.boxsize)
-        pg.Translation(-center).apply(self.__snapshot, total=True)
+        if center_known is None:
+            if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
+                print("searching for galaxies - shrinking sphere...")
+            center = pg.analysis.shrinking_sphere(stars, center=[stars.boxsize / 2] * 3, R=stars.boxsize)
+        else:
+            center = center_known
+
         self.__center = center
+        pg.Translation(-center).apply(self.__snapshot, total=True)
+
         vel_center = pg.analysis.mass_weighted_mean(self.__snapshot[self.__snapshot['r'] < '1 kpc'], 'vel')
         if environment.verbose >= environment.VERBOSE_NORMAL:
             print('center velocities at:', vel_center)
@@ -770,7 +828,7 @@ class SnapshotCache:
         snapshot_gx = self.__snapshot[mask]
 
         if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
-            print("searching for galaxies - complete")
+            print("center on galaxy - complete")
             print("*********************************************")
 
         self.__galaxy = snapshot_gx
@@ -790,9 +848,8 @@ class SnapshotCache:
             print("*********************************************")
         return
 
-    def _prepare_zoom(self, mode='auto', shrink_on='stars',
-                     linking_length=None, linking_vel='200 km/s', ret_FoF=False,
-                     sph_overlap_mask=False, gal_R200=0.10, star_form='deduce',
+    def _prepare_zoom(self, mode='auto', shrink_on='stars', ret_FoF=False,
+                     sph_overlap_mask=False, star_form='deduce',
                      gas_trace='deduce', to_physical=True, load_double_prec=False,
                      fill_undefined_nan=True, gas_traced_blocks='all',
                      gas_traced_dervied_blocks=None, **kwargs):
@@ -915,14 +972,19 @@ class SnapshotCache:
                                  'of particle types, but was: %s' % (shrink_on,))
 
         def FoF_exclude(h, s, threshold=1e-2):
+            if 'lowres_threshold' in self.__profile_properties:
+                threshold = self.__profile_properties['lowres_threshold']
+            else:
+                threshold = pg.environment.DEFAULT_lowres_threshold
+
             M_lowres = h.lowres_mass
             M = h.mass
             return M_lowres / M > threshold
 
-        if 'gastrace' in kwargs:
-            raise ValueError("You passed 'gastrace'. Did you mean 'gas_trace'?")
-        if 'starform' in kwargs:
-            raise ValueError("You passed 'starform'. Did you mean 'star_form'?")
+        # if 'gastrace' in kwargs:
+        #     raise ValueError("You passed 'gastrace'. Did you mean 'gas_trace'?")
+        # if 'starform' in kwargs:
+        #     raise ValueError("You passed 'starform'. Did you mean 'star_form'?")
 
         s = self.__snapshot
 
@@ -950,6 +1012,18 @@ class SnapshotCache:
         if mode == 'info':      # info file found an loaded into gx_properties
             center = self.__gx_properties['center']
         elif mode in ['ssc', 'FoF']:
+            # default old parameter linking_length=None
+            if 'linking_length' in self.__profile_properties:
+                linking_length = self.__profile_properties['linking_length']
+            else:
+                linking_length = pg.environment.DEFAULT_linking_length
+
+            # default old parameter linking_vel='200 km/s',
+            if 'linking_vel' in self.__profile_properties:
+                linking_vel = self.__profile_properties['linking_vel']
+            else:
+                linking_vel = pg.environment.DEFAULT_linking_vel
+
             if mode == 'FoF':
                 halos = pg.analysis.generate_FoF_catalogue(
                     s,
@@ -1274,7 +1348,14 @@ class SnapshotProperty(dict):
                             elif value[0] == '$':
                                 value = value.strip('"')
                             else:
-                                value = float(value) if value != 'None' else None
+                                if value == 'None':
+                                    value = None
+                                elif value == 'True':
+                                    value = True
+                                elif value == 'False':
+                                    value = False
+                                else:
+                                    value = float(value)
                         elif len(blocks) == 1 and not valuelist:
                             value = pg.UnitArr(float(value.rsplit('[')[0].strip()),
                                             units=blocks[0])

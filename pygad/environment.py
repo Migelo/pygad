@@ -86,8 +86,9 @@ allow_parallel_conversion = interactive
 
 DEFAULT_Rvir_property = 'R200_com'      # Halo property to get virial radius
 DEFAULT_gx_radius = 0.1                 # fraction of Rvir to get galaxy radius
-DEFAULT_linking_length = 0.05           # linking length for FoF
-DEFAULT_linking_vel = '100 km/s'        # linking vel for FoF
+DEFAULT_findgxfast = False              # default method to find zentral galaxy
+DEFAULT_linking_length = "6 ckpc"           # linking length None for FoF from pepare_zoom, in samples '6 ckpc', gTrace 0.05
+DEFAULT_linking_vel = '200 km/s'        # linking vel for FoF from prepare zoom, gtrace 100 km/s
 DEFAULT_lowres_threshold = 1e-2         # theshold for FoF
 
 # Plot parameters used by tool and utils
