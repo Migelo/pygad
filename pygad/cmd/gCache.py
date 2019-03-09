@@ -313,10 +313,14 @@ def plot_snapshot(sf, snapshot, title=None):
 
 
 if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by command line script
+    print("gCache arguments specified")
     for cp in sys.argv[1:]:
         print("gCache: argument ", cp)
 
     args = parser.parse_args()
+    # print("gCache arguments in effect")
+    # for arg in vars(args):
+    #     print(arg, getattr(args, arg))
 
     import sys
     if args.verbose:
@@ -474,9 +478,10 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
             if args.verbose:
                 print('====================================================')
                 print('process snapshot #%03d' % snap_num)
-                print('process snapshot ', snap_fname)
+                print('process snapshot ', snap_fname, 'profile =', args.profile)
                 sys.stdout.flush()
 
+            print('*** load snapshot ', snap_fname, '...profile =', args.profile)
             snap_cache = pg.SnapshotCache(snap_fname, profile=args.profile)
             print('*** ', snap_num, ' process')
             # if args.findgxfast:
