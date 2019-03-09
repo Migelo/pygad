@@ -400,7 +400,7 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
             if args.verbose:
                 print('done reading restart file')
             if args.end is None:
-                args.end = find_first_snapshot(args)
+                args.end = find_first_snapshot(args, snap_dir)
             if snap_num == args.end:
                 print('WARNING: no snapshot to process last =', snap_num, ' end =', args.end, file=sys.stderr)
                 exit(1)
