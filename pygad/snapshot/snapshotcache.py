@@ -14,7 +14,27 @@ class SnapshotCache:
     def __init__(self, snapfile_name, profile='cache'):
         # type: (str, str) -> SnapshotCache
         pg.environment.verbose = environment.verbose
-        self.__data_file = snapfile_name
+        if snapfile_name[0] != '/':
+            snap_home = os.getenv('SNAPSHOT_HOME', '')
+            if snap_home == '':
+                # treat local path same as absolute path
+                data_file = os.path.abspath(snapfile_name)
+                cache_home = ''
+            else:
+                if snap_home[-1] != '/': snap_home = snap_home + '/'
+                data_file = snap_home + snapfile_name
+                cache_home = os.getenv('SNAPCACHE_HOME', '')
+                if cache_home == '':
+                    cache_home = snap_home
+        else:
+            data_file = snapfile_name
+            snap_home = ''
+            cache_home = ''
+
+        self.__snap_home = snap_home
+        self.__cache_home = cache_home
+        self.__snap_name = snapfile_name
+        self.__data_file = data_file
         self.__profile = ''
         self.__profile_properties = SnapshotProperty()
         self._load_profile(profile)
@@ -264,9 +284,7 @@ class SnapshotCache:
         return self.__data_file
 
     @property
-    def dm_halo(self):
-        if self.__dm_halo is None:
-            self._create_DM_halo()          # $$$ prepare_zoom
+    def halo(self):
         return self.__dm_halo
 
     @property
@@ -408,7 +426,7 @@ class SnapshotCache:
 
     def load_snapshot(self, useChache=True, forceCache=False, loadBinaryProperties=False):
         # type: (bool, bool) -> pg.snapshot
-        filename = self.name
+        filename = self.__data_file
         if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
             print("*********************************************")
             print(("loading snapshot " + filename + "..."))
@@ -451,7 +469,10 @@ class SnapshotCache:
             gx = None
             if not findgxfast:
                 halo, gx, halos = self._prepare_zoom(mode='auto', shrink_on='stars', ret_FoF=True)
-                self._create_halo_properties(halos[0])
+                if halos is not None:
+                    self._create_halo_properties(halos[0])
+                else:
+                    self._create_halo_properties(None, headeronly=True)
                 if gx is not None:
                     self.__galaxy_all = gx
                     self.__galaxy = gx
@@ -599,11 +620,18 @@ class SnapshotCache:
                         self.__global_profile = True    # switch to global mode
             profile_name = profile
 
-        split_names = os.path.split(self.name)
-        if split_names[0] != '':
-            self.__destination = split_names[0] + '/' + profile_name
+        if self.__snap_home == '':
+            split_names = os.path.split(self.__data_file)
+            if split_names[0] != '':
+                self.__destination = split_names[0] + '/' + profile_name
+            else:
+                self.__destination = profile_name
         else:
-            self.__destination = profile_name
+            split_names = os.path.split(self.__cache_home + self.__snap_name)
+            if split_names[0] != '':
+                self.__destination = split_names[0] + '/' + profile_name
+            else:
+                self.__destination = profile_name
 
         self.__filename = split_names[1]
 
@@ -632,64 +660,112 @@ class SnapshotCache:
 
         return
 
-    def _create_halo_properties(self, halo):
+    def _correct_virial_info(self, halo_properties):
+        def corr_factor(halo_properties, prop, factor):
+            if not prop in halo_properties:
+                return
+            value = halo_properties[prop]
+            value = value * factor
+            halo_properties[prop] = value
+            return
+
+        mass_total = self.__snapshot['mass'].sum()
+        mass_dm = self.__snapshot.dm['mass'].sum()
+        factor = mass_total/mass_dm
+        print("$$$Korrekturfaktor ", mass_total, mass_dm, factor)
+
+        # Rvir_FoF: 299.3049442488739[ckpc h_0 ** -1]
+        # R200_FoF: 287.7142082873453[ckpc  h_0 ** -1]
+        # R200_ssc: 356.31469894527396[h_0 ** -1 ckpc]
+        # M200_ssc: 1.051522e+03[1e+10 h_0 ** -1 Msol]
+        # R200_com: 356.29890408445095[h_0 ** -1 ckpc]
+        # M200_com: 1.051388e+03[1e+10 h_0 ** -1 Msol]
+        # R500_FoF: 211.9896411873922[ckpc h_0 ** -1]
+        # R500_ssc: 241.28093820131429[h_0 ** -1 ckpc]
+        # M500_ssc: 816.2561863524752[1e+10 h_0 ** -1 Msol]
+        # R500_com: 241.27632340717858[h_0 ** -1 ckpc]
+        # M500_com: 816.2202291540016[1e+10 h_0 ** -1 Msol]
+
+        corr_factor(halo_properties, 'Rvir_FoF', factor)
+        corr_factor(halo_properties, 'R200_FoF', factor)
+        corr_factor(halo_properties, 'R200_ssc', factor)
+        corr_factor(halo_properties, 'M200_ssc', factor)
+        corr_factor(halo_properties, 'R200_com', factor)
+        corr_factor(halo_properties, 'M200_com', factor)
+        corr_factor(halo_properties, 'R500_FoF', factor)
+        corr_factor(halo_properties, 'R500_ssc', factor)
+        corr_factor(halo_properties, 'M500_ssc', factor)
+        corr_factor(halo_properties, 'R500_com', factor)
+        corr_factor(halo_properties, 'M500_com', factor)
+        return
+
+    def _create_halo_properties(self, halo, headeronly=False):
         def convert_to_Units(prop):
             if isinstance(prop,tuple):
                 value = pg.UnitArr([s for s in prop], units=None)
                 return value
             else:
                 return prop
+        if not headeronly:
+            if halo is not None:
+                dm_halo = halo
+                dm_only = False
+            else:   # this part is used, when prepare_zoom is not used
+                if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
+                    print("*********************************************")
+                    print(("creating DM-halo ", self.__snapshot.parts))
+                    print("*********************************************")
 
-        if halo is not None:
-            dm_halo = halo
-            dm_only = False
-        else:   # this part is used, when prepare_zoom is not used
-            if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
-                print("*********************************************")
-                print(("creating DM-halo ", self.__snapshot.parts))
-                print("*********************************************")
+                search_snap = self.__snapshot.dm
+                dm_only = True
+                # old value 0.05
+                if 'lowres_threshold' in self.__profile_properties:
+                    threshold = self.__profile_properties['lowres_threshold']
+                else:
+                    threshold = pg.environment.DEFAULT_lowres_threshold
+                # default old parameter linking_length=6 ckpc
+                if 'linking_length' in self.__profile_properties:
+                    linking_length = self.__profile_properties['linking_length']
+                else:
+                    linking_length = pg.environment.DEFAULT_linking_length
 
-            search_snap = self.__snapshot.dm
-            dm_only = True
-            # old value 0.05
-            if 'lowres_threshold' in self.__profile_properties:
-                threshold = self.__profile_properties['lowres_threshold']
-            else:
-                threshold = pg.environment.DEFAULT_lowres_threshold
-            # default old parameter linking_length=6 ckpc
-            if 'linking_length' in self.__profile_properties:
-                linking_length = self.__profile_properties['linking_length']
-            else:
-                linking_length = pg.environment.DEFAULT_linking_length
+                if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
+                    print("search_snap ", search_snap.parts)
 
-            if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
-                print("search_snap ", search_snap.parts)
+                if linking_length is None:
+                    linking_length = (1500. * search_snap.cosmology.rho_crit(search_snap.redshift)
+                         / np.median(search_snap['mass'])) ** pg.units.Fraction(-1, 3)
 
-            if linking_length is None:
-                linking_length = (1500. * search_snap.cosmology.rho_crit(search_snap.redshift)
-                     / np.median(search_snap['mass'])) ** pg.units.Fraction(-1, 3)
+                    print("linking length assumed ", linking_length)
 
-                print("linking length assumed ", linking_length)
+                FoF, N_FoF = pg.analysis.find_FoF_groups(search_snap, l=linking_length)
+                halos = pg.analysis.generate_FoF_catalogue(search_snap, max_halos=1, FoF=FoF, progressbar=False,
+                                                               exlude=lambda h, s: h.lowres_mass / h.mass > threshold)
+                dm_halo = halos[0]  # most massive halo
 
-            FoF, N_FoF = pg.analysis.find_FoF_groups(search_snap, l=linking_length)
-            halos = pg.analysis.generate_FoF_catalogue(search_snap, max_halos=1, FoF=FoF, progressbar=False,
-                                                           exlude=lambda h, s: h.lowres_mass / h.mass > threshold)
-            dm_halo = halos[0]  # most massive halo
+        halo_properties = SnapshotProperty()
+        halo_properties.append("date-created", '"' + time.asctime( time.localtime(time.time()) ) + '"')
+        halo_properties.append("profile-name", self.__profile)
+
+        if headeronly:
+            self.__dm_halo = None
+            self.__halo_properties = halo_properties
+            return
 
         # create halo properties
         if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
             print("DM-halo center ", dm_halo.ssc)
             print("DM-halo properties")
 
-        halo_properties = SnapshotProperty()
-        halo_properties.append("date-created", '"' + time.asctime( time.localtime(time.time()) ) + '"')
-        halo_properties.append("profile-name", self.__profile)
         halo_properties.append("dm_only", dm_only)
         for prop in dm_halo.props:
             v = convert_to_Units(dm_halo.props[prop])
             halo_properties[prop] = v
             if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
                 print("......", prop, " = ", v)
+
+        # if dm_only and dm_halo is not None:
+        #     self._correct_virial_info(halo_properties)
 
         self.__dm_halo = dm_halo
         self.__halo_properties = halo_properties
@@ -705,6 +781,9 @@ class SnapshotCache:
         info = SnapshotProperty()
         info.append("date-created", '"' + time.asctime( time.localtime(time.time()) ) + '"')
         info.append("profile-name", self.__profile)
+        if self.__galaxy_all is None:
+            self.__gx_properties = info
+            return
 
         # to document calculations copy values to gx-properties
         # theses values should be used for recalculations instead of profile-values
@@ -1025,42 +1104,58 @@ class SnapshotCache:
                 linking_vel = pg.environment.DEFAULT_linking_vel
 
             if mode == 'FoF':
-                halos = pg.analysis.generate_FoF_catalogue(
-                    s,
-                    l=linking_length,
-                    exclude=FoF_exclude,
-                    #calc=['mass', 'lowres_mass'],       # generate all halo properties
-                    max_halos=1,                         #  take only 3 instead of 10, for performance
-                    progressbar=False,
-                    **kwargs
-                )
-                if shrink_on not in ['all', 'highres']:     # $$ shrink_on parameter nicht klar
-                    galaxies = pg.analysis.generate_FoF_catalogue(
-                        get_shrink_on_sub(s, shrink_on),
+                try:
+                    halos = pg.analysis.generate_FoF_catalogue(
+                        s,
                         l=linking_length,
-                        dvmax=linking_vel,
-                        calc=['mass', 'com'],
-                        max_halos=5,                    # take only 5 instead of 10
+                        exclude=FoF_exclude,
+                        #calc=['mass', 'lowres_mass'],       # generate all halo properties
+                        max_halos=1,                         #  take only 3 instead of 10, for performance
                         progressbar=False,
                         **kwargs
                     )
-                    # The most massive galaxy does not have to be in a halo with little
-                    # low resolution elements! Find the most massive galaxy living in a
-                    # "resolved" halo:
-                    galaxy = None
-                    for gal in galaxies:
-                        # since the same linking lengths were used for the halos and
-                        # the galaxies (rethink that!), a galaxy in a halo is entirely
-                        # in that halo or not at all
-                        gal_ID_set = set(gal.IDs)
-                        for h in halos:
-                            if len(gal_ID_set - set(h.IDs)) == 0:
-                                galaxy = gal
+                except Exception as e:
+                    print("error finding halo ", e)
+                    halos = None
+                    halo = None
+                    gal = None
+                    if ret_FoF:
+                        return halo, gal, halos
+                    else:
+                        return halo, gal
+
+                if shrink_on not in ['all', 'highres']:     # $$ shrink_on parameter nicht klar
+                    try:
+                        galaxies = pg.analysis.generate_FoF_catalogue(
+                            get_shrink_on_sub(s, shrink_on),
+                            l=linking_length,
+                            dvmax=linking_vel,
+                            calc=['mass', 'com'],
+                            max_halos=5,                    # take only 5 instead of 10
+                            progressbar=False,
+                            **kwargs
+                        )
+                        # The most massive galaxy does not have to be in a halo with little
+                        # low resolution elements! Find the most massive galaxy living in a
+                        # "resolved" halo:
+                        galaxy = None
+                        for gal in galaxies:
+                            # since the same linking lengths were used for the halos and
+                            # the galaxies (rethink that!), a galaxy in a halo is entirely
+                            # in that halo or not at all
+                            gal_ID_set = set(gal.IDs)
+                            for h in halos:
+                                if len(gal_ID_set - set(h.IDs)) == 0:
+                                    galaxy = gal
+                                    break
+                            del h, gal_ID_set
+                            if galaxy is not None:
                                 break
-                        del h, gal_ID_set
-                        if galaxy is not None:
-                            break
-                    del galaxies
+                        del galaxies
+                    except Exception as e:
+                        galaxy = None
+                        print("Error finding galaxy ", e)
+
                     if galaxy is None:
                         shrink_on = None
                     else:
@@ -1198,7 +1293,7 @@ class SnapshotCache:
     def print_results(self):
         print(" ")
         print("**********************************************************")
-        print(("Summary of results for snapfile ", self.name))
+        print(("Summary of results for snapfile ", self.__data_file))
         print("**********************************************************")
         print(("number of results: ", len(self.results)))
         print("--------------------------------------------------------------")

@@ -357,10 +357,14 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
         sys.exit(1)
     # prepare arguments
 
+    basedir = os.getenv('SNAPSHOT_HOME', '')
+    if basedir != '' and basedir[-1] != '/': basedir = basedir + '/'
+
     if args.name_pattern.find('/') > -1:
-        dirname = os.path.dirname(args.name_pattern)
+        dirname = os.path.dirname(basedir + args.name_pattern)
     else:
         dirname = '.'
+        basedir = ''
     dirlist = glob.glob(dirname)
 
     if len(dirlist) == 0:
@@ -482,15 +486,20 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
                 sys.stdout.flush()
 
             print('*** load snapshot ', snap_fname, '...profile =', args.profile)
-            snap_cache = pg.SnapshotCache(snap_fname, profile=args.profile)
+            if basedir != '' and snap_fname.find(basedir) == 0:
+                findex = snap_fname.find(basedir)
+                snap_fname_rel = snap_fname[len(basedir):]
+                snap_cache = pg.SnapshotCache(snap_fname_rel, profile=args.profile)
+            else:
+                snap_cache = pg.SnapshotCache(snap_fname, profile=args.profile)
             print('*** ', snap_num, ' process')
             # if args.findgxfast:
             #     snap_cache.load_snapshot(findgxfast=True)
             # else:
             snap_cache.load_snapshot()
 
-            gx=snap_cache.galaxy
-            if args.withplot:
+            gx = snap_cache.galaxy
+            if args.withplot and gx is not None:
                 if not 'galaxy-all' in snap_cache.gx_properties:
                     if args.verbose:
                         print("plot particles in galaxy ", gx.parts)
@@ -501,7 +510,7 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
                         print("plot exists already in cache")
 
             snap_exec = 'process'
-            if command_str != '':
+            if command_str != '' and snap_cache.halo is not None:
                 exec(command_str, globals(), locals())
 
             if args.updatecache:
