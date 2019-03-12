@@ -129,6 +129,10 @@ parser.add_argument('--updatecache',
                     action='store_true',
                     help='Update profile cache at the end of processing ' +
                          'otherwise results are temporary only.')
+parser.add_argument('--cachedonly',
+                    action='store_true',
+                    help='process on snapshots already in cache ' +
+                         'others are skipped')
 # moved to profile properties
 # parser.add_argument('--findgxfast',
 #                     action='store_true',
@@ -372,11 +376,11 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
         exit(1)
 
     for snap_dir in dirlist:
-        args.destination = snap_dir + '/' + args.profile
+        snap_restart_destination = snap_dir + '/' + args.profile
 
         print('*** process directory ', snap_dir)
 
-        RESTART_FILENAME = args.destination + '/' + RESTART_FILENAME_postfix
+        RESTART_FILENAME = snap_restart_destination + '/' + RESTART_FILENAME_postfix
         if args.overwrite and os.path.exists(RESTART_FILENAME):
             os.remove(RESTART_FILENAME)
         if os.path.exists(RESTART_FILENAME):
@@ -412,14 +416,22 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
             print('restart: snapshot ', args.start, args.end)
 
         else:
+            ignore_start = False
             if args.end is None:
+                args.end = find_first_snapshot(args, snap_dir)
+            elif args.end == 999:
+                ignore_start = True
                 args.end = find_first_snapshot(args, snap_dir)
 
             if args.start is None:
                 args.start = find_last_snapshot(args, snap_dir)
+            if ignore_start:
+                args.end = args.start
+            else:
+                args.end = int(args.end)
 
             # prepare starformation file
-            # star_form_filename = args.destination + '/star_form.ascii'
+            # star_form_filename = snap_restart_destination + '/star_form.ascii'
             # if args.verbose:
             #     print('====================================================')
             #     print('prepare star formation file "%s"...' % star_form_filename)
@@ -440,11 +452,11 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
             #             time.time() - start_time))
 
         # prepare trace folder after checking that input files are found
-        if not os.path.exists(args.destination):
-            if args.verbose: print('create profile folder: "%s"' % args.destination)
-            os.makedirs(args.destination)
-        if os.listdir(args.destination):
-            print('WARNING: profile is not empty!', file=sys.stderr)
+        if not os.path.exists(snap_restart_destination):
+            if args.verbose: print('create profile folder: "%s"' % snap_restart_destination)
+            os.makedirs(snap_restart_destination)
+        # if os.listdir(snap_restart_destination):
+        #     print('WARNING: profile is not empty!', file=sys.stderr)
 
         # do tracing / loop over snapshot (in reverse order)
         if args.verbose: start_time = time.time()
@@ -463,6 +475,7 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
         cmd_par3 = args.par3
         cmd_par4 = args.par4
         cmd_par5 = args.par5
+        cmd_destination = args.destination
 
         command_str = load_command(args.command)
         if command_str != '':
@@ -485,7 +498,6 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
                 print('process snapshot ', snap_fname, 'profile =', args.profile)
                 sys.stdout.flush()
 
-            print('*** load snapshot ', snap_fname, '...profile =', args.profile)
             if basedir != '' and snap_fname.find(basedir) == 0:
                 findex = snap_fname.find(basedir)
                 snap_fname_rel = snap_fname[len(basedir):]
@@ -496,6 +508,13 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
             # if args.findgxfast:
             #     snap_cache.load_snapshot(findgxfast=True)
             # else:
+            if args.cachedonly:
+                if not snap_cache.exists_in_cache():
+                    print('*** skip snapshot ', snap_fname, '...profile =', args.profile)
+                    continue
+
+            print('*** load snapshot ', snap_fname, '...profile =', args.profile)
+
             snap_cache.load_snapshot()
 
             gx = snap_cache.galaxy
@@ -510,7 +529,7 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
                         print("plot exists already in cache")
 
             snap_exec = 'process'
-            if command_str != '' and snap_cache.halo is not None:
+            if command_str != '' and len(snap_cache.halo_properties) > 2: # no dummy halo
                 exec(command_str, globals(), locals())
 
             if args.updatecache:

@@ -424,6 +424,14 @@ class SnapshotCache:
         profile_path = self.__destination + '/'
         return profile_path
 
+    def exists_in_cache(self):
+        try:
+            self.__halo_properties._read_info_file(self.__get_halo_filename())
+            return True
+        except Exception as e:
+            return False
+
+
     def load_snapshot(self, useChache=True, forceCache=False, loadBinaryProperties=False):
         # type: (bool, bool) -> pg.snapshot
         filename = self.__data_file
@@ -457,7 +465,10 @@ class SnapshotCache:
             if 'center_in_halo' in self.__gx_properties:
                 center_known = self.__gx_properties['center_in_halo']
             else:
-                center_known = None
+                # only dummy profile exists, do not reprocess
+                self.__loaded = True
+                return self.__snapshot
+
             self._center_gx(center_known)
             self._gx_orientate()
             if loadBinaryProperties:        # only when reloading, as no binary data in generated automatically
