@@ -274,7 +274,7 @@ Example:
     >>> s.SubSnap([0,2,4]).parts
     [921708, 0, 56796, 0, 79764, 0]
 '''
-__all__ = ['write', 'Snapshot', 'SubSnapshot']
+__all__ = ['write', 'Snapshot', 'Snap', 'SubSnapshot']
 
 import sys
 import os.path
@@ -292,8 +292,6 @@ import ast
 import weakref
 from . import derived
 import fnmatch
-
-
 
 
 class Snapshot(object):
@@ -1407,6 +1405,7 @@ class Snapshot(object):
         '''Check whether the IDs (of this (sub-)snapshot) are unique.'''
         return len(np.unique(self['ID'])) == len(self)
 
+
 class SubSnapshot(Snapshot):
     '''
     A class for "sub-snapshots", that slice or mask an underlying (sub-)snapshot
@@ -1686,3 +1685,10 @@ def _FamilySubSnap(base, fam):
     family_s = base.SubSnap(gadget.families[fam])
     family_s._descriptor = base._descriptor + ':' + fam
     return family_s
+
+def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
+             gad_units=None, unclear_blocks=None):
+    from warnings import warn
+    warn("\nfunction Snap(...) has been renamed to Snapshot class\nplease use Snapshot(..) to create a snapshot object", DeprecationWarning, stacklevel=2)
+    s = Snapshot(filename, physical, load_double_prec, cosmological, gad_units, unclear_blocks)
+    return s
