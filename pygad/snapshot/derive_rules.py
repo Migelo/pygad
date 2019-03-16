@@ -174,7 +174,7 @@ def age_from_form(form, subs, cosmic_time=None, cosmo=None, units='Gyr', paralle
         if environment.allow_parallel_conversion and (
                 parallel or (parallel is None and len(form) > 1000)):
             N_threads = cpu_count()
-            chunk = [[i * len(form) / N_threads, (i + 1) * len(form) / N_threads]
+            chunk = [[i * len(form) // N_threads, (i + 1) * len(form) // N_threads]
                      for i in range(N_threads)]
             p = Pool(N_threads)
             res = [None] * N_threads

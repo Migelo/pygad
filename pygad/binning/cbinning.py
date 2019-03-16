@@ -198,7 +198,7 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml',
             C.c_void_p(ext.ctypes.data),
             C.c_void_p(Npx.ctypes.data),
             C.c_void_p(grid.ctypes.data),
-            C.create_string_buffer(kernel),
+            C.create_string_buffer(kernel.encode('ascii')),
             C.c_double(s.boxsize.in_units_of(s['pos'].units)),
     )
     grid = UnitArr(grid.reshape(tuple(Npx)), qty_units)
@@ -448,7 +448,7 @@ def SPH_3D_to_line(s, qty, los, extent, Npx, xaxis=0, yaxis=1, kernel=None,
                                 C.c_void_p(ext.ctypes.data),
                                 C.c_size_t(Npx),
                                 C.c_void_p(line.ctypes.data),
-                                C.create_string_buffer(kernel),
+                                C.create_string_buffer(kernel.encode('ascii')),
                                 C.c_double(s.boxsize.in_units_of(s['pos'].units)))
     line = UnitArr(line, qty_units)
 
@@ -592,7 +592,7 @@ def SPH_to_2Dgrid_by_particle(s, qty, extent, Npx, reduction, xaxis=0, yaxis=1,
                       C.c_void_p(ext.ctypes.data),
                       C.c_void_p(Npx.ctypes.data),
                       C.c_void_p(grid.ctypes.data),
-                      C.create_string_buffer(kernel),
+                      C.create_string_buffer(kernel.encode('ascii')),
                       C.c_double(s.boxsize.in_units_of(s['pos'].units)),
     )
     grid = UnitArr(grid.reshape(tuple(Npx)), qty_units)

@@ -222,7 +222,7 @@ def SPH_qty_at(s, qty, r, units=None, kernel=None, dV='dV'):
                 C.c_void_p(hsml.ctypes.data),
                 C.c_void_p(dV.ctypes.data),
                 C.c_void_p(qty.ctypes.data),
-                C.create_string_buffer(kernel),
+                C.create_string_buffer(kernel.encode('ascii')),
                 None  # build new tree
             )
         elif len(qty.shape) == 2:
@@ -245,7 +245,7 @@ def SPH_qty_at(s, qty, r, units=None, kernel=None, dV='dV'):
                     C.c_void_p(hsml.ctypes.data),
                     C.c_void_p(dV.ctypes.data),
                     C.c_void_p(qty[k].ctypes.data),
-                    C.create_string_buffer(kernel),
+                    C.create_string_buffer(kernel.encode('ascii')),
                     C.c_void_p(tree._cOctree__node_ptr),
                 )
             del tree

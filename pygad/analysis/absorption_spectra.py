@@ -1021,7 +1021,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
     los_temp = np.empty(Nbins, dtype=np.float64)
     restr_column_lims = restr_column_lims.view(np.ndarray).astype(np.float64)
     restr_column = np.empty(N, dtype=np.float64)
-    C.cpygad.absorption_spectrum(method == 'particles'.encode('ascii'),
+    C.cpygad.absorption_spectrum(method == 'particles',
                                  C.c_size_t(N),
                                  C.c_void_p(pos.ctypes.data) if pos is not None else None,
                                  C.c_void_p(vel.ctypes.data),
@@ -1040,7 +1040,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
                                  C.c_void_p(los_temp.ctypes.data),
                                  C.c_void_p(restr_column_lims.ctypes.data),
                                  C.c_void_p(restr_column.ctypes.data),
-                                 C.create_string_buffer(kernel),
+                                 C.create_string_buffer(kernel.encode('ascii')),
                                  C.c_double(s.boxsize.in_units_of(l_units))
                                  )
 

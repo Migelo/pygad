@@ -215,6 +215,8 @@ class Evaluator(object):
             return list(map(self._eval, node.elts))
         elif isinstance(node, ast.Tuple):
             return tuple(map(self._eval, node.elts))
+        elif isinstance(node, ast.NameConstant):
+            return node.value
         else:
             # seldomly reached due to substitution of spaces
             raise EvalError('AST node type %s not supported' %

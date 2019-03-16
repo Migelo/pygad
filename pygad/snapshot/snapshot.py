@@ -1508,7 +1508,7 @@ class SubSnapshot(Snapshot):
         # count particles of the different types
         while pt < 6 and cur_pos < stop:
             remain = int( min(stop, N_cum_base[pt]) - cur_pos )
-            N_part[pt] = remain / step
+            N_part[pt] = remain // step
             if remain % step:
                 N_part[pt] += 1
             cur_pos += N_part[pt] * step
@@ -1580,7 +1580,7 @@ class SubSnapshot(Snapshot):
             if utils.is_consecutive(ptypes):
                 if start < sum(base._N_part[:ptypes[0]]):
                     diff = sum(base._N_part[:ptypes[0]]) - start
-                    start += diff / step * step
+                    start += diff // step * step
                     if diff % step:
                         start += step
                 stop = min(stop, sum(base._N_part[:ptypes[-1]+1]))
