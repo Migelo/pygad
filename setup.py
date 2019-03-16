@@ -11,7 +11,7 @@ import sys
 uninstall = (sys.argv == ['setup.py', 'develop', '--uninstall'])
 if sys.argv[1] == 'install':
     from distutils.core import setup
-else:
+if sys.argv[1] == 'develop':
     from setuptools import setup
 
 # define all package data

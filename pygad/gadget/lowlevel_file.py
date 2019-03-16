@@ -77,7 +77,7 @@ def get_format_and_endianness(gfile):
     elif size == 8:
         gformat    = 2
         endianness = '='
-        assert struct.unpack('=4s', gfile.read(4)) == ('HEAD',)
+        assert struct.unpack('=4s', gfile.read(4))[0].decode('ascii') == 'HEAD'
         assert struct.unpack('=i', gfile.read(4)) == (264,)
         assert struct.unpack('=i', gfile.read(4)) == (8,)
         size = struct.unpack('=i', gfile.read(4))
@@ -89,7 +89,7 @@ def get_format_and_endianness(gfile):
         gformat    = 2
         # the non-native endianness
         endianness = '>' if sys.byteorder == 'little' else '<'
-        assert struct.unpack(endianness + '4s', gfile.read(4)) == ('HEAD',)
+        assert struct.unpack(endianness + '4s', gfile.read(4))[0].decode('ascii') == 'HEAD'
         assert struct.unpack(endianness + 'i', gfile.read(4)) == (264,)
         assert struct.unpack(endianness + 'i', gfile.read(4)) == (8,)
         size = struct.unpack(endianness + 'i', gfile.read(4))
@@ -608,7 +608,7 @@ def _infer_info(gfile, header, gformat, endianness, start_pos, block_sizes,
                     i <= len(config.block_order) else '?%03d' % i
             elif gformat == 2:  # can read name
                 gfile.seek(start_pos[i]-4-4-8)
-                name, = struct.unpack(endianness + '4s', gfile.read(4))
+                name = struct.unpack(endianness + '4s', gfile.read(4))[0].decode('ascii')
             block = BlockInfo(name=name, dtype=None, dimension=None,
                               ptypes=None, start_pos=start_pos[i],
                               size=block_sizes[i])
@@ -714,7 +714,7 @@ def get_block_info(gfile, gformat, endianness, header, unclear_blocks):
         size = gfile.read(4)
         while size:
             if gformat == 2:
-                name, = struct.unpack(endianness + '4s', gfile.read(4))
+                name = struct.unpack(endianness + '4s', gfile.read(4))[0].decode('ascii')
                 gfile.seek(4+4, SEEK_CUR)
                 size = gfile.read(4)
             # remember start position and size of block

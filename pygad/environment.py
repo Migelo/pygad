@@ -49,7 +49,7 @@ def git_descr(path=os.curdir, dirty='dirty', PEP440=False):
     cmd = ['git', 'describe', '--always', '--tags']
     if dirty is not None:
         cmd.append('--dirty=-'+dirty)
-    descr = subprocess.check_output(cmd, cwd=path).strip()
+    descr = subprocess.check_output(cmd, cwd=path).strip().decode('ascii')
 
     if PEP440:
         import re
