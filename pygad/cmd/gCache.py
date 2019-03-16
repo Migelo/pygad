@@ -395,14 +395,15 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
             for not_cmp in ['start', 'step', 'command','withplot', 'end', 'tlimit', 'overwrite', 'verbose']:
                 old_args.pop(not_cmp)
                 new_args.pop(not_cmp)
-            if old_args != new_args:
-                print('ERROR: arguments are not compatible ' + \
-                                     'with the previous run!', file=sys.stderr)
-                print('Not matching these old arguments:', file=sys.stderr)
-                for arg, value in old_args.items():
-                    if arg in new_args and new_args[arg] != value:
-                        print('  %-20s %s' % (arg+':', value), file=sys.stderr)
-                sys.exit(1)
+            # nur zum testen unter kommentar
+            # if old_args != new_args:
+            #     print('ERROR: arguments are not compatible ' + \
+            #                          'with the previous run!', file=sys.stderr)
+            #     print('Not matching these old arguments:', file=sys.stderr)
+            #     for arg, value in old_args.items():
+            #         if arg in new_args and new_args[arg] != value:
+            #             print('  %-20s %s' % (arg+':', value), file=sys.stderr)
+            #     sys.exit(1)
             del old_args, new_args
             args.start = snap_num-args.step
             if args.verbose:
@@ -481,7 +482,10 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
         if command_str != '':
             print("*** execute command ", args.command)
             print("*** command parameter ", cmd_par)
-            exec(command_str, globals(), locals())
+            try:
+                exec(command_str, globals(), locals())
+            except Exception as e:
+                print("*** error executing prepare ", e)
 
         for snap_num in range(snap_start, snap_end-1, -args.step):
             snap_fname = get_snap_fname(snap_dir, args.name_pattern, snap_num)
@@ -503,6 +507,7 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
                 snap_fname_rel = snap_fname[len(basedir):]
                 snap_cache = pg.SnapshotCache(snap_fname_rel, profile=args.profile)
             else:
+                snap_fname_rel = ''
                 snap_cache = pg.SnapshotCache(snap_fname, profile=args.profile)
             print('*** ', snap_num, ' process')
             # if args.findgxfast:
@@ -530,7 +535,10 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
 
             snap_exec = 'process'
             if command_str != '' and len(snap_cache.halo_properties) > 2: # no dummy halo
-                exec(command_str, globals(), locals())
+                try:
+                    exec(command_str, globals(), locals())
+                except Exception as e:
+                    print("*** error executing process ", e)
 
             if args.updatecache:
                 print('*** ', snap_num, ' writing cache')
@@ -560,7 +568,10 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
         print('*** close')
         snap_exec = 'close'
         if command_str != '':
-            exec(command_str, globals(), locals())
+            try:
+                exec(command_str, globals(), locals())
+            except Exception as e:
+                print("*** error executing close ", e)
 
         if args.verbose:
             print()
