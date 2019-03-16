@@ -1,11 +1,6 @@
 #!/usr/bin/env python
 
-try:
-    from setuptools import setup
-except:
-    from distutils.core import setup
 #from Cython.Build import cythonize
-import numpy
 import os
 import subprocess
 import sys
@@ -14,6 +9,10 @@ import sys
 # check if just unintalling with setuptools
 # and "python setup.py develop --uninstall"
 uninstall = (sys.argv == ['setup.py', 'develop', '--uninstall'])
+if sys.argv[1] == 'install':
+    from distutils.core import setup
+else:
+    from setuptools import setup
 
 # define all package data
 package_data = {'pygad.C':              ['cpygad.so'],

@@ -88,9 +88,9 @@ from . import plotting
 #   - in the installed version
 #       a string holding the value of above's function call at the moment of
 #       installation via setup.py
-version = 'v0.9'
+version = environment.git_descr( environment.module_dir, PEP440=True )
 if environment.verbose > environment.VERBOSE_QUIET:
-    print('imported pygad', version, "- Python3")
+    print('imported pygad', version, "- setup Python3")
 
 # make some chosen elements directly visible
 from .environment import gc_full_collect

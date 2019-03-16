@@ -81,7 +81,7 @@ VERBOSE_QUIET       = 0
 VERBOSE_TACITURN    = 1
 VERBOSE_NORMAL      = 2
 VERBOSE_TALKY       = 3
-verbose = VERBOSE_NORMAL if interactive else VERBOSE_TALKY
+verbose = VERBOSE_NORMAL if interactive else VERBOSE_QUIET
 allow_parallel_conversion = interactive
 
 DEFAULT_Rvir_property = 'R200_com'      # Halo property to get virial radius
