@@ -416,7 +416,9 @@ class SnapshotCache:
     def __get_profile_filename(self):
         postfix_profile = 'profile-' + self.__profile + '.info'
         if self.__global_profile:
-            return pg.gadget.general['Profile_dir'] + '/' + postfix_profile
+            profile_path = pg.gadget.general['Profile_dir'] + '/' + postfix_profile
+            profile_path = os.path.expandvars(profile_path)
+            return profile_path
         else:
             return postfix_profile
 
