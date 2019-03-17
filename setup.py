@@ -21,7 +21,8 @@ package_data = {'pygad.C':              ['cpygad.so'],
                 'pygad.snapshot':       ['derived.cfg'],
                 'pygad.ssp':            ['SSP-model/*']}
 # define scripts
-scripts = ['bin/ginsp', 'bin/gconv']
+scripts = ['bin/ginsp', 'bin/gconv', 'bin/gCache3','bin/gCatalog3' ,'bin/gStarform3']
+datafiles = [('commands', ['commands/CmdCatalog.py' ,'commands/CmdStarform.py'])]
 
 # find all sub-packages
 modules = []
@@ -62,6 +63,7 @@ try:
           packages = list(map(str,modules)),
           package_data = package_data,
           scripts=scripts,
+          data_files = datafiles
          )
 except:
     raise

@@ -41,7 +41,7 @@ parser.add_argument('--verbose', '-v',
 if __name__ == '__main__':
     args = parser.parse_args()
 
-    if args.verbose: print 'starting up...'
+    if args.verbose: print('starting up...')
 
     # Suspend importing to here, after parsing the arguments to be quick,
     # if only the help has to be displayed or there already occurs and
@@ -49,13 +49,13 @@ if __name__ == '__main__':
     import os
     import sys
     if os.path.exists(args.dest) and not args.overwrite:
-        print >> sys.stderr, 'ERROR: file "%s" exists!' % args.dest
-        print >> sys.stderr, 'Consider --overwrite.'
+        print('ERROR: file "%s" exists!' % args.dest, file=sys.stderr)
+        print('Consider --overwrite.', file=sys.stderr)
         sys.exit(1)
     import pygad
     pygad.environment.verbose = args.verbose
     if args.verbose:
-        print 'imported pygad', pygad.version
+        print('imported pygad', pygad.version)
 
     if args.format.lower() == 'hdf5':
         args.format = 3
@@ -70,5 +70,5 @@ if __name__ == '__main__':
                          double_prec=args.double_prec,
                          overwrite=args.overwrite)
 
-    if args.verbose: print 'finished.'
+    if args.verbose: print('finished.')
 

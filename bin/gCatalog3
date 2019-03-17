@@ -1,0 +1,57 @@
+#!/usr/bin/env python
+'''
+gCatalog3 - a script generate/process SnapshotCache via pygad.cmd.gCache
+plugin-Command CmdCatalog
+'''
+import sys
+import os
+
+def default_arg(name, value):
+    for arg in sys.argv:
+        if arg.find(name) >-1:
+            return
+    sys.argv.append(name + '=' + value)
+    print("argument ", name + '=' + value, " added")
+    return
+
+print("script: ", sys.argv[0])
+if len(sys.argv) < 2:
+    print("please provide snapshot and AGN/NoAGN")
+    print("e.g. M0094/AGN")
+    exit(1)
+
+if sys.argv[1][0] == '/':
+    print("please provide relative snapshot path")
+    print("e.g. M0094/AGN")
+    exit(1)
+
+sys.argv.append("--command=CmdCatalog")
+print("argument --command=CmdCatalog added")
+default_arg('--par', 'catalog.txt')
+default_arg('--par1','a,redshift,R200,M200,M_stars,R_half_M,R_half_M(faceon),R_eff(faceon),D/T(stars),jzjc_baryons,gamma-halo')
+
+# expand filename to the structure of the halo data
+basedir = os.getenv('SNAPSHOT_HOME', None)
+if basedir is None:
+    print("please set environment variable SNAPSHOT_HOME to the root of the snapshots")
+    print("e.g. /mnt/hgfs/Astro/Magneticum/")
+    print("and provide relative snapshot path e.g. M0094/AGN")
+    exit(1)
+
+index_wildcard = sys.argv[1].find('*')
+index_part1 = sys.argv[1].find('/')
+if index_wildcard < index_part1:  # wildcard in Halo-Number
+    print("global relative path specified")
+    basedir = os.getenv('SNAPCACHE_HOME', basedir)
+    default_arg("--destination", basedir)
+
+# environment variable managed by snapshotCache
+# if basedir[-1] != '/':
+#     basedir = basedir + '/'
+# sys.argv[1] = basedir + sys.argv[1] + "/*_%03d*"
+
+sys.argv[1] = sys.argv[1] + "/*_%03d*"
+print("invoking pygad.cmd.gCache")
+
+if __name__ == '__main__':
+    import pygad.cmd.gCache
