@@ -1325,7 +1325,7 @@ class SnapshotProperty(dict):
     def append(self, name, value):
         if name in self:
             v = self[name]
-            if v != value:
+            if isinstance(v,pg.UnitArr) or v != value:
                 self[name] = value
                 self.__modified = True
         else:

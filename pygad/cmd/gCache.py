@@ -520,50 +520,56 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
 
             print('*** load snapshot ', snap_fname, '...profile =', args.profile)
 
-            snap_cache.load_snapshot()
+            try:
+                load_OK = True
+                snap_cache.load_snapshot()
+            except Exception as e:
+                print("error loading snapshot ")
+                load_OK = False
 
-            gx = snap_cache.galaxy
-            if args.withplot and gx is not None:
-                if not 'galaxy-all' in snap_cache.gx_properties:
-                    if args.verbose:
-                        print("plot particles in galaxy ", gx.parts)
-                    buf = plot_snapshot(snap_cache, snap_cache.galaxy, 'Galaxy star particles')
-                    snap_cache.gx_properties.append('galaxy-all', buf)
-                else:
-                    if args.verbose:
-                        print("plot exists already in cache")
+            if load_OK:
+                gx = snap_cache.galaxy
+                if args.withplot and gx is not None:
+                    if not 'galaxy-all' in snap_cache.gx_properties:
+                        if args.verbose:
+                            print("plot particles in galaxy ", gx.parts)
+                        buf = plot_snapshot(snap_cache, snap_cache.galaxy, 'Galaxy star particles')
+                        snap_cache.gx_properties.append('galaxy-all', buf)
+                    else:
+                        if args.verbose:
+                            print("plot exists already in cache")
 
-            snap_exec = 'process'
-            if command_str != '' and len(snap_cache.halo_properties) > 2: # no dummy halo
-                try:
-                    exec(command_str, globals(), locals())
-                except Exception as e:
-                    print("*** error executing process ", e)
+                snap_exec = 'process'
+                if command_str != '' and len(snap_cache.halo_properties) > 2: # no dummy halo
+                    try:
+                        exec(command_str, globals(), locals())
+                    except Exception as e:
+                        print("*** error executing process ", e)
 
-            if args.updatecache:
-                print('*** ', snap_num, ' writing cache')
-                snap_cache.write_chache()
-                print('*** ', snap_num, ' finished')
+                if args.updatecache:
+                    print('*** ', snap_num, ' writing cache')
+                    snap_cache.write_chache()
+                    print('*** ', snap_num, ' finished')
 
-            last_snap = snap_cache
+                last_snap = snap_cache
 
-            if args.verbose:
-                print('writing restart file "%s"...' % RESTART_FILENAME)
-                sys.stdout.flush()
-            with open(RESTART_FILENAME, 'wb') as f:
-                pickle.dump((vars(args),snap_num), f)
-
-            if args.verbose:
-                print('all done with snapshot #%03d in ' % snap_num + \
-                      '%f sec' % (time.time() - start_time))
-                start_time = time.time()
-                sys.stdout.flush()
-
-            if time.time()-t_start > pg.UnitScalar(args.tlimit, 's'):
                 if args.verbose:
-                    print()
-                    print('time limit (%s) exceeded -- stop!' % args.tlimit)
-                break
+                    print('writing restart file "%s"...' % RESTART_FILENAME)
+                    sys.stdout.flush()
+                with open(RESTART_FILENAME, 'wb') as f:
+                    pickle.dump((vars(args),snap_num), f)
+
+                if args.verbose:
+                    print('all done with snapshot #%03d in ' % snap_num + \
+                          '%f sec' % (time.time() - start_time))
+                    start_time = time.time()
+                    sys.stdout.flush()
+
+                if time.time()-t_start > pg.UnitScalar(args.tlimit, 's'):
+                    if args.verbose:
+                        print()
+                        print('time limit (%s) exceeded -- stop!' % args.tlimit)
+                    break
 
         print('*** close')
         snap_exec = 'close'
