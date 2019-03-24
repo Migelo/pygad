@@ -517,27 +517,29 @@ if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by comma
                 if not snap_cache.exists_in_cache():
                     print('*** skip snapshot ', snap_fname, '...profile =', args.profile)
                     continue
-
-            print('*** load snapshot ', snap_fname, '...profile =', args.profile)
-
-            try:
+                print('*** use snapshot cache ', snap_fname, '...profile =', args.profile)
                 load_OK = True
-                snap_cache.load_snapshot()
-            except Exception as e:
-                print("error loading snapshot ")
-                load_OK = False
+            else:
+                print('*** load snapshot ', snap_fname, '...profile =', args.profile)
+                try:
+                    load_OK = True
+                    snap_cache.load_snapshot()
+                except Exception as e:
+                    print("error loading snapshot ")
+                    load_OK = False
 
             if load_OK:
-                gx = snap_cache.galaxy
-                if args.withplot and gx is not None:
-                    if not 'galaxy-all' in snap_cache.gx_properties:
-                        if args.verbose:
-                            print("plot particles in galaxy ", gx.parts)
-                        buf = plot_snapshot(snap_cache, snap_cache.galaxy, 'Galaxy star particles')
-                        snap_cache.gx_properties.append('galaxy-all', buf)
-                    else:
-                        if args.verbose:
-                            print("plot exists already in cache")
+                if args.withplot:
+                    gx = snap_cache.galaxy
+                    if gx is not None:
+                        if not 'galaxy-all' in snap_cache.gx_properties:
+                            if args.verbose:
+                                print("plot particles in galaxy ", gx.parts)
+                            buf = plot_snapshot(snap_cache, snap_cache.galaxy, 'Galaxy star particles')
+                            snap_cache.gx_properties.append('galaxy-all', buf)
+                        else:
+                            if args.verbose:
+                                print("plot exists already in cache")
 
                 snap_exec = 'process'
                 if command_str != '' and len(snap_cache.halo_properties) > 2: # no dummy halo

@@ -285,6 +285,13 @@ class SnapshotCache:
 
     @property
     def halo(self):
+        if self.__dm_halo is None:
+            Rvir_property = self.__profile_properties['Rvir_property']
+            if Rvir_property in self.__halo_properties:
+                Rvir = self.__halo_properties[Rvir_property]
+                mask = pg.BallMask(Rvir, center=[0, 0, 0])
+                halo = self.__snapshot[mask]
+                self.__dm_halo = halo
         return self.__dm_halo
 
     @property
@@ -429,6 +436,7 @@ class SnapshotCache:
     def exists_in_cache(self):
         try:
             self.__halo_properties._read_info_file(self.__get_halo_filename())
+            self.__gx_properties._read_info_file(self.__get_gx_filename())
             return True
         except Exception as e:
             return False
@@ -507,6 +515,11 @@ class SnapshotCache:
             print("*********************************************")
         self.__loaded = True
         return self.__snapshot
+
+    def read_chache(self, forceCache = False):
+        self.__halo_properties._read_info_file(self.__get_halo_filename())
+        self.__gx_properties._read_info_file(self.__get_gx_filename())
+        return
 
     def write_chache(self, forceCache = False):
         self.__halo_properties._write_info_file(self.__get_halo_filename(), force=forceCache)
