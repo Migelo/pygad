@@ -4,10 +4,10 @@
 # -----
 # You can specify a custom docker image from Docker Hub as your build environment.
 image: python:3.7.1
-  name: broett/std_programming_env
-  username: broett
-  password: $PWD_SECURE
-  email: broett@mpa-garching.mpg.de
+#  name: broett/std_programming_env
+#  username: broett
+#  password: $PWD_SECURE
+#  email: broett@mpa-garching.mpg.de
 
 pipelines:
   default:
