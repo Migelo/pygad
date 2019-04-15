@@ -929,7 +929,9 @@ class SnapshotCache:
         # Rvir_property = self.__snap_config.Rvir_property
         # Rvir = self.dm_halo.props[Rvir_property]
         Rgx = float(self.Rvir) * self.gx_radius
-        mask = pg.BallMask(str(Rgx) + ' kpc h_0**-1', center=[0, 0 , 0])
+        #mask = pg.BallMask(str(Rgx) + ' ckpc h_0**-1', center=[0, 0 , 0])
+        #mask = pg.BallMask(pg.UnitScalar(Rgx).in_units_of(self.snapshot['r'].units), center=[0, 0 , 0])
+        mask = pg.BallMask(Rgx, center=[0, 0 , 0])
         snapshot_gx = self.__snapshot[mask]
 
         if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
