@@ -953,7 +953,7 @@ def fill_derived_gas_trace_qty(snap, units=None, invalid=0.0):
 
     # Amount of metals gained nside and outside the galaxy.
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print '  "metal_gain_in", "metal_gain_out"'
+        print('  "metal_gain_in", "metal_gain_out"')
     # all traced particles have a value for metals gained before entering:
     gas['metal_gain_in'] = UnitArr( np.zeros(len(gas), dtype=float),
                                     units=units['MASS'] )

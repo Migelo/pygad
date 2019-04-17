@@ -3,7 +3,7 @@ Interface to the C implementations of binning.
 
 Testing:
     >>> from ..environment import module_dir
-    >>> from ..snapshot import Snap
+    >>> from ..snapshot import Snapshot
     >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_320', physical=True)
     >>> from ..transformation import Translation
     >>> Translation(-UnitArr([34.7828, 35.5898, 33.6147], 'cMpc/h_0')).apply(s)
@@ -23,13 +23,13 @@ Testing:
     Consistency check of total mass:
     >>> mask = np.ones(len(sub.gas), dtype=bool)
     >>> pos, hsml = sub.gas['pos'], sub.gas['hsml']
-    >>> for k in xrange(3):
+    >>> for k in range(3):
     ...     mask &= (extent[k,0]<pos[:,k]-hsml) & (pos[:,k]+hsml<extent[k,1])
     >>> lower = sub.gas[mask]['mass'].sum()
     >>> upper = sub.gas['mass'].sum()
     >>> del mask
     >>> if not (lower <= map2D.sum()*map2D.vol_voxel() <= upper):
-    ...     print lower, map2D.sum(), upper
+    ...     print(lower, map2D.sum(), upper)
 
     Consistency check between 3D and 2D:
     >>> map3D  = SPH_to_3Dgrid(sub.gas, extent=extent, qty='rho', Npx=Npx)
@@ -38,12 +38,12 @@ Testing:
     >>> map3D_proj = map3D.sum(axis=-1) * map3D.res(2,units='kpc')
     >>> tot_rel_err = (map3D_proj.sum() - map2D.sum()) / map2D.sum()
     >>> if tot_rel_err > 1e-3:
-    ...     print tot_rel_err
+    ...     print(tot_rel_err)
     >>> px_rel_err = np.abs(map2D-map3D_proj)/map2D
     >>> if np.mean(np.abs(px_rel_err)) > 0.01:
-    ...     print np.mean(np.abs(px_rel_err))
+    ...     print(np.mean(np.abs(px_rel_err)))
     >>> if np.percentile(np.abs(px_rel_err), 99) > 0.1:
-    ...     print np.percentile(np.abs(px_rel_err), 99)
+    ...     print(np.percentile(np.abs(px_rel_err), 99))
 
     Quick consistency check of higher resolution
     >>> map2D_high = SPH_to_2Dgrid(sub.gas, extent=extent[:2], qty='rho',
@@ -52,7 +52,7 @@ Testing:
     done with SPH grid
     >>> tot_rel_err = np.sum(map3D_proj - map2D) / map2D.sum()
     >>> if tot_rel_err > 0.001:
-    ...     print tot_rel_err
+    ...     print(tot_rel_err)
 
     Consistency check between 3D-map and the line integral:
     >>> extent = UnitArr([[-0.1,0.1],[-0.1,0.1],[-1e2,1e2]], 'kpc')
@@ -67,9 +67,9 @@ Testing:
     done with SPH line
     >>> px_rel_err = np.abs(column-line)/column
     >>> if np.mean(np.abs(px_rel_err)) > 0.01:
-    ...     print np.mean(np.abs(px_rel_err))
+    ...     print(np.mean(np.abs(px_rel_err)))
     >>> if np.percentile(np.abs(px_rel_err), 99) > 0.05:
-    ...     print np.percentile(np.abs(px_rel_err), 99)
+    ...     print(np.percentile(np.abs(px_rel_err), 99))
 '''
 __all__ = ['SPH_to_3Dgrid', 'SPH_to_2Dgrid', 'SPH_3D_to_line',
            'SPH_to_2Dgrid_by_particle']

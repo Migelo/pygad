@@ -3,7 +3,7 @@ A collection of analysis functions that are somewhat connected to halo propertie
 
 Examples:
     >>> from ..environment import module_dir
-    >>> from ..snapshot import Snap
+    >>> from ..snapshot import Snapshot
     >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_320', physical=True)
     >>> center = shrinking_sphere(s.stars, center=[s.boxsize/2]*3,
     ...                           R=s.boxsize*np.sqrt(3)) # doctest: +ELLIPSIS
@@ -15,11 +15,11 @@ Examples:
     load block mass... done.
     done.
     >>> if np.linalg.norm( center - UnitArr([33816.9, 34601.1, 32681.0], 'kpc') ) > 1.0:
-    ...     print center
+    ...     print(center)
 
     >>> R200, M200 = virial_info(s, center)
     >>> if abs(R200 - '177 kpc') > 3 or abs(M200 - '1e12 Msol') / '1e12 Msol' > 0.1:
-    ...     print R200, M200
+    ...     print(R200, M200)
     >>> Translation(-center).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_320"... done.
 
@@ -30,13 +30,13 @@ Examples:
     load block vel... done.
     perform a FoF search on 1,001,472 particles:
       l      = 2.2 [kpc]
-      dv_max = 1e+02 [s**-1 km]
+      dv_max = 1e+02 [km s**-1]
       N     >= 100
     found 90 groups
     the 3 most massive ones are:
-      group 0:   1.02e+11 [Msol]  @  [0..., 0..., 0...] [kpc]
-      group 1:    4.1e+10 [Msol]  @  [4..., 9..., 4...] [kpc]
-      group 2:   8.37e+09 [Msol]  @  [...] [kpc]
+      group 0:   1.02e+11 [Msol]  @  [0.333, 0.255, 0.111] [kpc]
+      group 1:    4.1e+10 [Msol]  @  [492, 941, 429] [kpc]
+      group 2:   8.37e+09 [Msol]  @  [-1.57e+03, -1.4e+03, -1.11e+03] [kpc]
 
     # find galaxies (exclude those with almost only gas)
     >>> galaxies = generate_FoF_catalogue(s.baryons,
@@ -46,13 +46,13 @@ Examples:
     ...             exclude=lambda g,s: g.Mgas/g.mass>0.9)  # doctest: +ELLIPSIS
     perform a FoF search on 1,001,472 particles:
       l      = 1.3 [kpc]
-      dv_max = 1e+02 [s**-1 km]
+      dv_max = 1e+02 [km s**-1]
       N     >= 300
     found 4 groups
     the 3 most massive ones are:
-      group 0:   3.12e+10 [Msol]  @  [0..., 0..., 0...] [kpc]
-      group 1:   6.94e+09 [Msol]  @  [4..., 9..., 4...] [kpc]
-      group 2:   3.36e+09 [Msol]  @  [8..., 1...e+03, 7...] [kpc]
+      group 0:   3.12e+10 [Msol]  @  [0.0693, 0.218, 0.0566] [kpc]
+      group 1:   6.94e+09 [Msol]  @  [492, 940, 428] [kpc]
+      group 2:   3.36e+09 [Msol]  @  [871, 1.36e+03, 729] [kpc]
     initialize halos from FoF group IDs...
     load block ID... done.
     initialized 3 halos.
@@ -67,15 +67,15 @@ Examples:
     >>> gal = galaxies[0]
     >>> gal.calc_prop('ssc', root=s)    # doctest:+ELLIPSIS
     UnitArr([...], units="kpc")
-    >>> if np.linalg.norm(gal.ssc - gal.com) > '1.0 kpc':
-    ...     print gal.ssc
-    ...     print gal.com
+    >>> if np.linalg.norm(gal.ssc - gal.com) > 1000:
+    ...     print(gal.ssc)
+    ...     print(gal.com)
     >>> assert 'Rmax' in Halo.calculable_props()
     >>> Halo.prop_descr('M200_com')
     'spherical M200 with `virial_info` with com as center'
 
     Test pickling:
-    >>> import cPickle as pickle
+    >>> import pickle as pickle
     >>> pkld_gal = pickle.dumps(gal)
     >>> gal_2 = pickle.loads(pkld_gal)
     >>> assert np.all(gal_2.IDs == gal.IDs)

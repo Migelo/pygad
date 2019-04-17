@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 '''
-gCache3 - a script generate/process SnapshotCache via pygad.cmd.gCache
+gCache3 - a script generate/process SnapshotCache via pygad.cmdtool.gCache
 Plugin scripts can be passed with argument --command.
 This script has access to pygad to do computations
 '''
@@ -33,7 +33,7 @@ if basedir is None:
 
 sys.argv[1] = sys.argv[1] + "/*_%03d*"
 
-print("invoking pygad.cmd.gCache")
+print("invoking pygad.cmdtool.gCache")
 
 if __name__ == '__main__':
-    import pygad.cmd.gCache
+    import pygad.cmdtool.gCache

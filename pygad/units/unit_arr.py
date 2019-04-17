@@ -69,7 +69,7 @@ Examples:
     >>> np.sqrt(v)
     UnitArr([ 1.54919334,  0.70710678,  2.        ], units="s**1/2")
     >>> np.round(v**Fraction(1,3), 3)   # no floats allowed, however, Fraction are!
-    array([ 1.339,  0.794,  1.587])
+    array([1.339,  0.794,  1.587])
     >>> np.mean(v)
     UnitArr(2.3, units="s")
     >>> v.sum()

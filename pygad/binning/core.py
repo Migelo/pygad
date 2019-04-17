@@ -2,37 +2,37 @@
 General image manipulation routines.
 
 Examples:
-    >>> for e in grid_props('100 kpc', Npx=100, dim=2): print e
+    >>> for e in grid_props('100 kpc', Npx=100, dim=2): print(e)
     [[-50.  50.]
      [-50.  50.]] [kpc]
     [100 100]
-    [ 1.  1.] [kpc]
-    >>> for e in grid_props(UnitArr([[-5,5],[-10,3]],'kpc'), Npx=20): print e
+    [1. 1.] [kpc]
+    >>> for e in grid_props(UnitArr([[-5,5],[-10,3]],'kpc'), Npx=20): print(e)
     [[ -5.   5.]
      [-10.   3.]] [kpc]
     [20 20]
-    [ 0.5   0.65] [kpc]
-    >>> for e in grid_props(UnitArr([[-5,5],[-10,3]],'kpc'), Npx=[20,26]): print e
+    [0.5  0.65] [kpc]
+    >>> for e in grid_props(UnitArr([[-5,5],[-10,3]],'kpc'), Npx=[20,26]): print(e)
     [[ -5.   5.]
      [-10.   3.]] [kpc]
     [20 26]
-    [ 0.5  0.5] [kpc]
-    >>> for e in grid_props(UnitArr([5,10],'kpc'), Npx=100): print e
+    [0.5 0.5] [kpc]
+    >>> for e in grid_props(UnitArr([5,10],'kpc'), Npx=100): print(e)
     [[-2.5  2.5]
      [-5.   5. ]] [kpc]
     [100 100]
-    [ 0.05  0.1 ] [kpc]
-    >>> for e in grid_props('1 Mpc', Npx=100, dim=3): print e
+    [0.05 0.1 ] [kpc]
+    >>> for e in grid_props('1 Mpc', Npx=100, dim=3): print(e)
     [[-0.5  0.5]
      [-0.5  0.5]
      [-0.5  0.5]] [Mpc]
     [100 100 100]
-    [ 0.01  0.01  0.01] [Mpc]
-    >>> for e in grid_props([1,2], Npx=[100,50]): print e
+    [0.01 0.01 0.01] [Mpc]
+    >>> for e in grid_props([1,2], Npx=[100,50]): print(e)
     [[-0.5  0.5]
      [-1.   1. ]]
     [100  50]
-    [ 0.01  0.04]
+    [0.01 0.04]
     >>> grid_props('1 Mpc', Npx=100)
     Traceback (most recent call last):
     ...
@@ -57,8 +57,8 @@ Examples:
     >>> orientate_at(s[s['r'] < '10 kpc'].baryons, 'L', total=True)
     derive block momentum... done.
     derive block angmom... done.
-    apply Rotation to "vel" of "snap_M1196_4x_470"... done.
     apply Rotation to "pos" of "snap_M1196_4x_470"... done.
+    apply Rotation to "vel" of "snap_M1196_4x_470"... done.
     >>> assert np.all(gridbin1d(s['pos'][:,0], qty=s['mass'], extent= [-100,100] )
     ...             == gridbin( s['pos'][:,0].reshape((len(s),1)),
     ...                                        qty=s['mass'], extent=[[-100,100]]))
@@ -78,9 +78,9 @@ Examples:
     >>> m1.Npx
     (100, 100)
     >>> m1.res()
-    UnitArr([ 0.7199242 ,  0.71997337])
+    UnitArr([0.7199242 , 0.71997337])
     >>> m1.vol_voxel()
-    UnitArr(0.518326256291)
+    UnitArr(0.518326256290704)
     >>> m1.vol_tot()
     UnitArr(5.183263e+03)
     >>> m1 = scale01(m1, np.percentile(m1, [5,95]))

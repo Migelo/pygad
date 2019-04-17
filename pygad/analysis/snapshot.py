@@ -3,11 +3,11 @@ A collection of (sub-)snapshot wide analysis functions.
 
 Example:
     >>> from ..environment import module_dir
-    >>> from ..snapshot import Snap
+    >>> from ..snapshot import Snapshot
     >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_320', physical=False)
     >>> if np.linalg.norm(mass_weighted_mean(s,'pos') - center_of_mass(s)) > 1e-3:
-    ...     print mass_weighted_mean(s,'pos')
-    ...     print center_of_mass(s,)
+    ...     print(mass_weighted_mean(s,'pos'))
+    ...     print(center_of_mass(s,))
     load block pos... done.
     load block mass... done.
 
@@ -21,11 +21,11 @@ Example:
     load block vel... done.
     derive block momentum... done.
     derive block angmom... done.
-    apply Rotation to "vel" of "snap_M1196_4x_320"... done.
     apply Rotation to "pos" of "snap_M1196_4x_320"... done.
+    apply Rotation to "vel" of "snap_M1196_4x_320"... done.
     >>> if np.linalg.norm(sub['angmom'].sum(axis=0) -
     ...         UnitArr([3.18e+08,-5.05e+07,1.24e+14],'kpc Msol km/s')) > 1e12:
-    ...     print sub['angmom'].sum(axis=0)
+    ...     print(sub['angmom'].sum(axis=0))
     derive block momentum... done.
     derive block angmom... done.
     >>> redI = reduced_inertia_tensor(sub.baryons)
@@ -35,21 +35,21 @@ Example:
     ...                                  [ 2.74e9,   5.16e8, 5.84e9]])) < 1e10
     True
     >>> orientate_at(s, 'red I', redI)
-    apply Rotation to "vel" of "snap_M1196_4x_320"... done.
     apply Rotation to "pos" of "snap_M1196_4x_320"... done.
+    apply Rotation to "vel" of "snap_M1196_4x_320"... done.
     >>> redI = reduced_inertia_tensor(sub.baryons)
     derive block r... done.
     >>> np.linalg.norm(redI - np.matrix([[ 2.62e10,  0.00   , 0.00   ],
     ...                                  [ 0.00   ,  5.73e+9, 0.00   ],
     ...                                  [ 0.00   ,  0.00   , 2.05e9]])) < 1e8
     True
-    >>> if abs( los_velocity_dispersion(sub) - '170 km/s' ) > '5 k/s':
-    ...     print los_velocity_dispersion(sub)
-
+    >>> if abs( los_velocity_dispersion(sub) - '170 km/s' ) > '5 km/s':
+    ...     print(los_velocity_dispersion(sub))
+    119.81759565569048 [km s**-1]
     >>> if abs(half_mass_radius(sub.stars) - '11 kpc') > '0.8 kpc':
-    ...     print half_mass_radius(sub.stars)
+    ...     print(half_mass_radius(sub.stars))
     >>> if abs(eff_radius(sub, 'V', proj=None) - '11 kpc') > '0.8 kpc':
-    ...     print eff_radius(sub, 'V', proj=None)
+    ...     print(eff_radius(sub, 'V', proj=None))
     load block form_time... done.
     derive block age... done.
     load block Z... done.
@@ -60,30 +60,30 @@ Example:
     derive block metallicity... done.
     derive block lum_v... done.
     >>> if abs(eff_radius(sub, 'V', proj=2) - '10.7 kpc') > '0.2 kpc':
-    ...     print eff_radius(sub, 'V', proj=2)
+    ...     print(eff_radius(sub, 'V', proj=2))
     derive block rcyl... done.
     >>> if abs(half_mass_radius(sub.stars, proj=2) - '10.8 kpc') > '0.2 kpc':
-    ...     print half_mass_radius(sub.stars)
+    ...     print(half_mass_radius(sub.stars))
     >>> ifr, ofr = flow_rates(s, '50 kpc')
     derive block vrad... done.
     >>> if abs(ifr - '355 Msol/yr') > '10 Msol/yr' or abs(ofr - '337 Msol/yr') > '10 Msol/yr':
-    ...     print ifr, ofr
+    ...     print(ifr, ofr)
     >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc')) - '-4.6 Msol/yr') > '0.2 Msol/yr':
-    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'))
+    ...     print(shell_flow_rates(s.gas, UnitArr([48,52],'kpc')))
     >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), qty='metals') - '-0.014 Msol/yr') > '0.002 Msol/yr':
-    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), qty='metals')
+    ...     print(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), qty='metals'))
     >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), direction='in') - '-12.2 Msol/yr') > '0.2 Msol/yr':
-    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), direction='in')
+    ...     print(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), direction='in'))
     >>> if abs(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), direction='out') - '7.6 Msol/yr') > '0.2 Msol/yr':
-    ...     print shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), direction='out')
+    ...     print(shell_flow_rates(s.gas, UnitArr([48,52],'kpc'), direction='out'))
     >>> ifr, ofr = flow_rates(s.gas, '50 kpc')
 
     >>> if abs(ifr - '13.0 Msol/yr') > '1.0 Msol/yr' or abs(ofr - '9.1 Msol/yr') > '0.1 Msol/yr':
-    ...     print ifr, ofr
+    ...     print(ifr, ofr)
     >>> eta = ofr / s.gas['sfr'].sum()
     load block sfr... done.
     >>> if abs(eta - 2.0) > 0.2:
-    ...     print 'mass loading:', eta
+    ...     print('mass loading:', eta)
 
     >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_470', load_double_prec=True)
     >>> s.gas['lx'] = x_ray_luminosity(s, lumtable=module_dir+'../snaps/em.dat')
@@ -101,9 +101,9 @@ Example:
     >>> s.gas['lx'].units
     Unit("erg s**-1")
     >>> if abs(np.mean(s.gas['lx']) - '1.68e33 erg/s') > '0.05e33 erg/s':
-    ...     print np.mean(s.gas['lx'])
+    ...     print(np.mean(s.gas['lx']))
     >>> if abs(s.gas['lx'].sum() - '1.55e39 erg/s') > '0.05e39 erg/s':
-    ...     print s.gas['lx'].sum()
+    ...     print(s.gas['lx'].sum())
 '''
 __all__ = ['mass_weighted_mean', 'center_of_mass', 'reduced_inertia_tensor',
            'orientate_at', 'half_qty_radius', 'half_mass_radius', 'eff_radius',

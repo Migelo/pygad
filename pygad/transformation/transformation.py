@@ -3,7 +3,7 @@ Classes for snapshot transformations.
 
 Examples:
     >>> from ..environment import module_dir
-    >>> from ..snapshot import Snap
+    >>> from ..snapshot import Snapshot
     >>> rot = Rotation([[0,1,0],[1,0,0],[0,0,1]])
     Traceback (most recent call last):
     ...
@@ -12,30 +12,30 @@ Examples:
     >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_470', physical=False)
     >>> s['pos'][:3]
     load block pos... done.
-    SimArr([[ 34613.515625  ,  35521.81640625,  33178.60546875],
-            [ 34613.296875  ,  35521.765625  ,  33178.31640625],
-            [ 34613.26171875,  35521.8828125 ,  33178.48046875]],
+    SimArr([[34613.516, 35521.816, 33178.605],
+            [34613.297, 35521.766, 33178.316],
+            [34613.26 , 35521.883, 33178.48 ]],
            dtype=float32, units="ckpc h_0**-1", snap="snap_M1196_4x_470")
     >>> rot.apply(s)
     apply Rotation to "pos" of "snap_M1196_4x_470"... done.
     >>> s['pos'][:3]
-    SimArr([[ 35521.81640625,  33178.60546875,  34613.515625  ],
-            [ 35521.765625  ,  33178.31640625,  34613.296875  ],
-            [ 35521.8828125 ,  33178.48046875,  34613.26171875]],
+    SimArr([[35521.816, 33178.605, 34613.516],
+            [35521.766, 33178.316, 34613.297],
+            [35521.883, 33178.48 , 34613.26 ]],
            dtype=float32, units="ckpc h_0**-1", snap="snap_M1196_4x_470")
     >>> s['vel'][:3]
     load block vel... done.
     apply stored Rotation to block vel... done.
-    SimArr([[-119.9617691 , -215.21350098, -218.84106445],
-            [-100.0279007 , -203.89819336, -218.8409729 ],
-            [-107.25678253, -204.94604492, -213.70817566]],
-           dtype=float32, units="a**1/2 s**-1 km", snap="snap_M1196_4x_470")
+    SimArr([[-119.96177, -215.2135 , -218.84106],
+            [-100.0279 , -203.8982 , -218.84097],
+            [-107.25678, -204.94604, -213.70818]],
+           dtype=float32, units="a**1/2 km s**-1", snap="snap_M1196_4x_470")
     >>> Translation(UnitArr([10,-20,30],'Mpc')).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_470"... done.
     >>> s['pos'][:3]
-    SimArr([[ 42721.81640625,  18778.60546875,  56213.515625  ],
-            [ 42721.765625  ,  18778.31640625,  56213.296875  ],
-            [ 42721.8828125 ,  18778.48046875,  56213.26171875]],
+    SimArr([[42721.816, 18778.605, 56213.516],
+            [42721.766, 18778.316, 56213.297],
+            [42721.883, 18778.48 , 56213.26 ]],
            dtype=float32, units="ckpc h_0**-1", snap="snap_M1196_4x_470")
     >>> Translation(UnitArr([100,200,300])).apply(s)
     apply Translation to "pos" of "snap_M1196_4x_470"... done.
@@ -43,34 +43,34 @@ Examples:
     load block mass... done.
     derive block momentum... done.
     derive block angmom... done.
-    SimArr([[ 453.28463745,  146.67962646, -392.72454834],
-            [ 627.07080078,  316.37619019, -581.39532471],
-            [ 483.9508667 ,  198.68783569, -433.42886353],
-            ..., 
-            [  59.79833984, -180.23754883,   15.16521835],
-            [ 147.31933594,  -25.50907898, -103.11534119],
-            [  60.9321785 ,  114.03372955,  -84.46931458]],
-           dtype=float32, units="1e+10 ckpc h_0**-1 Msol a**1/2 h_0**-1 km s**-1", snap="snap_M1196_4x_470")
+    SimArr([[ 453.28464 ,  146.67963 , -392.72455 ],
+            [ 627.0708  ,  316.3762  , -581.3953  ],
+            [ 483.95087 ,  198.68784 , -433.42886 ],
+            ...,
+            [  59.79834 , -180.23755 ,   15.165218],
+            [ 147.31934 ,  -25.509079, -103.11534 ],
+            [  60.93218 ,  114.03373 ,  -84.469315]],
+           dtype=float32, units="1e+10 Msol a**1/2 ckpc h_0**-1 h_0**-1 km s**-1", snap="snap_M1196_4x_470")
     >>> rot.apply(s)
-    apply Rotation to "vel" of "snap_M1196_4x_470"... done.
     apply Rotation to "pos" of "snap_M1196_4x_470"... done.
+    apply Rotation to "vel" of "snap_M1196_4x_470"... done.
     >>> s['angmom']
     derive block momentum... done.
     derive block angmom... done.
-    SimArr([[ 146.67962646, -392.72454834,  453.28463745],
-            [ 316.37619019, -581.39532471,  627.07080078],
-            [ 198.68783569, -433.42886353,  483.9508667 ],
-            ..., 
-            [-180.23754883,   15.16521835,   59.79833984],
-            [ -25.50907898, -103.11534119,  147.31933594],
-            [ 114.03372955,  -84.46931458,   60.9321785 ]],
-           dtype=float32, units="1e+10 ckpc h_0**-1 Msol a**1/2 h_0**-1 km s**-1", snap="snap_M1196_4x_470")
+    SimArr([[ 146.67963 , -392.72455 ,  453.28464 ],
+            [ 316.3762  , -581.3953  ,  627.0708  ],
+            [ 198.68784 , -433.42886 ,  483.95087 ],
+            ...,
+            [-180.23755 ,   15.165218,   59.79834 ],
+            [ -25.509079, -103.11534 ,  147.31934 ],
+            [ 114.03373 ,  -84.469315,   60.93218 ]],
+           dtype=float32, units="1e+10 Msol a**1/2 ckpc h_0**-1 h_0**-1 km s**-1", snap="snap_M1196_4x_470")
     >>> ca, sa = np.cos(12), np.sin(12)
     >>> Rotation([[ca,sa,0],[-sa,ca,0],[0,0,1]]).apply(s)
-    apply Rotation to "vel" of "snap_M1196_4x_470"... done.
     apply Rotation to "pos" of "snap_M1196_4x_470"... done.
+    apply Rotation to "vel" of "snap_M1196_4x_470"... done.
     >>> for T in s._trans_at_load:  # for efficiency, translations of same type
-    ...     print T                 # are combined...
+    ...     print(T)                 # are combined...
     Rotation([[ 0.000, 1.000, 0.000],[ 0.000, 0.000, 1.000],[ 1.000, 0.000, 0.000]])
     Translation([10.14,-19.72,30.42] [Mpc])
     Rotation([[ 0.000, 0.844,-0.537],[ 0.000, 0.537, 0.844],[ 1.000, 0.000, 0.000]])
@@ -82,15 +82,15 @@ Examples:
     apply stored Translation to block pos... done.
     apply stored Rotation to block pos... done.
     >>> del s; s = Snapshot(module_dir+'../snaps/snap_M1196_4x_470', physical=False)
-    >>> print s['pos'][0]; print s['pos'][-1]
+    >>> print(s['pos'][0]); print(s['pos'][-1])
     load block pos... done.
-    [ 34613.515625    35521.81640625  33178.60546875] [ckpc h_0**-1]
-    [ 34607.65234375  35537.62109375  33167.83203125] [ckpc h_0**-1]
+    [34613.516 35521.816 33178.605] [ckpc h_0**-1]
+    [34607.652 35537.62  33167.832] [ckpc h_0**-1]
     >>> rot.apply(s.gas,remember=False)
     apply Rotation to "pos" of "snap_M1196_4x_470":gas... done.
-    >>> print s['pos'][0]; print s['pos'][-1]
-    [ 35521.81640625  33178.60546875  34613.515625  ] [ckpc h_0**-1]
-    [ 34607.65234375  35537.62109375  33167.83203125] [ckpc h_0**-1]
+    >>> print(s['pos'][0]); print(s['pos'][-1])
+    [35521.816 33178.605 34613.516] [ckpc h_0**-1]
+    [34607.652 35537.62  33167.832] [ckpc h_0**-1]
     >>> del s['pos']
 
     >>> np.linalg.norm(s['pos'][0])
@@ -103,11 +103,10 @@ Examples:
     >>> s['vel'][-3:]
     load block vel... done.
     apply stored Rotation to block vel... done.
-    SimArr([[  14.27710342,  -56.8183403 ,   54.35939789],
-            [  37.94758224,   84.52431488,  130.14624023],
-            [  37.37803268,   64.14741516,   -4.18749571]],
-           dtype=float32, units="a**1/2 s**-1 km", snap="snap_M1196_4x_470")
-'''
+    SimArr([[ 14.277103 , -56.81834  ,  54.359398 ],
+            [ 37.947582 ,  84.524315 , 130.14624  ],
+            [ 37.378033 ,  64.147415 ,  -4.1874957]],
+           dtype=float32, units="a**1/2 km s**-1", snap="snap_M1196_4x_470")'''
 __all__ = ['Transformation', 'Translation', 'Rotation', 'rot_from_axis_angle',
            'rot_to_z']
 
@@ -204,6 +203,7 @@ class Transformation(object):
         todo = self._pre \
              + list(set(self._change)-set(self._pre)-set(self._post)) \
              + self._post
+        todo.sort()
         for name in todo:
             # only apply to available and not excluded blocks
             if name not in snap.available_blocks() or name in exclude:
@@ -439,15 +439,15 @@ def rot_from_axis_angle(u, angle):
         rot (Rotation):         The corresponding rotation (not only the matrix!).
 
     Example:
-        >>> print rot_from_axis_angle([1,0,0], np.pi/2.0)
+        >>> print(rot_from_axis_angle([1,0,0], np.pi/2.0))
         Rotation([[ 1.000, 0.000, 0.000],[ 0.000, 0.000,-1.000],[ 0.000, 1.000, 0.000]])
-        >>> print rot_from_axis_angle([0,0,1], np.pi/4.0)
+        >>> print(rot_from_axis_angle([0,0,1], np.pi/4.0))
         Rotation([[ 0.707,-0.707, 0.000],[ 0.707, 0.707, 0.000],[ 0.000, 0.000, 1.000]])
-        >>> print rot_from_axis_angle([0,0,1], '12 degree')
+        >>> print(rot_from_axis_angle([0,0,1], '12 degree'))
         Rotation([[ 0.978,-0.208, 0.000],[ 0.208, 0.978, 0.000],[ 0.000, 0.000, 1.000]])
         >>> R = rot_from_axis_angle([1,2,3], 1.234)
         >>> np.sqrt(1**2+2**2+3**2)*R.axis(), R.angle()
-        (array([ 1.,  2.,  3.]), 1.234)
+        (array([1., 2., 3.]), 1.234)
     '''
     if isinstance(angle, (str,UnitArr)):
         angle = UnitScalar(angle, 'rad')
@@ -481,9 +481,9 @@ def rot_to_z(z):
         >>> assert np.all(rot_to_z([0,0,1]).rotmat == np.eye(3))
         >>> z = rot_to_z([1,2,3]).apply_to_block(np.array([[1,2,3]]))
         >>> assert abs(z[0,0])<1e-9 and abs(z[0,1])<1e-9
-        >>> print rot_to_z([0,1,1])
+        >>> print(rot_to_z([0,1,1]))
         Rotation([[ 1.000, 0.000, 0.000],[ 0.000, 0.707,-0.707],[ 0.000, 0.707, 0.707]])
-        >>> print rot_to_z([0.5,-1,0])
+        >>> print(rot_to_z([0.5,-1,0]))
         Rotation([[ 0.800, 0.400,-0.447],[ 0.400, 0.200, 0.894],[ 0.447,-0.894, 0.000]])
     '''
     z = np.array(z,dtype=float)

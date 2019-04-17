@@ -20,13 +20,13 @@ Example:
     load block pos... done.
     Unit("cMpc h_0**-1")
     >>> s.gadget_units
-    {'VELOCITY': 'a**(1/2) km / s', 'LENGTH': 'cMpc/h_0', 'MASS': '1e10 Msol / h_0'}
-    >>> print 'current age of the universe: %s' % s.cosmic_time().in_units_of('Myr')
-    current age of the universe: 12.8697344013 [Myr]
+    {'LENGTH': 'cMpc/h_0', 'VELOCITY': 'a**(1/2) km / s', 'MASS': '1e10 Msol / h_0'}
+    >>> print('current age of the universe: %s' % s.cosmic_time().in_units_of('Myr'))
+    current age of the universe: 12.869734401309785 [Myr]
     >>> s.loadable_blocks()
-    ['vel', 'mass', 'ID', 'pos']
+    ['pos', 'vel', 'ID', 'mass']
     >>> if not set(s.deriveable_blocks()) >= set('Epot vx jzjc vy vz rcyl momentum angmom E dV vrad Ekin temp vcirc r jcirc y x z'.split()):
-    ...     print ' '.join(sorted(s.deriveable_blocks()))
+    ...     print(' '.join(sorted(s.deriveable_blocks())))
     >>> assert set(s.all_blocks()) == set(s.loadable_blocks() + s.deriveable_blocks())
     >>> mwgt_pos = np.tensordot(s['mass'], s['pos'], axes=1).view(UnitArr)
     load block mass... done.
@@ -40,14 +40,13 @@ Example:
     (Conversion from 'ckpc/h_0' to 'kpc' is done automatically: the values for 'a'
     and 'h_0' are taken from the associated snapshot and substitued.)
     >>> np.sqrt(np.sum( (com - s['pos'].mean(axis=0))**2 )).in_units_of('kpc', subs=s) < 10.0
-    UnitArr(True, dtype=bool)
+    UnitArr(True)
 
     Whereas the physical dimensions of the simulation's box are:
     >>> s.boxsize
     SimArr(100.0, units="cMpc h_0**-1", snap="AqA_ICs_C02_200_nm.gdt.0-8")
     >>> s['pos'].max(axis=0) - s['pos'].min(axis=0)
-    UnitArr([ 97.78572083,  97.81533051,  97.83026123],
-            dtype=float32, units="cMpc h_0**-1")
+    UnitArr([97.78572, 97.81533, 97.83026], dtype=float32, units="cMpc h_0**-1")
 
     >>> s.load_all_blocks()
     load block vel... done.
@@ -61,8 +60,8 @@ Example:
     >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_470', physical=False)
     >>> s.gas['rho']
     load block rho... done.
-    SimArr([  2.13930360e-03,   8.17492546e-04,   9.48364788e-04, ...,
-              4.68019188e-08,   3.91658048e-08,   3.44690605e-08],
+    SimArr([2.1393036e-03, 8.1749255e-04, 9.4836479e-04, ..., 4.6801919e-08,
+            3.9165805e-08, 3.4469060e-08],
            dtype=float32, units="1e+10 Msol ckpc**-3 h_0**2", snap="snap_M1196_4x_470":gas)
 
     The derived block R (radius) is updated automatically, if the block pos it
@@ -70,15 +69,15 @@ Example:
     >>> s['r']
     load block pos... done.
     derive block r... done.
-    SimArr([ 59671.72500919,  59671.40716648,  59671.54775578, ...,
-             59672.52310468,  59671.98484173,  59671.74536916],
+    SimArr([59671.72500919, 59671.40716648, 59671.54775578, ...,
+            59672.52310468, 59671.98484173, 59671.74536916],
            units="ckpc h_0**-1", snap="snap_M1196_4x_470")
     >>> assert np.all( s['r'] == dist(s['pos']) )
     >>> s['pos'] -= UnitArr([34622.7,35522.7,33180.5], 'ckpc/h_0')
     >>> s['r']
     derive block r... done.
-    SimArr([  9.41927424,   9.69844804,   9.6864571 , ...,  25.08852488,
-             23.95322772,  24.6890346 ],
+    SimArr([ 9.41927424,  9.69844804,  9.6864571 , ..., 25.08852488,
+            23.95322772, 24.6890346 ],
            units="ckpc h_0**-1", snap="snap_M1196_4x_470")
     >>> s.cache_derived = False
     >>> s.delete_blocks(derived=True)
@@ -106,35 +105,35 @@ Example:
 
     # You can also get (almost) arbitrary combinations of the blocks
     >>> s.gas.get('dist(pos)**2 / rho')
-    SimArr([  1.54323637e-05,   4.28144806e-05,   3.68149753e-05, ...,
-              2.25019852e+04,   2.70823020e+04,   3.08840657e+04],
+    SimArr([1.54323637e-05, 4.28144806e-05, 3.68149753e-05, ...,
+            2.25019852e+04, 2.70823020e+04, 3.08840657e+04],
            units="Msol**-1 kpc**5", snap="snap_M1196_4x_470":gas)
     >>> assert np.max(np.abs( (s.get('dist(pos)') - s['r']) / s['r'] )) < 1e-6
     >>> del s['pos']
     >>> s['r']
-    SimArr([ 13.08232505,  13.47006664,  13.45341258, ...,  34.84517185,
-             33.268371  ,  34.2903246 ], units="kpc", snap="snap_M1196_4x_470")
+    SimArr([13.08232505, 13.47006664, 13.45341258, ..., 34.84517185,
+            33.268371  , 34.2903246 ], units="kpc", snap="snap_M1196_4x_470")
     >>> s['pos']
     load block pos... done.
-    SimArr([[ 48074.32421875,  49335.85546875,  46081.39453125],
-            [ 48074.0234375 ,  49335.78515625,  46080.9921875 ],
-            [ 48073.97265625,  49335.9453125 ,  46081.22265625],
+    SimArr([[48074.324, 49335.855, 46081.395],
+            [48074.023, 49335.785, 46080.992],
+            [48073.973, 49335.945, 46081.223],
             ...,
-            [ 48067.1953125 ,  49359.1796875 ,  46065.84375   ],
-            [ 48067.49609375,  49357.2578125 ,  46066.24609375],
-            [ 48066.18359375,  49357.8046875 ,  46066.4296875 ]],
+            [48067.195, 49359.18 , 46065.844],
+            [48067.496, 49357.258, 46066.246],
+            [48066.184, 49357.805, 46066.43 ]],
            dtype=float32, units="kpc", snap="snap_M1196_4x_470")
     >>> s['r']
     derive block r... done.
-    SimArr([ 82877.39261021,  82876.95257089,  82877.14659861, ...,
-             82878.50049942,  82877.75400349,  82877.42052568],
+    SimArr([82877.39261021, 82876.95257089, 82877.14659861, ...,
+            82878.50049942, 82877.75400349, 82877.42052568],
            units="kpc", snap="snap_M1196_4x_470")
 
     One can test for available blocks and families by the 'in' opertator:
     >>> 'r' in s
     True
     >>> if not set(s.available_blocks()) >= set('Epot pot pos jzjc vx vy vz rcyl momentum mass vel angmom jcirc E vrad ID Ekin vcirc r y x z'.split()):
-    ...     print ' '.join(sorted(s.available_blocks()))
+    ...     print(' '.join(sorted(s.available_blocks())))
     >>> s.delete_blocks(derived=True)
     >>> 'r' in s
     True
@@ -151,7 +150,7 @@ Example:
     derive block metallicity... done.
     >>> s.stars['new'] = np.ones(len(s.stars))
     >>> sub['new']
-    SimArr([ 1.,  1.,  1., ...,  1.,  1.,  1.], snap="snap_M1196_4x_470":stars)
+    SimArr([1., 1., 1., ..., 1., 1., 1.], snap="snap_M1196_4x_470":stars)
 
     >>> dest_file = module_dir+'test.gad'
     >>> assert not os.path.exists(dest_file)
@@ -161,7 +160,7 @@ Example:
     load block mass... done.
     derive block r... done.
     writing block POS  (dtype=float32, units=[ckpc h_0**-1])... done.
-    writing block VEL  (dtype=float32, units=[a**1/2 s**-1 km])... done.
+    writing block VEL  (dtype=float32, units=[a**1/2 km s**-1])... done.
     writing block ID   (dtype=uint32, units=[1])... done.
     writing block MASS (dtype=float32, units=[1e+10 Msol h_0**-1])... done.
     writing block R    (dtype=float32, units=[kpc])... done.
@@ -184,13 +183,13 @@ Example:
     load block vel... done.
     load block ID... done.
     load block mass... done.
-    load block nh... done.
+    load block u... done.
     ...
     writing block POS  (dtype=float32, units=[ckpc h_0**-1])... done.
-    writing block VEL  (dtype=float32, units=[a**1/2 s**-1 km])... done.
+    writing block VEL  (dtype=float32, units=[a**1/2 km s**-1])... done.
     writing block ID   (dtype=uint32, units=[1])... done.
     writing block MASS (dtype=float32, units=[1e+10 Msol h_0**-1])... done.
-    writing block NH   (dtype=float32, units=[1])... done.
+    writing block U    (dtype=float32, units=[a**2 km**2 s**-2])... done.
     ...
     >>> s2 = Snapshot(dest_file, physical=False)
     >>> s2.load_all_blocks()    # doctest:+ELLIPSIS
@@ -201,7 +200,7 @@ Example:
     ...     b2 = s2.get_host_subsnap(name)[name]
     ...     err = np.max( np.abs((b - b2) / b) )
     ...     if err[np.isfinite(err)] > 1e-6:
-    ...         print name, b, b2
+    ...         print(name, b, b2)
     >>> os.remove(dest_file)
 
     >>> dest_file_hdf5 = module_dir+'test.hdf5'
@@ -209,10 +208,10 @@ Example:
     >>> gadget.write(s, dest_file_hdf5) # doctest:+ELLIPSIS
     ...
     writing block POS  (dtype=float32, units=[ckpc h_0**-1])... done.
-    writing block VEL  (dtype=float32, units=[a**1/2 s**-1 km])... done.
+    writing block VEL  (dtype=float32, units=[a**1/2 km s**-1])... done.
     writing block ID   (dtype=uint32, units=[1])... done.
     writing block MASS (dtype=float32, units=[1e+10 Msol h_0**-1])... done.
-    writing block NH   (dtype=float32, units=[1])... done.
+    writing block U    (dtype=float32, units=[a**2 km**2 s**-2])... done.
     ...
     >>> tmp = Snapshot(dest_file_hdf5, physical=False)
     >>> gadget.write(tmp, dest_file)    # doctest:+ELLIPSIS
@@ -220,13 +219,13 @@ Example:
     load block vel... done.
     load block ID... done.
     load block mass... done.
-    load block nh... done.
+    load block u... done.
     ...
     writing block POS  (dtype=float32, units=[ckpc h_0**-1])... done.
-    writing block VEL  (dtype=float32, units=[a**1/2 s**-1 km])... done.
+    writing block VEL  (dtype=float32, units=[a**1/2 km s**-1])... done.
     writing block ID   (dtype=uint32, units=[1])... done.
     writing block MASS (dtype=float32, units=[1e+10 Msol h_0**-1])... done.
-    writing block NH   (dtype=float32, units=[1])... done.
+    writing block U    (dtype=float32, units=[a**2 km**2 s**-2])... done.
     ...
     >>> del tmp
     >>> os.remove(dest_file_hdf5)
@@ -237,9 +236,9 @@ Example:
     ...     assert np.all( b == b2 )
     load block ...
     >>> assert s.redshift == s2.redshift
-    >>> for name, prop in s.properties.iteritems():
+    >>> for name, prop in s.properties.items():
     ...     if not prop == s2.properties[name]:
-    ...         print name, prop, s2.properties[name]
+    ...         print(name, prop, s2.properties[name])
     >>> os.remove(dest_file)
     >>> del s2
 
@@ -251,18 +250,18 @@ Example:
     FLRWCosmo(h_0=0.72, O_Lambda=0.74, O_m=0.26, O_b=0.0416, sigma_8=None, n_s=None)
     >>> s['pos']
     load block pos... done.
-    SimArr([[ 34613.515625  ,  35521.81640625,  33178.60546875],
-            [ 34613.296875  ,  35521.765625  ,  33178.31640625],
-            [ 34613.26171875,  35521.8828125 ,  33178.48046875],
+    SimArr([[34613.516, 35521.816, 33178.605],
+            [34613.297, 35521.766, 33178.316],
+            [34613.26 , 35521.883, 33178.48 ],
             ...,
-            [ 34608.3828125 ,  35538.609375  ,  33167.41015625],
-            [ 34608.59765625,  35537.2265625 ,  33167.69921875],
-            [ 34607.65234375,  35537.62109375,  33167.83203125]],
+            [34608.383, 35538.61 , 33167.41 ],
+            [34608.598, 35537.227, 33167.7  ],
+            [34607.652, 35537.62 , 33167.832]],
            dtype=float32, units="ckpc h_0**-1", snap="snap_M1196_4x_conv_470.hdf5")
     >>> s['r']
     derive block r... done.
-    SimArr([ 59671.72500919,  59671.40716648,  59671.54775578, ...,
-             59672.52310468,  59671.98484173,  59671.74536916],
+    SimArr([59671.72500919, 59671.40716648, 59671.54775578, ...,
+            59672.52310468, 59671.98484173, 59671.74536916],
            units="ckpc h_0**-1", snap="snap_M1196_4x_conv_470.hdf5")
     >>> s.parts
     [921708, 1001472, 56796, 19315, 79764, 0]
@@ -1152,7 +1151,7 @@ class Snapshot(object):
         # pre-load all needed (and not yet loaded) blocks in order not to mess up
         # the output (too much)
         dep_blocks = {}
-        for dep in deps:
+        for dep in sorted(deps):
             if self._root._cache_derived:
                 host[dep]
             else:
@@ -1430,9 +1429,9 @@ class SubSnapshot(Snapshot):
                         ATTENTION: you are responsible for this being correct!
 
     Doctests:
-        >>> s = Snap(module_dir+'../snaps/snap_M1196_4x_470', physical=False)
-        >>> if any(s.gas.parts[1:]): print s.gas.parts
-        >>> if any(s.stars.parts[:4]) or any(s.stars.parts[5:]): print s.gas.parts
+        >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_470', physical=False)
+        >>> if any(s.gas.parts[1:]): print(s.gas.parts)
+        >>> if any(s.stars.parts[:4]) or any(s.stars.parts[5:]): print(s.gas.parts)
         >>> s[123:len(s):100]
         <Snap "snap_M1196_4x_470"[123:2079055:100]; N=20,790; z=0.000>
         >>> s[123:len(s):100].parts
@@ -1457,8 +1456,8 @@ class SubSnapshot(Snapshot):
         [9217, 0, 0, 0, 798, 0]
         >>> slim[slim_mask][100:9000:3]['rho']
         load block rho... done.
-        SimArr([  3.18597343e-10,   8.68698516e-11,   2.53987748e-10, ...,
-                  9.36064892e-10,   1.11472465e-09,   4.26807673e-10],
+        SimArr([3.1859734e-10, 8.6869852e-11, 2.5398775e-10, ..., 9.3606489e-10,
+                1.1147246e-09, 4.2680767e-10],
                dtype=float32, units="1e+10 Msol ckpc**-3 h_0**2", snap="snap_M1196_4x_470":gas)
         >>> len(slim[slim_mask][100:9000:3]['rho'])
         2967
@@ -1475,22 +1474,22 @@ class SubSnapshot(Snapshot):
         >>> assert s[2:-123:10].stars['form_time'].shape[0] == len(s[2:-123:10].stars)
         load block form_time... done.
         >>> s[2:-123:10].stars['form_time']
-        SimArr([ 0.77399528,  0.950091  ,  0.81303227, ...,  0.2623567 ,
-                 0.40703428,  0.28800005],
+        SimArr([0.7739953 , 0.950091  , 0.81303227, ..., 0.2623567 , 0.40703428,
+                0.28800005],
                dtype=float32, units="a_form", snap="snap_M1196_4x_470":stars)
         >>> assert slim[slim_mask].stars['form_time'].shape[0] == len(slim[slim_mask].stars)
         >>> slim[slim_mask].stars['form_time'][::100]
-        SimArr([ 0.9974333 ,  0.30829304,  0.64798123,  0.60468233,  0.18474203,
-                 0.53754038,  0.18224117,  0.26500258],
+        SimArr([0.9974333 , 0.30829304, 0.6479812 , 0.6046823 , 0.18474203,
+                0.5375404 , 0.18224117, 0.26500258],
                dtype=float32, units="a_form", snap="snap_M1196_4x_470":stars)
 
         # index list (+family) tests (see comments in SubSnap)
         >>> r = np.sqrt(np.sum(s['pos']**2, axis=1))
-        >>> assert np.all( s[r<123]['pos'] == s[np.where(r<123)]['pos'] )
+        >>> assert np.all( s[r<123]['pos'] == s[np.where(r<123, True, False)]['pos'] )
         >>> assert np.all( s[s['pos'][:,0]>0]['pos']
-        ...             == s[np.where(s['pos'][:,0]>0)]['pos'] )
+        ...             == s[np.where(s['pos'][:,0]>0, True, False)]['pos'] )
         >>> assert np.all( s.stars[s.stars['inim']>s.stars['mass'].mean()]['pos'] ==
-        ...         s.stars[np.where(s.stars['inim']>s.stars['mass'].mean())]['pos'] )
+        ...         s.stars[np.where(s.stars['inim']>s.stars['mass'].mean(), True, False)]['pos'] )
         load block inim... done.
     '''
     def _calc_N_part_from_slice(self, N_part_base, _slice):

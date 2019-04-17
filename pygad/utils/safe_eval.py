@@ -22,26 +22,26 @@ Examples:
     >>> eval('__import__("os")')
     Traceback (most recent call last):
     ...
-    EvalError: "Undefined symbol: '__import__'"
+    pygad.utils.safe_eval.EvalError: "Undefined symbol: '__import__'"
     >>> eval('arange(10).__class__')
     Traceback (most recent call last):
     ...
-    EvalError: "accessing underscore attributes is not allowed!: 'arange(10).__class__'"
+    pygad.utils.safe_eval.EvalError: "accessing underscore attributes is not allowed!: 'arange(10).__class__'"
     >>> e = Evaluator({'c':42}, my_math=np)
     >>> e.eval('pi*c')
     131.94689145077132
     >>> e.eval('exp(arr**2)', {'arr':np.arange(6)})
-    array([  1.00000000e+00,   2.71828183e+00,   5.45981500e+01,
-             8.10308393e+03,   8.88611052e+06,   7.20048993e+10])
+    array([1.00000000e+00, 2.71828183e+00, 5.45981500e+01, 8.10308393e+03,
+           8.88611052e+06, 7.20048993e+10])
     >>> for name in iter_idents_in_expr('test.attr + more'):
-    ...     print name
+    ...     print(name)
     attr
     more
     test
     >>> e.eval('a%2 == 0', {'a':np.arange(6)})
-    array([ True, False,  True, False,  True, False], dtype=bool)
+    array([ True, False,  True, False,  True, False])
     >>> e.eval('(a%2 == 0) | ((a%3 == 0))', {'a':np.arange(6)})
-    array([ True, False,  True,  True,  True, False], dtype=bool)
+    array([ True, False,  True,  True,  True, False])
 '''
 __all__ = ['iter_idents_in_expr', 'EvalError', 'Evaluator', 'eval']
 

@@ -80,7 +80,11 @@ class FileReader(object):
 
     def infos(self):
         '''Return a sorted list of the block informations.'''
-        return sorted(list(self._info.values()), key=lambda e: e.start_pos)
+        try:
+            erg = sorted(list(self._info.values()), key=lambda e: e.start_pos)
+        except Exception as e:
+            erg = list(self._info.values())
+        return erg
 
     def block_names(self):
         '''Return a list of all available blocks.'''

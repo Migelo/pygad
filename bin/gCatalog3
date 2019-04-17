@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 '''
-gCatalog3 - a script generate/process SnapshotCache via pygad.cmd.gCache
+gCatalog3 - a script generate/process SnapshotCache via pygad.cmdtool.gCache
 plugin-Command CmdCatalog
 computes density profile and fits slope and puts it as "gamma" into the cache
 '''
@@ -65,7 +65,7 @@ if dest_value == 'global':
 # sys.argv[1] = basedir + sys.argv[1] + "/*_%03d*"
 
 sys.argv[1] = sys.argv[1] + "/*_%03d*"
-print("invoking pygad.cmd.gCache")
+print("invoking pygad.cmdtool.gCache")
 
 if __name__ == '__main__':
-    import pygad.cmd.gCache
+    import pygad.cmdtool.gCache

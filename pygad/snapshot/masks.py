@@ -4,7 +4,7 @@ Defining the disc etc.
 Rewrite to use np.in1d to get the correct particles.
 
 Examples:
-    >>> from ..snapshot import Snap
+    >>> from ..snapshot import Snapshot
     >>> from ..transformation import *
     >>> from ..analysis import *
     >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_470', physical=False)
@@ -32,16 +32,16 @@ Examples:
     >>> sub
     <Snap "snap_M1196_4x_470":Ball(r=60.0 [kpc]); N=198,250; z=0.000>
     >>> if abs(sub['r'].max().in_units_of('Mpc',subs=s) - 9.905) > 0.01:
-    ...     print sub['r'].max().in_units_of('Mpc',subs=s)
+    ...     print(sub['r'].max().in_units_of('Mpc',subs=s))
     >>> no_gas_max_r = sub.SubSnap(list(set(range(6))-set(gadget.families['gas'])))['r'].max()
     >>> if abs( no_gas_max_r.in_units_of('kpc',subs=s)  -  60.0 ) > 0.01:
-    ...     print no_gas_max_r
+    ...     print(no_gas_max_r)
     >>> s.to_physical_units()
     >>> sub = s[BoxMask('120 kpc',sph_overlap=False)]
     >>> sub # doctest:+ELLIPSIS
     <Snap "snap_M1196_4x_470":Box([[-60,60],[-60,60],[-60,60]] [kpc],strict); N=218,98...; z=0.000>
     >>> if np.linalg.norm( np.abs(sub['pos']).max(axis=0) - [120/2]*3 ) > 0.1:
-    ...     print np.abs(sub['pos']).max(axis=0)
+    ...     print(np.abs(sub['pos']).max(axis=0))
 
     >>> discmask = DiscMask(0.85,rmax='60.0 kpc')
     >>> disc = s[discmask]
@@ -55,7 +55,7 @@ Examples:
     <Snap "snap_M1196_4x_470":Disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc]); N=36,419; z=0.000>
     >>> gal = s[s['r']<'60 kpc']
     >>> np.array(disc.parts,float) / np.array(gal.parts)
-    array([ 0.78431754,  0.02731191,         nan,         nan,  0.26441513,
+    array([0.78431754,  0.02731191,         nan,         nan,  0.26441513,
                    nan])
     >>> bulge = gal[discmask.inverted()]
     >>> bulge
@@ -97,7 +97,7 @@ Examples:
     <Snap "snap_M1196_4x_470":CompoundMask(CompoundMask(ExprMask("abs(vel[:,2]) < '100 km/s'") & Disc(jzjc<0.85,rcyl<60.0 [kpc],z<5.0 [kpc])) & Ball(r=30.0 [kpc],strict)); N=34,177; z=0.000>
     >>> np.round( np.percentile(
     ...     s[ BallMask('100 kpc') & ~BallMask('30 kpc') ]['r'], [0,100]) )
-    array([  30.,  100.])
+    array([ 30.,  100.])
 '''
 __all__ = ['SnapMask', 'BallMask', 'BoxMask', 'DiscMask', 'IDMask', 'ExprMask']
 

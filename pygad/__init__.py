@@ -10,47 +10,49 @@ plotting module.
 doctests:
     >>> import doctest
     >>> import sys
-    >>> print >> sys.stderr, "ATTENTION: full doctest takes a few minutes!!!"
-    >>> print >> sys.stderr, 'testing module utils...'
+    >>> print("ATTENTION: full doctest takes a few minutes!!!", file=sys.stderr)
+    >>> print('testing module utils...', file=sys.stderr)
     >>> doctest.testmod(utils)
     TestResults(failed=0, attempted=5)
-    >>> print >> sys.stderr, 'testing module environment...'
+    >>> print('testing module environment...', file=sys.stderr)
     >>> doctest.testmod(environment)
     TestResults(failed=0, attempted=0)
-    >>> print >> sys.stderr, 'testing module units...'
+    >>> print('testing module units...', file=sys.stderr)
     >>> doctest.testmod(units)
-    TestResults(failed=0, attempted=3)
-    >>> print >> sys.stderr, 'testing module physics...'
+    TestResults(failed=0, attempted=38)
+    >>> print('testing module physics...', file=sys.stderr)
     >>> doctest.testmod(physics)
     TestResults(failed=0, attempted=4)
-    >>> print >> sys.stderr, 'testing module kernels...'
+    >>> print('testing module kernels...', file=sys.stderr)
     >>> doctest.testmod(kernels)
     TestResults(failed=0, attempted=3)
-    >>> print >> sys.stderr, 'testing module gadget...'
+    >>> print('testing module gadget...', file=sys.stderr)
     >>> doctest.testmod(gadget)
     TestResults(failed=0, attempted=3)
-    >>> print >> sys.stderr, 'testing module transformation...'
+    >>> print('testing module transformation...', file=sys.stderr)
     >>> doctest.testmod(transformation)
-    TestResults(failed=0, attempted=2)
-    >>> print >> sys.stderr, 'testing module snapshot...'
+    TestResults(failed=0, attempted=54)
+    >>> print('testing module snapshot...', file=sys.stderr)
     >>> doctest.testmod(snapshot)
-    TestResults(failed=0, attempted=6)
-    >>> print >> sys.stderr, 'testing module octree...'
+    TestResults(failed=0, attempted=118)
+    >>> print('testing module octree...', file=sys.stderr)
     >>> doctest.testmod(octree)
     TestResults(failed=0, attempted=3)
-    >>> print >> sys.stderr, 'testing module ssp...'
+    >>> print('testing module ssp...', file=sys.stderr)
     >>> doctest.testmod(ssp)
     TestResults(failed=0, attempted=2)
-    >>> print >> sys.stderr, 'testing module binning...'
+    >>> print('testing module binning...', file=sys.stderr)
     >>> doctest.testmod(binning)
     TestResults(failed=0, attempted=5)
-    >>> print >> sys.stderr, 'testing module analysis...'
+    >>> print('testing module analysis...', file=sys.stderr)
     >>> doctest.testmod(analysis)
     TestResults(failed=0, attempted=6)
-    >>> print >> sys.stderr, 'testing module tools...'
-    >>> doctest.testmod(tools)
-    TestResults(failed=0, attempted=0)
-    >>> print >> sys.stderr, 'testing module plotting...'
+
+    #>>> print('testing module tools...', file=sys.stderr)
+    #>>> doctest.testmod(.tools)
+    #TestResults(failed=0, attempted=0)
+
+    >>> print('testing module plotting...', file=sys.stderr)
     >>> doctest.testmod(plotting)
     TestResults(failed=0, attempted=2)
 

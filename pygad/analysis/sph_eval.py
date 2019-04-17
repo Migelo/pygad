@@ -3,7 +3,7 @@ Evaluate SPH properties.
 
 Examples:
     >>> from ..environment import module_dir
-    >>> from ..snapshot import Snap
+    >>> from ..snapshot import Snapshot
     >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_320', physical=False)
     >>> from ..transformation import Translation
     >>> Translation([-34792.2, -35584.8, -33617.9]).apply(s)
@@ -11,7 +11,7 @@ Examples:
 
     >>> if (abs(SPH_qty_at(s.gas, 'rho', [0,0,0]) - '1.74e5 Msol/kpc**3')
     ...             > '2e3 Msol/kpc**3'):
-    ...     print SPH_qty_at(s.gas, 'rho', [0,0,0])
+    ...     print(SPH_qty_at(s.gas, 'rho', [0,0,0]))
     load block pos... done.
     apply stored Translation to block pos... done.
     load block rho... done.
@@ -20,24 +20,24 @@ Examples:
     derive block dV... done.
     >>> if (abs(SPH_qty_at(s.gas, 'rho', s.gas['pos'][331798]) -
     ...         '5.33e4 Msol/kpc**3') > '2e2 Msol/kpc**3'):
-    ...     print SPH_qty_at(s.gas, 'rho', s.gas['pos'][331798])
+    ...     print(SPH_qty_at(s.gas, 'rho', s.gas['pos'][331798]))
     >>> assert np.all(np.abs(SPH_qty_at(s, 'rho', s.gas['pos'][:1000:100]) -
     ...                      SPH_qty_at(s, 'rho', s.gas['pos'][:1000])[::100]) /
     ...                 SPH_qty_at(s, 'rho', s.gas['pos'][:1000:100]) < 1e-4)
     >>> scatter_gas_qty_to_stars(s, 'rho', name='gas_rho')  # doctest:+ELLIPSIS
     SimArr(...units="Msol kpc**-3", snap="snap_M1196_4x_320":stars)
     >>> if np.abs(s.stars['gas_rho'][0] - 3.5e7) > 0.2e7:
-    ...     print s.stars['gas_rho'][0]
+    ...     print(s.stars['gas_rho'][0])
     >>> if np.abs(s.stars['gas_rho'][-1] - 2.2e2) > 0.2e2:
-    ...     print s.stars['gas_rho'][-1]
+    ...     print(s.stars['gas_rho'][-1])
 
     >>> v1 = SPH_qty_at(s, 'elements', s.gas['pos'][:200:10])
     load block Z... done.
     derive block elements... done.
     >>> v2 = SPH_qty_at(s, 'elements', s.gas['pos'][:200])[::10]
     >>> if np.max(np.abs(v1-v2)/v1) > 1e-6:
-    ...     print v1
-    ...     print v2
+    ...     print(v1)
+    ...     print(v2)
 
 '''
 __all__ = ['kernel_weighted', 'SPH_qty_at', 'scatter_gas_qty_to_stars']

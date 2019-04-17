@@ -15,8 +15,8 @@ Example:
     ...     gformat, endianness = get_format_and_endianness(gfile)
     ...     header = read_header(gfile, gformat, endianness)
     ...     info = get_block_info(gfile, gformat, endianness, header, 'exception')
-    ...     for block in info.itervalues():
-    ...         N = sum(header['N_part'][i] for i in xrange(6) if block.ptypes[i])
+    ...     for block in info.values():
+    ...         N = sum(header['N_part'][i] for i in range(6) if block.ptypes[i])
     ...         gfile.seek(block.start_pos)
     ...         data = np.fromfile(gfile,
     ...                             dtype=endianness+block.type_descr,
@@ -24,6 +24,22 @@ Example:
     ...         if block.dimension > 1:
     ...             data = data.reshape( (N,block.dimension) )
     ...         blocks[block.name] = data
+    300
+    24948984
+    49897668
+    58213912
+    66530156
+    70217012
+    73903868
+    77590724
+    81277580
+    84964436
+    88651292
+    88970372
+    89289452
+    89608532
+    137679212
+    145995456
     >>> import os
     >>> assert not os.path.exists(dest_file)
     >>> info = sorted(info.values(), key=lambda x: x.start_pos)
@@ -160,7 +176,7 @@ def read_header(gfile, gformat, endianness):
             header['flg_ic_info'], header['lpt_scalingfactor'] \
                 = struct.unpack(endianness + 'i i 4d 5i d',
                                 gfile.read(2*4+4*8+5*4+8))
-        header['unused'] = gfile.read(68)
+        header['unused'] = gfile.read(68).decode('ascii')
 
         assert struct.unpack(endianness + 'i', gfile.read(4)) == (256,)
 
@@ -224,7 +240,11 @@ def write_header(gfile, header, gformat, endianness):
                 header['flg_age'], header['flg_metals'],
                 header['flg_entropy_instead_u'], header['flg_doubleprecision'],
                 header['flg_ic_info'], header['lpt_scalingfactor']))
-        gfile.write(header['unused'])
+        if isinstance(header['unused'], str):
+            gfile.write(header['unused'].encode('ascii'))
+        else:
+            gfile.write(header['unused'])
+
 
         assert gfile.tell() - start_pos == size
         gfile.write(struct.pack(endianness + 'i', size))
@@ -255,7 +275,10 @@ class BlockInfo(object):
                              'typename ends with "N"!')
         self.name      = name
         self.dtype     = dtype
-        self.dimension = dimension
+        if dimension is not None:
+            self.dimension = int(dimension)
+        else:
+            self.dimension = dimension
         self.ptypes    = ptypes
         self.start_pos = start_pos
         self.size      = size
@@ -369,9 +392,9 @@ def write_info(gfile, info, gformat, endianness):
     start_pos = gfile.tell()
 
     for block in info:
-        gfile.write(struct.pack(endianness + '4s', block.name))
-        gfile.write(struct.pack(endianness + '8s',
-                                '%-8s' % block.Gadget_type_name))
+        gfile.write(struct.pack(endianness + '4s', block.name.encode('ascii')))
+        tn = '%-8s' % block.Gadget_type_name
+        gfile.write(struct.pack(endianness + '8s', tn.encode('ascii')))
         gfile.write(struct.pack(endianness + 'i',  block.dimension))
         gfile.write(struct.pack(endianness + '6i', *list(map(int,block.ptypes))))
 
@@ -511,13 +534,13 @@ def _block_inferring(block, header):
         return 'delete'
     element_size = block.size / N
     if block.dtype is not None:
-        block.dimension = element_size / block.dtype.itemsize
+        block.dimension = int(element_size / block.dtype.itemsize)
         return  # all known
 
     assert block.dtype is None
     # dtype is unknown (and dimension might be as well)...
     if block.dimension is not None:
-        itemsize = element_size / block.dimension
+        itemsize = int(element_size / block.dimension)
         if type_hint == 'int':
             block.dtype = 'i' + str(itemsize)
         elif type_hint in ['uint', 'unsigned']:
@@ -536,7 +559,7 @@ def _block_inferring(block, header):
         elif element_size % np.dtype(int).itemsize == 0:
             # could be multi-dimensional native
             block.dtype = np.dtype(int)
-            block.dimension = element_size / block.dtype.itemsize
+            block.dimension = int(element_size / block.dtype.itemsize)
         else:
             raise RuntimeError('Could not infere information for block ' +
                                '"%s"!' % block.name)
@@ -545,10 +568,10 @@ def _block_inferring(block, header):
     assert type_hint is None or type_hint == 'float'
     # assume float
     block.dtype = 'float64' if header['flg_doubleprecision'] else 'float32'
-    block.dimension = element_size / block.dtype.itemsize
+    block.dimension = int(element_size / block.dtype.itemsize)
     if element_size != block.dimension * block.dtype.itemsize:
         block.dtype = 'float32'
-        block.dimension = element_size / block.dtype.itemsize
+        block.dimension = int(element_size / block.dtype.itemsize)
         if element_size != block.dimension * block.dtype.itemsize:
             block.dtype = None
             block.dimension = None
@@ -766,7 +789,7 @@ def get_block_info(gfile, gformat, endianness, header, unclear_blocks):
 def _write_format2_leading_block(gfile, name, size, endianness):
     '''Little helper function with speaking name, that writes the small leading
     blocks for format 2 Gadget files.'''
-    gfile.write(struct.pack(endianness + ' i 4s i i', 8, name, size+8, 8))
+    gfile.write(struct.pack(endianness + ' i 4s i i', 8, name.encode('ascii'), size+8, 8))
 
 def write_block(gfile, block_name, data, gformat, endianness='=',
                 gad_units=None):

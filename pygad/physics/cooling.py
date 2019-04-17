@@ -4,7 +4,7 @@ can be obtained from their website (http://www.strw.leidenuniv.nl/WSS08/).
 
 Doctests:
     >>> from ..environment import module_dir
-    >>> from ..snapshot import Snap
+    >>> from ..snapshot import Snapshot
     >>> from ..tools import prepare_zoom
     >>> s,h,g = prepare_zoom(module_dir+'../snaps/snap_M1196_4x_470',
     ...                      star_form=None,
@@ -48,8 +48,7 @@ Doctests:
     The percentiles are still close to the overall ones, though
     >>> perc = np.percentile(Lambda, [10,25,50,75,90])
     >>> np.round(perc, decimals=25)
-    array([ -1.31000000e-23,  -6.40000000e-24,  -7.00000000e-25,
-             1.57000000e-23,   4.30000000e-23])
+    array([-1.31e-23, -6.40e-24, -7.00e-25,  1.57e-23,  4.30e-23])
 
     The cooling rates of the galaxy are much smaller than they are overall:
     >>> Lambda_gal = tbl.get_cooling(g.gas,
@@ -122,9 +121,9 @@ class Wiersma_CoolingTable(object):
         if verbose >= environment.VERBOSE_NORMAL:
             print('reading cooling tables from "%s"' % self._path)
         with h5py.File(self._path, 'r') as f:
-            self._note = f.get('Header/Note').value[0]
-            self._reference = f.get('Header/Reference').value[0]
-            self._version = f.get('Header/Version').value[0]
+            self._note = f.get('Header/Note').value[0].decode('ascii')
+            self._reference = f.get('Header/Reference').value[0].decode('ascii')
+            self._version = f.get('Header/Version').value[0].decode('ascii')
             if verbose >= environment.VERBOSE_TALKY:
                 print('  note:       "%s"' % self._note)
                 print('  reference:  "%s"' % self._reference)
@@ -132,7 +131,8 @@ class Wiersma_CoolingTable(object):
 
             self._redshift = f.get('Header/Redshift').value[0]
 
-            self._species = f.get('Header/Species_names').value
+            spec = f.get('Header/Species_names').value
+            self._species = spec.astype('|U10')
             if verbose >= environment.VERBOSE_TALKY:
                 print('  %2d species: %s' % (len(self._species),
                                              ', '.join(self._species)))
@@ -161,7 +161,8 @@ class Wiersma_CoolingTable(object):
 
             if verbose >= environment.VERBOSE_TALKY:
                 print('  reading solar abundancies')
-            self._solar_species = f.get('Header/Abundances/Abund_names').value
+            sspec = f.get('Header/Abundances/Abund_names').value
+            self._solar_species = sspec.astype('|U10')
             self._solar_mass_frac = \
                 f.get('Header/Abundances/Solar_mass_fractions').value
             self._solar_ne_nH = f.get('Solar/Electron_density_over_n_h').value

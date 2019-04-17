@@ -3,21 +3,21 @@ Produce mock absorption spectra for given line transition(s) and line-of-sight(s
 
 Doctests:
     >>> from ..environment import module_dir
-    >>> from ..snapshot import Snap
+    >>> from ..snapshot import Snapshot
     >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_320', physical=False)
 
     >>> vs = UnitArr([1,1e3,1e5], 'km/s')
-    >>> print velocities_to_redshifts(vs, 0.1)
-    [ 0.10000367  0.10366921  0.4669205 ]
-    >>> print redshifts_to_velocities(velocities_to_redshifts(vs,0.1), 0.1)
-    [  1.00000000e+03   1.00000000e+06   1.00000000e+08] [m s**-1]
+    >>> print(velocities_to_redshifts(vs, 0.1))
+    [0.10000367 0.10366921 0.4669205 ]
+    >>> print(redshifts_to_velocities(velocities_to_redshifts(vs,0.1), 0.1))
+    [1.e+03 1.e+06 1.e+08] [m s**-1]
     >>> for z0 in (0.0, 0.123, 1.0, 2.34, 10.0):
     ...     zs = velocities_to_redshifts(vs, z0=z0)
     ...     vs_back = redshifts_to_velocities(zs, z0=z0)
     ...     if np.max(np.abs( ((vs-vs_back)/vs).in_units_of(1) )) > 1e-10:
-    ...         print vs
-    ...         print vs_back
-    ...         print np.max(np.abs( ((vs-vs_back)/vs).in_units_of(1) ))
+    ...         print(vs)
+    ...         print(vs_back)
+    ...         print(np.max(np.abs( ((vs-vs_back)/vs).in_units_of(1) )))
 
     >>> los_arr = UnitArr([[ 34800.,  35566.],
     ...                    [ 34700.,  35600.],
@@ -38,9 +38,9 @@ Doctests:
     >>> b_turb = UnitArr( np.sqrt( np.maximum(1405.*np.log10(nH**2) +
     ...                     15674.*np.log10(nH) + 43610., 100.**2 ) ), 'km/s')
     >>> for los in los_arr:
-    ...     print 'l.o.s.:', los
+    ...     print('l.o.s.:', los)
     ...     for line in ['H1215', 'OVI1031']:
-    ...         print '  ', line
+    ...         print('  ', line)
     ...         for method in ['particles', 'line', 'column']:
     ...             tau, dens, temp, v_edges, restr_column = mock_absorption_spectrum_of(
     ...                 s, los, line=line,
@@ -49,44 +49,44 @@ Doctests:
     ...                 v_turb=b_turb if line=='OVI1031' else '0 km/s',
     ...             )
     ...             N = dens.sum()
-    ...             print '    N = %.3e %s' % (N, N.units),
+    ...             print('    N = %.3e %s' % (N, N.units), end='')
     ...             if method == 'particles':
     ...                 N_restr = np.sum(restr_column)
     ...                 N_restr.convert_to('cm**-2', subs=s)
     ...                 if np.abs((N_restr - N) / N) > 0.01:
-    ...                     print '; N = %.3e %s' % (N_restr, N_restr.units),
+    ...                     print('; N = %.3e %s' % (N_restr, N_restr.units)),
     ...             z_edges = velocities_to_redshifts(v_edges, z0=s.redshift)
     ...             l = UnitArr(lines[line]['l'])
     ...             l_edges = l * (1.0 + z_edges)
     ...             EW_l = EW(tau, l_edges)
-    ...             print '; EW = %.3f %s' % (EW_l, EW_l.units)
-    l.o.s.: [ 34800.  35566.] [ckpc h_0**-1]
+    ...             print('; EW = %.3f %s' % (EW_l, EW_l.units))
+    l.o.s.: [34800. 35566.] [ckpc h_0**-1]
        H1215
-        N = 7.506e+17 [cm**-2] ; EW = 1.879 [Angstrom]
-        N = 7.501e+17 [cm**-2] ; EW = 1.439 [Angstrom]
-        N = 7.509e+17 [cm**-2] ; EW = 1.412 [Angstrom]
+        N = 7.506e+17 [cm**-2]; EW = 1.879 [Angstrom]
+        N = 7.501e+17 [cm**-2]; EW = 1.439 [Angstrom]
+        N = 7.509e+17 [cm**-2]; EW = 1.412 [Angstrom]
        OVI1031
-        N = 8.693e+14 [cm**-2] ; EW = 0.990 [Angstrom]
-        N = 8.686e+14 [cm**-2] ; EW = 0.655 [Angstrom]
-        N = 8.700e+14 [cm**-2] ; EW = 0.648 [Angstrom]
-    l.o.s.: [ 34700.  35600.] [ckpc h_0**-1]
+        N = 8.693e+14 [cm**-2]; EW = 0.990 [Angstrom]
+        N = 8.686e+14 [cm**-2]; EW = 0.655 [Angstrom]
+        N = 8.700e+14 [cm**-2]; EW = 0.648 [Angstrom]
+    l.o.s.: [34700. 35600.] [ckpc h_0**-1]
        H1215
-        N = 2.815e+15 [cm**-2] ; EW = 1.435 [Angstrom]
-        N = 2.811e+15 [cm**-2] ; EW = 1.156 [Angstrom]
-        N = 2.818e+15 [cm**-2] ; EW = 1.139 [Angstrom]
+        N = 2.815e+15 [cm**-2]; EW = 1.435 [Angstrom]
+        N = 2.811e+15 [cm**-2]; EW = 1.156 [Angstrom]
+        N = 2.818e+15 [cm**-2]; EW = 1.139 [Angstrom]
        OVI1031
-        N = 7.536e+14 [cm**-2] ; EW = 0.909 [Angstrom]
-        N = 7.528e+14 [cm**-2] ; EW = 0.538 [Angstrom]
-        N = 7.543e+14 [cm**-2] ; EW = 0.530 [Angstrom]
-    l.o.s.: [ 35000.  35600.] [ckpc h_0**-1]
+        N = 7.536e+14 [cm**-2]; EW = 0.909 [Angstrom]
+        N = 7.528e+14 [cm**-2]; EW = 0.538 [Angstrom]
+        N = 7.543e+14 [cm**-2]; EW = 0.530 [Angstrom]
+    l.o.s.: [35000. 35600.] [ckpc h_0**-1]
        H1215
-        N = 4.816e+13 [cm**-2] ; EW = 0.312 [Angstrom]
-        N = 4.811e+13 [cm**-2] ; EW = 0.306 [Angstrom]
-        N = 4.821e+13 [cm**-2] ; EW = 0.306 [Angstrom]
+        N = 4.816e+13 [cm**-2]; EW = 0.312 [Angstrom]
+        N = 4.811e+13 [cm**-2]; EW = 0.306 [Angstrom]
+        N = 4.821e+13 [cm**-2]; EW = 0.306 [Angstrom]
        OVI1031
-        N = 1.098e+14 [cm**-2] ; EW = 0.184 [Angstrom]
-        N = 1.097e+14 [cm**-2] ; EW = 0.167 [Angstrom]
-        N = 1.099e+14 [cm**-2] ; EW = 0.167 [Angstrom]
+        N = 1.098e+14 [cm**-2]; EW = 0.184 [Angstrom]
+        N = 1.097e+14 [cm**-2]; EW = 0.167 [Angstrom]
+        N = 1.099e+14 [cm**-2]; EW = 0.167 [Angstrom]
     >>> environment.verbose = environment.VERBOSE_NORMAL
 """
 __all__ = ['mock_absorption_spectrum_of', 'mock_absorption_spectrum',

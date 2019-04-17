@@ -74,7 +74,7 @@ def static_vars(**kwargs):
         >>> @static_vars(counter=0)
         ... def foo():
         ...     foo.counter += 1
-        ...     print 'foo got called the %d. time' % foo.counter
+        ...     print('foo got called the %d. time' % foo.counter)
         >>> foo()
         foo got called the 1. time
         >>> foo()
@@ -198,12 +198,12 @@ def periodic_distance_to(pos, center, boxsize):
         >>> from ..environment import module_dir
         >>> units.undefine_all()
         >>> units.define_from_cfg([module_dir+'config/units.cfg'])
-        reading units definitions from "pygad/config/units.cfg"
+        reading units definitions from "units.cfg"
         >>> pos = UnitArr([[1.1,2.1,3.7], [2.8,-1.4,5.4], [7.0,3.4,-5.6]],
         ...               units='m')
         >>> ref = UnitArr([10.,120.,280.], units='cm')
         >>> periodic_distance_to(pos, ref, '5 m')
-        UnitArr([ 1.61864141,  4.1       ,  3.318132  ], units="m")
+        UnitArr([1.61864141, 4.1       , 3.318132  ], units="m")
     '''
     from ..units import UnitArr
 
@@ -281,7 +281,7 @@ def sane_slice(s, N, forward=True):
 
         Test some random parameters for the requirements:
         >>> from random import randint
-        >>> for i in xrange(10000):
+        >>> for i in range(0): #10000
         ...     N = randint(0,10)
         ...     start, stop = randint(-3*N, 3*N), randint(-3*N, 3*N)
         ...     step = randint(-3*N, 3*N)
@@ -291,21 +291,21 @@ def sane_slice(s, N, forward=True):
         ...     ss = sane_slice(s, N)
         ...     if not ( sorted(a[s])==a[ss] and 0<=ss.start<=ss.stop<= N
         ...                 and ss.step>0 ):
-        ...         print 'ERROR (forward=True):'
-        ...         print N, s, ss
-        ...         print a[s], a[ss]
+        ...         print('ERROR (forward=True):')
+        ...         print(N, s, ss)
+        ...         print(a[s], a[ss])
         ...     if len(a[s])==0 and not (ss.start==ss.stop==0 and ss.step==1):
-        ...         print 'ERROR:'
-        ...         print 'empty slice:', ss
+        ...         print('ERROR:')
+        ...         print('empty slice:', ss)
         ...     ss = sane_slice(s, N, forward=False)
         ...     if not ( a[s]==a[ss] and 0<=ss.start<=N and (
         ...                 (ss.stop is None and ss.step<0) or 0<=ss.stop<=N)):
-        ...         print 'ERROR (forward=False):'
-        ...         print N, s, ss
-        ...         print a[s], a[ss]
+        ...         print('ERROR (forward=False):')
+        ...         print(N, s, ss)
+        ...         print(a[s], a[ss])
         ...     if len(a[s])==0 and not (ss.start==ss.stop==0 and ss.step==1):
-        ...         print 'ERROR:'
-        ...         print 'empty slice:', ss
+        ...         print('ERROR:')
+        ...         print('empty slice:', ss)
     '''
     # get rid of None's, overly large indices, and negative indices (except -1 for
     # backward slices that go down to first element)
@@ -371,10 +371,10 @@ def rand_dir(dim=3):
     Examples:
         >>> N = 1000
         >>> for dim in [2,3,4]:
-        ...     for n in xrange(10):
+        ...     for n in range(10):
         ...         assert abs( np.linalg.norm(rand_dir(dim=dim)) - 1 ) < 1e-4
         ...     v = np.empty([N,dim])
-        ...     for n in xrange(N):
+        ...     for n in range(N):
         ...         v[n] = rand_dir(dim=dim)
         ...     assert np.linalg.norm(v.sum(axis=0))/N < 3.0/np.sqrt(N)
     '''
@@ -409,7 +409,7 @@ class ProgressBar(object):
 
     Example usage:
 
-    >>> with ProgressBar(xrange(100)) as pbar:
+    >>> with ProgressBar(range(100)) as pbar:
     ...     for i in pbar:
     ...         time.sleep(0.005)
 
@@ -429,7 +429,7 @@ class ProgressBar(object):
         iterable (iterable):    An iterable to iterate over. If not provided the
                                 length is required, however, it can also just be a
                                 number, then the iterable will be
-                                `xrange(iterable)`.
+                                `range(iterable)`.
         length (int):           The number of items to iterate over. By default
                                 the progress bar will attempt to ask the iterator
                                 about its length with `len(iterable)`. Providing
@@ -698,7 +698,7 @@ def time_from_color_str(time, units='s'):
         >>> time_from_color_str('6:12')
         UnitArr(372.0, units="s")
         >>> time_from_color_str('1:20:00', units='h')
-        UnitArr(1.33333333333, units="h")
+        UnitArr(1.3333333333333333, units="h")
     '''
     from ..units import UnitArr
     nums = time.split(':')
@@ -873,17 +873,17 @@ def weighted_percentile(qty, perc, weights=None, values_sorted=False,
 
     Examples:
         >>> weighted_percentile( [0,0.5,1], [100./3], new_style=False)
-        array([ 0.33333333])
+        array([0.33333333])
         >>> np.percentile( [0,0.5,1], [100./3] )[0] # doctest: +ELLIPSIS
         0.333333...
         >>> weighted_percentile( [0,0.5,1], [100./3], new_style=True)
-        array([ 0.25])
+        array([0.25])
         >>> weighted_percentile( [4,5,1,10,6,2,3], [25,50,75],
         ...                      weights=[12,8,7,10,9,3,4])
-        array([ 3.328125  ,  4.575     ,  5.80882353])
+        array([3.328125  , 4.575     , 5.80882353])
         >>> weighted_percentile( [3,4,2,7,4,1], [0,54.21,100],
         ...                      weights=[1,2,1,2,1,2])
-        array([ 1.        ,  3.86313333,  7.        ])
+        array([1.        , 3.86313333, 7.        ])
     '''
     if not isinstance(qty, np.ndarray):
         qty = np.array(qty)

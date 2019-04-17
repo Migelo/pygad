@@ -4,7 +4,7 @@ Mapping quantities onto a 2D-grid.
 Example:
     >>> from ..analysis import *
     >>> from ..transformation import *
-    >>> s = Snapshot('snaps/snap_M1196_4x_470', physical=True)
+    >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_470', physical=True)
     >>> Translation(UnitArr([-48087.1,-49337.1,-46084.3],'kpc')).apply(s)
     >>> s['vel'] -= UnitArr([-42.75,-15.60,-112.20],'km s**-1')
     load block vel... done.
@@ -15,8 +15,8 @@ Example:
     load block mass... done.
     derive block momentum... done.
     derive block angmom... done.
-    apply Rotation to "vel" of "snap_M1196_4x_470"... done.
     apply Rotation to "pos" of "snap_M1196_4x_470"... done.
+    apply Rotation to "vel" of "snap_M1196_4x_470"... done.
     >>> sub = s[BoxMask('120 kpc', sph_overlap=True)]
     load block hsml... done.
     >>> m_b = map_qty(sub.baryons, '120 kpc', False, 'mass', Npx=256)
@@ -35,7 +35,7 @@ Example:
     done with SPH grid
     >>> rel_err = np.abs(m_b - (m_s+m_g)) / m_b
     >>> if rel_err.max() > 1e-10:
-    ...     print np.percentile(rel_err, [50,90,95,100])
+    ...     print(np.percentile(rel_err, [50,90,95,100]))
 '''
 __all__ = ['map_qty']
 

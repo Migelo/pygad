@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 '''
-gStarform3 - a script generate star_form.ascii via pygad.cmd.gCache
+gStarform3 - a script generate star_form.ascii via pygad.cmdtool.gCache
 plugin-Command CmdStarform
 '''
 import sys
@@ -29,7 +29,7 @@ sys.argv.append("--command=CmdStarform")
 print("argument --command=CmdStarform added")
 default_arg('--par','star_form.ascii')
 
-print("invoking pygad.cmd.gCache")
+print("invoking pygad.cmdtool.gCache")
 
 # expand filename to the structure of the halo data
 basedir = os.getenv('SNAPSHOT_HOME', None)
@@ -46,7 +46,7 @@ if basedir is None:
 
 sys.argv[1] = sys.argv[1] + "/*_%03d*"
 
-print("invoking pygad.cmd.gCache")
+print("invoking pygad.cmdtool.gCache")
 
 if __name__ == '__main__':
-    import pygad.cmd.gCache
+    import pygad.cmdtool.gCache

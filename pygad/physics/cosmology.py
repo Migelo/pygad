@@ -6,9 +6,9 @@ Example:
     >>> from ..environment import module_dir
     >>> cosmo = WMAP7()
     >>> if abs(cosmo.universe_age() - '13.77 Gyr') > '1e-2 Gyr':
-    ...     print cosmo.universe_age()
+    ...     print(cosmo.universe_age())
     >>> if abs(cosmo.cosmic_time(1.5) - '4.375 Gyr') > '1e-3 Gyr':
-    ...     print cosmo.cosmic_time(1.5)
+    ...     print(cosmo.cosmic_time(1.5))
     >>> z = cosmo.lookback_time_2z('5 Gyr') # reshift before 5 Gyr
     >>> assert abs(z - 0.4915) < 1e-4
     >>> assert abs(z2a(z) - 0.6705) < 1e-4  # and corresponding scale factor
@@ -89,7 +89,7 @@ def Planck2013():
     Example:
         >>> planck = Planck2013()
         >>> planck.universe_age()
-        UnitArr(13.7869170878, units="Gyr")
+        UnitArr(13.786917087815011, units="Gyr")
         >>> planck.f_c
         0.15716612377850164
     '''
@@ -109,7 +109,7 @@ def WMAP7():
     Example:
         >>> wmap = WMAP7()
         >>> wmap.universe_age()
-        UnitArr(13.7689702445, units="Gyr")
+        UnitArr(13.768970244523558, units="Gyr")
         >>> wmap.f_c
         0.16727941176470587
     '''
@@ -152,7 +152,7 @@ class FLRWCosmo(object):
         >>> assert abs(cosmo.rho_crit(10)-'5.44e4 Msol/kpc**3') < '1e2 Msol/kpc**3'
         >>> assert abs(cosmo.lookback_time_2z('5 Gyr') - 0.49383) < 1e-4
         >>> cosmo.H()
-        UnitArr(70.0, units="km s**-1 Mpc**-1")
+        UnitArr(70.0, units="Mpc**-1 km s**-1")
         >>> assert abs(cosmo.H(z=1.0) - '123.25 km/s/Mpc') < '0.1 km/s/Mpc'
         >>> z = 1.234
         >>> assert abs(cosmo.comoving_distance(z) - '3.839 Gpc') < '1e-3 Gpc'

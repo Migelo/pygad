@@ -31,12 +31,12 @@ Doctests:
 
     >>> assert tree.root is tree
     >>> particles, nodes = 0, 0
-    >>> for o in xrange(8):
+    >>> for o in range(8):
     ...     child = tree.get_child(o)
     ...     assert tree.get_octant(child.center) == o
     ...     assert child.parent is tree
     ...     assert child.root is tree
-    ...     for o in xrange(8):
+    ...     for o in range(8):
     ...         grandchild = child.get_child(o)
     ...         assert grandchild.parent is child
     ...         assert grandchild.root is tree
@@ -50,7 +50,7 @@ Doctests:
     >>> r = center + np.array([-0.3,0.1,0.2]) * side_2
     >>> h = np.mean(H)
     >>> ngbs = []
-    >>> for i in xrange(N):
+    >>> for i in range(N):
     ...     d = np.linalg.norm(pos[i] - r)
     ...     if d < h:
     ...         ngbs.append(i)
@@ -58,7 +58,7 @@ Doctests:
     >>> tree_ngbs = tree.find_ngbs_within(r, h, pos, np.inf, max_ngbs=3*N_ngbs)
     >>> assert set(tree_ngbs) == set(ngbs)
     >>> ngbs = []
-    >>> for i in xrange(N):
+    >>> for i in range(N):
     ...     d = np.linalg.norm(pos[i] - r)
     ...     if d < H[i]:
     ...         ngbs.append(i)
@@ -380,8 +380,9 @@ class cOctree(object, metaclass=_MAX_TREE_LEVEL_class):
                                       pos.ctypes.data, periodic,
                                       cond,
                                       )
-        ngbs.resize(N_ngbs.value)
-        return ngbs
+        #ngbs.resize(N_ngbs.value)
+        erg = np.resize(ngbs, N_ngbs.value)
+        return erg
 
     def find_ngbs_SPH(self, r, H, pos, periodic=np.inf, max_ngbs=100):
         '''
@@ -425,8 +426,9 @@ class cOctree(object, metaclass=_MAX_TREE_LEVEL_class):
                                    periodic,
                                    0.0,
                                    )
-        ngbs.resize(N_ngbs.value)
-        return ngbs
+        #ngbs.resize(N_ngbs.value)
+        erg = np.resize(ngbs, N_ngbs.value)
+        return erg
 
     def find_next_ngb(self, r, pos, periodic=np.inf, cond=None):
         '''

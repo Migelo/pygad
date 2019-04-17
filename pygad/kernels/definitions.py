@@ -17,10 +17,9 @@ Examples and doctests:
     >>> cubic(1.0)
     0.0
     >>> Wendland_C4_vec(np.linspace(0,1,12))
-    array([  4.92385605e+00,   4.56340351e+00,   3.65811505e+00,
-             2.55311070e+00,   1.54488080e+00,   7.95912455e-01,
-             3.36297380e-01,   1.08637670e-01,   2.33707743e-02,
-             2.44034893e-03,   4.47381991e-05,   0.00000000e+00])
+    array([4.92385605e+00, 4.56340351e+00, 3.65811505e+00, 2.55311070e+00,
+           1.54488080e+00, 7.95912455e-01, 3.36297380e-01, 1.08637670e-01,
+           2.33707743e-02, 2.44034893e-03, 4.47381991e-05, 0.00000000e+00])
 
     Test for the equality of all the vector versions and for normation:
     >>> for name in sorted(kernels):
@@ -30,22 +29,22 @@ Examples and doctests:
     ...             continue
     ...         c_kernel = getattr(C.cpygad,name.replace(' ','_'),None)
     ...         if c_kernel:
-    ...             print 'found C version of "%s" kernel' % name
+    ...             print('found C version of "%s" kernel' % name)
     ...         kernel_vec = vec_kernels[name]
     ...         u = np.linspace(0,1,100)
     ...         w = kernel_vec(u)
     ...         for uu,ww in zip(u,w):
     ...             if not np.all(np.abs(ww - kernel(uu)) < 1e-6):
-    ...                 print name, 'not equal to its vector version'
+    ...                 print(name, 'not equal to its vector version')
     ...                 break
     ...             if c_kernel:
     ...                 if not np.all(np.abs(ww - c_kernel(uu,1.0)) < 1e-3):
-    ...                     print ww, c_kernel(uu,1.0)
-    ...                     print name, 'not equal to its C version'
+    ...                     print(ww, c_kernel(uu,1.0))
+    ...                     print(name, 'not equal to its C version')
     ...                     break
     ...         I = np.sum(4*np.pi*u**2 * w) / (len(w)-1)
     ...         if not abs(I-1.0) < 1e-6:
-    ...             print name, 'is not normed to 1, but to', I
+    ...             print(name, 'is not normed to 1, but to', I)
     found C version of "Wendland C2" kernel
     found C version of "Wendland C4" kernel
     found C version of "Wendland C6" kernel

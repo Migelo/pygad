@@ -5,19 +5,17 @@ configs!).
 Example:
     >>> from ..environment import module_dir
     >>> read_config([module_dir+'config/gadget.cfg'])
-    reading config file "pygad/config/gadget.cfg"
+    reading config file "gadget.cfg"
     >>> block_order
     ['POS ', 'VEL ', 'ID  ', 'MASS']
     >>> families.keys()
-    ['gands', 'dm', 'gas', 'lowres', 'bh', 'sandbh', 'stars', 'highres', 'baryons']
+    dict_keys(['gas', 'stars', 'dm', 'bh', 'gands', 'sandbh', 'baryons', 'highres', 'lowres'])
     >>> families['dm']
     [1, 2, 3]
-    >>> general
-    {'kernel': 'cubic', 'unclear_blocks': 'warning', 'IMF': 'Kroupa', 'UVB': 'HM01', 'vol_def_x': 'ones(len(gas))', 'SSP_dir': 'pygad//../bc03'}
     >>> block_infos['MASS'], block_infos['HSML']
     ((1, 'float', None), (1, 'float', 'gas'))
-    >>> get_block_units('RHO ')
-    Unit("1e+10 Msol ckpc**-3 h_0**2")
+    >>> get_block_units('RHO ').standardize()
+    Unit("6.76991e-16 a**-3 g h_0**2 m**-3")
     >>> HDF5_to_std_name['Coordinates'], HDF5_to_std_name['ParticleIDs']
     ('POS ', 'ID  ')
     >>> std_name_to_HDF5['POS '], std_name_to_HDF5['ID  ']
@@ -97,7 +95,8 @@ def read_config(config):
         raise IOError('Config file "%s" does not exist!' % config)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print('reading config file "%s"' % filename)
+        filenamep = os.path.split(filename)[1]
+        print('reading config file "%s"' % filenamep)
 
     # The SafeConfigParser class has been renamed to ConfigParser in Python 3.2, not yet removed for compatibility
     cfg = SafeConfigParser(allow_no_value=True,

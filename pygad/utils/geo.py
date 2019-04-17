@@ -12,7 +12,7 @@ def angle(a,b):
 
     Examples:
         >>> angle( [1,2,3], [1,1.23,-1.4] )
-        UnitArr(1.66444639785, units="rad")
+        UnitArr(1.664446397854663, units="rad")
         >>> angle( [0,1,0], [1,0,0] ).in_units_of('degree')
         UnitArr(90.0, units="degree")
         >>> angle( [1,0,0], [1,0,0] )
@@ -45,13 +45,13 @@ def dist(arr, pos=None, metric='euclidean', p=2, V=None, VI=None, w=None):
 
     Examples:
         >>> dist( [1,2,0], [-2,0,3] )
-        UnitArr([ 4.69041576])
+        UnitArr([4.69041576])
         >>> dist( UnitArr([1,2,0],'m'), UnitArr([-231,12,323],'cm') )
-        UnitArr([ 4.99233412], units="m")
+        UnitArr([4.99233412], units="m")
         >>> dist( UnitArr([1,2,0],'kpc') )
-        UnitArr([ 2.23606798], units="kpc")
+        UnitArr([2.23606798], units="kpc")
         >>> dist( [[1,2,0],[1,2,3],[-2,3,4]] )
-        UnitArr([ 2.23606798,  3.74165739,  5.38516481])
+        UnitArr([2.23606798, 3.74165739, 5.38516481])
     '''
     from scipy.spatial.distance import cdist
     arr = UnitQty(arr)
@@ -112,9 +112,9 @@ def find_maxima_prominence_isolation(arr, prominence=None, sortby='index',
         >>> m['index']
         array([2, 5, 7])
         >>> m['value']
-        array([ 3.,  2.,  3.])
+        array([3., 2., 3.])
         >>> m['prominence']
-        array([ 3.,  1.,  3.])
+        array([3., 1., 3.])
         >>> m['isolation']
         array([6, 2, 8])
         >>> find_maxima_prominence_isolation( [1,1,1] )['value']

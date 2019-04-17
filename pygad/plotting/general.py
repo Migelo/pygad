@@ -12,7 +12,7 @@ required...
     ...     colors = normed_cmap(np.arange(normed_cmap.N))
     ...     lum = luminance(colors)
     ...     if np.any( np.abs(lum - np.mean(lum)) > 1e-6 ):
-    ...         print '%s:'%cmap.name, np.mean(lum), np.percentile(lum,[0,100])
+    ...         print('%s:'%cmap.name, np.mean(lum), np.percentile(lum,[0,100]))
 '''
 __all__ = ['CM_DEF', 'luminance', 'isolum_cmap', 'color_code', 'show_image',
            'scatter_map', 'make_scale_indicators', 'add_cbar']

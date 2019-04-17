@@ -31,19 +31,19 @@ Example:
     >>> for r in pos:
     ...     n = find_node(tree, r)
     ...     if max(abs(r - n.center)) > n.side:
-    ...         print r, n, n.side
-    >>> for i in xrange(20):
+    ...         print(r, n, n.side)
+    >>> for i in range(20):
     ...     r = np.random.rand(3)
     ...     np_idcs = np.where(cdist(pos, [[.3,.3,.3]]).ravel() < 0.1)[0]
     ...     ot_idcs = find_ngbs(tree, [.3,.3,.3], 0.1, pos)
     ...     if not set(np_idcs) == set(ot_idcs):
-    ...         print 'numpy:'
-    ...         print pos[np_idcs]
-    ...         print 'octree:'
-    ...         print pos[ot_idcs]
+    ...         print('numpy:')
+    ...         print(pos[np_idcs])
+    ...         print( 'octree:')
+    ...         print(pos[ot_idcs])
 
     A more realistic sample of positions (just every 100th for speed reasons):
-    >>> from ..snapshot.snapshot import Snap
+    >>> from ..snapshot.snapshot import Snapshot
     >>> from ..environment import module_dir
     >>> snap = Snapshot(module_dir+'../snaps/snap_M1196_4x_470', physical=False,
     ...             load_double_prec=True)
@@ -61,13 +61,13 @@ Example:
     [8573, 9334, 0, 0, 736, 0]
     >>> apply_on(tree, populate_center_of_mass(snap['pos'], snap['mass']))  # doctest:+ELLIPSIS
     load block mass... done.
-    (array([ 34497.3...,  35431.5...,  33097.6...]), 2.926...)
+    (array([34497.34533395, 35431.564173  , 33097.62806547]), 2.926226872834377)
     >>> from .. import analysis
     >>> com = analysis.center_of_mass(sub)
     >>> d = np.sqrt(np.sum((tree.com - com)**2))
     >>> if not d < 0.5:
-    ...     print 'com      =', com
-    ...     print 'tree.com =', tree.com
+    ...     print('com      =', com)
+    ...     print('tree.com =', tree.com)
     >>> del_quantity(tree, 'com')
     >>> del_quantity(tree, 'mass')
 '''

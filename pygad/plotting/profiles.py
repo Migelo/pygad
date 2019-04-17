@@ -349,7 +349,7 @@ def flow_history(s, qty='mass', inout='infall', recycles='first/re',
     """
     mass = np.zeros(len(t_edges)-1, dtype=float)
     for i,t0,t1 in zip(np.arange(len(mass)),t_edges[:-1],t_edges[1:]):
-        for n in xrange(max_N_cycle+1):
+        for n in range(max_N_cycle+1):
             tbin = (t0<=g[inout+'_time'][:,n]) & (g[inout+'_time'][:,n]<t1)
             mass[i] += g[qty+'_at_'+inout][tbin,n].sum()
     mass = UnitArr(mass, g[qty+'_at_'+inout].units)

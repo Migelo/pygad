@@ -316,7 +316,7 @@ def plot_snapshot(sf, snapshot, title=None):
     return buf
 
 
-if __name__ == '__main__' or __name__ == 'pygad.cmd.gCache': # imported by command line script
+if __name__ == '__main__' or __name__ == 'pygad.cmdtool.gCache': # imported by command line script
     print("gCache arguments specified")
     for cp in sys.argv[1:]:
         print("gCache: argument ", cp)

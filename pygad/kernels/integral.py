@@ -19,23 +19,25 @@ Examples and doctests:
     ...         integ += f(r)
     >>> integ *= dx**2
     >>> if not abs(integ-1.0) < 1e-3:
-    ...     print integ
+    ...     print(integ)
 
     Test some properties of the integrated kernels:
-    >>> for kernel in kernels.iterkeys():
+    >>> for ikernel in kernels.items():
+    ...     kernel = ikernel[0]
     ...     integ_kernel = integrate_kernel(kernel)
     ...     if abs(integ_kernel(1.0) - 1.0) > 1e-6:
-    ...         print 'Kernel %s did not got integrated to one!', name
+    ...         print('Kernel %s did not got integrated to one!', name)
     ...     if abs(integ_kernel(0.0)) > 1e-6:
-    ...         print 'Integrated kernel %s does not start at zero!', name
+    ...         print('Integrated kernel %s does not start at zero!', name)
     ...     for r in [0.1, 0.3, 0.5, 0.8, 0.9]:
     ...         assert 0 < integ_kernel(r) < 1
 
     Test some properties of the random radii:
     >>> N = 1000
     >>> rs = np.empty(N)
-    >>> for kernel in kernels.iterkeys():
-    ...     for n in xrange(N):
+    >>> for ikernel in kernels.items():
+    ...     kernel = ikernel[0]
+    ...     for n in range(N):
     ...         rs[n] = rand_kernel_r(kernel)
     ...     pdf, edges = np.histogram(rs, bins=np.linspace(0,1,30+1))
     ...     integ_rand = np.cumsum(pdf) / float(N)
@@ -45,7 +47,7 @@ Examples and doctests:
     ...         ref_val = integ_kernel(r)
     ...         err = abs(ref_val - integ_rand[i])
     ...         if err>0.1 and err/ref_val>0.1:
-    ...             print 'Kernel "%s" was wrongly sampled at r=%f: err=%f' % (kernel, r, err)
+    ...             print('Kernel "%s" was wrongly sampled at r=%f: err=%f' % (kernel, r, err))
 '''
 __all__ = ['project_kernel', 'integrate_kernel', 'rand_kernel_r']
 

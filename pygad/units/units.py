@@ -9,13 +9,13 @@ later use:
 >>> define('m'), define('s')
 (Unit("m"), Unit("s"))
 >>> m = Unit('m')
->>> print m**3
+>>> print(m**3)
 [m**3]
 >>> cm = define('cm', '1e-2 m')
 >>> define('in', '2.54 cm')
 Traceback (most recent call last):
 ...
-UnitError: '"in" is a keyword or a function or constant from math!'
+pygad.units.units.UnitError: '"in" is a keyword or a function or constant from math!'
 >>> define('inch', '2.54 cm')
 Unit("inch")
 >>> define('km', 1e3*m)
@@ -34,7 +34,7 @@ Conversion factors can conveniently be calculated as long as they are convertabl
 >>> Unit('m').in_units_of(s)
 Traceback (most recent call last):
 ...
-UnitError: 'Units [m] and [s] are not convertable!'
+pygad.units.units.UnitError: 'Units [m] and [s] are not convertable!'
 >>> convertable('m', 'km')
 True
 >>> convertable('m', 'km/s')
@@ -44,21 +44,21 @@ Expanding, comparing, and undefining units is also straight forward:
 >>> kg = define('kg')
 >>> N = define('N', m*kg/s**2)
 >>> J = define('J', 'N m')
->>> print J.expand(full=False)
+>>> print(J.expand(full=False))
 [N m]
->>> print J.expand().gather()
-[kg s**-2 m**2]
+>>> print(J.expand().standardize())
+[kg m**2 s**-2]
 >>> N == m*kg/s**2
 True
 >>> J == 'N m', J == N
 (True, False)
 >>> undefine('N')
 >>> defined_units()
-['kg', 'cm', 'J', 'm', 'km', 's', 'inch']
+['m', 's', 'cm', 'inch', 'km', 'kg', 'J']
 >>> Unit('N')
 Traceback (most recent call last):
 ...
-UnitError: "Undefined symbol: 'N'"
+pygad.units.units.UnitError: "Undefined symbol: 'N'"
 >>> pc = define('pc', 3.08568e+16*m)
 >>> Msol = define('Msol', 1.989e30*kg, latex=r'M_\odot')
 >>> (Msol/pc**2).latex()
@@ -80,7 +80,7 @@ dertails.
 >>> from ..environment import module_dir
 >>> define_from_cfg([module_dir+'config/units.cfg'], allow_redef=True,
 ...                 warn=False)
-reading units definitions from "pygad/config/units.cfg"
+reading units definitions from "units.cfg"
 >>> Unit('erg').in_units_of('J')
 1e-07
 >>> Unit('Msol / h_0').latex()
@@ -153,7 +153,8 @@ class _UnitClass(object):
             s = '%g ' % (self._scale)
         else:
             s = ''
-        s += ' '.join('%s**%s'%(u,p) if p!=1 else u for u,p in self._composition)
+        comp_sort = sorted(self._composition, key=lambda x: x[0])
+        s += ' '.join('%s**%s'%(u,p) if p!=1 else u for u,p in comp_sort)
         return s.strip()
 
     def __str__(self):
@@ -540,7 +541,8 @@ def define_from_cfg(config, allow_redef=False, warn=True, undefine_old=True):
         raise IOError('Config file "%s" does not exist!' % config)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print('reading units definitions from "%s"' % filename)
+        pfilename = path.split(filename)[1]
+        print('reading units definitions from "%s"' % pfilename)
 
     # The SafeConfigParser class has been renamed to ConfigParser in Python 3.2, not yet removed for compatibility
     cfg = SafeConfigParser(allow_no_value=True,

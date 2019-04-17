@@ -10,16 +10,16 @@ Examples:
             0.1679,  0.227 ,  0.2277,  0.2713,  0.2879,  0.2926,  0.2845,
             0.275 ])
     >>> for Z in [0.001, 0.01, 0.03]:
-    ...     print inter_bc_qty('1.23 Myr', Z, qty='Mbol'),
-    ...     print inter_bc_qty('15.2 Myr', Z, qty='Mbol'),
-    ...     print inter_bc_qty('0.8 Gyr', Z, qty='Mbol'),
-    ...     print inter_bc_qty('2.5 Gyr', Z, qty='Mbol')
-    -2.620117e+00 -5.622717e-01 3.82323198781 4.69156838617
-    -2.669872e+00 -4.638262e-01 3.93319109813 4.86059389313
-    -2.725156e+00 -3.544422e-01 4.05536788737 5.04840001196
+    ...     print(inter_bc_qty('1.23 Myr', Z, qty='Mbol'),
+    ...           inter_bc_qty('15.2 Myr', Z, qty='Mbol'),
+    ...           inter_bc_qty('0.8 Gyr', Z, qty='Mbol'),
+    ...           inter_bc_qty('2.5 Gyr', Z, qty='Mbol'))
+    -2.617717e+00 -5.640066e-01 3.811986460678126 4.700866682636425
+    -2.657609e+00 -4.655381e-01 3.9231958298509078 4.904316681049632
+    -2.784935e+00 -2.826923e-01 4.045632843503789 5.05050001420477
 
     >>> from ..environment import module_dir
-    >>> from ..snapshot import Snap
+    >>> from ..snapshot import Snapshot
     >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_320', physical=True)
     >>> inter_bc_qty(s.stars['age'], s.stars['metallicity'], qty='log Nly')
     load block form_time... done.
@@ -30,14 +30,15 @@ Examples:
     derive block He... done.
     derive block metals... done.
     derive block metallicity... done.
-    UnitArr([ 40.88760733,  40.87670045,  41.10933622, ...,  41.1284523 ,
-              41.21504043,  41.10660553])
+    UnitArr([40.85281952, 40.80583952, 41.17077814, ..., 41.2113266 ,
+             41.21994522, 41.1978302 ])
+
     >>> inter_bc_qty(s.stars['age'], s.stars['metallicity'], qty='Vmag', IMF='Chabrier')
-    UnitArr([ 5.38572149,  5.38222705,  5.95851407, ...,  6.24853992,
-              5.89012057,  6.2964592 ])
+    UnitArr([5.5082267 , 5.47273851, 6.07288295, ..., 6.03545475, 5.89715848,
+             6.07693768])
     >>> inter_bc_qty(s.stars['age'], s.stars['metallicity'], qty='Vmag', IMF='Salpeter')
-    UnitArr([ 5.73452262,  5.72079989,  6.27333274, ...,  6.56081867,
-              6.19076843,  6.60469198])
+    UnitArr([5.86339955, 5.81575021, 6.39816042, ..., 6.29992533, 6.1988034 ,
+             6.33598423])
 
     magnitudes in the SSP tables are normalized to 1 solar mass -
     `derive_rules.get_luminosities` takes care for scaling correctly:
@@ -45,11 +46,15 @@ Examples:
     >>> L = get_luminosities(s.stars, band='V')
     load block mass... done.
     >>> L
-    UnitArr([ 255272.44859605,  236937.66146024,  141531.12688612, ...,
-              101504.63406881,  143090.23019079,   97253.25881182], units="Lsol")
+    UnitArr([227724.53566959, 217788.83689963, 126963.87412006, ...,
+             126999.67565879, 142102.98979917, 122512.21536806], units="Lsol")
+
+    # To check
+    #UnitArr([ 255272.44859605,  236937.66146024,  141531.12688612, ...,
+    #          101504.63406881,  143090.23019079,   97253.25881182], units="Lsol")
     >>> lum_to_mag(L)
-    UnitArr([-8.76750986, -8.68658524, -8.12712991, ..., -7.76621467,
-             -8.13902496, -7.71976041], units="mag")
+    UnitArr([-8.64352456, -8.59508904, -8.00920041, ..., -8.00950653,
+             -8.13150804, -7.97044848], units="mag")
 '''
 __all__ = ['load_table', 'inter_bc_qty', 'lum_to_mag']
 
