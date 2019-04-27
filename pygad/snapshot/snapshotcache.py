@@ -442,7 +442,8 @@ class SnapshotCache:
             return False
 
 
-    def load_snapshot(self, useChache=True, forceCache=False, loadBinaryProperties=False):
+    def load_snapshot(self, useChache=True, forceCache=False,
+                      loadBinaryProperties=False, loadSF=True, loadGasHistory=False):
         # type: (bool, bool) -> pg.snapshot
         filename = self.__data_file
         if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
@@ -514,7 +515,36 @@ class SnapshotCache:
             print("loading complete Rvir=", self.Rvir)
             print("*********************************************")
         self.__loaded = True
+
+        if (loadSF or loadGasHistory):
+            if 'redshift' in self.__gx_properties:
+                rs = round(float(self.__gx_properties['redshift']),2)
+                if rs == 0.0:  # load only for z=0
+                    if loadSF and "starformingfile" in self.__gx_properties:
+                        sfname = self.__gx_properties['starformingfile']
+                        if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
+                            print("*********************************************")
+                            print("loading star forming information from ", sfname)
+                            print("*********************************************")
+                        star_form_filename = self.get_profile_path() + sfname
+                        self._fill_star_from_info(star_form_filename)
+
+                        if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
+                            print("*********************************************")
+                            print("reloading derived quanitities")
+                            print("*********************************************")
+                        self.__snapshot.fill_derived_rules(clear_old=True)
+
+                    if loadGasHistory: # and "gashistoryfile" in self.__gx_properties:
+                        sfname = self.__gx_properties['gashistoryfile']
+                        if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
+                            print("*********************************************")
+                            print("loading gas history information from ", sfname)
+                            print("*********************************************")
+                        gas_trace_filename = self.get_profile_path() + sfname
+                        self._fill_gas_from_traced(self.__snapshot, gas_trace_filename)
         return self.__snapshot
+
 
     def read_chache(self, forceCache = False):
         self.__halo_properties._read_info_file(self.__get_halo_filename())
@@ -1317,6 +1347,559 @@ class SnapshotCache:
             return halo, gal, halos
         else:
             return  halo, gal
+
+
+
+    def _fill_star_from_info(self, fname, fill_undefined_nan=True, dtypes=None,
+                            units=None):
+        '''
+        Read the formation radius rform and rform/R200(aform) from the star_form.ascii
+        file and create the new blocks "rform" and "rR200form".
+
+        Note:
+            The set of the star particle IDs in the star formation information file
+            must exactly be the set of star particle IDs in the (root) snapshot.
+
+        Args:
+            snap (Snap):    The snapshot to fill with the data (has to be the one at
+                            z=0 of the simulation used to create the star_form.ascii).
+            fname (str):    The path to the star_form.ascii file.
+            fill_undefined_nan (bool):
+                            Fill data with NaN for stars that are not listed in the
+                            formation file.
+            dtypes (np.dtypes):
+                            The named(!) fields in the formation file. One of the has
+                            to be a (integer type) field called "ID" for matching the
+                            data to the snapshot.
+            units (dict):   Specifying the units of the fields. Not every field has to
+                            be sopecified here.
+                            Defaults to: `{'aform':'a_form', 'rform':'kpc'}`.
+
+        Raises:
+            RuntimeError:   If the IDs are not unique or they do not match (except the
+                            cases where `fill_undefined_nan` applies).
+        '''
+        snap = self.__snapshot
+        stars = snap.root.stars
+        if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
+            print('reading the star formation information from %s...' % fname)
+        # prepare the type of data
+        if dtypes is None:
+            dtypes = [('ID', np.uint64), ('aform', float), ('rform', float),
+                      ('rR200form', float), ('Zform', float)]
+        dtypes = np.dtype(dtypes)
+        if 'ID' not in dtypes.fields:
+            raise ValueError('The `dtypes` need to have a field "ID"!')
+        if units is None:
+            units = {'aform': 'a_form', 'rform': 'kpc'}
+        try:
+            # load the data
+            SFI = np.loadtxt(fname, skiprows=1, dtype=dtypes)
+
+            if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
+                print('testing if the IDs match the (root) snapshot...')
+            SFI_IDs = SFI['ID']
+            # test uniqueness removed
+            # if not stars.IDs_unique():
+            #    raise RuntimeError('Stellar IDs in the snapshot are not unique!')
+            # if len(np.unique(SFI_IDs)) != len(SFI_IDs):
+            #    raise RuntimeError('IDs in the star formation file are not unique!')
+            # there might be too many or not enough IDs in the file
+
+            missing = np.setdiff1d(stars['ID'], SFI_IDs, assume_unique=False)
+            if fill_undefined_nan:
+                if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
+                    print('WARNING: There are %d stellar IDs missing ' % len(missing) + \
+                      'in the formation file! Fill them with NaN\'s.')
+                add = np.array([(ID,) + (np.NaN,) * (len(dtypes) - 1) for ID in missing],
+                               dtype=dtypes)
+                SFI = np.concatenate((SFI, add))
+                del add
+                SFI_IDs = SFI['ID']
+            else:
+                raise RuntimeError('Some stars do not have a match in the ' + \
+                                   'formation file "%s" (missing: %d)!' % (fname, len(missing))
+                                   )
+            toomany = np.setdiff1d(SFI_IDs, stars['ID'], assume_unique=False)
+            if len(toomany):
+                raise RuntimeError('Some formation file IDs do not have a match in ' + \
+                                   'the snapshot (missing: %d)!' % (
+                                       len(toomany))
+                                   )
+
+            if len(SFI) != len(stars):
+                raise RuntimeError('Different number of stars in snapshot (%d) ' + \
+                                   'and the formation file (%d)!' % (len(stars), len(SFI)))
+
+            # adding the data as blocks
+            sfiididx = np.argsort(SFI_IDs)
+            sididx = np.argsort(stars['ID'])
+            for name in dtypes.names:
+                if name == 'ID':
+                    continue
+                if pg.environment.verbose >= pg.environment.VERBOSE_NORMAL:
+                    print('adding the new block "%s" (units:%s, type:%s)...' % (
+                        name, units.get(name, None), dtypes[name]))
+                stars[name] = pg.UnitArr(np.empty(len(stars)),
+                                         dtype=dtypes[name],
+                                         units=units.get(name, None))
+                stars[name][sididx] = SFI[name][sfiididx]
+            return
+
+        except Exception as e:
+            print("error importing star_form file")
+            print(e)
+            exit(1)
+            return
+
+    def _fill_gas_from_traced(self, snap, data, add_blocks='all', add_derived=True,
+                             units=None, invalid=0.0):
+        '''
+        Fill some information from the gas trace file into the snapshot as blocks.
+
+        This function is using data from a gas trace file (as produced by `gtracegas`)
+        to create new gas blocks with particle properties at in- and outflow times as
+        well as additional information of the time being ejected.
+
+        Among the new blocks are:
+          "trace_type", "num_recycled",
+          "infall_a", "infall_time",
+          "mass_at_infall", "metals_at_infall", "jz_at_infall", "T_at_infall",
+          "ejection_a", "ejection_time",
+          "mass_at_ejection", "metals_at_ejection", "jz_at_ejection", "T_at_ejection",
+          "cycle_r_max_at", "cycle_r_max", "cycle_z_max_at", "cycle_z_max",
+        For the addtional derived blocks see `fill_derived_gas_trace_qty`.
+
+        Note:
+            The set of the star particle IDs in the star formation information file
+            must exactly be the set of star particle IDs in the (root) snapshot.
+
+        Args:
+            snap (Snap):        The snapshot to fill with the data (has to be the one
+                                at z=0 of the simulation used to create the trace
+                                file).
+            data (str, dict):   The path to the gas trace file or the alread read-in
+                                data.
+            add_blocks (iterable, str):
+                                A list of the block names to actually add to the gas
+                                sub-snapshot, or just 'all', which then adds all of
+                                them. If `add_derived` it True, it will be set to 'all'
+                                anyway, since they might be needed afterwards.
+            add_derived (bool): Whether to also add blocks that can be derived from
+                                the trace data stored in blocks. The function
+                                `fill_derived_gas_trace_qty` is used for that.
+            units (dict):       The units to use for masses, lengths, etc..
+                                Defaults to: {'TIME':'a_form', 'MASS':'Msol',
+                                              'TEMP':'K', 'ANGMOM':None, 'POS':'kpc'}
+            invalid (float/NaN/inf):
+                                The value to fill invalid entries with. Such entries
+                                are properties of cycles that did not happen for a
+                                given particle.
+        '''
+
+        def read_traced_gas(filename, types=None):
+            '''
+            Read the gas tracing statistics from a gtracegas output.
+
+            The data also gets tagged by type:
+                1:  gas in region
+                2:  gas out of region
+                3:  stars that formed in region
+                4:  stars that formed outside region
+            and the number of full cycles (leaving region + re-entering).
+
+            TODO:
+                * fill the stars that have been traced gas!
+
+            The following is tracked at the different events:
+                (re-)entering the region:       [a, mass, metals, j_z, T]
+                the leave the region:           [a, mass, metals, j_z, T, vel]
+                turning into a star:            [a, mass, metals, j_z]
+                being out of the region, the following is updated:
+                                                [(a, r_max), (a, z_max)]
+            where a is the scale factor of when the particle reached the maximum radius or
+            height, respectively.
+
+            Args:
+                filename (str):     The filename to read from.
+                types (iterable):   The types of particles (see above!) to filter for.
+                                    Default: all.
+
+            Returns:
+                tr (dict):          A dictionary with the trace data for the individual
+                                    particles (of types ask for) indexed by ID. The actual
+                                    data is:
+                                        [ [type, n],
+                                          np.ndarray of first enter event,
+                                          np.ndarray leaving event,          \
+                                          np.ndarray of traced being out,     >  n times
+                                          np.ndarray of re-entering,         /
+                                          events of leaving + out,          \  depending
+                                          forming a star, or                 > on type or
+                                          leaving + out + forming a stars,  / just nothing
+                                        ]
+                                    where n is the number of full recylces.
+            '''
+            filename = os.path.expanduser(filename)
+            if pg.environment.verbose >= pg.environment.VERBOSE_TALKY:
+                print('read gas trace file "%s"...' % filename)
+                sys.stdout.flush()
+            import pickle as pickle
+            with open(filename, 'rb') as f:
+                tr = pickle.load(f)
+                f.close()
+            return tr
+
+        def fill_derived_gas_trace_qty(snap, units=None, invalid=0.0):
+            """
+            Derive blocks from the gas trace blocks and add them.
+
+            Among the new blocks are:
+              "out_time",
+              "last_infall_a", "last_infall_time", "mass_at_last_infall",
+                "metals_at_last_infall", "jz_at_last_infall", "T_at_last_infall",
+              "last_ejection_a", "last_ejection_time", "mass_at_last_ejection",
+                "metals_at_last_ejection", "jz_at_last_ejection", "T_at_last_ejection"'
+
+            Note:
+                The arguments `units` and `invalid` shall be the same as for
+                `fill_gas_from_traced`.
+                Also, some blocks added by `fill_gas_from_traced` are needed. Make sure
+                they are avaiable!
+
+            Args:
+                snap (Snap):        The snapshot to fill with the data (has to be the one
+                                    at z=0 of the simulation used to create the trace
+                                    file).
+                units (dict):       The units to use for masses, lengths, etc..
+                invalid (float/NaN/inf):
+                                    The value to fill invalid entries with. Such entries
+                                    are properties of cycles that did not happen for a
+                                    given particle.
+            """
+            if units is None:
+                # TODO: angmom units
+                units = dict(TIME='a_form', MASS='Msol', TEMP='K',
+                             ANGMOM=None, POS='kpc')
+            if pg.environment.verbose >= pg.environment.VERBOSE_NORMAL:
+                print('adding blocks that can be derived from the gas trace blocks:')
+
+            gas = snap.gas
+
+            trmask = (gas['num_recycled'] != -1)
+            set_N_cycles = set(gas['num_recycled'])
+            max_N_cycle = max(set_N_cycles)
+
+            # each (full) cycle takes some given time
+            if max_N_cycle > 0:
+                if pg.environment.verbose >= pg.environment.VERBOSE_NORMAL:
+                    print('  "out_time",')
+                ejected = gas['ejection_time'][:, :-1]
+                infall = gas['infall_time'][:, 1:]
+                gas['out_time'] = infall - ejected
+                mask = (ejected == invalid) | ~np.isfinite(ejected)
+                del ejected
+                pg.environment.gc_full_collect()
+                gas['out_time'][mask] = invalid
+                mask = (infall == invalid) | ~np.isfinite(infall)
+                del infall
+                pg.environment.gc_full_collect()
+                gas['out_time'][mask] = invalid
+            pg.environment.gc_full_collect()
+
+            # The events of the last infall and the last ejection are a bit messy to
+            # access. Create extra blocks:
+            # last_infall_idx = np.sum(~np.isnan(gas['infall_a']), axis=-1) - 1
+            last_infall_idx = np.sum(gas['infall_a'] != invalid, axis=-1) - 1
+            last_infall_idx = np.arange(len(last_infall_idx)), last_infall_idx
+            for last, alle in [('last_infall_a', 'infall_a'),
+                               ('last_infall_time', 'infall_time'),
+                               ('mass_at_last_infall', 'mass_at_infall'),
+                               ('metals_at_last_infall', 'metals_at_infall'),
+                               ('jz_at_last_infall', 'jz_at_infall'),
+                               ('T_at_last_infall', 'T_at_infall')]:
+                if pg.environment.verbose >= pg.environment.VERBOSE_NORMAL:
+                    print('  "%s"' % last)
+                gas[last] = pg.UnitArr(np.empty(len(gas), dtype=gas[alle].dtype),
+                                       units=gas[alle].units)
+                gas[last][~trmask] = invalid
+                gas[last][trmask] = gas[alle][last_infall_idx][trmask]
+            del last_infall_idx
+            pg.environment.gc_full_collect()
+
+            # last_ejection_idx = np.sum(~np.isnan(gas['ejection_a']), axis=-1) - 1
+            last_ejection_idx = np.sum(gas['ejection_a'] != invalid, axis=-1) - 1
+            last_ejection_idx = np.arange(len(last_ejection_idx)), last_ejection_idx
+            for last, alle in [('last_ejection_a', 'ejection_a'),
+                               ('last_ejection_time', 'ejection_time'),
+                               ('mass_at_last_ejection', 'mass_at_ejection'),
+                               ('metals_at_last_ejection', 'metals_at_ejection'),
+                               ('jz_at_last_ejection', 'jz_at_ejection'),
+                               ('T_at_last_ejection', 'T_at_ejection')]:
+                if pg.environment.verbose >= pg.environment.VERBOSE_NORMAL:
+                    print('  "%s"' % last)
+                gas[last] = pg.UnitArr(np.empty(len(gas), dtype=gas[alle].dtype),
+                                       units=gas[alle].units)
+                gas[last][~trmask] = invalid
+                gas[last][trmask] = gas[alle][last_ejection_idx][trmask]
+            del last_ejection_idx
+            pg.environment.gc_full_collect()
+            return
+
+        def add_block(name, block):
+            if name in add_blocks:
+                if pg.environment.verbose >= pg.environment.VERBOSE_NORMAL:
+                    print('  "%s"' % name)
+                gas[name] = block
+            return
+
+        def count_cycles(history):
+            c = 0
+            for entry in history:
+                if entry[0] == 'r':  # reentry
+                    c += 1
+            return c
+
+        def get_a_at(event, history, max_count, invalid):
+            a = []
+            n = 0
+            for entry in history:
+                if entry[0] == event:
+                    a.append(entry[1][0])  # a at event
+                    n += 1
+            while n < max_count:
+                a.append(invalid)
+                n += 1
+
+            return a
+
+        def get_event_Q(event, history, index_Q, max_count, invalid):
+            Q = []
+            n = 0
+            for entry in history:
+                if entry[0] == event:
+                    Q.append(entry[1][index_Q])  # a at reentry
+                    n += 1
+            while n < max_count:
+                Q.append(invalid)
+                n += 1
+
+            return Q
+
+        if add_derived:
+            add_blocks = 'all'
+        if add_blocks == 'all':
+            add_blocks = ["trace_type", "num_recycled",
+                          "infall_a", "infall_time",
+                          "mass_at_infall", "metals_at_infall", "jz_at_infall", "T_at_infall",
+                          "ejection_a", "ejection_time",
+                          "mass_at_ejection", "metals_at_ejection", "jz_at_ejection", "T_at_ejection",
+                          "cycle_r_max_at", "cycle_r_max", "cycle_z_max_at", "cycle_z_max",
+                          ]
+        if isinstance(add_blocks, str):
+            add_blocks = (add_blocks,)
+        if units is None:
+            # TODO: angmom units
+            units = dict(TIME='a_form', MASS='Msol', TEMP='K',
+                         ANGMOM=None, POS='kpc')
+        gas = snap.root.gas
+        pg.environment.gc_full_collect()
+
+        if isinstance(data, str):
+            filename = data
+            if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
+                print('reading the gas trace information from %s...' % filename)
+            tr = read_traced_gas(data)
+        else:
+            filename = '<given data>'
+
+        # filter to gas only (last history entry: new gas or reentered gas)
+        # gas_type = {1, 2}
+        # data = dict([i for i in iter(data.items()) if i[1][0][0] in gas_type])
+        data = dict([i for i in tr.items() if i[1][len(i[1]) - 1][0] in ['n', 'r']])
+
+        # print("root parts", snap.root.parts)
+        # if len(set(data.keys()) - set(snap.root['ID'])) > 0: print("nicht in gesamt")
+        # if len(set(data.keys()) - set(snap.root.stars['ID'])) > 0: print("nicht in stars")
+        # if len(set(data.keys()) - set(snap.root.gas['ID'])) > 0: print("nicht in gas")
+
+        allIDs = set(snap.root['ID'])
+        todel = []
+        for pk in data.keys():
+            if not pk in allIDs:
+                todel.append(pk)
+        for pk in todel:
+            data.pop(pk)
+
+        if len(set(data.keys()) - set(snap.root['ID'])) > 0: print("nicht in gesamt")
+
+        if pg.environment.verbose >= pg.environment.VERBOSE_TALKY:
+            print('test IDs and find matching IDs...')
+        if len(set(data.keys()) - set(gas['ID'])) > 0:
+            raise RuntimeError('Traced gas IDs in "%s" have ' % filename +
+                               '%s ' % pg.utils.nice_big_num_str(len(
+                set(data.keys()) - set(gas['ID']))) +
+                               'elements that are not in the snapshot!')
+        tracedIDs = (set(data.keys()) & set(gas['ID']))
+
+        trmask = np.array([(ID in tracedIDs) for ID in gas['ID']], dtype=bool)
+        if pg.environment.verbose >= pg.environment.VERBOSE_TALKY:
+            print('  found %s (of %s)' % (pg.utils.nice_big_num_str(len(tracedIDs)),
+                                          pg.utils.nice_big_num_str(len(data))), end=' ')
+            print('traced IDs that are in the snapshot')
+
+        if pg.environment.verbose >= pg.environment.VERBOSE_NORMAL:
+            print('adding the blocks:')
+
+        trididx = np.argsort(list(data.keys()))
+        gididx = np.argsort(gas['ID'])
+        gididx_traced = gididx[trmask[gididx]]
+
+        # type = not traced (0), in region (1), out of region (2)
+        # number of full cycles (out and in)
+
+        trace_type = pg.UnitArr(np.zeros(len(gas), dtype=int))
+        trtype = np.array([1 if i[len(i) - 1][0] == 'n' else 2 for i in data.values()])
+        trace_type[gididx_traced] = trtype[trididx]
+        add_block('trace_type', trace_type)
+        del trace_type
+
+        n_cyc = np.array([count_cycles(i) for i in data.values()])
+        num_recycled = pg.UnitArr(np.empty(len(gas), dtype=n_cyc.dtype))
+        num_recycled[~trmask] = -1
+        num_recycled[gididx_traced] = n_cyc[trididx]
+        add_block('num_recycled', num_recycled)
+        set_N_cycles = set(n_cyc)
+        if pg.environment.verbose >= pg.environment.VERBOSE_TALKY:
+            print('  +++ number of recycles that occured:', set_N_cycles, '+++')
+
+        # Create blocks with shape (N, max(recycl)+1) for traced quantities at the
+        # events of entering the region. N is the number of the gas particles. Each
+        # particle has entries for each of their enter events, those events that do
+        # not exists, get filled with `invalid`.
+
+        max_N_cycle = max(set_N_cycles)
+        # infall_t = np.array([[e[0] for e in i[1:1 + 3 * n + 1:3]] + [invalid] * (max_N_cycle - n)
+        #                     for n, i in zip(n_cyc, list(data.values()))])
+        infall_t = np.array([get_a_at('r', i, max_N_cycle + 1, invalid) for n, i in zip(n_cyc, list(data.values()))])
+        infall_a = pg.UnitArr(np.empty((len(gas), max_N_cycle + 1),
+                                       dtype=infall_t.dtype), units=units['TIME'])
+        infall_a[~trmask] = invalid
+        infall_a[gididx_traced] = infall_t[trididx]
+        add_block('infall_a', infall_a)
+        del infall_t
+        pg.environment.gc_full_collect()
+
+        # from .snapshot import age_from_form
+        # only convert reasonable values & ensure not to overwrite blocks
+        mask = (infall_a != invalid) & np.isfinite(infall_a)
+        infall_time = infall_a.copy()
+        new = gas.cosmic_time() - pg.age_from_form(infall_time[mask], subs=gas)
+        infall_time.units = new.units
+        infall_time[mask] = new
+        del new
+        add_block('infall_time', infall_time)
+        del infall_time
+        pg.environment.gc_full_collect()
+
+        for name, idx, unit in [('mass_at_infall', 1, units['MASS']),
+                                ('metals_at_infall', 2, units['MASS']),
+                                ('jz_at_infall', 3, units['ANGMOM']),
+                                ('T_at_infall', 4, units['TEMP'])]:
+            if name not in add_blocks:
+                continue
+            # infall_Q = np.array([[e[idx] for e in i[1:1 + 3 * n + 1:3]] +
+            #                     [invalid] * (max_N_cycle - n)
+            #                     for n, i in zip(n_cyc, list(data.values()))])
+            infall_Q = np.array(
+                [get_event_Q('r', i, idx, max_N_cycle + 1, invalid) for n, i in zip(n_cyc, list(data.values()))])
+            block = pg.UnitArr(np.empty((len(gas), max_N_cycle + 1),
+                                        dtype=infall_Q.dtype),
+                               units=unit)
+            block[~trmask] = invalid
+            block[gididx_traced] = infall_Q[trididx]
+            add_block(name, block)
+            del infall_Q, block
+            pg.environment.gc_full_collect()
+
+        # Create blocks with shape (N, max(recycl)+1) for traced quantities at the
+        # events of ejection / leaving the region. N is the number of the gas
+        # particles. Each particle has entries for each of their ejection events,
+        # those events that do not exists, get filled with `invalid`.
+        max_N_cycle = max(set_N_cycles)
+        # eject_t = np.array([[e[0] for e in i[2:2 + 3 * n:3]] +
+        #                     [i[2 + 3 * n][0] if t == 2 else invalid] +
+        #                     [invalid] * (max_N_cycle - n)
+        #                     for n, t, i in zip(n_cyc, trtype, list(data.values()))])
+        eject_t = np.array([get_a_at('l', i, max_N_cycle + 1, invalid) for n, i in zip(n_cyc, list(data.values()))])
+
+        ejection_a = pg.UnitArr(np.empty((len(gas), max_N_cycle + 1),
+                                         dtype=eject_t.dtype),
+                                units=units['TIME'])
+        ejection_a[~trmask] = invalid
+        ejection_a[gididx_traced] = eject_t[trididx]
+        del eject_t
+        add_block('ejection_a', ejection_a)
+        pg.environment.gc_full_collect()
+
+        # from .snapshot import age_from_form
+        # only convert reasonable values & ensure not to overwrite blocks
+        mask = (ejection_a != invalid) & np.isfinite(ejection_a)
+        ejection_time = ejection_a.copy()
+        new = gas.cosmic_time() - pg.age_from_form(ejection_time[mask], subs=gas)
+        ejection_time.units = new.units
+        ejection_time[mask] = new
+        del new
+        add_block('ejection_time', ejection_time)
+        pg.environment.gc_full_collect()
+
+        for name, idx, unit in [('mass_at_ejection', 1, units['MASS']),
+                                ('metals_at_ejection', 2, units['MASS']),
+                                ('jz_at_ejection', 3, units['ANGMOM']),
+                                ('T_at_ejection', 4, units['TEMP'])]:
+            if name not in add_blocks:
+                continue
+            # eject_Q = np.array([[e[idx] for e in i[2:2 + 3 * n:3]] +
+            #                     [i[2 + 3 * n][idx] if t == 2 else invalid] +
+            #                     [invalid] * (max_N_cycle - n)
+            #                     for n, t, i in zip(n_cyc, trtype, list(data.values()))])
+            eject_Q = np.array(
+                [get_event_Q('l', i, idx, max_N_cycle + 1, invalid) for n, i in zip(n_cyc, list(data.values()))])
+            block = pg.UnitArr(np.empty((len(gas), max_N_cycle + 1),
+                                        dtype=eject_Q.dtype),
+                               units=unit)
+            block[~trmask] = invalid
+            block[gididx_traced] = eject_Q[trididx]
+            add_block(name, block)
+            del eject_Q, block
+            pg.environment.gc_full_collect()
+
+        # for each cycle there is a maximum travel distance, plus one more for those
+        # particles that are outside the region: store them
+        for name, idx, unit in [('cycle_r_max_at', 0, units['TIME']),
+                                ('cycle_r_max', 1, units['POS']),
+                                ('cycle_z_max_at', 2, units['TIME']),
+                                ('cycle_z_max', 3, units['POS'])]:
+            if name not in add_blocks:
+                continue
+            # pos = np.array([[e[idx] for e in i[3:3 + 3 * n:3]] +
+            #                 [i[3 + 3 * n][idx] if t == 2 else invalid] +
+            #                 [invalid] * (max_N_cycle - n)
+            #                 for n, t, i in zip(n_cyc, trtype, list(data.values()))])
+            pos = np.array(
+                [get_event_Q('p', i, idx, max_N_cycle + 1, invalid) for n, i in zip(n_cyc, list(data.values()))])
+            block = pg.UnitArr(np.empty((len(gas), max_N_cycle + 1),
+                                        dtype=pos.dtype),
+                               units=unit)
+            block[~trmask] = invalid
+            block[gididx_traced] = pos[trididx]
+            add_block(name, block)
+            del pos, block
+            pg.environment.gc_full_collect()
+
+        if add_derived:
+            fill_derived_gas_trace_qty(snap, units=units, invalid=invalid)
+        return
 
     def print_results(self):
         print(" ")

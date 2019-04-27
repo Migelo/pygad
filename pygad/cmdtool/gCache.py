@@ -133,6 +133,9 @@ parser.add_argument('--cachedonly',
                     action='store_true',
                     help='process on snapshots already in cache ' +
                          'others are skipped')
+parser.add_argument('--reverseorder',
+                    action='store_true',
+                    help='process on snapshots from low to high z ')
 # moved to profile properties
 # parser.add_argument('--findgxfast',
 #                     action='store_true',
@@ -487,7 +490,17 @@ if __name__ == '__main__' or __name__ == 'pygad.cmdtool.gCache': # imported by c
             except Exception as e:
                 print("*** error executing prepare ", e)
 
-        for snap_num in range(snap_start, snap_end-1, -args.step):
+
+        if args.reverseorder:
+            loop_start = snap_start
+            loop_end = snap_end - 1
+            loop_step = -args.step
+        else:
+            loop_start = snap_end
+            loop_end = snap_start + 1
+            loop_step = args.step
+
+        for snap_num in range(loop_start, loop_end, loop_step):
             snap_fname = get_snap_fname(snap_dir, args.name_pattern, snap_num)
             filelist = glob.glob(snap_fname)
             if len(filelist) != 1:

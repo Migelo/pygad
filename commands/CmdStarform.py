@@ -73,8 +73,11 @@ def write_star_form(snapfile, last_snap, last_R200, fstarform):
 # gcache3-init: ignored by gcache3
 ##############################################################################
 pg.environment.verbose=pg.environment.VERBOSE_QUIET
-snap_cache = pg.SnapshotCache("/mnt/hgfs/Astro/Magneticum/M0094/AGN/snap_m0094_sf_x_2x_094",
-                          profile='FastRun')
+os.environ['SNAPSHOT_HOME'] = '/mnt/hgfs/AstroDaten/CosmoZooms/'
+os.environ['SNAPCACHE_HOME'] = '/mnt/hgfs/Astro/CosmoCache/'
+
+snap_fname_rel = "M0094/AGN/snap_m0094_sf_x_2x_094"
+snap_cache = pg.SnapshotCache(snap_fname_rel, profile='FastRun')
 snap_cache.load_snapshot()
 
 snap_num = 94
@@ -104,18 +107,11 @@ else:
 
 star_form_filename = snap_cache.get_profile_path() + fname
 
-if os.path.exists(star_form_filename):
-    neu = False
-else:
-    neu = True
-
-if snap_overwrite:
+if snap_overwrite and snap_num ==  snap_start:
     fstarform = open(star_form_filename, "w")
+    write_header(fstarform)
 else:
     fstarform = open(star_form_filename, "a+")
-
-if neu:
-    write_header(fstarform)
 
 print("command CmdStarform - write star forming file ", star_form_filename)
 if last_snap is None:
@@ -123,6 +119,8 @@ if last_snap is None:
 else:
     write_star_form(snap_cache, last_snap, last_R200, fstarform)
     last_R200 = snap_cache.gx_properties['R200']
+
+snap_cache.gx_properties.append('starformingfile', fname)
 
 first_snapshot = False
 
