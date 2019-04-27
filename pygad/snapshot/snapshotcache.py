@@ -396,7 +396,7 @@ class SnapshotCache:
     @property
     def Rvir(self):
         Rvir_property = self.__profile_properties['Rvir_property']
-        Rvir_f  = float(self.__halo_properties[Rvir_property])
+        Rvir_f  = self.__halo_properties[Rvir_property]
         return Rvir_f
 
     @property
