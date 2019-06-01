@@ -397,7 +397,8 @@ class SnapshotCache:
     def Rvir(self):
         Rvir_property = self.__profile_properties['Rvir_property']
         Rvir_f  = self.__halo_properties[Rvir_property]
-        return Rvir_f
+        Rvir_unit = pg.UnitScalar(Rvir_f, self.__snapshot['pos'].units, subs=self.__snapshot)
+        return Rvir_unit
 
     @property
     def gx_radius(self):
@@ -556,6 +557,66 @@ class SnapshotCache:
         self.__gx_properties._write_info_file(self.__get_gx_filename(), force=forceCache)
         self.__profile_properties._write_info_file(self.__get_profile_filename(), force=forceCache)
         return
+
+    def clone_profile(self, newprofile, BaseOnly=True, force=True):
+        halo_filename = os.path.split(self.__get_halo_filename())
+        halo_dir = os.path.split(halo_filename[0])[0]
+        halo_new = halo_dir + '/' + newprofile + '/' + halo_filename[1]
+
+        if os.path.exists(halo_new) and not force:
+            if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
+                print("*****************************************************************")
+                print("profile ", newprofile, "already exists - clone_profile terminated")
+                print("*****************************************************************")
+            return
+
+        gx_filename = os.path.split(self.__get_gx_filename())
+        gx_dir = os.path.split(gx_filename[0])[0]
+        gx_new = gx_dir + '/' + newprofile + '/' + gx_filename[1]
+        prop_filename = os.path.split(self.__get_profile_filename())
+        prop_new = prop_filename[0] + '/profile-' + newprofile + '.info'
+
+        if force:
+            if os.path.exists(halo_new): os.remove(halo_new)
+            if os.path.exists(gx_new): os.remove(gx_new)
+            if os.path.exists(prop_new): os.remove(prop_new)
+
+        #print("halo:", halo_new)
+        #print("gx:", gx_new)
+        #print("prop:", prop_new)
+        if not os.path.exists(os.path.split(halo_new)[0]):
+            os.makedirs(os.path.split(halo_new)[0])
+        forceCache = True
+        halo_props = ['date-created', 'profile-name', 'dm_only', 'mass', 'Mstars', 'Mgas', 'Mdm',
+                      'parts', 'com', 'ssc', 'vel', 'vel_sigma', 'Rmax', 'lowres_part', 'lowres_mass',
+                      'Rvir_FoF', 'R200_FoF', 'R200_ssc', 'M200_ssc', 'R200_com', 'M200_com',
+                      'R500_FoF', 'R500_ssc', 'M500_ssc', 'R500_com', 'M500_com']
+
+        gx_props = ['date-created', 'profile-name', 'Rvir_property', 'gx_radius', 'findgxfast',
+                    'linking_length', 'linking_vel', 'lowres_threshold', 'a', 'cosmic_time', 'redshift',
+                    'h', 'center_in_halo', 'center_com', 'center_ssc', 'center_halo_com', 'center_halo_ssc',
+                    'R200', 'M200', 'R500', 'M500', 'M_stars', 'L_halo', 'L_baryons', 'M_gas',
+                    'Z_stars', 'Z_gas', 'SFR', 'jzjc_baryons', 'jzjc_total', 'I_red',
+                    'R_half_M', 'R_half_M_stellar', 'R_half_M(faceon)', 'R_eff(faceon)', 'D/T(stars)']
+
+        self.__profile_properties._write_info_file(prop_new, force=forceCache)
+        if BaseOnly:
+            new_halo_prop = SnapshotProperty()
+            for p in halo_props:
+                new_halo_prop.append(p, self.__halo_properties[p])
+            new_halo_prop['profile-name'] = newprofile
+            new_gx_prop = SnapshotProperty()
+            for p in gx_props:
+                new_gx_prop.append(p, self.__gx_properties[p])
+            new_gx_prop['profile-name'] = newprofile
+            new_halo_prop._write_info_file(halo_new, force=forceCache)
+            new_gx_prop._write_info_file(gx_new, force=forceCache)
+        else:
+            self.__halo_properties._write_info_file(halo_new, force=forceCache)
+            self.__gx_properties._write_info_file(gx_new, force=forceCache)
+
+        return
+
 
     def execute_command(self, command, par=None, par1=None, par2=None, par3=None, par4=None, par5=None):
 
@@ -860,11 +921,11 @@ class SnapshotCache:
         gx = self.__galaxy_all
         halo = self.__snapshot
 
-        R200 = float(self.halo_properties['R200_com'])
-        M200 = float(self.halo_properties['M200_com'])
+        R200 = self.halo_properties['R200_com']
+        M200 = self.halo_properties['M200_com']
 
-        R500 = float(self.halo_properties['R500_com'])
-        M500 = float(self.halo_properties['M500_com'])
+        R500 = self.halo_properties['R500_com']
+        M500 = self.halo_properties['M500_com']
 
         # infos part 1
         info['a'] = self.__snapshot.scale_factor
@@ -909,6 +970,7 @@ class SnapshotCache:
             redI = pg.UnitArr(pg.analysis.reduced_inertia_tensor(gx)).flatten()
             info['I_red'] = redI
             info['R_half_M'] = pg.analysis.half_mass_radius(gx)
+            info['R_half_M_stellar'] = pg.analysis.half_mass_radius(gx.stars)
         else:
             info['M_stars'] =  pg.UnitArr(0, 'Msol')
             info['M_gas'] = pg.UnitArr(0, 'Msol')
@@ -958,7 +1020,8 @@ class SnapshotCache:
 
         # Rvir_property = self.__snap_config.Rvir_property
         # Rvir = self.dm_halo.props[Rvir_property]
-        Rgx = float(self.Rvir) * self.gx_radius
+        Rgx = self.Rvir * self.gx_radius
+        #Rgx_units = pg.UnitScalar(Rgx).in_units_of(self.__snapshot['r'].units)
         #mask = pg.BallMask(str(Rgx) + ' ckpc h_0**-1', center=[0, 0 , 0])
         #mask = pg.BallMask(pg.UnitScalar(Rgx).in_units_of(self.snapshot['r'].units), center=[0, 0 , 0])
         mask = pg.BallMask(Rgx, center=[0, 0 , 0])
@@ -1923,7 +1986,7 @@ class SnapshotProperty(dict):
     def append(self, name, value):
         if name in self:
             v = self[name]
-            if isinstance(v,pg.UnitArr) or v != value:
+            if isinstance(v, pg.UnitArr) or isinstance(value, pg.UnitArr) or v != value:
                 self[name] = value
                 self.__modified = True
         else:

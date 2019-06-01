@@ -136,6 +136,9 @@ parser.add_argument('--cachedonly',
 parser.add_argument('--reverseorder',
                     action='store_true',
                     help='process on snapshots from low to high z ')
+parser.add_argument('--loadsf',
+                    action='store_true',
+                    help='load star forming information (insitu)')
 # moved to profile properties
 # parser.add_argument('--findgxfast',
 #                     action='store_true',
@@ -536,7 +539,11 @@ if __name__ == '__main__' or __name__ == 'pygad.cmdtool.gCache': # imported by c
                 print('*** load snapshot ', snap_fname, '...profile =', args.profile)
                 try:
                     load_OK = True
-                    snap_cache.load_snapshot()
+                    if args.loadsf:
+                        loadsf = True
+                    else:
+                        loadsf = False
+                    snap_cache.load_snapshot(loadSF=loadsf)
                 except Exception as e:
                     print("error loading snapshot ")
                     load_OK = False
