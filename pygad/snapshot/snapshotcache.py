@@ -599,7 +599,13 @@ class SnapshotCache:
                     'Z_stars', 'Z_gas', 'SFR', 'jzjc_baryons', 'jzjc_total', 'I_red',
                     'R_half_M', 'R_half_M_stellar', 'R_half_M(faceon)', 'R_eff(faceon)', 'D/T(stars)']
 
-        self.__profile_properties._write_info_file(prop_new, force=forceCache)
+        #self.__profile_properties._write_info_file(prop_new, force=forceCache)
+        new_prop_prop = SnapshotProperty()
+        for p in self.__profile_properties:
+            new_prop_prop.append(p, self.__profile_properties[p])
+        new_prop_prop['profile-name'] = newprofile
+        new_prop_prop._write_info_file(prop_new, force=forceCache)
+
         if BaseOnly:
             new_halo_prop = SnapshotProperty()
             for p in halo_props:
@@ -609,9 +615,15 @@ class SnapshotCache:
             for p in gx_props:
                 new_gx_prop.append(p, self.__gx_properties[p])
             new_gx_prop['profile-name'] = newprofile
+            if 'galaxy-all' in self.__gx_properties:
+                new_gx_prop['galaxy-all'] = self.__gx_properties.get_binary_value('galaxy-all')
             new_halo_prop._write_info_file(halo_new, force=forceCache)
             new_gx_prop._write_info_file(gx_new, force=forceCache)
         else:
+            self.__halo_properties['profile-name'] = newprofile
+            self.__gx_properties['profile-name'] = newprofile
+            self.__halo_properties.load_binary_properties()
+            self.gx_properties.load_binary_properties()
             self.__halo_properties._write_info_file(halo_new, force=forceCache)
             self.__gx_properties._write_info_file(gx_new, force=forceCache)
 
