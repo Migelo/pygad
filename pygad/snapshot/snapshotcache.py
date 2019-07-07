@@ -406,6 +406,11 @@ class SnapshotCache:
         return gx_rad
 
     @property
+    def Rgx(self):
+        Rgx_unit = self.Rvir * self.gx_radius
+        return Rgx_unit
+
+    @property
     def center(self):
         return self.__center
 
@@ -558,7 +563,7 @@ class SnapshotCache:
         self.__profile_properties._write_info_file(self.__get_profile_filename(), force=forceCache)
         return
 
-    def clone_profile(self, newprofile, BaseOnly=True, force=True):
+    def clone_profile(self, newprofile, BaseOnly=True, includeGalaxyPlot = True, force=True):
         halo_filename = os.path.split(self.__get_halo_filename())
         halo_dir = os.path.split(halo_filename[0])[0]
         halo_new = halo_dir + '/' + newprofile + '/' + halo_filename[1]
@@ -615,8 +620,9 @@ class SnapshotCache:
             for p in gx_props:
                 new_gx_prop.append(p, self.__gx_properties[p])
             new_gx_prop['profile-name'] = newprofile
-            if 'galaxy-all' in self.__gx_properties:
-                new_gx_prop['galaxy-all'] = self.__gx_properties.get_binary_value('galaxy-all')
+            if includeGalaxyPlot:
+                if 'galaxy-all' in self.__gx_properties:
+                    new_gx_prop['galaxy-all'] = self.__gx_properties.get_binary_value('galaxy-all')
             new_halo_prop._write_info_file(halo_new, force=forceCache)
             new_gx_prop._write_info_file(gx_new, force=forceCache)
         else:
@@ -1053,7 +1059,15 @@ class SnapshotCache:
             print("*********************************************")
             print("orientate galaxy...")
 
-        pg.analysis.orientate_at(self.__galaxy_all, 'L', total=True)
+        #pg.analysis.orientate_at(self.__galaxy_all, 'L', total=True)
+        if 'I_red' in self.__gx_properties:
+            redI = self.__gx_properties['I_red']
+            if redI is not None:
+                redI = redI.reshape((3, 3))
+            mode, qty = 'red I', redI
+            pg.analysis.orientate_at(self.__galaxy_all, mode, qty=qty, total=True)
+        else:
+            pg.analysis.orientate_at(self.__galaxy_all, 'L', total=True)
 
         if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
             print("orientate complete")
