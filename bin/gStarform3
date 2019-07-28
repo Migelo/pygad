@@ -27,6 +27,8 @@ if sys.argv[1][0] == '/':
 
 sys.argv.append("--command=CmdStarform")
 print("argument --command=CmdStarform added")
+sys.argv.append("--reverseorder")
+print("argument --reverseorder added")
 default_arg('--par','star_form.ascii')
 
 print("invoking pygad.cmdtool.gCache")

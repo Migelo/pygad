@@ -1061,11 +1061,14 @@ class SnapshotCache:
 
         #pg.analysis.orientate_at(self.__galaxy_all, 'L', total=True)
         if 'I_red' in self.__gx_properties:
-            redI = self.__gx_properties['I_red']
+            # redI = self.__gx_properties['I_red']
+            redI = pg.UnitArr(pg.analysis.reduced_inertia_tensor(self.__galaxy_all)).flatten()
             if redI is not None:
                 redI = redI.reshape((3, 3))
-            mode, qty = 'red I', redI
-            pg.analysis.orientate_at(self.__galaxy_all, mode, qty=qty, total=True)
+                mode, qty = 'red I', redI
+                pg.analysis.orientate_at(self.__galaxy_all, mode, qty=qty, total=True)
+            else:
+                pg.analysis.orientate_at(self.__galaxy_all, 'L', total=True)
         else:
             pg.analysis.orientate_at(self.__galaxy_all, 'L', total=True)
 
