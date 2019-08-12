@@ -570,7 +570,7 @@ if __name__ == '__main__' or __name__ == 'pygad.cmdtool.gCache': # imported by c
 
                 if args.updatecache:
                     print('*** ', snap_num, ' writing cache')
-                    snap_cache.write_chache()
+                    snap_cache.write_cache()
                     print('*** ', snap_num, ' finished')
 
                 last_snap = snap_cache

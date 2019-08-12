@@ -448,7 +448,7 @@ class SnapshotCache:
             return False
 
 
-    def load_snapshot(self, useChache=True, forceCache=False,
+    def load_snapshot(self, useCache=True, forceCache=False,
                       loadBinaryProperties=False, loadSF=True, loadGasHistory=False):
         # type: (bool, bool) -> pg.snapshot
         filename = self.__data_file
@@ -474,7 +474,7 @@ class SnapshotCache:
             print("units", snapshot.gadget_units)
 
         try:
-            if not useChache or forceCache:
+            if not useCache or forceCache:
                 raise FileNotFoundError
             # halo properties are found, re-tranlsate and re-orientate the halo, nothing else has to be done
             self.__halo_properties._read_info_file(self.__get_halo_filename())
@@ -511,7 +511,7 @@ class SnapshotCache:
 
             self._create_gx_properties()
 
-            if useChache or forceCache:
+            if useCache or forceCache:
                 self.__halo_properties._write_info_file(self.__get_halo_filename(), force=forceCache)
                 self.__gx_properties._write_info_file(self.__get_gx_filename(), force=forceCache)
                 self.__profile_properties._write_info_file(self.__get_profile_filename(), force=forceCache)
@@ -552,12 +552,12 @@ class SnapshotCache:
         return self.__snapshot
 
 
-    def read_chache(self, forceCache = False):
+    def read_cache(self, forceCache = False):
         self.__halo_properties._read_info_file(self.__get_halo_filename())
         self.__gx_properties._read_info_file(self.__get_gx_filename())
         return
 
-    def write_chache(self, forceCache = False):
+    def write_cache(self, forceCache = False):
         self.__halo_properties._write_info_file(self.__get_halo_filename(), force=forceCache)
         self.__gx_properties._write_info_file(self.__get_gx_filename(), force=forceCache)
         self.__profile_properties._write_info_file(self.__get_profile_filename(), force=forceCache)
@@ -729,7 +729,7 @@ class SnapshotCache:
 
         if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
             print('*** writing cache')
-        self.write_chache()
+        self.write_cache()
         if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
             print('*** finished')
 
@@ -2023,6 +2023,15 @@ class SnapshotProperty(dict):
             self[name] = value
             self.__modified = True
         return v        # returns old value
+
+    def remove(self, name):
+        if name in self:
+            v = self[name]
+            v = self.pop(name, None)
+            self.__modified = True
+        else:
+            v = None
+        return v
 
     @property
     def modified(self):
