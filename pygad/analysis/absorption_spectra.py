@@ -194,6 +194,8 @@ lines['Lyman_alpha'] = lines['H1215']
 lines['Lyman_beta'] = lines['H1025']
 lines['Lyman_gamma'] = lines['H972']
 
+def line_quantity(line,qty):
+    return lines[line][str(qty)]
 
 def Gaussian(x, sigma):
     '''
@@ -621,7 +623,8 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
                              hsml='hsml', kernel=None,
                              restr_column_lims=None,
                              zero_Hubble_flow_at=0,
-                             xaxis=0, yaxis=1):
+                             xaxis=0, yaxis=1,
+                             return_los_phys=False):
     """
     Create a mock absorption spectrum for the given line of sight (l.o.s.) for the
     given line transition.
@@ -722,13 +725,18 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
         xaxis/yaxis (int):      The x- and y-axis for the l.o.s.. The implicitly
                                 defined z-axis goes along the l.o.s.. The axis
                                 must be chosen from [0,1,2].
+        return_los_phys (Bool): Returns additional LOS info, currently
+                                los_phys_dens (optical depth-weighted density), and
+                                vel (optical depth-weighted peculiar velocity)
 
     Returns:
         taus (np.ndarray):      The optical depths for the velocity bins.
         los_dens (UnitArr):     The column densities restricted to the velocity
                                 bins (in cm^-2).
+        los_dens_phys (UnitArr):The gas density for the velocity bins (in g cm^-3)
         los_temp (UnitArr):     The (mass-weighted) particle temperatures
                                 restricted to the velocity bins (in K).
+        vel (UnitArr):          The LOS velocities of particles (in km/s)
         v_edges (UnitArr):      The velocities at the bin edges.
         restr_column (np.ndarray):
                                 The column densities of the particles/cells along
@@ -974,6 +982,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
         pos = s.gas['pos'][:, (xaxis, yaxis)]
         vel = s.gas['vel'][:, zaxis]
         temp = s.gas['temp']
+        rho = s.gas['rho'] # DS: gas density
         if temp.base is not None:
             temp.copy()
 
@@ -995,12 +1004,15 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
     zero_Hubble_flow_at.convert_to(los_pos.units, subs=s)
     H_flow = s.cosmology.H(s.redshift) * (los_pos - zero_Hubble_flow_at)
     H_flow.convert_to(vel.units, subs=s)
+    vpec_z=vel # DS: peculiar LOS velocities 
     vel = vel + H_flow
 
     if pos is not None:
         pos = pos.astype(np.float64).in_units_of(l_units, subs=s).view(np.ndarray).copy()
     vel = vel.astype(np.float64).in_units_of(v_units, subs=s).view(np.ndarray).copy()
+    vpec_z = vpec_z.astype(np.float64).in_units_of(v_units,subs=s).view(np.ndarray).copy() # DS LOS peculiar velocities
     temp = temp.in_units_of('K', subs=s).view(np.ndarray).astype(np.float64)
+    rho = rho.in_units_of('g/cm**3',subs=s).view(np.ndarray).astype(np.float64) # DS: gas density
     if hsml is not None:
         hsml = hsml.in_units_of(l_units, subs=s).view(np.ndarray).astype(np.float64)
 
@@ -1018,16 +1030,20 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
 
     taus = np.empty(Nbins, dtype=np.float64)
     los_dens = np.empty(Nbins, dtype=np.float64)
+    los_dens_phys = np.empty(Nbins, dtype=np.float64) # DS: gas density field
     los_temp = np.empty(Nbins, dtype=np.float64)
+    los_vpec = np.empty(Nbins, dtype=np.float64) # DS: LOS peculiar velocity field
     restr_column_lims = restr_column_lims.view(np.ndarray).astype(np.float64)
     restr_column = np.empty(N, dtype=np.float64)
     C.cpygad.absorption_spectrum(method == 'particles',
                                  C.c_size_t(N),
                                  C.c_void_p(pos.ctypes.data) if pos is not None else None,
                                  C.c_void_p(vel.ctypes.data),
+                                 C.c_void_p(vpec_z.ctypes.data), # DS Los peculiar velocities
                                  C.c_void_p(hsml.ctypes.data) if hsml is not None else None,
                                  C.c_void_p(n.ctypes.data),
                                  C.c_void_p(temp.ctypes.data),
+                                 C.c_void_p(rho.ctypes.data), # DS: gas density
                                  C.c_void_p(los.ctypes.data),
                                  C.c_void_p(vel_extent.ctypes.data),
                                  C.c_size_t(Nbins),
@@ -1037,7 +1053,9 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
                                  C.c_double(Gamma),
                                  C.c_void_p(taus.ctypes.data),
                                  C.c_void_p(los_dens.ctypes.data),
+                                 C.c_void_p(los_dens_phys.ctypes.data), # DS gas density
                                  C.c_void_p(los_temp.ctypes.data),
+                                 C.c_void_p(los_vpec.ctypes.data), # DS LOS peculiar velocity field
                                  C.c_void_p(restr_column_lims.ctypes.data),
                                  C.c_void_p(restr_column.ctypes.data),
                                  C.create_string_buffer(kernel.encode('ascii')),
@@ -1045,7 +1063,9 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
                                  )
 
     los_dens = UnitArr(los_dens, 'cm**-2')
+    los_dens_phys = UnitArr(los_dens_phys, 'g cm**-3') # DS gas density field
     los_temp = UnitArr(los_temp, 'K')
+    los_vpec = UnitArr(los_vpec, 'km/s') # DS LOS peculiar velocity field
     restr_column = UnitArr(restr_column, 'cm**-2')
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
@@ -1068,7 +1088,10 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
         except:
             pass
 
-    return taus, los_dens, los_temp, v_edges, restr_column
+    if return_los_phys:
+        return taus, los_dens, los_dens_phys, los_temp, los_vpec,  v_edges, restr_column
+    else:
+        return taus, los_dens, los_temp, v_edges, restr_column
 
 
 def EW(taus, edges):

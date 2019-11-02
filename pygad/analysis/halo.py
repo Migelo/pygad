@@ -95,7 +95,7 @@ from ..units import *
 from ..utils import *
 import sys, os
 from ..transformation import *
-from .snapshot import *
+from .properties import *
 from ..snapshot import *
 from .. import environment
 from .. import C

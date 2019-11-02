@@ -8,9 +8,11 @@ void absorption_spectrum(bool particles,
                          size_t N,
                          double *pos,
                          double *vel,
+			 double *vpec_z, // DS LOS peculiar velocity
                          double *hsml,
                          double *n,
                          double *temp,
+			 double *rho, // DS: density
                          double *los_pos,
                          double *vel_extent,
                          size_t Nbins,
@@ -20,7 +22,9 @@ void absorption_spectrum(bool particles,
                          double Gamma,
                          double *taus,
                          double *los_dens,
+			 double *los_dens_phys, // DS: density field
                          double *los_temp,
+			 double *los_vpec, // DS LOS peculiar velocity field
                          double *v_lims,
                          double *column,
                          const char *kernel_,
