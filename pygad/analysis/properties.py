@@ -482,8 +482,11 @@ def x_ray_luminosity(s, lumtable='em.dat', tempbin=None, lx0bin=None, dlxbin=Non
         lx (UnitArr):           X-ray luminosities of the gas particles
     '''
     if abs(s.redshift - z_table) > 1e-2:
-        raise RuntimeError('Snapshot\'s redshift (%.3g) does not ' % s.redshift +
+        # from pygad-dsorini
+        print('WARNING: Snapshot\'s redshift (%.3g) does not ' % s.redshift +
                            'match the table\'s redshift (%.3g)!' % z_table)
+        # raise RuntimeError('Snapshot\'s redshift (%.3g) does not ' % s.redshift +
+        #                    'match the table\'s redshift (%.3g)!' % z_table)
 
     # Read in temperature bins and corresponding Lx0(T,Z=Zref) and (dLx/dZ)(T)
     # (both in 1e44 erg/s (per Zsol))
@@ -495,8 +498,19 @@ def x_ray_luminosity(s, lumtable='em.dat', tempbin=None, lx0bin=None, dlxbin=Non
     tlow = tempbin[0] - 0.5 * (tempbin[1] - tempbin[0])  # lower temperature bin limit
     Z = s.gas['metallicity'] / physics.solar.Z()  # metallicity in solar units
     mp = physics.m_p.in_units_of('g')  # proton mass
+
+    # Horst: configurability of H-property
+    if s.H_neutral_only:
+        # Romeel 28/5/2018: can't use s.gas['H'] in our Gizmo sims, this corresponds to *neutral* H; have to get H mass from total-helium-metals
+        mhydr = np.float64(s.gas['mass']).in_units_of('g')*(1.-Z*physics.solar.Z())-np.float64(s.gas['He']).in_units_of('g') # H mass in g
+    else:
+        mhydr = np.float64(s.gas['H']).in_units_of('g')
+
+    #print (1.-Z*physics.solar.Z()),'H in g',mhydr[Z>0]
     # emission measure of gas particles (n_e * n_H * V)
-    em = np.float64(s.gas['ne']) * np.float64(s.gas['H']).in_units_of('g') ** 2 * \
+    # Horst: configurability of H-property
+    #em = np.float64(s.gas['ne']) * np.float64(s.gas['H']).in_units_of('g') ** 2 * \
+    em = np.float64(s.gas['ne']) * mhydr**2 * \
          np.float64(s.gas['rho']).in_units_of('g/cm**3') / \
          (np.float64(s.gas['mass']).in_units_of('g') * mp ** 2)
     # rescaling factor for precomputed luminosities

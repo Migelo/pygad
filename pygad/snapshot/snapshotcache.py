@@ -449,7 +449,7 @@ class SnapshotCache:
 
 
     def load_snapshot(self, useCache=True, forceCache=False,
-                      loadBinaryProperties=False, loadSF=True, loadGasHistory=False):
+                      loadBinaryProperties=False, loadSF=True, loadGasHistory=False, H_neutral_only=None):
         # type: (bool, bool) -> pg.snapshot
         filename = self.__data_file
         if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
@@ -457,7 +457,7 @@ class SnapshotCache:
             print(("loading snapshot " + filename + "..."))
             print("*********************************************")
         #snapshot = pg.Snap(filename, load_double_prec=True)
-        snapshot = pg.Snapshot(filename, load_double_prec=True)
+        snapshot = pg.Snapshot(filename, load_double_prec=True, H_neutral_only=H_neutral_only)
         self.__snapshot = snapshot
 
         if 'findgxfast' in self.__profile_properties:

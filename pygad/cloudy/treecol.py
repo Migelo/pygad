@@ -147,8 +147,15 @@ def Rahmati_HI_mass(s, UVB=gadget.general['UVB'], flux_factor=None):
     det = B ** 2 - 4. * A * C
     fHI = (B - np.sqrt(det)) / (2. * A)
     fHI[det < 0] = 0.0
+    # Horst: configurability of H-property
+    if s.H_neutral_only:
+        # Romeel 28/5/2018: can't use s.gas['H'] in our Gizmo sims, this corresponds to *neutral* H; have to get H mass from total-helium-metals
+        mhydr = np.float64(s.gas['mass']).in_units_of('g')*(1.-s.gas['metallicity'])-np.float64(s.gas['He']).in_units_of('g') # H mass in g
+    else:
+        mhydr = s.gas['H']
 
-    return fHI * s.gas['H']
+    #return fHI * s.gas['H']
+    return fHI * mhydr
 
 
 UVB_data = {

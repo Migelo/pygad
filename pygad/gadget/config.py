@@ -37,6 +37,7 @@ from .. import kernels
 families = {'gas':[0], 'stars':[4], 'dm':[1,2,3], 'bh':[5], 'baryons':[0,4,5]}
 block_order = []
 elements = []
+# Horst: H_neutral_only added
 general = {
     'kernel': '<undefined>',
     'vol_def_x': '<undefined>',
@@ -45,6 +46,7 @@ general = {
     'SSP_dir': '<undefined>',
     'unclear_blocks': 'warning',
     'Profile_dir': '',
+    'H_neutral_only': False,
     }
 block_infos = {}
 # def. units have to be strings - they are used as replacements
@@ -141,8 +143,15 @@ def read_config(config):
     if unclear_blocks not in ['exception', 'warning', 'ignore']:
         raise ValueError('Unclear block mode "%s" is unknown!' % unclear_blocks)
     general['unclear_blocks'] = unclear_blocks
+
     if cfg.has_option('general', 'Profile_dir'):
         general['Profile_dir'] = cfg.get('general', 'Profile_dir')
+
+    # Horst: read config-file into configuration
+    if cfg.has_option('general', 'H_neutral_only'):
+        general['H_neutral_only'] = cfg.getboolean('general','H_neutral_only')
+    else:
+        general['H_neutral_only'] = False # Gadget default value
 
     default_gadget_units.clear()
     default_gadget_units.update( cfg.items('base units') )

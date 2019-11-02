@@ -305,7 +305,7 @@ class Snapshot(object):
     '''
 
     def _initsnap(self, filename, base, suffix, physical=False, load_double_prec=False, cosmological=None,
-                  gad_units=None, unclear_blocks=None):
+                  gad_units=None, unclear_blocks=None, H_neutral_only=None):
         '''
         Create a snapshot from file (without loading the blocks, yet).
 
@@ -425,7 +425,7 @@ class Snapshot(object):
         return s
 
     def __init__(self, filename, physical=False, load_double_prec=False, cosmological=None,
-                                 gad_units=None, unclear_blocks=None):
+                                 gad_units=None, unclear_blocks=None, H_neutral_only=None):
 
         filename = os.path.expandvars(filename)
         filename = os.path.expanduser(filename)
@@ -467,11 +467,17 @@ class Snapshot(object):
         self._always_cache          = set() # _derive_rule_deps is empty; gets
                                             # filled in Snap() with
                                             # derived.general['always_cache']
+        # Horst: copy configuration to snapshot-property
+        if H_neutral_only is None:
+            self._H_neutral_only        = gadget.config.general['H_neutral_only']
+        else:
+            self._H_neutral_only        = H_neutral_only
+
         # Actual initialization is done in the factory function Snap. Just do some
         # basic setting of the attributes to enshure that even snapshot created by
         # just _Snap are somewhat functioning.
         self._initsnap(filename, base, suffix, physical=physical, load_double_prec=load_double_prec, cosmological=cosmological,
-                  gad_units=gad_units, unclear_blocks=unclear_blocks)
+                  gad_units=gad_units, unclear_blocks=unclear_blocks, H_neutral_only=H_neutral_only)
 
     @property
     def filename(self):
@@ -497,6 +503,12 @@ class Snapshot(object):
     def N_files(self):
         '''The number of file the snapshot is distributed over.'''
         return len(self._root._file_handlers)
+
+    # Horst: new property-method to query neutral-H setting
+    @property
+    def H_neutral_only(self):
+        '''The configuration property for neutral H.'''
+        return self._root._H_neutral_only
 
     def __len__(self):
         return sum(self._N_part)
@@ -1685,9 +1697,10 @@ def _FamilySubSnap(base, fam):
     family_s._descriptor = base._descriptor + ':' + fam
     return family_s
 
+
 def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
-             gad_units=None, unclear_blocks=None):
+             gad_units=None, unclear_blocks=None, H_neutral_only=None):
     from warnings import warn
     warn("\nfunction Snap(...) has been renamed to Snapshot class\nplease use Snapshot(..) to create a snapshot object", DeprecationWarning, stacklevel=2)
-    s = Snapshot(filename, physical, load_double_prec, cosmological, gad_units, unclear_blocks)
+    s = Snapshot(filename, physical, load_double_prec, cosmological, gad_units, unclear_blocks, H_neutral_only)
     return s
