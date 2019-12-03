@@ -14,6 +14,7 @@ void _absorption_spectrum(size_t N,
                           double *n,
                           double *temp,
 			  double *rho, // DS: density array
+			  double *metal_frac, // SA: metal mass fraction
                           double *los_pos,
                           double *vel_extent,
                           size_t Nbins,
@@ -24,6 +25,7 @@ void _absorption_spectrum(size_t N,
                           double *taus,
                           double *los_dens,
 			  double *los_dens_phys, // DS: density array
+			  double *los_metal_frac, // SA: LOS metal mass fraction
                           double *los_temp,
 			  double *los_vpec, // DS LOS peculiar velocity field
                           double *v_lims,
@@ -41,6 +43,7 @@ void _absorption_spectrum(size_t N,
     std::memset(taus, 0, Nbins*sizeof(double));
     std::memset(los_dens, 0, Nbins*sizeof(double));
     std::memset(los_dens_phys, 0, Nbins*sizeof(double)); // DS: density array
+    std::memset(los_metal_frac, 0, Nbins*sizeof(double)); // SA: LOS metal mass fraction
     std::memset(los_temp, 0, Nbins*sizeof(double));
     std::memset(los_vpec, 0, Nbins*sizeof(double)); // DS: LOS peculiar velocity field
 
@@ -71,6 +74,7 @@ void _absorption_spectrum(size_t N,
 	double vzj = vpec_z[j]; // DS: LOS peculiar velocity array
         double Tj = temp[j];
 	double Rhj = rho[j]; // DS: density array
+	double Zj = metal_frac[j]; // SA: metal mass fraction array
 
         // get the (middle) velocity bin index
         double vi = (vj - vel_extent[0]) / dv;
@@ -119,6 +123,8 @@ void _absorption_spectrum(size_t N,
             los_temp[vi_min] += Tj * Nj;
 #pragma omp atomic
 	    los_vpec[vi_min] += vzj * Nj; // DS: LOS peculiar velocity field
+#pragma omp atomic
+	    los_metal_frac[vi_min] += Zj * Nj; // SA: LOS metal mass fraction
 
             if( not in_lims(vj,v_lims) )
                 column[j] = 0.0;
@@ -176,6 +182,8 @@ void _absorption_spectrum(size_t N,
                 los_temp[i] += Tj * DtbNj;
 #pragma omp atomic
 		los_vpec[i] += vzj * DtbNj; // DS: LOS peculiar velocity field
+#pragma omp atomic
+		los_metal_frac[i] += Zj * DtbNj; // SA: LOS metal mass fraction
 
                 //contrib_total += Dtb;
                 if ( in_lims(vj+Dv,v_lims) )
@@ -193,6 +201,7 @@ void _absorption_spectrum(size_t N,
             los_temp[i] /= los_dens[i];
 	    los_dens_phys[i] /= los_dens[i]; // DS: density skewer
 	    los_vpec[i] /= los_dens[i]; // DS: LOS peculiar velocity field
+	    los_metal_frac[i] /= los_dens[i]; // SA: LOS metal mass fraction
         }
     }
 }
@@ -207,6 +216,7 @@ void absorption_spectrum(bool particles,
                          double *n,
                          double *temp,
 			 double *rho, // DS: density
+			 double *metal_frac, // SA: metal mass fraction
                          double *los_pos,
                          double *vel_extent,
                          size_t Nbins,
@@ -217,6 +227,7 @@ void absorption_spectrum(bool particles,
                          double *taus,
                          double *los_dens,
 			 double *los_dens_phys, // DS: density
+			 double *los_metal_frac, // SA: LOS metal mass fraction
                          double *los_temp,
 			 double *los_vpec, // DS LOS peculiar velocity field
                          double *v_lims,
@@ -225,22 +236,24 @@ void absorption_spectrum(bool particles,
                          double periodic) {
     if ( particles ) {
       return _absorption_spectrum<true>(N, pos, vel, vpec_z, hsml, n, temp, rho,
-                                          los_pos, vel_extent, Nbins,
+                                          metal_frac, los_pos, vel_extent, Nbins,
                                           b_0, v_turb, Xsec, Gamma,
-					taus, los_dens, los_dens_phys, los_temp,
-					los_vpec, v_lims, column,
+					taus, los_dens, los_dens_phys, los_metal_frac,
+					los_temp, los_vpec, v_lims, column,
                                           kernel_, periodic);
       // DS: Added rho and los_dens_phys in the arguments of the function above
       // DS: Also vpec_z and los_vpec
+      // SA: Added metal_frac and los_metal_frac in the arguments above
     } else {
       return _absorption_spectrum<false>(N, pos, vel, vpec_z, hsml, n, temp, rho,
-                                           los_pos, vel_extent, Nbins,
+                                           metal_frac, los_pos, vel_extent, Nbins,
                                            b_0, v_turb, Xsec, Gamma,
-					 taus, los_dens, los_dens_phys, los_temp,
-					 los_vpec, v_lims, column,
+					 taus, los_dens, los_dens_phys, los_metal_frac,
+					 los_temp,los_vpec, v_lims, column,
                                            kernel_, periodic);
       // DS: Added rho and los_dens_phys in the arguments of the function above
       // DS: Also vpec_z and los_vpec
+      // SA: Added metal_frac and los_metal_frac in the arguments above
     }
 }
 

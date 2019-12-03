@@ -13,6 +13,7 @@ void absorption_spectrum(bool particles,
                          double *n,
                          double *temp,
 			 double *rho, // DS: density
+			 double *metal_frac, // SA: metal mass fraction
                          double *los_pos,
                          double *vel_extent,
                          size_t Nbins,
@@ -23,6 +24,7 @@ void absorption_spectrum(bool particles,
                          double *taus,
                          double *los_dens,
 			 double *los_dens_phys, // DS: density field
+			 double *los_metal_frac, // SA: LOS metal mass fraction
                          double *los_temp,
 			 double *los_vpec, // DS LOS peculiar velocity field
                          double *v_lims,
