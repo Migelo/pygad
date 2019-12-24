@@ -37,7 +37,7 @@ class Kernel {
         void require_table_size(unsigned proj_tbl_size, unsigned los_tbl_size);
 
         KernelType type() const {return _type;}
-        KernelType norm() const {return _norm;}
+        double norm() const {return _norm;}
         const char *name() const {return kernel_name[_type];}
 
         double value_ql1(double q, double H) const {
