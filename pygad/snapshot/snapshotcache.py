@@ -524,8 +524,9 @@ class SnapshotCache:
 
         if (loadSF or loadGasHistory):
             if 'redshift' in self.__gx_properties:
-                rs = round(float(self.__gx_properties['redshift']),2)
-                if rs == 0.0:  # load only for z=0
+                rs = round(float(self.__gx_properties['redshift']), 2)
+                a = round(float(self.__gx_properties['a']), 2)
+                if True or rs == 0.0:  # load only for z=0
                     if loadSF and "starformingfile" in self.__gx_properties:
                         sfname = self.__gx_properties['starformingfile']
                         if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
@@ -533,7 +534,7 @@ class SnapshotCache:
                             print("loading star forming information from ", sfname)
                             print("*********************************************")
                         star_form_filename = self.get_profile_path() + sfname
-                        self._fill_star_from_info(star_form_filename)
+                        self._fill_star_from_info(star_form_filename, a)
 
                         if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
                             print("*********************************************")
@@ -1442,7 +1443,7 @@ class SnapshotCache:
 
 
 
-    def _fill_star_from_info(self, fname, fill_undefined_nan=True, dtypes=None,
+    def _fill_star_from_info(self, fname, a_max, fill_undefined_nan=True, dtypes=None,
                             units=None):
         '''
         Read the formation radius rform and rform/R200(aform) from the star_form.ascii
@@ -1487,6 +1488,8 @@ class SnapshotCache:
         try:
             # load the data
             SFI = np.loadtxt(fname, skiprows=1, dtype=dtypes)
+            if a_max < 1.0:
+                SFI = SFI[SFI['aform'] <= a_max]
 
             if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
                 print('testing if the IDs match the (root) snapshot...')
