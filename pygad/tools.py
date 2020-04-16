@@ -65,7 +65,8 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
                  sph_overlap_mask=False, gal_R200=0.10, star_form='deduce',
                  gas_trace='deduce', to_physical=True, load_double_prec=False,
                  fill_undefined_nan=True, gas_traced_blocks='all',
-                 gas_traced_dervied_blocks=None, **kwargs):
+                 gas_traced_dervied_blocks=None, center_on_BH=False,
+                 **kwargs):
     '''
     A convenience function to load a snapshot from a zoomed-in simulation that is
     not yet centered or oriented.
@@ -159,6 +160,12 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
         gas_traced_dervied_blocks (bool):
                             Passed to `fill_gas_from_traced` as `add_derived`.
                             Defaults to `gas_traced_blocks=='all'` if None.
+        center_on_BH (bool):
+                            If True, positions and velocities are centered on
+                            the central supermassive black hole (if present).
+                            If there are multiple supermassive black holes 
+                            within the central kpc of the galaxy, their center
+                            of mass is used as the center.
         kwargs:             Passed to `generate_FoF_catalogue` in `mode='FoF'`.
 
     Returns:
@@ -300,6 +307,35 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
             print 'center velocities at:', vel_center
         s['vel'] -= vel_center
 
+    # center galaxy on central supermassive black hole(s)
+    if center_on_BH:
+        bh_search_rad_kpc = 1. 
+        search_ball=s[BallMask(str(bh_search_rad_kpc)+' kpc')]
+        if search_ball.bh["mass"].size==0: #No BH
+            if environment.verbose >= environment.VERBOSE_NORMAL:
+                print "No black holes found, center stays the same."
+        else:
+            if search_ball.bh["mass"].size > 1: #>1 BHs
+                if environment.verbose >= environment.VERBOSE_NORMAL:
+                    print "WARNING: Multiple black holes within the central kpc"+\
+                          ", centering on their center of mass"
+                #selecting the most massive black hole
+                bhpos = np.average(search_ball.bh["pos"], axis=0, 
+                                   weights=search_ball.bh["mass"] )
+                bhvel = np.average(search_ball.bh["vel"], axis=0, 
+                                   weights=search_ball.bh["mass"] )
+                if environment.verbose >= environment.VERBOSE_NORMAL:
+                    print "Center of mass: " + str(bhpos)
+                    print "Velocity of center of mass: " + str(bhvel)
+            else:  #1 BH
+                bhpos = search_ball.bh["pos"][0]
+                bhvel = search_ball.bh["vel"][0]
+                if environment.verbose >= environment.VERBOSE_NORMAL:
+                    print "Central black hole position: " + str(bhpos)
+                    print "Central black hole velocity: " + str(bhvel)
+            s["pos"] = s["pos"] - bhpos
+            s["vel"] = s["vel"] - bhvel
+
     # cut the halo (<R200)
     if mode == 'info':
         R200 = info['R200']
@@ -334,7 +370,7 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
     else:
         if environment.verbose >= environment.VERBOSE_NORMAL:
             print 'at red. inertia tensor of the baryons within %.3f*R200' % gal_R200
-        orientate_at(s[BallMask(gal_R200*R200, sph_overlap=False)].baryons,
+        orientate_at(shrink_on[BallMask(gal_R200*R200, sph_overlap=False)], 
                      'red I',
                      total=True
         )

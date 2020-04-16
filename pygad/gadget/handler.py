@@ -110,7 +110,7 @@ class FileReader(object):
                 if block.ptypes[pt])
 
         if self._format == 3:
-            with h5py.File(self._filename) as gfile:
+            with h5py.File(self._filename, 'r') as gfile:
                 HDF5_name = config.std_name_to_HDF5.get(name,name)
                 data = np.empty(N*block.dimension, dtype=block.dtype)
                 if block.dimension > 1:
