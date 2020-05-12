@@ -33,6 +33,7 @@ import numpy as np
 import warnings
 import scipy.constants
 from ..units import *
+import sys
 
 # alpha elements, produced in (or actually before) SNII:
 alpha_elements = ['O', 'C', 'Ne', 'Si', 'Mg', 'S', 'Ca']
@@ -53,23 +54,27 @@ for name in scipy.constants.find():
     except SyntaxError:
         pass
 # Some useful constants:
-G = constants['Newtonian constant of gravitation']
-c = constants['speed of light in vacuum']
-h = constants['Planck constant']
-hbar = constants['Planck constant over 2 pi']
-kB = constants['Boltzmann constant']
-N_A = constants['Avogadro constant']
-epsilon0 = constants['electric constant']
-mu0 = constants['mag. constant']
-q_e = constants['elementary charge']
-m_p = constants['proton mass']
-m_n = constants['neutron mass']
-m_u = constants['atomic mass constant']
-m_e = constants['electron mass']
-m_H = UnitArr(1.00794, 'u')
-m_He = UnitArr(4.002602, 'u')
-R = N_A * kB  # ideal gas constant
-
+try:
+    G = constants['Newtonian constant of gravitation']
+    c = constants['speed of light in vacuum']
+    h = constants['Planck constant']
+    hbar = constants['reduced Planck constant']
+    kB = constants['Boltzmann constant']
+    N_A = constants['Avogadro constant']
+    epsilon0 = constants['vacuum electric permittivity']
+    mu0 = constants['vacuum mag. permeability']
+    q_e = constants['elementary charge']
+    m_p = constants['proton mass']
+    m_n = constants['neutron mass']
+    m_u = constants['atomic mass constant']
+    m_e = constants['electron mass']
+    m_H = UnitArr(1.00794, 'u')
+    m_He = UnitArr(4.002602, 'u')
+    R = N_A * kB  # ideal gas constant
+except KeyError:
+    print("Constant missing from scipy.constants, update scipy to the latest"\
+          " version!")
+    raise
 
 class solar(object):
     '''
@@ -627,4 +632,3 @@ def Jeans_mass(T, rho, mu='1 u', units='Msol'):
     M = 4. * np.pi / 3. * Jeans_length(T, rho, mu) ** 3 * rho
     M.convert_to(units)
     return M
-
