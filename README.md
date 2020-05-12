@@ -14,12 +14,14 @@ without the need to worry about format, read-in, indexing of blocks, units, etc.
 
 ### Prerequisites
 
-Written entirely in `Python 2.7` and `C++` (the latter only for speed relevant parts), it only requires a running Python 2.7 environment and the following additional quasi-standard modules:
+Written entirely in `Python 3.x` and `C++` (the latter only for speed relevant parts), it only requires a running Python 3.x environment and the following additional quasi-standard modules:
 
 * `numpy`
 * `scipy`
 * `matplotlib`
-* `hdf5` (only required if reading/writing format 3 snapshots)
+* `astropy`
+* `Pillow`
+* `h5py` (only required if reading/writing format 3 snapshots)
 
 as well as the free library
 
