@@ -19,5 +19,9 @@ pipelines:
           - tar -xzf iontbls.tar.gz iontbls
           - wget https://bitbucket.org/broett/pygad/downloads/snaps.tar.gz
           - tar -xzf snaps.tar.gz
-#          - python setup.py install
+          - apt-get update
+          - apt-get install -y libgsl-dev
+          - pip install numpy matplotlib scipy astropy Pillow h5py 
+          - python setup.py install
+          - python -c "import pygad"
 #          - python -c "import pygad,doctest,sys; res = doctest.testmod(pygad); sys.exit(res.failed)"
