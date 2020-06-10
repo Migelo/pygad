@@ -23,6 +23,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from ..units import *
 from ..binning import *
+import sys
 
 # 'jet' is bad -- the new default in matplotlib v2.0 ('viridis') is much better
 CM_DEF = 'viridis'
@@ -516,6 +517,8 @@ def add_cbar(ax, cbartitle, clim, cmap=None, fontcolor='black', fontsize=14,
                                                    foreground=fontoutline[1]),
                         mpl.patheffects.Normal()]
 
+    if isinstance(cmap, str):
+        cmap = mpl.cm.get_cmap(cmap)
     cax = inset_axes(ax, width="70%", height="3%", loc=1)
     norm = mpl.colors.Normalize(vmin=clim[0], vmax=clim[1])
 
