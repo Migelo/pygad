@@ -96,6 +96,16 @@ If you have any problems, ideas, found bugs, or want to contribute in some way, 
 contact me:  
 [broett@mpa-garching.mpg.de](mailto:broett@mpa-garching.mpg.de)
 
+or any of the current maintainers
+
+[horst.foidl@outlook.com](mailto:horst.foidl@outlook.com)
+
+[mfrigo@mpa-garching.mpg.de](mailto:mfrigo@mpa-garching.mpg.de)
+
+[cernetic@mpa-garching.mpg.de](mailto:cernetic@mpa-garching.mpg.de)
+
+
+
 [pygad]: https://bitbucket.org/broett/pygad
 [pynbody]: https://pynbody.github.io
 [HM01]: https://ui.adsabs.harvard.edu/#abs/2001cghr.confE..64H/abstract
