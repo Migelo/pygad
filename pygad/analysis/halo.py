@@ -235,7 +235,8 @@ def virial_info(s, center=None, odens=200.0, N_min=10):
            UnitArr(info[1],s['mass'].units)
 
 NO_FOF_GROUP_ID = int( np.array(-1, np.uintp) )
-def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True, verbose=None):
+def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True, 
+                    periodic_boundary=True, verbose=None):
     '''
     Perform a friends-of-friends search on a (sub-)snapshot.
 
@@ -251,6 +252,8 @@ def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True, verbose=None):
         sort (bool):        Whether to sort the groups by mass. If True, the group
                             with ID 0 will be the most massive one and the in
                             descending order.
+        periodic_boundary (bool): Whether the simulation uses periodic boundary
+                                  conditions or not.
         verbose (int):      Verbosity level. Default: the gobal pygad verbosity
                             level.
 
@@ -286,7 +289,13 @@ def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True, verbose=None):
     if mass.base is not None:
         mass = mass.copy()
     FoF = np.empty(len(s), dtype=np.uintp)
-    boxsize = float(s.boxsize.in_units_of(s['pos'].units))
+    if not periodic_boundary:
+        boxsize = float(s['pos'].in_units_of(s['pos'].units).max()*2)
+    else:
+        if s.cosmological:
+            boxsize = float(s['pos'].in_units_of(s['pos'].units))
+        else:
+            boxsize = float(s['pos'].in_units_of(s['pos'].units).max()*2)
 
     C.cpygad.find_fof_groups(C.c_size_t(len(s)),
                              C.c_void_p(pos.ctypes.data),
