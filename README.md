@@ -19,7 +19,9 @@ Written entirely in `Python 2.7` and `C++` (the latter only for speed relevant p
 * `numpy`
 * `scipy`
 * `matplotlib`
-* `hdf5` (only required if reading/writing format 3 snapshots)
+* `astropy`
+* `Pillow`
+* `h5py` (only required if reading/writing format 3 snapshots)
 
 as well as the free library
 
@@ -93,6 +95,15 @@ ipython notenook path/to/notebook.ipnb
 If you have any problems, ideas, found bugs, or want to contribute in some way, please
 contact me:  
 [broett@mpa-garching.mpg.de](mailto:broett@mpa-garching.mpg.de)
+
+or any of the current maintainers
+
+[horst.foidl@outlook.com](mailto:horst.foidl@outlook.com)
+
+[mfrigo@mpa-garching.mpg.de](mailto:mfrigo@mpa-garching.mpg.de)
+
+[cernetic@mpa-garching.mpg.de](mailto:cernetic@mpa-garching.mpg.de)
+
 
 [pygad]: https://bitbucket.org/broett/pygad
 [pynbody]: https://pynbody.github.io
