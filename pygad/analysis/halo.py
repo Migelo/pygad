@@ -293,7 +293,7 @@ def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True,
         boxsize = float(s['pos'].in_units_of(s['pos'].units).max()*2)
     else:
         if s.cosmological:
-            boxsize = float(s['pos'].in_units_of(s['pos'].units))
+            boxsize = float(s.boxsize.in_units_of(s['pos'].units))
         else:
             boxsize = float(s['pos'].in_units_of(s['pos'].units).max()*2)
 
