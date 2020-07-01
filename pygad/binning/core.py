@@ -162,7 +162,6 @@ def gridbin(pnts, qty=None, bins=50, extent=None, normed=False, stats=None,
     if qty is None:
         if stats is None or stats == 'count':
             stats = 'count'
-        else:
             qty = np.ones(len(pnts), int)
     else:
         if stats is None:
