@@ -288,8 +288,8 @@ class BoxMask(SnapMask):
         if center_new.shape != (3,):
             raise ValueError('Center has to have shape (3,)!')
         diff = center_new - (self._extent[:,1]+self._extent[:,0])/2.0
-        extent[:,0] += diff
-        extent[:,1] += diff
+        self._extent[:, 0] += diff 
+        self._extent[:, 1] += diff
 
     def __str__(self):
         s = '~' if self._inverse else ''
