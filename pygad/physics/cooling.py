@@ -121,17 +121,17 @@ class Wiersma_CoolingTable(object):
         if verbose >= environment.VERBOSE_NORMAL:
             print('reading cooling tables from "%s"' % self._path)
         with h5py.File(self._path, 'r') as f:
-            self._note = f.get('Header/Note').value[0].decode('ascii')
-            self._reference = f.get('Header/Reference').value[0].decode('ascii')
-            self._version = f.get('Header/Version').value[0].decode('ascii')
+            self._note = f['Header/Note'][()][0].decode('ascii')
+            self._reference = f['Header/Reference'][()][0].decode('ascii')
+            self._version = f['Header/Version'][()][0].decode('ascii')
             if verbose >= environment.VERBOSE_TALKY:
                 print('  note:       "%s"' % self._note)
                 print('  reference:  "%s"' % self._reference)
                 print('  version:    "%s"' % self._version)
 
-            self._redshift = f.get('Header/Redshift').value[0]
+            self._redshift = f['Header/Redshift'][()][0]
 
-            spec = f.get('Header/Species_names').value
+            spec = f['Header/Species_names'].value
             self._species = spec.astype('|U10')
             if verbose >= environment.VERBOSE_TALKY:
                 print('  %2d species: %s' % (len(self._species),
@@ -141,19 +141,19 @@ class Wiersma_CoolingTable(object):
                 print('  reading cooling tables for')
                 print('    metal free gas & electron density...')
             tbls = {
-                'noZ': f.get('Metal_free/Net_Cooling').value,
-                'ne_nH': f.get('Metal_free/Electron_density_over_n_h').value,
+                'noZ': f['Metal_free/Net_Cooling'][()],
+                'ne_nH': f['Metal_free/Electron_density_over_n_h'][()],
             }
-            f.get('Metal_free/Mean_particle_mass').value
+            f['Metal_free/Mean_particle_mass'][()]
             for el in self._species:
                 if verbose >= environment.VERBOSE_TALKY:
                     print('    %s...' % el)
                 tbls[el] = f.get('%s/Net_Cooling' % el).value
             if verbose >= environment.VERBOSE_TALKY:
                 print('  reading table bins')
-            self._nH_bins = f.get('Metal_free/Hydrogen_density_bins').value
-            self._T_bins = f.get('Metal_free/Temperature_bins').value
-            self._fHe_bins = f.get('Metal_free/Helium_mass_fraction_bins').value
+            self._nH_bins = f['Metal_free/Hydrogen_density_bins'][()]
+            self._T_bins = f['Metal_free/Temperature_bins'][()]
+            self._fHe_bins = f['Metal_free/Helium_mass_fraction_bins'][()]
             if verbose >= environment.VERBOSE_TALKY:
                 print('    nH [cm^-3]: ', self.nH_range)
                 print('    T [K]:      ', self.T_range)
@@ -161,11 +161,11 @@ class Wiersma_CoolingTable(object):
 
             if verbose >= environment.VERBOSE_TALKY:
                 print('  reading solar abundancies')
-            sspec = f.get('Header/Abundances/Abund_names').value
+            sspec = f['Header/Abundances/Abund_names'][()]
             self._solar_species = sspec.astype('|U10')
             self._solar_mass_frac = \
-                f.get('Header/Abundances/Solar_mass_fractions').value
-            self._solar_ne_nH = f.get('Solar/Electron_density_over_n_h').value
+                f['Header/Abundances/Solar_mass_fractions'][()]
+            self._solar_ne_nH = f['Solar/Electron_density_over_n_h'][()]
 
         self._tbls = tbls
 
