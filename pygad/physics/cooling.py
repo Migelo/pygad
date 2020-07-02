@@ -131,7 +131,7 @@ class Wiersma_CoolingTable(object):
 
             self._redshift = f['Header/Redshift'][()][0]
 
-            spec = f['Header/Species_names'].value
+            spec = f['Header/Species_names'][()]
             self._species = spec.astype('|U10')
             if verbose >= environment.VERBOSE_TALKY:
                 print('  %2d species: %s' % (len(self._species),
@@ -148,7 +148,7 @@ class Wiersma_CoolingTable(object):
             for el in self._species:
                 if verbose >= environment.VERBOSE_TALKY:
                     print('    %s...' % el)
-                tbls[el] = f.get('%s/Net_Cooling' % el).value
+                tbls[el] = f['%s/Net_Cooling' % el][()]
             if verbose >= environment.VERBOSE_TALKY:
                 print('  reading table bins')
             self._nH_bins = f['Metal_free/Hydrogen_density_bins'][()]
