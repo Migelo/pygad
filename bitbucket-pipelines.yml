@@ -24,4 +24,4 @@ pipelines:
           - pip install numpy matplotlib scipy astropy Pillow h5py
           - python setup.py install
           - python -c "import pygad as pg; s = pg.Snapshot('./snaps/snap_M1196_4x_470'); s.to_physical_units(); center = pg.analysis.shrinking_sphere(s.stars, center=[s.boxsize/2]*3, R=s.boxsize); pg.Translation(-center).apply(s); pg.plotting.image(s.gas, extent='50 kpc'); pg.plotting.image(s.stars, qty='mass', surface_dens=True, units='Msol/pc**2', cbartitle = r'log$_{10}$($\Sigma_*$ [M$_\odot$/pc$^2$])', extent='50 kpc', Npx=[1024,1024], scaleind=None, vlim=[10**(-2),10**1])"
-#          - python -c "import pygad,doctest,sys; res = doctest.testmod(pygad); sys.exit(res.failed)"
+          - python -c "import pygad,doctest,sys; res = doctest.testmod(pygad); sys.exit(res.failed)"
