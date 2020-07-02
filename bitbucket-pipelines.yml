@@ -12,6 +12,7 @@ image: python:3.7
 pipelines:
   default:
     - step:
+        size: 2x
         script:
           - wget https://bitbucket.org/broett/pygad/downloads/bc03.tar.gz
           - tar -xzf bc03.tar.gz
