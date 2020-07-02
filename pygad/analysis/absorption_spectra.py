@@ -909,6 +909,16 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
             vel, px = bin_func(sub, n_parts * sub['vel'][:, zaxis] / dV,
                                **binargs)
             vel[non0n] = vel[non0n] / n[non0n]
+
+            rho, px = bin_func(sub, n_parts * sub['rho'] / dV,
+                               **binargs)
+            if element is not None and element is not 'H' and element is not 'He':
+                metal_frac, px = bin_func(sub, n_parts * sub.gas[element] / sub.gas['mass'] / dV,
+                                          **binargs)
+            else:
+                metal_frac, px = bin_func(sub, n_parts * sub.gas['metallicity'] / dV,
+                                          **binargs)
+
             # average sqrt(T), since thats what the therm. broadening scales with
             temp, px = bin_func(sub, n_parts * np.sqrt(sub['temp']) / dV,
                                 **binargs)
@@ -964,6 +974,15 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
             vel, px = bin_func(sub, n_parts * sub['vel'][:, zaxis],
                                **binargs)
             vel[non0n] = vel[non0n] / n_[non0n]
+            rho, px = bin_func(sub, n_parts * sub['rho'],
+                               **binargs)
+            if element is not None and element is not 'H' and element is not 'He':
+                metal_frac, px = bin_func(sub, n_parts * sub.gas[element] / sub.gas['mass'],
+                                          **binargs)
+            else:
+                metal_frac, px = bin_func(sub, n_parts * sub.gas['metallicity'],
+                                          **binargs)
+
             # average sqrt(T), since thats what the therm. broadening scales with
             temp, px = bin_func(sub, n_parts * np.sqrt(sub['temp']),
                                 **binargs)
