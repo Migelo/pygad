@@ -154,9 +154,10 @@ def mass_weighted_mean(s, qty, mass='mass'):
     # only using the np.ndarray views does not speed up
     mwgt = np.tensordot(mass, qty, axes=1)
     print("mwgt", mwgt)
-    float(mass.sum())
+    print("mass-len, mass-sum1/-2", len(mass), float(mass.sum()), sum(mass))
     normalized_mwgt = mwgt / float(mass.sum())
     print("normalized_mwgt", normalized_mwgt)
+    print("normalized_mwgt2", mwgt / sum(mass))
     return UnitArr(normalized_mwgt, qty.units)
 
 
