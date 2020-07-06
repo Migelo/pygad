@@ -300,7 +300,12 @@ class Map(UnitArr):
         return UnitArr.__array_wrap__(self, array, context)
 
     def __getitem__(self, key):
+        from warnings import simplefilter
+        # ignore all future warnings
+        simplefilter(action='ignore', category=FutureWarning)
         item = super(Map, self).__getitem__(key)
+        # the warning: FutureWarning: Using a non-tuple sequence for multidimensional indexing is deprecated; use `arr[tuple(seq)]` instead of `arr[seq]`. In the future this will be interpreted as an array index, `arr[np.array(seq)]`, which will result either in an error or a different result.
+        # is handles by pagad in the following code
         if item.ndim != self.ndim:
             if (isinstance(key, np.ndarray) and key.dtype == bool) or \
                     (not isinstance(key, slice) and
