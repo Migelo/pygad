@@ -45,7 +45,7 @@ Example:
     True
     >>> if abs( los_velocity_dispersion(sub) - '170 km/s' ) > '5 km/s':
     ...     print(los_velocity_dispersion(sub))
-    119.81759565569048 [km s**-1]
+    119.81757523137155 [km s**-1]
     >>> if abs(half_mass_radius(sub.stars) - '11 kpc') > '0.8 kpc':
     ...     print(half_mass_radius(sub.stars))
     >>> if abs(eff_radius(sub, 'V', proj=None) - '11 kpc') > '0.8 kpc':
@@ -135,29 +135,19 @@ def mass_weighted_mean(s, qty, mass='mass'):
     Returns:
         mean (UnitArr):     The mass weighted mean.
     '''
-
-    print("mass_weighted_mean", s, qty, mass)
     if isinstance(qty, str):
         qty = s.get(qty)
     else:
         qty = UnitArr(qty)
-        print("qty", qty)
-
     if len(s) == 0:
         return UnitArr([0] * qty.shape[-1], units=qty.units, dtype=qty.dtype)
     if isinstance(mass, str):
         mass = s.get(mass)
     else:
         mass = UnitArr(mass)
-
-    print("mass", mass)
     # only using the np.ndarray views does not speed up
     mwgt = np.tensordot(mass, qty, axes=1)
-    print("mwgt", mwgt)
-    print("mass-len, mass-sum1/-2", len(mass), float(mass.sum()), sum(mass))
     normalized_mwgt = mwgt / float(mass.sum())
-    print("normalized_mwgt", normalized_mwgt)
-    print("normalized_mwgt2", mwgt / sum(mass))
     return UnitArr(normalized_mwgt, qty.units)
 
 
@@ -464,11 +454,8 @@ def los_velocity_dispersion(s, proj=2):
     '''
     # array of los velocities
     v = s['vel'][:, proj].ravel()
-    print("v", v)
     av_v = mass_weighted_mean(s, v)
-    print("av_v", av_v)
     sigma_v = np.sqrt(mass_weighted_mean(s, (v - av_v) ** 2))
-    print("sigma_v", sigma_v)
 
     return sigma_v
 
