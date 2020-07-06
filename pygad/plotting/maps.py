@@ -818,8 +818,8 @@ def vec_field(s, qty, extent, field=False, av=None, reduction=None,
                     qty=qty_y, av=av, reduction=reduction, Npx=Npx,
                     xaxis=xaxis, yaxis=yaxis)
 
-    X, Y = np.meshgrid(np.linspace(extent[0,0],extent[0,1],Npx[0]),
-                       np.linspace(extent[1,0],extent[1,1],Npx[1]))
+    X, Y = np.meshgrid(np.linspace(float(extent[0,0]),float(extent[0,1]),Npx[0]),
+                       np.linspace(float(extent[1,0]),float(extent[1,1]),Npx[1]))
     mx, my = map_x.view(np.ndarray).T, map_y.view(np.ndarray).T
 
     if ax is None:

@@ -81,8 +81,8 @@ def profile_from_map(m, extent, av=None, Nbins=None, reduction='sum',
         raise ValueError("`ref_center` has to have shape (2,)!")
 
     # pixel center positions and radii:
-    X = np.linspace( extent[0,0], extent[0,1], m.shape[0]+1 )
-    Y = np.linspace( extent[1,0], extent[1,1], m.shape[1]+1 )
+    X = np.linspace( float(extent[0,0]), float(extent[0,1]), m.shape[0]+1 )
+    Y = np.linspace( float(extent[1,0]), float(extent[1,1]), m.shape[1]+1 )
     X = (X[:-1] + X[1:]) / 2.
     Y = (Y[:-1] + Y[1:]) / 2.
     X,Y = np.meshgrid(X,Y)
@@ -91,8 +91,8 @@ def profile_from_map(m, extent, av=None, Nbins=None, reduction='sum',
     r_px = dist(pos.reshape((-1,2)), ref_center).reshape(pos.shape[:2])
 
     # radial bins
-    #r_edges = np.linspace( r_px.min(), r_px.max(), Nbins+1 )
-    r_edges = np.linspace( 0, np.min(extent[:,1]-extent[:,0])/2., Nbins+1 )
+    #r_edges = np.linspace( float(r_px.min()), float(r_px.max()), Nbins+1 )
+    r_edges = np.linspace( 0, float(np.min(extent[:,1]-extent[:,0])/2.), Nbins+1 )
     r_edges = UnitArr(r_edges, extent.units)
     #dr = UnitScalar(r_edges[1] - r_edges[0], r_edges.units)
     idx = np.digitize(r_px.flatten(), r_edges).reshape(r_px.shape)

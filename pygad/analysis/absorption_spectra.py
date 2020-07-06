@@ -346,7 +346,7 @@ def line_profile(line, N, T=None, b=None, l0=None,
         b = UnitScalar(b, 'km/s')
 
     if l is None:
-        l = UnitArr(np.linspace(lim[0], lim[1], bins), lim.units)
+        l = UnitArr(np.linspace(float(lim[0]), float(lim[1]), bins), lim.units)
     else:
         l = UnitQty(l, 'Angstrom')
     nu = (c / l).in_units_of('Hz')
@@ -404,7 +404,7 @@ def curve_of_growth(line, b, Nlim=(10, 21), bins=30, mode='Voigt'):
     if isinstance(line, str):
         line = lines[line]
     l0 = UnitScalar(line['l'])
-    N = UnitArr(np.logspace(Nlim[0], Nlim[1], int(bins)), 'cm**-2')
+    N = UnitArr(np.logspace(float(Nlim[0]), float(Nlim[1]), int(bins)), 'cm**-2')
     ew = UnitArr(np.empty(len(N)), 'Angstrom')
     for i, N_ in enumerate(N):
         lim, bins = [-0.5, 0.5], 300
@@ -469,8 +469,8 @@ def fit_Voigt(l, flux, line, Nlim=(8, 22), blim=(0, 200), bins=(57, 41)):
         return np.sum((np.exp(-tau) - flux) ** 2)
 
     errs = np.empty(tuple(bins), dtype=float)
-    Ns = np.logspace(Nlim[0], Nlim[1], bins[0])
-    bs = np.linspace(blim[0], blim[1], bins[1])
+    Ns = np.logspace(float(Nlim[0]), float(Nlim[1]), bins[0])
+    bs = np.linspace(float(blim[0]), float(blim[1]), bins[1])
     for i, N in enumerate(Ns):
         for j, b in enumerate(bs):
             errs[i, j] = err(N, b)
@@ -821,7 +821,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
                 v_perc[0], v_perc[-1], v_turb.units))
         print('  using kernel "%s"' % kernel)
 
-    v_edges = UnitArr(np.linspace(vel_extent[0], vel_extent[1], Nbins + 1),
+    v_edges = UnitArr(np.linspace(float(vel_extent[0]), float(vel_extent[1]), Nbins + 1),
                       vel_extent.units)
 
     # get ne number of ions per particle
@@ -928,8 +928,8 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
             n /= np.prod(px[[xaxis, yaxis]])
 
             # the z-coordinates for the Hubble flow
-            los_pos = UnitArr(np.linspace(spatial_extent[0],
-                                          spatial_extent[1] - px[zaxis], N),
+            los_pos = UnitArr(np.linspace(float(spatial_extent[0]),
+                                          float(spatial_extent[1] - px[zaxis]), N),
                               spatial_extent.units)
         elif method == 'line':
             binargs = {
@@ -990,8 +990,8 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
             temp **= 2
 
             # the z-coordinates for the Hubble flow
-            los_pos = UnitArr(np.linspace(spatial_extent[0],
-                                          spatial_extent[1] - px, N),
+            los_pos = UnitArr(np.linspace(float(spatial_extent[0]),
+                                          float(spatial_extent[1] - px), N),
                               spatial_extent.units)
         else:
             raise ValueError("Unkown method '%s'!" % method)

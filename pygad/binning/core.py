@@ -429,7 +429,7 @@ def smooth(grid, sml, kernel, bndrymode='constant'):
     from ..kernels import kernels, vector_kernels
 
     pxs = int(2 * np.ceil(sml) + 1)
-    x = np.linspace(-(pxs - 1) / 2., (pxs - 1) / 2., pxs) / sml
+    x = np.linspace(float(-(pxs - 1) / 2.), float((pxs - 1) / 2.), pxs) / sml
     D = len(grid.shape)
     x = np.meshgrid(*(x,) * D)
     x = np.array(x)
