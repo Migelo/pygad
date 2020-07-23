@@ -63,6 +63,7 @@ from ..units import UnitQty
 import re
 import warnings
 from . import derive_rules
+import os
 
 _rules = {}
 general = {
@@ -222,21 +223,25 @@ def read_derived_rules(config, delete_old=False):
         _rules[mag] = "lum_to_mag(%s)" % lum
 
     # add the ions from the Cloudy table as derived blocks
-    if iontable['style'] == 'Oppenheimer new':
-        from ..cloudy.cloudy_tables import config_ion_table
-        verbose = environment.verbose
-        environment.verbose = environment.VERBOSE_QUIET
-        ions = config_ion_table(0.0).ions
-        environment.verbose = verbose
+    if os.path.isdir(iontable['tabledir']):
+        if iontable['style'] == 'Oppenheimer new':
+            from ..cloudy.cloudy_tables import config_ion_table
+            verbose = environment.verbose
+            environment.verbose = environment.VERBOSE_QUIET
+            ions = config_ion_table(0.0).ions
+            environment.verbose = verbose
+        else:
+            ions = iontable['ions']
+        for ion in ions:
+            el, ionisation = ion.split()
+            ion = el + ionisation   # getting rid of the white space
+            if ion in _rules:
+                continue
+            _rules[ion] = "calc_ion_mass(gas, '%s', '%s', selfshield=%s)" % (
+                                    el, ionisation, iontable['selfshield'])
     else:
-        ions = iontable['ions']
-    for ion in ions:
-        el, ionisation = ion.split()
-        ion = el + ionisation   # getting rid of the white space
-        if ion in _rules:
-            continue
-        _rules[ion] = "calc_ion_mass(gas, '%s', '%s', selfshield=%s)" % (
-                                el, ionisation, iontable['selfshield'])
+        print("Warning: no ion table found in: " + iontable['tabledir'] + ";")
+        print("         ion blocks (e.g. HI) will not be available")
 
     return _rules
 

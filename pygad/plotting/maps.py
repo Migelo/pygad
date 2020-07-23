@@ -133,7 +133,7 @@ def plot_map(m, colors=None, extent=None, vlim=None, clim=None,
         extent.convert_to(scaleunits, subs=subs)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print('plot a map - paramters:')
+        print('plot a map - parameters:')
         print('  Npx:           ', m.Npx)
         print('  colors:        ', (colors is not None))
         print('  extent:        ', repr(extent).replace('\n        ', ''))
@@ -193,7 +193,7 @@ def plot_map(m, colors=None, extent=None, vlim=None, clim=None,
         if cbartitle is None:
             if units is not None:
                 cbartitle = r'[$%s$]' % units.latex()
-                if logscale:
+                if (logscale and colors is None) or (clogscale and colors is not None):
                     cbartitle = r'$\log_{10}$(%s)' % cbartitle
             else:
                 cbartitle = ''
@@ -439,7 +439,7 @@ def image(s, qty=None, av=None, units=None, logscale=None, surface_dens=None,
         scaleunits = Unit(scaleunits)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print('plot a map - paramters:')
+        print('plot a map - parameters:')
         if isinstance(qty,str) or qty is None:
             print('  qty:         ', qty)
         else:

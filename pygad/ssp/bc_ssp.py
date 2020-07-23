@@ -204,6 +204,10 @@ def load_table(qty, metal_code, folder=None, base=None, ending=None, IMF=None):
     if not found:
         raise RuntimeError('Could not find the quantity "%s" in the ' % qty + \
                            'SSP tables.')
+    else:
+        if environment.verbose >= environment.VERBOSE_TALKY:
+            print("Using SSP table: " + folder + '/' + (base%metal_code) + '.' + ending)
+
 
     return tbl[:,0], tbl[:,columns.index(qty)]
 

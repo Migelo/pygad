@@ -44,8 +44,8 @@ Example:
     ...                                  [ 0.00   ,  0.00   , 2.05e9]])) < 1e8
     True
     >>> if abs( los_velocity_dispersion(sub) - '170 km/s' ) > '5 km/s':
-    ...     print(los_velocity_dispersion(sub))
-    119.81757523137155 [km s**-1]
+    ...     print(round(float(los_velocity_dispersion(sub)),4))
+    119.8176
     >>> if abs(half_mass_radius(sub.stars) - '11 kpc') > '0.8 kpc':
     ...     print(half_mass_radius(sub.stars))
     >>> if abs(eff_radius(sub, 'V', proj=None) - '11 kpc') > '0.8 kpc':
