@@ -301,7 +301,7 @@ class UnitArr(np.ndarray):
 
         # all UnitArr's need to have a _unit_carrier
         obj._unit_carrier = obj
-        obj._unit_carrier._units = getattr(data, 'units', None)
+        obj._units = getattr(data, 'units', None)
 
         # bring data into desired units
         if units is not None:
@@ -314,7 +314,7 @@ class UnitArr(np.ndarray):
 
     def __array_finalize__(self, obj):
         self._unit_carrier = getattr(obj, '_unit_carrier', self)
-        self._unit_carrier._units = getattr(obj, 'units', None)
+        self._units = getattr(obj, 'units', None)
 
     def __array_wrap__(self, array, context=None):
         if context is None:
@@ -340,21 +340,23 @@ class UnitArr(np.ndarray):
     @property
     def units(self):
         '''The units of the array.'''
-        return self._unit_carrier._units
+        return self._units
 
     @units.setter
     def units(self, value):
         if value is not None:
             value = Unit(value)
-        self._unit_carrier._units = value
+        self._units = value
 
     def _set_units_and_carrier_on_base(self, units=None):
         uc = self
         if isinstance(self.base, UnitArr):
             uc = self.base._set_units_and_carrier_on_base(units)
+            self._units = uc._units
         else:
             self._units = None if units is None else Unit(units)
         self._unit_carrier = uc
+
         return uc
 
     def __float__(self):
@@ -497,10 +499,10 @@ class UnitArr(np.ndarray):
         if uc.dtype.kind != 'f':
             raise RuntimeError('Cannot convert UnitArr inplace, that do not ' + \
                                'have floating point data type!')
-        fac = uc._units.in_units_of(units, subs=subs)
+        fac = self._units.in_units_of(units, subs=subs)
         view = uc.view(np.ndarray)
         view *= fac
-        uc._units = units
+        self._units = units
 
     def in_units_of(self, units, subs=None, copy=False):
         '''

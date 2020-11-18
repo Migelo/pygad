@@ -240,7 +240,7 @@ def virial_info(s, center=None, odens=200.0, N_min=10):
 NO_FOF_GROUP_ID = int(np.array(-1, np.uintp))
 
 
-def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True, periodic_boundary=False, verbose=None):
+def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True, periodic_boundary=2, boxsize_manual=None, verbose=None):
     '''
     Perform a friends-of-friends search on a (sub-)snapshot.
 
@@ -293,13 +293,27 @@ def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True, periodic_boundary=
     if mass.base is not None:
         mass = mass.copy()
     FoF = np.empty(len(s), dtype=np.uintp)
-    if not periodic_boundary:
-        boxsize = float(s.boxsize.in_units_of(s['pos'].units))
-    else:
+
+    # check setting of periodic boundaries
+    periodic = False
+    if periodic_boundary == 0:
+        periodic = False
+    elif periodic_boundary == 1:
+        periodic = True
+    elif periodic_boundary == 2:
         if s.cosmological:
-            boxsize = float(s['pos'].in_units_of(s['pos'].units))
+            periodic = True
         else:
-            boxsize = float(s['pos'].in_units_of(s['pos'].units).max()*2)
+            periodic = False
+
+    if periodic_boundary >= 3:
+        if boxsize_manual is not None:
+            boxsize = float(boxsize_manual)
+    else:
+        if periodic:
+            boxsize = float(s.boxsize.in_units_of(s['pos'].units))
+        else:
+            boxsize = float(s['pos'].in_units_of(s['pos'].units).max() * 2)
 
     C.cpygad.find_fof_groups(C.c_size_t(len(s)),
                              C.c_void_p(pos.ctypes.data),
