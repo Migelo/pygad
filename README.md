@@ -10,6 +10,39 @@ without the need to worry about format, read-in, indexing of blocks, units, etc.
 
 ---
 
+## Citing pygad
+
+If you use this code, please cite
+
+```
+Röttgers, B., “Lyman α absorption beyond the disc of simulated spiral galaxies”, Monthly Notices of the Royal Astronomical Society, vol. 496, no. 1, pp. 152–168, 2020. doi:10.1093/mnras/staa1490. 
+https://arxiv.org/abs/2005.08580
+```
+
+BibTeX for conveinance:
+```
+@ARTICLE{2020MNRAS.496..152R,
+       author = {{R{\"o}ttgers}, Bernhard and {Naab}, Thorsten and {Cernetic}, Miha and {Dav{\'e}}, Romeel and {Kauffmann}, Guinevere and {Borthakur}, Sanchayeeta and {Foidl}, Horst},
+        title = "{Lyman {\ensuremath{\alpha}} absorption beyond the disc of simulated spiral galaxies}",
+      journal = {\mnras},
+     keywords = {line: profiles, Galaxy: formation, quasars: absorption lines, Circumstellar matter, Astrophysics - Astrophysics of Galaxies},
+         year = 2020,
+        month = jul,
+       volume = {496},
+       number = {1},
+        pages = {152-168},
+          doi = {10.1093/mnras/staa1490},
+archivePrefix = {arXiv},
+       eprint = {2005.08580},
+ primaryClass = {astro-ph.GA},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2020MNRAS.496..152R},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+
+```
+
+---
+
 ## Getting started
 
 ### Prerequisites
@@ -93,16 +126,14 @@ ipython notenook path/to/notebook.ipnb
 ## Support, Contact
 
 If you have any problems, ideas, found bugs, or want to contribute in some way, please
-contact me:  
-[broett@mpa-garching.mpg.de](mailto:broett@mpa-garching.mpg.de)
-
-or any of the current maintainers
+contact any of the current maintainers:
 
 [horst.foidl@outlook.com](mailto:horst.foidl@outlook.com)
 
+[cernetic@mpa-garching.mpg.de](mailto:cernetic@mpa-garching.mpg.de)
+
 [mfrigo@mpa-garching.mpg.de](mailto:mfrigo@mpa-garching.mpg.de)
 
-[cernetic@mpa-garching.mpg.de](mailto:cernetic@mpa-garching.mpg.de)
 
 
 [pygad]: https://bitbucket.org/broett/pygad
