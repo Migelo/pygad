@@ -639,8 +639,8 @@ class Halo(object):
             'mean_stellar_age': 'mean stellar age',
             'gas_half_mass_radius_from_com': '3d half mass radius of gas from com',
             'gas_half_mass_radius_from_ssc': '3d half mass radius of gas from ssc',
-            'star_half_mass_radius_from_com': '3d half mass radius of stars from com',
-            'star_half_mass_radius_from_ssc': '3d half mass radius of stars from ssc'
+            'stars_half_mass_radius_from_com': '3d half mass radius of stars from com',
+            'stars_half_mass_radius_from_ssc': '3d half mass radius of stars from ssc'
     }
 
     for odens in ['vir', '200', '500']:
