@@ -55,6 +55,15 @@ Examples:
       group 2:   3.36e+09 [Msol]  @  [871, 1.36e+03, 729] [kpc]
     initialize halos from FoF group IDs...
     load block ID... done.
+    load block Z... done.
+    derive block elements... done.
+    derive block H... done.
+    load block ne... done.
+    load block u... done.
+    derive block temp... done.
+    load block rho... done.
+    load block form_time... done.
+    derive block age... done.
     initialized 3 halos.
     >>> galaxies[0] # doctest: +ELLIPSIS
     <Halo @0x..., N = 55,..., M = 3.1e+10 [Msol]>
@@ -937,14 +946,12 @@ class Halo(object):
         elif prop == 'stars_half_mass_radius_from_com':
             if halo.stars['mass'].size > 0:
                 val = half_mass_radius(halo.stars, M=halo.stars['mass'].sum(), center=self._get('com', **args), proj=None)
-                print('stars_half_mass_radius_from_com: {}'.format(val))
             else:
                 val = np.nan
 
         elif prop == 'stars_half_mass_radius_from_ssc':
             if halo.stars['mass'].size > 0:
                 val = half_mass_radius(halo.stars, M=halo.stars['mass'].sum(), center=self._get('ssc', **args), proj=None)
-                print('stars_half_mass_radius_from_ssc: {}'.format(val))
             else:
                 val = np.nan
 
