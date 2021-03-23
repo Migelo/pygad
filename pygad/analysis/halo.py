@@ -661,6 +661,14 @@ class Halo(object):
         'Rmax': 'maximum distance of a particle from com',
         'lowres_part': 'number of low-resolution particles',
         'lowres_mass': 'mass of low-resolution particles',
+        'avg_gas_temp': 'mass weighted average gas temperature',
+        'rho_gas_avg': 'mass weighted average gas density',
+        'mean_stellar_age': 'mean stellar age',
+        'gas_half_mass_radius_from_com': '3d half mass radius of gas from com',
+        'gas_half_mass_radius_from_ssc': '3d half mass radius of gas from ssc',
+        'stars_half_mass_radius_from_com': '3d half mass radius of stars from com',
+        'stars_half_mass_radius_from_ssc': '3d half mass radius of stars from ssc'
+
     }
 
     for odens in ['vir', '200', '500']:
@@ -912,6 +920,34 @@ class Halo(object):
                 val = UnitScalar(0.0, halo['mass'].units)
             else:
                 val = low['mass'].sum()
+        elif prop == 'avg_gas_temp':
+            val = mass_weighted_mean(halo.gas, 'temp')
+        elif prop == 'rho_gas_avg':
+            val = mass_weighted_mean(halo.gas, 'rho')
+        elif prop == 'mean_stellar_age':
+            # only if there are stars in the halo
+            if halo.stars['mass'].size > 0:
+                val = halo.stars['age'].mean()
+            else:
+                val = np.nan
+        elif prop == 'gas_half_mass_radius_from_com':
+            val = half_mass_radius(halo.gas, M=halo.gas['mass'].sum(), center=self._get('com', **args), proj=None)
+        elif prop == 'gas_half_mass_radius_from_ssc':
+            val = half_mass_radius(halo.gas, M=halo.gas['mass'].sum(), center=self._get('ssc', **args), proj=None)
+        elif prop == 'stars_half_mass_radius_from_com':
+            if halo.stars['mass'].size > 0:
+                val = half_mass_radius(halo.stars, M=halo.stars['mass'].sum(), center=self._get('com', **args), proj=None)
+                print('stars_half_mass_radius_from_com: {}'.format(val))
+            else:
+                val = np.nan
+
+        elif prop == 'stars_half_mass_radius_from_ssc':
+            if halo.stars['mass'].size > 0:
+                val = half_mass_radius(halo.stars, M=halo.stars['mass'].sum(), center=self._get('ssc', **args), proj=None)
+                print('stars_half_mass_radius_from_ssc: {}'.format(val))
+            else:
+                val = np.nan
+
         else:
             raise ValueError('Unknown property "%s"!' % prop)
 
