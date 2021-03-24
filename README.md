@@ -1,4 +1,5 @@
 # pygad README
+[![Build Status](https://travis-ci.com/broett/pygad.svg?branch=master)](https://travis-ci.com/broett/pygad)
 
 This module is a light-weighted (despite having ~25.000 lines of code and documentation) but comprehensive Python module that serves as a framework and basis for analysis of Gadget snapshots.
 
@@ -126,17 +127,13 @@ ipython notenook path/to/notebook.ipnb
 ## Support, Contact
 
 If you have any problems, ideas, found bugs, or want to contribute in some way, please
-contact me:  
-[broett@mpa-garching.mpg.de](mailto:broett@mpa-garching.mpg.de)
-
-or any of the current maintainers
+contact any of the current maintainers:
 
 [horst.foidl@outlook.com](mailto:horst.foidl@outlook.com)
 
-[mfrigo@mpa-garching.mpg.de](mailto:mfrigo@mpa-garching.mpg.de)
-
 [cernetic@mpa-garching.mpg.de](mailto:cernetic@mpa-garching.mpg.de)
 
+[mfrigo@mpa-garching.mpg.de](mailto:mfrigo@mpa-garching.mpg.de)
 
 
 [pygad]: https://bitbucket.org/broett/pygad
