@@ -50,9 +50,9 @@ Examples:
       N     >= 300
     found 4 groups
     the 3 most massive ones are:
-      group 0:   3.12e+10 [Msol]  @  [0..., 0..., 0...] [kpc]
-      group 1:   6.94e+09 [Msol]  @  [4..., 9..., 4...] [kpc]
-      group 2:   3.36e+09 [Msol]  @  [8..., 1...e+03, 7...] [kpc]
+      group 0:   3.12e+10 [Msol]  @  [0.0693, 0.218, 0.0566] [kpc]
+      group 1:   6.94e+09 [Msol]  @  [492, 940, 428] [kpc]
+      group 2:   3.36e+09 [Msol]  @  [871, 1.36e+03, 729] [kpc]
     initialize halos from FoF group IDs...
     load block ID... done.
     load block form_time... done.
@@ -63,8 +63,8 @@ Examples:
     derive block H... done.
     load block u... done.
     load block ne... done.
-    derive block temp... done.    
-    initialized 3 halos.
+    derive block temp... done.
+    initialized 3 halos.    
     >>> galaxies[0] # doctest: +ELLIPSIS
     <Halo @0x..., N = 55,..., M = 3.1e+10 [Msol]>
     >>> gal = s[galaxies[0]]
