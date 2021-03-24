@@ -64,7 +64,7 @@ Examples:
     load block u... done.
     load block ne... done.
     derive block temp... done.
-    initialized 3 halos.    
+    initialized 3 halos.
     >>> galaxies[0] # doctest: +ELLIPSIS
     <Halo @0x..., N = 55,..., M = 3.1e+10 [Msol]>
     >>> gal = s[galaxies[0]]
