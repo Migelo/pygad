@@ -58,8 +58,6 @@ Examples:
     load block form_time... done.
     derive block age... done.
     load block rho... done.
-    stars_half_mass_radius_from_ssc: 3.89667448462 [kpc]
-    stars_half_mass_radius_from_com: 3.85557644439 [kpc]
     load block Z... done.
     derive block elements... done.
     derive block H... done.
