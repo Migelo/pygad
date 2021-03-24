@@ -265,8 +265,13 @@ def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True, periodic_boundary=
         sort (bool):        Whether to sort the groups by mass. If True, the group
                             with ID 0 will be the most massive one and the in
                             descending order.
-        periodic_boundary (bool): Whether the simulation uses periodic boundary
-                            conditions or not.
+        periodic_boundary (int): Whether the simulation uses periodic boundary
+                                 conditions or not:
+                                     - 0: no periodic boundary
+                                     - 1: periodic boundary turned on
+                                     - 2: automatic determination, turned on for s.cosmological == True
+                                     - 3: periodic boundary turned on with boxsize from boxsize_manual argument
+        boxsize_manual (UnitScalar) : Boxsize for periodic boundary conditions.
         verbose (int):      Verbosity level. Default: the gobal pygad verbosity
                             level.
 
@@ -315,9 +320,9 @@ def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True, periodic_boundary=
         else:
             periodic = False
 
-    if periodic_boundary >= 3:
-        if boxsize_manual is not None:
-            boxsize = float(boxsize_manual)
+    if periodic_boundary == 3:
+        assert(boxsize_manual is not None)
+        boxsize = float(boxsize_manual)
     else:
         if periodic:
             boxsize = float(s.boxsize.in_units_of(s['pos'].units))
