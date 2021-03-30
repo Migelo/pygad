@@ -322,7 +322,8 @@ try:
     viridis = mpl.get_cmap('viridis')
     del viridis
 except:
-    mpl.cm.register_cmap(name='viridis', cmap=cm_my_viridis)
+    mpl.cm.register_cmap(name='viridis', cmap=cm_my_viridis,
+                         override_builtin=True)
 
 cm_isolum = [[ 0.60650245, 0.52403835, 0.96984564],
              [ 0.60010679, 0.52742294, 0.96805436],
