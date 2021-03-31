@@ -9,6 +9,7 @@ __all__ = ['cm_age', 'cm_k_g', 'cm_k_p',
 import matplotlib as mpl
 import matplotlib.cm
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
+from packaging import version
 
 def _create_new_listed_cm(name, data, bad='black'):
     cmap = ListedColormap(data, name=name)
@@ -322,8 +323,11 @@ try:
     viridis = mpl.get_cmap('viridis')
     del viridis
 except:
-    mpl.cm.register_cmap(name='viridis', cmap=cm_my_viridis,
-                         override_builtin=True)
+    if version.parse(mpl.__version__) > version.parse('3.3.4'):
+        mpl.cm.register_cmap(name='viridis', cmap=cm_my_viridis,
+                             override_builtin=True)
+    else:
+        mpl.cm.register_cmap(name='viridis', cmap=cm_my_viridis)
 
 cm_isolum = [[ 0.60650245, 0.52403835, 0.96984564],
              [ 0.60010679, 0.52742294, 0.96805436],
