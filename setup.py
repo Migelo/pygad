@@ -56,7 +56,7 @@ with open(init_file, 'w') as f:
 try:
     # actually do the setup
     setup(
-        name="pygadget",
+        name="pygad-mpa",
         description="analysis module for Gadget",
         long_description="A light-weighted analysis module for galaxy "
         + "simulations performed by the SPH code Gadget.",
