@@ -13,7 +13,7 @@ import gc
 module_dir = os.path.dirname(__file__)+'/'
 
 def git_descr(path=os.curdir, dirty='dirty', PEP440=False):
-    '''
+    """
     Get a brief description of the current git revision of a directory.
 
     Args:
@@ -39,7 +39,7 @@ def git_descr(path=os.curdir, dirty='dirty', PEP440=False):
         RuntimeError:   If PEP440 is True and the string obtained by `git
                         describe` returned could not have been converted into a
                         PEP 0440 compliant version.
-    '''
+    """
     if not os.path.exists(os.path.expanduser(path)):
         raise IOError('The path "%s" does not exist!' % path)
     if not os.path.isdir(path):

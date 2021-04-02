@@ -1,0 +1,2 @@
+include versioneer.py
+include pygad/_version.py
