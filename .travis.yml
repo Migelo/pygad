@@ -9,12 +9,13 @@ python:
 install:
 - sudo apt-get -y install libgsl-dev g++ gcc build-essential
 script:
+- export TRAVIS_TAG=$(git tag --points-at HEAD)
 - echo $TRAVIS_TAG
 - cd $TRAVIS_BUILD_DIR
 - pip install .
 - cd $HOME
-# - python -c "import pygad"
-# - python -c "import pygad,doctest,sys; res = doctest.testmod(pygad); sys.exit(res.failed)"
+- python -c "import pygad"
+- python -c "import pygad,doctest,sys; res = doctest.testmod(pygad); sys.exit(res.failed)"
 - cd $TRAVIS_BUILD_DIR
 deploy:
   provider: pypi
