@@ -23,4 +23,4 @@ deploy:
   edge: true
   distributions: "sdist"
   on:
-    tags: true
+    tags: true 
