@@ -9,6 +9,7 @@ python:
 install:
 - sudo apt-get -y install libgsl-dev g++ gcc build-essential
 script:
+- echo $TRAVIS_TAG
 - cd $TRAVIS_BUILD_DIR
 - pip install .
 - cd $HOME
@@ -20,8 +21,5 @@ deploy:
   username: "mihac"
   edge: true
   distributions: "sdist"
-# branches:
-#   only:
-#     - master
-#     - /^v\d+\.\d+\.\d+.*$/
-  
+  on:
+    tags: true
