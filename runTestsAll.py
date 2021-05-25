@@ -13,7 +13,7 @@ import warnings
 
 warnings.filterwarnings("ignore")
 print("*********************************************************************")
-print("pygad version ", pygad.version)
+print("pygad version ", pygad.__version__)
 print("*********************************************************************")
 pygad.environment.verbose = pygad.environment.VERBOSE_NORMAL
 print("running pygad doctest...")

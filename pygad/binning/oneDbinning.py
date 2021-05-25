@@ -5,7 +5,7 @@ Doctests:
     >>> from ..transformation import *
     >>> from ..snapshot import *
     >>> from .mapping import *
-    >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_470', physical=True)
+    >>> s = Snapshot(module_dir+'snaps/snap_M1196_4x_470', physical=True)
     >>> Translation(UnitArr([-48087.1,-49337.1,-46084.3],'kpc')).apply(s)
     >>> s['vel'] -= UnitArr([-42.75,-15.60,-112.20],'km s**-1')
     load block vel... done.

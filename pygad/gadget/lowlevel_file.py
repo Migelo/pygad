@@ -8,7 +8,7 @@ Example:
     This tests format 2 with info block only.
     TODO: add other doctests!? Some are implicitly done in snapshot module.
     >>> from ..environment import module_dir
-    >>> orig_file = module_dir+'../snaps/snap_M1196_4x_470'
+    >>> orig_file = module_dir+'snaps/snap_M1196_4x_470'
     >>> dest_file = module_dir+'test.gad'
     >>> blocks = {}
     >>> with open(orig_file, 'rb') as gfile:

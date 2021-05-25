@@ -215,7 +215,7 @@ if __name__ == '__main__':
     import pygad
     pygad.environment.verbose = args.verbose
     if args.verbose:
-        print('imported pygad', pygad.version)
+        print('imported pygad', pygad.__version__)
     h5py = pygad.environment.secure_get_h5py()
 
     if args.verbose: print('read file information of "%s"...' % args.file)

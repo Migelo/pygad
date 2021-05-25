@@ -45,7 +45,7 @@ Example:
     A more realistic sample of positions (just every 100th for speed reasons):
     >>> from ..snapshot.snapshot import Snapshot
     >>> from ..environment import module_dir
-    >>> snap = Snapshot(module_dir+'../snaps/snap_M1196_4x_470', physical=False,
+    >>> snap = Snapshot(module_dir+'snaps/snap_M1196_4x_470', physical=False,
     ...             load_double_prec=True)
     >>> snap = snap[::100]
     >>> OctNode.MAX_DEPTH = 11  # making the following tree build way faster

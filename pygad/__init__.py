@@ -90,9 +90,6 @@ from . import plotting
 #   - in the installed version
 #       a string holding the value of above's function call at the moment of
 #       installation via setup.py
-version = environment.git_descr( environment.module_dir, PEP440=True )
-if environment.verbose > environment.VERBOSE_QUIET:
-    print('imported pygad', version, "- setup Python3")
 
 # make some chosen elements directly visible
 from .environment import gc_full_collect
@@ -110,6 +107,7 @@ from .environment import gc_full_collect
 from .units import *
 from .transformation import *
 from .snapshot import *
+from .tools import prepare_zoom, read_info_file
 
 import gc
 # default seems to be (700, 10, 10)
@@ -118,3 +116,39 @@ import gc
 gc.set_threshold(50, 3, 3)
 gc_full_collect()
 
+from .environment import module_dir
+import subprocess
+
+if not os.path.exists(module_dir+'./CoolingTables/z_0.000.hdf5'):
+    url = 'http://www.strw.leidenuniv.nl/WSS08/'
+    zipf = 'z_0.000_highres.tar.gz'
+    assert not os.system('wget %s%s' % (url,zipf))
+    assert not os.system('tar zxvf %s -C %s/' % (zipf,module_dir))
+    assert not os.system('rm -f %s' % zipf)
+
+if not os.path.exists(module_dir+'./iontbls'):
+    url = 'https://bitbucket.org/broett/pygad/downloads/'
+    file = 'iontbls.tar.gz'
+    subprocess.run('wget %s%s' % (url, file), check=True, shell=True)
+    subprocess.run('tar zxf %s -C %s/' % (file, module_dir), check=True, shell=True)
+    subprocess.run('rm -f %s' % file, check=True, shell=True)
+
+if not os.path.exists(module_dir+'./bc03'):
+    url = 'https://bitbucket.org/broett/pygad/downloads/'
+    file = 'bc03.tar.gz'
+    subprocess.run('wget %s%s' % (url, file), check=True, shell=True)
+    subprocess.run('tar zxf %s -C %s/' % (file, module_dir), check=True, shell=True)
+    subprocess.run('rm -f %s' % file, check=True, shell=True)
+
+if not os.path.exists(module_dir+'./snaps'):
+    url = 'https://bitbucket.org/broett/pygad/downloads/'
+    file = 'snaps.tar.gz'
+    subprocess.run('wget %s%s' % (url, file), check=True, shell=True)
+    subprocess.run('tar zxf %s -C %s/' % (file, module_dir), check=True, shell=True)
+    subprocess.run('rm -f %s' % file, check=True, shell=True)
+
+from ._version import get_versions
+__version__ = get_versions()['version']
+if environment.verbose > environment.VERBOSE_QUIET:
+  print('imported pygad', __version__)
+del get_versions

@@ -1,0 +1,7 @@
+include versioneer.py
+include pygad/_version.py
+include pygad/config/*
+include pygad/C/include/*
+include pygad/C/src/*
+include pygad/C/Makefile
+include commands/*.py

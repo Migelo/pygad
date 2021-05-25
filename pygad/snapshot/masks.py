@@ -7,7 +7,7 @@ Examples:
     >>> from ..snapshot import Snapshot
     >>> from ..transformation import *
     >>> from ..analysis import *
-    >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_470', physical=False)
+    >>> s = Snapshot(module_dir+'snaps/snap_M1196_4x_470', physical=False)
     >>> Translation(-shrinking_sphere(s.stars, [s.boxsize/2]*3,
     ...                               np.sqrt(3)*s.boxsize)).apply(s)
     load block pos... done.

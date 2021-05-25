@@ -5,10 +5,9 @@ ifneq ($(wildcard ${GSL_LIB}),)
 endif
 
 CC 		= g++
-CFLAGS 	= -std=c++11 #-fext-numeric-literals
+CFLAGS 	= -std=c++11
 CFLAGS  += -pedantic -Wall -Wextra -Wno-unused-parameter
 CFLAGS 	+= -O3 -DNDEBUG -fopenmp
-#CFLAGS 	+= -Wno-unknown-pragmas -O2 -DDEBUG
 IPATH	= $(addprefix -I, $(addsuffix /include, $(GSL_HOME)))
 LPATH	= $(addprefix -L, $(addsuffix /lib, $(GSL_HOME)))
 LDFLAGS = -lm -fopenmp -lgsl -lgslcblas
@@ -30,7 +29,7 @@ HEADERS = $(wildcard $(INCLDIR)/*.hpp)
 
 all: $(LIB)
 
-# also let depend on headers to enshure proper rebuilds
+# also let depend on headers to ensure proper rebuilds
 $(OBJ) : $(BUILDIR)/%.o : $(SRCDIR)/%.cpp $(HEADERS) Makefile
 	@mkdir -p $(BUILDIR)
 	$(CC) -fPIC $(CFLAGS) $(IPATH) -I./$(INCLDIR) -c $< -o $@

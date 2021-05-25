@@ -1,7 +1,8 @@
 # compiled python files
 *.pyc
-# egg info folder created by `python setup.py develop`
-pygad.egg-info
+
+# egg info folder created by pip
+*.egg-info
 
 # compiled C code
 *.o
@@ -25,3 +26,15 @@ snaps
 wiki
 QuickStart*
 
+# development python env
+venv
+
+# archives
+*.zip
+*.tar*
+
+# pycharm 
+.idea
+
+# vscode
+settings.json

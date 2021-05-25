@@ -16,7 +16,7 @@ without the need to worry about format, read-in, indexing of blocks, units, etc.
 If you use this code, please cite
 
 ```
-Röttgers, B., “Lyman α absorption beyond the disc of simulated spiral galaxies”, Monthly Notices of the Royal Astronomical Society, vol. 496, no. 1, pp. 152–168, 2020. doi:10.1093/mnras/staa1490. 
+RÃ¶ttgers, B., â€œLyman Î± absorption beyond the disc of simulated spiral galaxiesâ€, Monthly Notices of the Royal Astronomical Society, vol. 496, no. 1, pp. 152â€“168, 2020. doi:10.1093/mnras/staa1490. 
 https://arxiv.org/abs/2005.08580
 ```
 
@@ -54,7 +54,6 @@ Written entirely in `Python 3.x` and `C++` (the latter only for speed relevant p
 * `scipy`
 * `matplotlib`
 * `astropy`
-* `Pillow`
 * `h5py` (only required if reading/writing format 3 snapshots)
 
 as well as the free library
@@ -73,20 +72,11 @@ Clone and install the git repository:
 ```
 $ git clone https://bitbucket.org/broett/pygad
 $ cd pygad
-$ sudo python setup.py install
+$ sudo pip install .
 ```
-I the `setuptools` module is installed, I would actually recommend `sudo python setup.py develop` (see the [wiki entry][WikiInstallation] for more).
+I would actually recommend `sudo pip install -e .` (see the [wiki entry][WikiInstallation] for more). This way of installing only links the pygad folder to your site-packages. This means any changes to the code will be immediately reflected, no need for reinstallation to apply the new changes.
 
-For full functionality, you need to download the tables for [Bruzual & Charlot (2003)][BC03] SSP model and ionisation Cloudy tables (here for [Haardt & Madau, 2001][HM01]):
-```
-$ wget https://bitbucket.org/broett/pygad/downloads/bc03.tar.gz
-$ tar -xzf bc03.tar.gz
-$ wget https://bitbucket.org/broett/pygad/downloads/iontbls.tar.gz
-$ tar -xzf iontbls.tar.gz
-```
-The [Bruzual & Charlot (2003)][BC03] tables are optional but recommended, since required for standard star plotting routines.
-For absorption line generation, you need the ionisation tables.
-(You might need to adjust the path to it in the `gadget.cfg`.)
+For full functionality, pygad will automatically download the tables for [Bruzual & Charlot (2003)][BC03] SSP model and ionisation Cloudy tables (here for [Haardt & Madau, 2001][HM01]) as well as some test snapshots and cooling function tables. The downloaded files are put in the 
 
 If you have problems or want a more detailed explanation, see the [wiki][WikiInstallation].
 We also want to point out the [FAQ section][FAQ].
@@ -105,7 +95,7 @@ For a starter you could try something like the following in iPython:
 import matplotlib.pyplot as plt
 import pygad
 import pygad.plotting   # needs to be imported explicitly
-s = pygad.Snap('path/to/snap')
+s = pygad.Snapshot('path/to/snap')
 snap, halo = pygad.tools.prepare_zoom(s)
 R200, M200 = pygad.analysis.virial_info(snap)
 fig, ax, cbar = pygad.plotting.image(snap.gas, extent='5 Mpc')

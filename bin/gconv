@@ -55,7 +55,7 @@ if __name__ == '__main__':
     import pygad
     pygad.environment.verbose = args.verbose
     if args.verbose:
-        print('imported pygad', pygad.version)
+        print('imported pygad', pygad.__version__)
 
     if args.format.lower() == 'hdf5':
         args.format = 3

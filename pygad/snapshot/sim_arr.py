@@ -5,7 +5,7 @@ deleted from the snapshot, if the array changes.
 Examples:
     >>> #from snapshot import Snapshot
     >>> from ..environment import module_dir
-    >>> snap = Snapshot(module_dir+'../snaps/snap_M1196_4x_470')
+    >>> snap = Snapshot(module_dir+'snaps/snap_M1196_4x_470')
     >>> sa = SimArr([1,2,3], units='a kpc / h_0', dtype=float, snap=snap)
     >>> sa[:2]
     SimArr([ 1.,  2.], units="a kpc h_0**-1", snap="snap_M1196_4x_470")

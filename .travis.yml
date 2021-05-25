@@ -5,22 +5,23 @@ addons:
     update: true
 language: python
 python:
- - "3.6"
- - "3.7"
- - "3.8"
- - "3.9"
-before_install:
-    #  - pip install numpy==1.19.3 matplotlib astropy scipy h5py Pillow
-  - wget https://bitbucket.org/broett/pygad/downloads/bc03.tar.gz
-  - tar -xzf bc03.tar.gz
-  - wget https://bitbucket.org/broett/pygad/downloads/iontbls.tar.gz
-  - tar -xzf iontbls.tar.gz iontbls
-  - wget https://bitbucket.org/broett/pygad/downloads/snaps.tar.gz
-  - tar -xzf snaps.tar.gz
+- '3.9'
 install:
-  - pip install -r requirements.txt
-  - sudo apt-get -y install libgsl-dev g++ gcc build-essential
-  - python setup.py install
-script: 
-      #  - python -c "import pygad as pg; s = pg.Snapshot('./snaps/snap_M1196_4x_470'); s.to_physical_units(); center = pg.analysis.shrinking_sphere(s.stars, center=[s.boxsize/2]*3, R=s.boxsize); pg.Translation(-center).apply(s); pg.plotting.image(s.gas, extent='50 kpc'); pg.plotting.image(s.stars, qty='mass', surface_dens=True, units='Msol/pc**2', cbartitle = r'log$_{10}$($\Sigma_*$ [M$_\odot$/pc$^2$])', extent='50 kpc', Npx=[1024,1024], scaleind=None, vlim=[10**(-2),10**1])"
-  - python -c "import pygad,doctest,sys; res = doctest.testmod(pygad); sys.exit(res.failed)"
+- sudo apt-get -y install libgsl-dev g++ gcc build-essential
+script:
+- cd $TRAVIS_BUILD_DIR
+- pip install .
+- cd $HOME
+# - python -c "import pygad"
+# - python -c "import pygad,doctest,sys; res = doctest.testmod(pygad); sys.exit(res.failed)"
+- cd $TRAVIS_BUILD_DIR
+deploy:
+  provider: pypi
+  username: "mihac"
+  edge: true
+  distributions: "sdist"
+# branches:
+#   only:
+#     - master
+#     - /^v\d+\.\d+\.\d+.*$/
+  

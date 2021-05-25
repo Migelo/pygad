@@ -1,10 +1,26 @@
-'''
+"""
 Basic loading of the fast C library.
-'''
+"""
+from ctypes import (
+    POINTER,
+    byref,
+    c_char_p,
+    c_double,
+    c_int,
+    c_size_t,
+    c_uint,
+    c_void_p,
+    cdll,
+    create_string_buffer,
+)
+from glob import glob
+
 from .. import environment
-from ctypes import cdll, c_void_p, c_size_t, c_double, c_int, c_uint, POINTER, \
-                   byref, create_string_buffer, c_char_p
-cpygad = cdll.LoadLibrary(environment.module_dir+'C/cpygad.so')
+
+try:
+    cpygad = cdll.LoadLibrary(glob(environment.module_dir + "C/cpygad*.so")[0])
+except:
+    cpygad = cdll.LoadLibrary(glob(environment.module_dir + "../cpygad*.so")[0])
 
 cpygad.cubic.restype = c_double
 cpygad.cubic.argtypes = [c_double, c_double]
@@ -21,4 +37,3 @@ cpygad.Wendland_C6.argtypes = [c_double, c_double]
 
 cpygad.Voigt.restype = c_double
 cpygad.Voigt.argtypes = [c_double, c_double, c_double]
-

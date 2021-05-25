@@ -9,7 +9,7 @@ Examples:
     ...
     ValueError: Rotation matrix needs to fullfil det(R) == +1 (proper Rotation)!
     >>> rot = Rotation([[0,1,0],[0,0,1],[1,0,0]])
-    >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_470', physical=False)
+    >>> s = Snapshot(module_dir+'snaps/snap_M1196_4x_470', physical=False)
     >>> s['pos'][:3]
     load block pos... done.
     SimArr([[34613.516, 35521.816, 33178.605],
@@ -81,7 +81,7 @@ Examples:
     apply stored Rotation to block pos... done.
     apply stored Translation to block pos... done.
     apply stored Rotation to block pos... done.
-    >>> del s; s = Snapshot(module_dir+'../snaps/snap_M1196_4x_470', physical=False)
+    >>> del s; s = Snapshot(module_dir+'snaps/snap_M1196_4x_470', physical=False)
     >>> print(s['pos'][0]); print(s['pos'][-1])
     load block pos... done.
     [34613.516 35521.816 33178.605] [ckpc h_0**-1]

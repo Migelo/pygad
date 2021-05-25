@@ -12,7 +12,7 @@ Example:
     demonstrated.
 
     >>> snap_tmp_file = 'test.gdt'
-    >>> s = Snapshot(module_dir+'../snaps/AqA_ICs_C02_200_nm.gdt', physical=False,
+    >>> s = Snapshot(module_dir+'snaps/AqA_ICs_C02_200_nm.gdt', physical=False,
     ...          gad_units={'LENGTH':'cMpc/h_0'})
     >>> s
     <Snap "AqA_ICs_C02_200_nm.gdt.0-8"; N=2,951,686; z=127.000>
@@ -57,7 +57,7 @@ Example:
     np.ndarray of bools (for more information see SubSnap).
     In fact, in order to access blocks that are only for certains families, one has
     to restrict the snapshot to appropiately.
-    >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_470', physical=False)
+    >>> s = Snapshot(module_dir+'snaps/snap_M1196_4x_470', physical=False)
     >>> s.gas['rho']
     load block rho... done.
     SimArr([2.1393036e-03, 8.1749255e-04, 9.4836479e-04, ..., 4.6801919e-08,
@@ -177,7 +177,7 @@ Example:
     >>> import os
     >>> os.remove(dest_file)
     >>> del sub, sub_copy
-    >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_470', physical=False)
+    >>> s = Snapshot(module_dir+'snaps/snap_M1196_4x_470', physical=False)
     >>> gadget.write(s, dest_file)  # doctest:+ELLIPSIS
     load block pos... done.
     load block vel... done.
@@ -243,7 +243,7 @@ Example:
     >>> del s2
 
     Some basic testing for (reading) HDF5 snapshots:
-    >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_conv_470.hdf5', physical=False)
+    >>> s = Snapshot(module_dir+'snaps/snap_M1196_4x_conv_470.hdf5', physical=False)
     >>> s
     <Snap "snap_M1196_4x_conv_470.hdf5"; N=2,079,055; z=0.000>
     >>> s.cosmology
@@ -1441,7 +1441,7 @@ class SubSnapshot(Snapshot):
                         ATTENTION: you are responsible for this being correct!
 
     Doctests:
-        >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_470', physical=False)
+        >>> s = Snapshot(module_dir+'snaps/snap_M1196_4x_470', physical=False)
         >>> if any(s.gas.parts[1:]): print(s.gas.parts)
         >>> if any(s.stars.parts[:4]) or any(s.stars.parts[5:]): print(s.gas.parts)
         >>> s[123:len(s):100]

@@ -11,10 +11,10 @@ Examples:
     >>> general
     {'always_cache': set(['Ekin', 'temp', 'age', 'mag*', 'angmom', 'LX', 'jcirc']), 'cache_derived': True}
     >>> iontable
-    {'ions': [], 'tabledir': 'pygad//../iontbls/tbls-i45', 'style': 'Oppenheimer new', 'selfshield': False, 'pattern': 'lt<z>f100_i45', 'flux_factor': 1.0, 'T_vals': [2.5, 0.05, 140], 'nH_vals': [-8, 0.05, 160]}
+    {'ions': [], 'tabledir': 'pygad/iontbls/tbls-i45', 'style': 'Oppenheimer new', 'selfshield': False, 'pattern': 'lt<z>f100_i45', 'flux_factor': 1.0, 'T_vals': [2.5, 0.05, 140], 'nH_vals': [-8, 0.05, 160]}
 
     >>> # from snapshot import Snapshot
-    >>> s = Snapshot(module_dir+'../snaps/snap_M1196_4x_470')
+    >>> s = Snapshot(module_dir+'snaps/snap_M1196_4x_470')
     >>> ptypes_and_deps(rules['r'], s)
     ([True, True, True, True, True, False], set(['pos']))
     >>> ptypes_and_deps(rules['metallicity'], s) # derived from mass (for all
@@ -31,8 +31,8 @@ Examples:
     load block ne... done.
     derive block temp... done.
     derive block CIV... load tables:
-      "pygad//../iontbls/tbls-i45/lt00000f100_i45" (z=0.000)
-      "pygad//../iontbls/tbls-i45/lt00491f100_i45" (z=0.049)
+      "pygad/iontbls/tbls-i45/lt00000f100_i45" (z=0.000)
+      "pygad/iontbls/tbls-i45/lt00491f100_i45" (z=0.049)
     derive block nH... done.
     derive block C... done.
     done.
@@ -40,8 +40,8 @@ Examples:
            units="1e+10 Msol h_0**-1", snap="snap_M1196_4x_470":gas)
     >>> s.gas['MgII'].sum() # doctest: +ELLIPSIS
     derive block MgII... load tables:
-      "pygad//../iontbls/tbls-i45/lt00000f100_i45" (z=0.000)
-      "pygad//../iontbls/tbls-i45/lt00491f100_i45" (z=0.049)
+      "pygad/iontbls/tbls-i45/lt00000f100_i45" (z=0.000)
+      "pygad/iontbls/tbls-i45/lt00491f100_i45" (z=0.049)
     derive block Mg... done.
     done.
     UnitArr(0.00131..., units="1e+10 Msol h_0**-1")
