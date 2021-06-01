@@ -3,16 +3,20 @@ os: linux
 addons:
   apt:
     update: true
+    packages:
+    - libgsl-dev
 language: python
 python:
-- '3.9'
+  - "3.6"
+  - "3.7"
+  - "3.8"
+  - "3.9"
 install:
-- sudo apt-get -y install libgsl-dev g++ gcc build-essential
-script:
 - export TRAVIS_TAG=$(git tag --points-at HEAD)
 - echo $TRAVIS_TAG
 - cd $TRAVIS_BUILD_DIR
 - pip install .
+script:
 - cd $HOME
 - python -c "import pygad"
 - python -c "import pygad,doctest,sys; res = doctest.testmod(pygad); sys.exit(res.failed)"
@@ -22,5 +26,6 @@ deploy:
   username: "mihac"
   edge: true
   distributions: "sdist"
+  skip_existing: true
   on:
     tags: true 
