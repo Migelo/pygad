@@ -120,7 +120,7 @@ from .environment import module_dir
 import subprocess
 
 if not os.path.exists(module_dir+'./CoolingTables/z_0.000.hdf5'):
-    url = 'http://www.strw.leidenuniv.nl/WSS08/'
+    url = 'https://bitbucket.org/broett/pygad/downloads/'
     zipf = 'z_0.000_highres.tar.gz'
     assert not os.system('wget %s%s' % (url,zipf))
     assert not os.system('tar zxvf %s -C %s/' % (zipf,module_dir))

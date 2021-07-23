@@ -1,6 +1,6 @@
 '''
 Calculating the cooling rates for gas particles using the Wiersma cooling table as
-can be obtained from their website (http://www.strw.leidenuniv.nl/WSS08/).
+can be obtained from their website (https://bitbucket.org/broett/pygad/downloads/).
 
 Doctests:
     >>> from ..environment import module_dir
@@ -21,7 +21,7 @@ Doctests:
     Get the cooling tables of not present:
     >>> import os
     >>> if not os.path.exists(module_dir+'CoolingTables/z_0.000.hdf5'):
-    ...     url = 'http://www.strw.leidenuniv.nl/WSS08/'
+    ...     url = 'https://bitbucket.org/broett/pygad/downloads/'
     ...     zipf = 'z_0.000_highres.tar.gz'
     ...     assert not os.system('wget %s%s' % (url,zipf))
     ...     assert not os.system('tar zxvf %s -C %s/../' % (zipf,module_dir))
@@ -98,7 +98,7 @@ SHORT_ELEMENT_NAME['Aluminum'] = 'Al'
 class Wiersma_CoolingTable(object):
     '''
     Handle HDF5 cooling tables from Wiersma et al. (2008) as taken from their
-    website: http://www.strw.leidenuniv.nl/WSS08/
+    website: https://bitbucket.org/broett/pygad/downloads/
 
     Args:
         path (str):     The path to the HDF5 file to load the table from.

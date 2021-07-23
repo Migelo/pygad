@@ -82,7 +82,7 @@ class solar(object):
 
     These are taken from the tables from Wiersma+(2008) and are the CLOUDY
     default values.
-    webpage: http://www.strw.leidenuniv.nl/WSS08/
+    webpage: https://bitbucket.org/broett/pygad/downloads/
     '''
 
     Z_massfrac = [0.70649785,
