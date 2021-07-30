@@ -97,7 +97,7 @@ import math
 from ..utils import *
 from keyword import iskeyword
 import re
-from configparser import SafeConfigParser
+from configparser import ConfigParser
 import sys
 import ast
 import operator as op
@@ -544,9 +544,8 @@ def define_from_cfg(config, allow_redef=False, warn=True, undefine_old=True):
         pfilename = path.split(filename)[1]
         print('reading units definitions from "%s"' % pfilename)
 
-    # The SafeConfigParser class has been renamed to ConfigParser in Python 3.2, not yet removed for compatibility
-    cfg = SafeConfigParser(allow_no_value=True,
-                           inline_comment_prefixes=('#', ';'))  # new to python3. ignores comments at end of values
+    cfg = ConfigParser(allow_no_value=True, inline_comment_prefixes=('#', ';'))
+    # new to python3. ignores comments at end of values
     cfg.optionxform = str
     cfg.read(filename)
 

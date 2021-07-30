@@ -138,7 +138,7 @@ table_names = {
                                 'V-F606w', 'V-F675w', 'V-F814w', 'V-U', 'V-B',
                                 'V-R', 'V-I', 'V-J', 'V-K', 'V-L'],
     }
-available_qty = set(np.sum(list(table_names.values()))) - set(['log-age-yr', 'log-age'])
+available_qty = set(np.concatenate(list(table_names.values()))) - set(['log-age-yr', 'log-age'])
 
 table_base_name = {
         'Kroupa': 'bc2003_hr_stelib_%s_kroup_ssp',
