@@ -88,10 +88,10 @@ from ..snapshot import BoxMask
 def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml',
                   normed=True):
     '''
-    Bin some SPH quantity onto a 3D grid, fully accouting for the smoothing
+    Bin some SPH quantity onto a 3D grid, fully accounting for the smoothing
     lengths.
 
-    This method also enshures that the integral over the region of the grid is
+    This method also ensures that the integral over the region of the grid is
     conserved; meaning that no particles can "fall through the grid", not even
     partially.
 
@@ -211,10 +211,10 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml',
 def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
                   hsml='hsml', normed=True):
     '''
-    Bin some SPH quantity onto a 2D grid, fully accouting for the smoothing
+    Bin some SPH quantity onto a 2D grid, fully accounting for the smoothing
     lengths.
 
-    This method also enshures that the integral over the region of the grid is
+    This method also ensures that the integral over the region of the grid is
     conserved; meaning that no particles can "fall through the grid", not even
     partially.
 

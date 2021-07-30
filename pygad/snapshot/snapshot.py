@@ -373,13 +373,13 @@ class Snapshot(object):
 
         if greader.header['N_files'] > 1:
             s._descriptor += '.0-' + str(greader.header['N_files'])
-            # enshure Python int's to avoid overflows
+            # ensure Python int's to avoid overflows
             N_part = list(map(int, greader.header['N_part']))
             for n in range(1, greader.header['N_files']):  # first already done
                 filename = base + '.' + str(n) + suffix
                 greader = gadget.FileReader(filename, unclear_blocks=unclear_blocks)
                 s._file_handlers.append(greader)
-                # enshure Python int's to avoid overflows
+                # ensure Python int's to avoid overflows
                 for i in range(6): N_part[i] += int(greader.header['N_part'][i])
                 # update loadable blocks:
                 for block in greader.infos():
@@ -474,7 +474,7 @@ class Snapshot(object):
             self._H_neutral_only        = H_neutral_only
 
         # Actual initialization is done in the factory function Snap. Just do some
-        # basic setting of the attributes to enshure that even snapshot created by
+        # basic setting of the attributes to ensure that even snapshot created by
         # just _Snap are somewhat functioning.
         self._initsnap(filename, base, suffix, physical=physical, load_double_prec=load_double_prec, cosmological=cosmological,
                   gad_units=gad_units, unclear_blocks=unclear_blocks, H_neutral_only=H_neutral_only)

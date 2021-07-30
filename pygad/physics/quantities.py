@@ -82,7 +82,8 @@ class solar(object):
 
     These are taken from the tables from Wiersma+(2008) and are the CLOUDY
     default values.
-    webpage: https://bitbucket.org/broett/pygad/downloads/
+    webpage: http://www.strw.leidenuniv.nl/WSS08/
+    The link above is dead, alternative source on our bitbucket: https://bitbucket.org/broett/pygad/downloads/
     '''
 
     Z_massfrac = [0.70649785,
@@ -402,7 +403,7 @@ def SMH_Kravtsov_2014(M_halo, type='200c', return_scatter=False):
 
     log10_SM = _Behroozi_function(np.log10(M_halo), log10_M1, log10_eps, alpha, delta, gamma)
     if return_scatter:
-        warnings.warn('Scatter of 0.2 dex in Kravtsov et al. (2014) not shure!')
+        warnings.warn('Scatter of 0.2 dex in Kravtsov et al. (2014) not sure!')
         return 10 ** log10_SM / M_halo, \
                10 ** (log10_SM - 0.2) / M_halo, 10 ** (log10_SM + 0.2) / M_halo
     else:

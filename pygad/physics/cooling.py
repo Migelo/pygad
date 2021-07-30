@@ -1,6 +1,7 @@
 '''
 Calculating the cooling rates for gas particles using the Wiersma cooling table as
-can be obtained from their website (https://bitbucket.org/broett/pygad/downloads/).
+can be obtained from their website (http://www.strw.leidenuniv.nl/WSS08/).
+The website is down, we have a copy on our bitbucket (https://bitbucket.org/broett/pygad/downloads/).
 
 Doctests:
     >>> from ..environment import module_dir
@@ -22,10 +23,10 @@ Doctests:
     >>> import os
     >>> if not os.path.exists(module_dir+'CoolingTables/z_0.000.hdf5'):
     ...     url = 'https://bitbucket.org/broett/pygad/downloads/'
-    ...     zipf = 'z_0.000.tar.gz'
-    ...     assert not os.system('wget %s%s' % (url,zipf))
-    ...     assert not os.system('tar zxvf %s -C %s/../' % (zipf,module_dir))
-    ...     assert not os.system('rm -f %s' % zipf)
+    ...     file = 'z_0.000_highres.tar.gz'
+    ...     subprocess.run('wget -q  %s%s' % (url, file), check=True, shell=True)
+    ...     subprocess.run('tar zxvf %s -C %s/../' % (file, module_dir), check=True, shell=True)
+    ...     subprocess.run('rm -f %s' % file, check=True, shell=True)
 
     Calculate the cooling rates for just every 100th particle for reasons of
     runtime.
@@ -98,7 +99,8 @@ SHORT_ELEMENT_NAME['Aluminum'] = 'Al'
 class Wiersma_CoolingTable(object):
     '''
     Handle HDF5 cooling tables from Wiersma et al. (2008) as taken from their
-    website: https://bitbucket.org/broett/pygad/downloads/
+    website: http://www.strw.leidenuniv.nl/WSS08/
+    The link is down but the same data are available on our bitbucket: https://bitbucket.org/broett/pygad/downloads/
 
     Args:
         path (str):     The path to the HDF5 file to load the table from.
