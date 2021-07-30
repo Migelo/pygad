@@ -16,7 +16,7 @@ without the need to worry about format, read-in, indexing of blocks, units, etc.
 If you use this code, please cite
 
 ```
-RÃ¶ttgers, B., â€œLyman Î± absorption beyond the disc of simulated spiral galaxiesâ€, Monthly Notices of the Royal Astronomical Society, vol. 496, no. 1, pp. 152â€“168, 2020. doi:10.1093/mnras/staa1490. 
+Röttgers, B., Lyman alpha absorption beyond the disc of simulated spiral galaxies, Monthly Notices of the Royal Astronomical Society, vol. 496, no. 1, pp. 152â€“168, 2020. doi:10.1093/mnras/staa1490. 
 https://arxiv.org/abs/2005.08580
 ```
 
@@ -51,9 +51,9 @@ archivePrefix = {arXiv},
 Written entirely in `Python 3.x` and `C++` (the latter only for speed relevant parts), it only requires a running Python 3.x environment and the following additional quasi-standard modules:
 
 * `numpy`
-* `scipy`
 * `matplotlib`
 * `astropy`
+* `scipy`
 * `h5py` (only required if reading/writing format 3 snapshots)
 
 as well as the free library
@@ -74,7 +74,7 @@ $ git clone https://bitbucket.org/broett/pygad
 $ cd pygad
 $ sudo pip install .
 ```
-I would actually recommend `sudo pip install -e .` (see the [wiki entry][WikiInstallation] for more). This way of installing only links the pygad folder to your site-packages. This means any changes to the code will be immediately reflected, no need for reinstallation to apply the new changes.
+I would actually recommend `pip install -e .` (see the [wiki entry][WikiInstallation] for more). This way of installing only links the pygad folder to your site-packages. This means any changes to the code will be immediately reflected, no need for reinstallation to apply the new changes.
 
 For full functionality, pygad will automatically download the tables for [Bruzual & Charlot (2003)][BC03] SSP model and ionisation Cloudy tables (here for [Haardt & Madau, 2001][HM01]) as well as some test snapshots and cooling function tables. The downloaded files are put in the 
 
