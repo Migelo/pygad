@@ -208,7 +208,7 @@ def prepare_zoom(s, mode='auto', info='deduce', shrink_on='stars',
 
     # read info file (if required)
     if mode in ['auto', 'info']:
-        if info is 'deduce':
+        if info == 'deduce':
             try:
                 snap = int(os.path.basename(s.filename).split('.')[0][-3:])
                 info = os.path.dirname(s.filename) + '/trace/info_%03d.txt' % snap

@@ -396,7 +396,7 @@ def flow_history(s, qty='mass', inout='infall', recycles='first/re',
     ax.plot(t, (mass/dt).in_units_of(units,subs=s),
             label='total '+inout, **pltargs)
 
-    if recycles is 'all':
+    if recycles == 'all':
         recycles = max_N_cycle
     if isinstance(recycles,int):
         for n in range(max_N_cycle+1):

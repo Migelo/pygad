@@ -912,7 +912,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
 
             rho, px = bin_func(sub, n_parts * sub['rho'] / dV,
                                **binargs)
-            if element is not None and element is not 'H' and element is not 'He':
+            if element is not None and element != 'H' and element != 'He':
                 metal_frac, px = bin_func(sub, n_parts * sub.gas[element] / sub.gas['mass'] / dV,
                                           **binargs)
             else:
@@ -976,7 +976,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
             vel[non0n] = vel[non0n] / n_[non0n]
             rho, px = bin_func(sub, n_parts * sub['rho'],
                                **binargs)
-            if element is not None and element is not 'H' and element is not 'He':
+            if element is not None and element != 'H' and element != 'He':
                 metal_frac, px = bin_func(sub, n_parts * sub.gas[element] / sub.gas['mass'],
                                           **binargs)
             else:
@@ -1007,7 +1007,7 @@ def mock_absorption_spectrum(s, los, ion, l, f, atomwt,
         vel = s.gas['vel'][:, zaxis]
         temp = s.gas['temp']
         rho = s.gas['rho'] # DS: gas density
-        if element is not None and element is not 'H' and element is not 'He':
+        if element is not None and element != 'H' and element != 'He':
             metal_frac = s.gas[element] / s.gas['mass'] # SA: metal mass fraction
         else:
             metal_frac = s.gas['metallicity']
