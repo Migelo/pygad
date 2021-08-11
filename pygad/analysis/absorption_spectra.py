@@ -156,6 +156,10 @@ lines = {
                 'atomwt': '15.9994 u', 'element': 'O'},
     'OVI1037': {'ion': 'OVI', 'l': '1037.617 Angstrom', 'f': 0.06590,
                 'atomwt': '15.9994 u', 'element': 'O'},
+    'OVII21': {'ion': 'OVII','l': '21.602 Angstrom', 'f' :0.696,
+                'atomwt': '15.9994 u', 'element': 'O'},
+    'OVIII19':{'ion': 'OVIII','l': '18.969 Angstrom', 'f' :0.416,
+                'atomwt': '15.9994 u', 'element': 'O'},
 
     'NeVIII770': {'ion': 'NeVIII', 'l': '770.409 Angstrom', 'f': 0.103,
                   'atomwt': '20.180 u', 'element': 'Ne'},

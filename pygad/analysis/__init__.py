@@ -23,4 +23,4 @@ from .halo import *
 from .profiles import *
 #from analysis import *
 from .absorption_spectra import *
-
+from .vpfit import *
