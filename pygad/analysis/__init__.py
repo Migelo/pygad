@@ -1,4 +1,4 @@
-'''
+"""
 Module for snapshot analysis.
 
 Also doctest other parts of this sub-module:
@@ -16,11 +16,12 @@ Also doctest other parts of this sub-module:
 
     #>>> doctest.testmod(analysis)
     #TestResults(failed=0, attempted=20)
-'''
+"""
 from .sph_eval import *
 from .properties import *
 from .halo import *
 from .profiles import *
-#from analysis import *
+
+# from analysis import *
 from .absorption_spectra import *
 from .vpfit import *
