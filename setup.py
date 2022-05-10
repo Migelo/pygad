@@ -3,6 +3,7 @@ import os
 import subprocess
 import sys
 from glob import glob
+import os
 
 from setuptools import Extension, setup
 
@@ -27,7 +28,7 @@ ext_module = Extension(
     "pygad/C/cpygad",
     language="c++",
     sources=glob("pygad/C/src/*"),
-    include_dirs=["pygad/C/include", "/usr/include"],
+    include_dirs=["pygad/C/include", "/usr/include", os.getenv("GSL_HOME")],
     extra_compile_args=[
         "-fPIC",
         "-std=c++11",
