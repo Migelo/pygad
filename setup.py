@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 import os
 import subprocess
-import sys
 from glob import glob
-import os
 
 from setuptools import Extension, setup
 
@@ -28,7 +26,11 @@ ext_module = Extension(
     "pygad/C/cpygad",
     language="c++",
     sources=glob("pygad/C/src/*"),
-    include_dirs=["pygad/C/include", "/usr/include", os.getenv("GSL_HOME")],
+    include_dirs=[
+        "pygad/C/include",
+        "/usr/include",
+        os.getenv("GSL_HOME") + "/include",
+    ],
     extra_compile_args=[
         "-fPIC",
         "-std=c++11",
@@ -40,6 +42,7 @@ ext_module = Extension(
     ],
     libraries=["m", "gsl", "gslcblas", "gomp"],
     extra_link_args=["-fopenmp"],
+    library_dirs=[os.getenv("GSL_HOME") + "/lib"],
 )
 
 setup(
