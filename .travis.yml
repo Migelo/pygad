@@ -16,6 +16,7 @@ install:
 - echo $TRAVIS_TAG
 - cd $TRAVIS_BUILD_DIR
 - pip install .
+- pip list
 script:
 - cd $HOME
 - python -c "import pygad"
