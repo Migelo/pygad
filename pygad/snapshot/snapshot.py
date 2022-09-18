@@ -418,6 +418,9 @@ class Snapshot(object):
         # now the mass block is named 'mass' for all cases (HDF5 or other)
         s._block_avail['mass'] = [n > 0 for n in s._N_part]
 
+        if "CenterOfMass" in self.gas.loadable_blocks():
+            s.get_arepo_blocks()
+
         s.fill_derived_rules()
 
         s._descriptor = '"' + s._descriptor + '"'
@@ -857,6 +860,25 @@ class Snapshot(object):
                 [k for k in list(self._root.__class__.__dict__.keys())
                         if not k.startswith('_')] + \
                 self.families()
+
+    def get_arepo_blocks(self):
+        from .sim_arr import SimArr
+        from .derive_rules import age_from_form
+        self.gas["CenterOfMass"].units = None
+        self.gas["pos"] = SimArr(self.gas["CenterOfMass"], "ckpc h_0**-1", snap=self)
+        if "Volume" not in self.gas.loadable_blocks():
+            self.gas["Volume"] = self.gas["mass"] / self.gas["rho"]
+        #Approximate hsml to use in plotting and binning
+        self.gas["hsml"] = SimArr(0.75 * np.cbrt(self.gas["Volume"]), "ckpc h_0**-1", snap=self)
+        if "GFM_StellarFormationTime" in self.stars.loadable_blocks():
+            #In IllustrisTNG "stars" with negative formation time are wind cells
+            self.stars = self.stars[self.stars["GFM_StellarFormationTime"] > 0.]
+            self.stars["form_time"] = SimArr(self.stars["GFM_StellarFormationTime"])
+            self.stars["form_time"].units = "a_form"
+            #self.stars["age"] = age_from_form(self.stars["form_time"], self) #Takes a long time to compute
+        if "H" not in self.gas.loadable_blocks():
+            #Necessary for calculating temperatures
+            self.gas["H"] = 0.76 * self.gas["mass"]
 
     def get_host_subsnap(self, block_name):
         '''
