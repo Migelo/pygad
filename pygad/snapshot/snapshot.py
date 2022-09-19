@@ -870,15 +870,12 @@ class Snapshot(object):
             self.gas["Volume"] = self.gas["mass"] / self.gas["rho"]
         #Approximate hsml to use in plotting and binning
         self.gas["hsml"] = SimArr(0.75 * np.cbrt(self.gas["Volume"]), "ckpc h_0**-1", snap=self)
-        if "GFM_StellarFormationTime" in self.stars.loadable_blocks():
-            #In IllustrisTNG "stars" with negative formation time are wind cells
-            self.stars = self.stars[self.stars["GFM_StellarFormationTime"] > 0.]
-            self.stars["form_time"] = SimArr(self.stars["GFM_StellarFormationTime"])
-            self.stars["form_time"].units = "a_form"
-            #self.stars["age"] = age_from_form(self.stars["form_time"], self) #Takes a long time to compute
         if "H" not in self.gas.loadable_blocks():
             #Necessary for calculating temperatures
             self.gas["H"] = 0.76 * self.gas["mass"]
+        if "GFM_StellarFormationTime" in self.stars.loadable_blocks():
+            #In IllustrisTNG "stars" with negative formation time are wind cells
+            self.stars = self.stars[self.stars["GFM_StellarFormationTime"] > 0.]
 
     def get_host_subsnap(self, block_name):
         '''
