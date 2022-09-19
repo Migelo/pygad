@@ -863,18 +863,21 @@ class Snapshot(object):
 
     def get_arepo_blocks(self):
         from .sim_arr import SimArr
-        from .derive_rules import age_from_form
+        #default pos is the Voronoi center of gas cells -> use center of mass instead
         self.gas["CenterOfMass"].units = None
         self.gas["pos"] = SimArr(self.gas["CenterOfMass"], "ckpc h_0**-1", snap=self)
+
+        #Approximate hsml for binning/plotting, from radius of sphere with Voronoi cell volume
         if "Volume" not in self.gas.loadable_blocks():
             self.gas["Volume"] = self.gas["mass"] / self.gas["rho"]
-        #Approximate hsml to use in plotting and binning
         self.gas["hsml"] = SimArr(0.75 * np.cbrt(self.gas["Volume"]), "ckpc h_0**-1", snap=self)
+
+        # Hydrogen mass fraction is used for calculating temperatures
         if "H" not in self.gas.loadable_blocks():
-            #Necessary for calculating temperatures
             self.gas["H"] = 0.76 * self.gas["mass"]
+
+        #In IllustrisTNG "stars" with negative formation time are actually wind cells
         if "GFM_StellarFormationTime" in self.stars.loadable_blocks():
-            #In IllustrisTNG "stars" with negative formation time are wind cells
             self.stars = self.stars[self.stars["GFM_StellarFormationTime"] > 0.]
 
     def get_host_subsnap(self, block_name):
