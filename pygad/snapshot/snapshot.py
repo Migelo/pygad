@@ -870,7 +870,7 @@ class Snapshot(object):
         #Approximate hsml for binning/plotting, from radius of sphere with Voronoi cell volume
         if "Volume" not in self.gas.loadable_blocks():
             self.gas["Volume"] = self.gas["mass"] / self.gas["rho"]
-        self.gas["hsml"] = SimArr(0.75 * np.cbrt(self.gas["Volume"]), "ckpc h_0**-1", snap=self)
+        self.gas["hsml"] = SimArr(np.cbrt(0.75 * self.gas["Volume"] / np.pi), "ckpc h_0**-1", snap=self)
 
         # Hydrogen mass fraction is used for calculating temperatures
         if "H" not in self.gas.loadable_blocks():
