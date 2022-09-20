@@ -20,7 +20,7 @@ Example:
     load block pos... done.
     Unit("cMpc h_0**-1")
     >>> s.gadget_units
-    {'LENGTH': 'cMpc/h_0', 'VELOCITY': 'a**(1/2) km / s', 'MASS': '1e10 Msol / h_0'}
+    {'LENGTH': 'cMpc/h_0', 'VELOCITY': 'km / s', 'MASS': '1e10 Msol / h_0'}
     >>> print('current age of the universe: %s' % s.cosmic_time().in_units_of('Myr'))
     current age of the universe: 12.869734401309785 [Myr]
     >>> s.loadable_blocks()
