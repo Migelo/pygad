@@ -160,7 +160,10 @@ def read_header(gfile, gformat, endianness):
                 if 'Flag_IC_Info' in hattrs else None
         header['lpt_scalingfactor'] = None #float(hattrs['???'])
         header['unused'] = ' '*68  # for consistency
-        header['flg_arepo'] = gfile['Config'].attrs.__contains__("VORONOI")
+        if "Config" in gfile.keys():
+            header['flg_arepo'] = gfile['Config'].attrs.__contains__("VORONOI")
+        else:
+            header['flg_arepo'] = False
     else:
         gfile.seek(4 if gformat == 1 else 4+8+4+4)
 
