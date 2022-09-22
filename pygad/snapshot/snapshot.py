@@ -418,7 +418,7 @@ class Snapshot(object):
         # now the mass block is named 'mass' for all cases (HDF5 or other)
         s._block_avail['mass'] = [n > 0 for n in s._N_part]
 
-        if "CenterOfMass" in self.gas.loadable_blocks():
+        if s.headers()[0]["flg_arepo"]:
             s.get_arepo_blocks()
 
         s.fill_derived_rules()

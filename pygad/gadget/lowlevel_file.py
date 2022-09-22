@@ -160,6 +160,7 @@ def read_header(gfile, gformat, endianness):
                 if 'Flag_IC_Info' in hattrs else None
         header['lpt_scalingfactor'] = None #float(hattrs['???'])
         header['unused'] = ' '*68  # for consistency
+        header['flg_arepo'] = gfile['Config'].attrs.__contains__("VORONOI")
     else:
         gfile.seek(4 if gformat == 1 else 4+8+4+4)
 
@@ -177,6 +178,7 @@ def read_header(gfile, gformat, endianness):
                 = struct.unpack(endianness + 'i i 4d 5i d',
                                 gfile.read(2*4+4*8+5*4+8))
         header['unused'] = gfile.read(68).decode('ascii')
+        header['flg_arepo'] = False #Arepo snapshots are currently only supported in hdf5 format
 
         assert struct.unpack(endianness + 'i', gfile.read(4)) == (256,)
 
