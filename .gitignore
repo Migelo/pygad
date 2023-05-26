@@ -8,6 +8,9 @@
 *.o
 *.so
 
+# build folder
+build
+
 # iPython Notebook checkpoints
 .ipynb_checkpoints
 
