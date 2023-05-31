@@ -22,5 +22,5 @@
   ]
 		}
   },
-  "postCreateCommand": "sudo apt update; sudo apt install -y libgsl-dev g++ gcc build-essential python3-pip",
+  "postCreateCommand": "sudo apt update; sudo apt-get install -y git-lfs vim libgsl-dev g++ gcc build-essential python3-pip python-is-python3"
 }
