@@ -1,10 +1,15 @@
 {
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
   "features": {
-    "ghcr.io/wxw-matt/devcontainer-features/apt:latest": {
-      "packages": "libgsl-dev g++ gcc buildessential"
-    },
-    "extension": [
+    // "ghcr.io/wxw-matt/devcontainer-features/apt:latest": {
+    //   "packages": "libgsl-dev g++ gcc buildessential"
+    // },
+    // "extension": [
+    // ]
+  },
+  "customizations": {
+		"vscode": {
+			"extensions": [
       "GitHub.codespaces",
       "GitHub.copilot",
       "GitHub.copilot-labs",
@@ -14,6 +19,8 @@
       "ms-azuretools.vscode-docker",
       "ms-python.python",
       "ms-python.vscode-pylance"
-    ]
-  }
+  ]
+		}
+  },
+  "postCreateCommand": "sudo apt update; sudo apt install -y libgsl-dev g++ gcc buildessential",
 }
