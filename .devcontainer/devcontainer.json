@@ -1,8 +1,19 @@
 {
-  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
   "features": {
-    "ghcr.io/wxw-matt/devcontainer-features/apt:0": {
-      "packages": "libgsl-dev g++ gcc buildessential",
-    }
+    "ghcr.io/wxw-matt/devcontainer-features/apt:latest": {
+      "packages": "libgsl-dev g++ gcc buildessential"
+    },
+    "extension": [
+      "GitHub.codespaces",
+      "GitHub.copilot",
+      "GitHub.copilot-labs",
+      "GitHub.github-vscode-theme",
+      "GitHub.vscode-pull-request-github",
+      "mads-hartmann.bash-ide-vscode",
+      "ms-azuretools.vscode-docker",
+      "ms-python.python",
+      "ms-python.vscode-pylance"
+    ]
   }
 }
