@@ -18,7 +18,8 @@
       "mads-hartmann.bash-ide-vscode",
       "ms-azuretools.vscode-docker",
       "ms-python.python",
-      "ms-python.vscode-pylance"
+      "ms-python.vscode-pylance",
+      "github.vscode-github-actions"
   ]
 		}
   },
