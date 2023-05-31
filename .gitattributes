@@ -1,1 +1,4 @@
 pygad/_version.py export-subst
+*.tar.gz binary
+*.tar binary
+data/* binary
