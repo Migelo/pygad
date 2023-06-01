@@ -22,15 +22,22 @@ jobs:
           python -m pip install --upgrade pip
           pip install ruff pytest
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          sudo apt-get update 
+          sudo apt-get install -y git-lfs libgsl-dev g++ gcc build-essential
+      - name: Get files from LFS
+        run: |
+          git lfs fetch
+          git lfs checkout
+      - name: Extract auxiliary data    
+        run: |
+          find data/*.tar.gz | xargs -I% tar xzf % -C pygad
+
       # - name: Lint with ruff
       #   run: |
       #     # stop the build if there are Python syntax errors or undefined names
       #     ruff --format=github --select=E9,F63,F7,F82 --target-version=py37 .
       #     # default set of ruff rules with GitHub Annotations
       #     ruff --format=github --target-version=py37 .
-      - name: Download and import tables
-        run: |
-          python -c "import pygad"
       - name: Test
         run: |
           python -c "import pygad,doctest,sys; res = doctest.testmod(pygad); sys.exit(res.failed)"
