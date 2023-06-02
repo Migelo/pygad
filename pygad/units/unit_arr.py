@@ -777,6 +777,8 @@ def _same_units_binary(a, b):
     a_units = getattr(a, 'units', None)
     b_units = getattr(b, 'units', None)
     if a_units is not None and b_units is not None:
+        a_units = a_units.gather()
+        b_units = b_units.gather()
         if a_units == b_units:
             return a_units
         else:
