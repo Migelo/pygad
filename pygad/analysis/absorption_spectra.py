@@ -1104,7 +1104,7 @@ def mock_absorption_spectrum(
             # do some padding in the 3D binning in order to use the the normation
             # process
             pad = int(pad)
-            Npx = (1 + 2 * pad) * np.ones(3, dtype=np.int)
+            Npx = (1 + 2 * pad) * np.ones(3, dtype=np.int64)
             Npx[zaxis] = N
             # mask for getting the middle column of interest
             m = [pad] * 3
