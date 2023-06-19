@@ -712,8 +712,8 @@ def convertable(u1, u2, subs=None):
     u1, u2 = Unit(u1), Unit(u2)
     try:
         u1.in_units_of(u2, subs=subs)
-    except:
-        return False
+    except UnitError:
+        return False    
     else:
         return True
 
