@@ -39,23 +39,6 @@ def check_output_numbers(self, want, got, optionflags):
     if got == want:
         return True
 
-    # Compare the two strings number by number
-    # print("using the homemade check_output_numbers function")
-    # print(f"got = {got}")
-    # print(f"want = {want}")
-    got_numbers = string_to_numbers(got)
-    want_numbers = string_to_numbers(want)
-    # print(f"got_numbers = {got_numbers}")
-    # print(f"want_numbers = {want_numbers}")
-    all_equal = True
-    if len(got_numbers) == len(want_numbers):
-        for i in range(len(got_numbers)):
-            if not isclose(float(got_numbers[i]), float(want_numbers[i])):
-                all_equal = False
-                break
-    if all_equal:
-        return True
-        
 
     # The values True and False replaced 1 and 0 as the return
     # value for boolean comparisons in Python 2.3.
@@ -90,6 +73,23 @@ def check_output_numbers(self, want, got, optionflags):
     if optionflags & ELLIPSIS:
         if _ellipsis_match(want, got):
             return True
+        
+    # Compare the two strings number by number
+    # print("using the homemade check_output_numbers function")
+    # print(f"got = {got}")
+    # print(f"want = {want}")
+    got_numbers = string_to_numbers(got)
+    want_numbers = string_to_numbers(want)
+    # print(f"got_numbers = {got_numbers}")
+    # print(f"want_numbers = {want_numbers}")
+    all_equal = True
+    if len(got_numbers) == len(want_numbers):
+        for i in range(len(got_numbers)):
+            if not isclose(float(got_numbers[i]), float(want_numbers[i])):
+                all_equal = False
+                break
+    if all_equal:
+        return True
 
     # We didn't find any match; return false.
     return False
