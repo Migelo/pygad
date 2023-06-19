@@ -42,5 +42,5 @@ jobs:
           pip install -e .
       - name: Test
         run: |
-          python -c "import pygad,doctest,sys; res = doctest.testmod(pygad); sys.exit(res.failed)"
+          python runTestsAll.py
         
