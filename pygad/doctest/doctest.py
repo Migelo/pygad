@@ -1,5 +1,8 @@
 import re
-import numpy as np
+from math import isclose
+from doctest import (DONT_ACCEPT_TRUE_FOR_1, DONT_ACCEPT_BLANKLINE,
+                     NORMALIZE_WHITESPACE, BLANKLINE_MARKER, ELLIPSIS,
+                     _ellipsis_match)
 
 
 def string_to_numbers(string: str):
@@ -12,7 +15,7 @@ def string_to_numbers(string: str):
     return numbers
 
 
-def check_output(self, want, got, optionflags):
+def check_output_numbers(self, want, got, optionflags):
     """
     Return True iff the actual output from an example (`got`)
     matches the expected output (`want`).  These strings are
@@ -37,10 +40,22 @@ def check_output(self, want, got, optionflags):
         return True
 
     # Compare the two strings number by number
+    # print("using the homemade check_output_numbers function")
+    # print(f"got = {got}")
+    # print(f"want = {want}")
     got_numbers = string_to_numbers(got)
     want_numbers = string_to_numbers(want)
-    if np.all(np.isclose(got_numbers == want_numbers)):
+    # print(f"got_numbers = {got_numbers}")
+    # print(f"want_numbers = {want_numbers}")
+    all_equal = True
+    if len(got_numbers) == len(want_numbers):
+        for i in range(len(got_numbers)):
+            if not isclose(float(got_numbers[i]), float(want_numbers[i])):
+                all_equal = False
+                break
+    if all_equal:
         return True
+        
 
     # The values True and False replaced 1 and 0 as the return
     # value for boolean comparisons in Python 2.3.

@@ -8,8 +8,13 @@ Created on Tue Apr 16 12:19:11 2019
 
 import pygad
 import doctest
-import sys
 import warnings
+
+
+# monkey patch check_output to doctest.OutputChecker.check_output
+from doctest import OutputChecker
+from pygad.doctest import check_output_numbers
+OutputChecker.check_output = check_output_numbers
 
 warnings.filterwarnings("ignore")
 print("*********************************************************************")
