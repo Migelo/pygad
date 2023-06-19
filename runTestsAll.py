@@ -9,6 +9,7 @@ Created on Tue Apr 16 12:19:11 2019
 import pygad
 import doctest
 import warnings
+import sys
 
 
 # monkey patch check_output to doctest.OutputChecker.check_output
