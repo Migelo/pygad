@@ -33,7 +33,6 @@ import numpy as np
 import warnings
 import scipy.constants
 from ..units import *
-import sys
 
 # alpha elements, produced in (or actually before) SNII:
 alpha_elements = ['O', 'C', 'Ne', 'Si', 'Mg', 'S', 'Ca']
