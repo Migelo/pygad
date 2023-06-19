@@ -24,7 +24,7 @@ print("*********************************************************************")
 pygad.environment.verbose = pygad.environment.VERBOSE_NORMAL
 print("running pygad doctest...")
 
-res = doctest.testmod(pygad)
+res = doctest.testmod(pygad.utils.geo)
 
 print("*********************************************************************")
 print("return code = ", res.failed)
