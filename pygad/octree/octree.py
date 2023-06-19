@@ -13,7 +13,7 @@ Note:
 Example:
     Start with a regular grid of points:
     >>> pos = np.linspace(0,1, 32)
-    >>> pos = np.vstack(map(np.ravel, np.meshgrid(pos, pos, pos))).T
+    >>> pos = np.vstack(list(map(np.ravel, np.meshgrid(pos, pos, pos)))).T
     >>> OctNode.SPLIT_NUM = 12
     >>> tree = Octree(pos)
     >>> count_nodes(tree)
