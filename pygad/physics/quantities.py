@@ -33,6 +33,11 @@ import numpy as np
 import warnings
 import scipy.constants
 from ..units import UnitError, UnitArr, UnitQty, Unit
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
+
 
 # alpha elements, produced in (or actually before) SNII:
 alpha_elements = ['O', 'C', 'Ne', 'Si', 'Mg', 'S', 'Ca']
