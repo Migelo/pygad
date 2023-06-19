@@ -32,7 +32,7 @@ __all__ = ['alpha_elements',
 import numpy as np
 import warnings
 import scipy.constants
-from ..units import *
+from ..units import UnitError, UnitArr, UnitQty, Unit
 
 # alpha elements, produced in (or actually before) SNII:
 alpha_elements = ['O', 'C', 'Ne', 'Si', 'Mg', 'S', 'Ca']
