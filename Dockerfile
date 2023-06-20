@@ -16,11 +16,12 @@ RUN set -ex  && \
     rm -rf /var/lib/apt/lists/*
 
 COPY . /data/pygad
-RUN set -ex \
-    useradd -ms /bin/bash runner && \
-    chown -R runner /data
+# RUN set -ex \
+#     useradd -ms /bin/bash runner
+# RUN set -ex \
+#     chown -R runner /data
 
-USER runner
+# USER runner
 ENV PATH="/home/runner/.local/bin:${PATH}"
 
 WORKDIR "/data/pygad"
