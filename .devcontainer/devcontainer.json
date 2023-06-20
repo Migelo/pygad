@@ -19,5 +19,5 @@
   ]
 		}
   },
-  "postCreateCommand": "sudo apt update; sudo apt-get install -y git-lfs vim libgsl-dev g++ gcc build-essential python3-pip python-is-python3; git lfs fetch; git lfs checkout; find data/*.tar.gz | xargs -I% tar xzf % -C pygad; sudo pip install --upgrade pip; sudo pip install -e .; sudo pip install ipython ipykernel"
+  "postCreateCommand": "sudo apt update; sudo apt-get install -y git-lfs vim libgsl-dev g++ gcc build-essential python3-pip python-is-python3; git lfs fetch; git lfs track '*.tar.gz'; git lfs checkout; find data/*.tar.gz | xargs -I% tar xzf % -C pygad; sudo pip install --upgrade pip; sudo pip install -e .; sudo pip install ipython ipykernel"
 }
