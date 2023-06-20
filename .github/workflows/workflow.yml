@@ -25,6 +25,7 @@ jobs:
       - name: Get files from LFS
         run: |
           git lfs fetch
+          git lfs track "*.tar.gz"
           git lfs checkout
       - name: Extract auxiliary data    
         run: |

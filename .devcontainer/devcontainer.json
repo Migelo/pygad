@@ -1,6 +1,7 @@
 {
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
   "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {"dockerDashComposeVersion": "v2"}
   },
   "customizations": {
 		"vscode": {
@@ -10,13 +11,18 @@
       "GitHub.copilot-labs",
       "GitHub.github-vscode-theme",
       "GitHub.vscode-pull-request-github",
+      "github.vscode-github-actions",
       "mads-hartmann.bash-ide-vscode",
       "ms-azuretools.vscode-docker",
       "ms-python.python",
       "ms-python.vscode-pylance",
-      "github.vscode-github-actions"
+      "ms-toolsai.jupyter",
+      "ms-toolsai.jupyter-keymap",
+      "ms-toolsai.jupyter-renderers",
+      "ms-toolsai.vscode-jupyter-cell-tags",
+      "ms-toolsai.vscode-jupyter-slideshow"
   ]
 		}
   },
-  "postCreateCommand": "sudo apt update; sudo apt-get install -y git-lfs vim libgsl-dev g++ gcc build-essential python3-pip python-is-python3; git lfs fetch; git lfs checkout; find data/*.tar.gz | xargs -I% tar xzf % -C pygad; sudo pip install --upgrade pip; sudo pip install -e .; sudo pip install ipython ipykernel"
+  "postCreateCommand": "sudo apt update; sudo apt-get install -y git-lfs vim libgsl-dev g++ gcc build-essential python3-pip python-is-python3; git lfs fetch; git lfs track '*.tar.gz'; git lfs checkout; find data/*.tar.gz | xargs -I% tar xzf % -C pygad; sudo pip install --upgrade pip; sudo pip install -e .; sudo pip install ipython ipykernel"
 }
