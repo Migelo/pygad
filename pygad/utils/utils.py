@@ -3,7 +3,7 @@ A collection of some general (low-level) functions.
 
 Doctests are in the functions themselves.
 '''
-__all__ = ['DevNull', 'static_vars', 'nice_big_num_str', 'float_to_nice_latex',
+__all__ = ['DevNull', 'nice_big_num_str', 'float_to_nice_latex',
            'perm_inv', 'periodic_distance_to', 'sane_slice', 'is_consecutive',
            'rand_dir', 'ProgressBar', 'time_from_color_str', 'time_to_nice_str',
            'sec_to_nice_str', 'weighted_percentile']
