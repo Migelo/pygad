@@ -1,8 +1,8 @@
 import re
-from math import isclose
-from doctest import (DONT_ACCEPT_TRUE_FOR_1, DONT_ACCEPT_BLANKLINE,
-                     NORMALIZE_WHITESPACE, BLANKLINE_MARKER, ELLIPSIS,
+from doctest import (BLANKLINE_MARKER, DONT_ACCEPT_BLANKLINE,
+                     DONT_ACCEPT_TRUE_FOR_1, ELLIPSIS, NORMALIZE_WHITESPACE,
                      _ellipsis_match)
+from math import isclose
 
 
 def string_to_numbers(string: str):
@@ -75,21 +75,16 @@ def check_output_numbers(self, want, got, optionflags):
             return True
         
     # Compare the two strings number by number
-    # print("using the homemade check_output_numbers function")
-    # print(f"got = {got}")
-    # print(f"want = {want}")
     got_numbers = string_to_numbers(got)
     want_numbers = string_to_numbers(want)
-    # print(f"got_numbers = {got_numbers}")
-    # print(f"want_numbers = {want_numbers}")
     all_equal = True
     if len(got_numbers) == len(want_numbers):
         for i in range(len(got_numbers)):
             if not isclose(float(got_numbers[i]), float(want_numbers[i])):
                 all_equal = False
                 break
-    if all_equal:
-        return True
+        if all_equal:
+            return True
 
     # We didn't find any match; return false.
     return False
