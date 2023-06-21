@@ -82,7 +82,7 @@ class FileReader(object):
         '''Return a sorted list of the block informations.'''
         try:
             erg = sorted(list(self._info.values()), key=lambda e: e.start_pos)
-        except Exception as e:
+        except Exception:
             erg = list(self._info.values())
         return erg
 

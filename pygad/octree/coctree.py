@@ -107,7 +107,6 @@ __all__ = ['cOctree']
 from ..C import *
 import sys
 import numpy as np
-import warnings
 import weakref
 from .. import environment
 from .. import utils

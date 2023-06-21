@@ -444,7 +444,7 @@ class SnapshotCache:
             self.__halo_properties._read_info_file(self.__get_halo_filename())
             self.__gx_properties._read_info_file(self.__get_gx_filename())
             return True
-        except Exception as e:
+        except Exception:
             return False
 
 
@@ -492,7 +492,7 @@ class SnapshotCache:
                 self.halo_properties.load_binary_properties()
                 self.gx_properties.load_binary_properties()
                 self.profile_properties.load_binary_properties()
-        except Exception as e:
+        except Exception:
             halo = None
             gx = None
             if not findgxfast:
@@ -782,7 +782,7 @@ class SnapshotCache:
         self.__profile = profile_name
         try:
             self.__profile_properties._read_info_file(self.__get_profile_filename())
-        except Exception as e:
+        except Exception:
             # set default profile values
             self.__profile_properties = SnapshotProperty()
             self.__profile_properties.append("date-created", '"' + time.asctime(time.localtime(time.time())) + '"')
@@ -798,7 +798,7 @@ class SnapshotCache:
 
     def _correct_virial_info(self, halo_properties):
         def corr_factor(halo_properties, prop, factor):
-            if not prop in halo_properties:
+            if prop not in halo_properties:
                 return
             value = halo_properties[prop]
             value = value * factor
@@ -1821,7 +1821,7 @@ class SnapshotCache:
         allIDs = set(snap.root['ID'])
         todel = []
         for pk in data.keys():
-            if not pk in allIDs:
+            if pk not in allIDs:
                 todel.append(pk)
         for pk in todel:
             data.pop(pk)
@@ -2102,7 +2102,7 @@ class SnapshotProperty(dict):
                 data = io.BytesIO(fin.read())
                 fin.close()
                 return data
-        except Exception as e:
+        except Exception:
             pass
 
         return None
@@ -2180,7 +2180,7 @@ class SnapshotProperty(dict):
                                   'multiple times in info file ' + \
                                   '"%s"! First one used.' % info_filename, file=sys.stderr)
                         info[name] = value
-                except ValueError as e:
+                except ValueError:
                     continue  # ignore error continue loading
             if pg.environment.verbose >= pg.environment.VERBOSE_TACITURN:
                 print("SnapshotProperty")

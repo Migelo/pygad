@@ -431,7 +431,6 @@ def smooth(grid, sml, kernel, bndrymode='constant'):
 
     sml = float(sml)
 
-    from ..kernels import kernels, vector_kernels
 
     pxs = int(2 * np.ceil(sml) + 1)
     x = np.linspace(float(-(pxs - 1) / 2.), float((pxs - 1) / 2.), pxs) / sml

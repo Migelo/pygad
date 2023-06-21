@@ -20,10 +20,8 @@ __all__ = ['CM_DEF', 'luminance', 'isolum_cmap', 'color_code', 'show_image',
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from ..units import *
 from ..binning import *
-import sys
 
 # 'jet' is bad -- the new default in matplotlib v2.0 ('viridis') is much better
 CM_DEF = 'viridis'
@@ -416,7 +414,6 @@ def make_scale_indicators(ax, extent, scaleind='line', scaleunits=None,
                                 readability. The first element is the thickness,
                                 the second the color.
     '''
-    import matplotlib.patheffects
 
     if outline is True:
         outline = [
@@ -503,7 +500,6 @@ def add_cbar(ax, cbartitle, clim, cmap=None, fontcolor='black', fontsize=14,
         cbar (Colorbar):        The added colorbar instance.
     '''
     from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-    import matplotlib.patheffects
 
     if fontoutline is True:
         fontoutline = [

@@ -99,8 +99,6 @@ from keyword import iskeyword
 import re
 from configparser import ConfigParser
 import sys
-import ast
-import operator as op
 from os import path
 from .. import environment
 
@@ -659,7 +657,7 @@ def Unit(x, allow_undefined=False):
                     print(' ', list(undef), file=sys.stderr)
             variables.update( { n:_UnitClass(1.,[[n,1]])
                     for n in re.findall(_re_ident, x)
-                    if not n in _unit_evaluator.namespace } )
+                    if n not in _unit_evaluator.namespace } )
         try:
             exp_val = _unit_evaluator.eval(x, variables)
         except EvalError as e:

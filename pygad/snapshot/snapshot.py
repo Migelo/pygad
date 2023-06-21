@@ -791,7 +791,7 @@ class Snapshot(object):
                                 Defaults to the list loaded from `derived.cfg`.
             clear_old (dict):   Whether to first clear any already existing rules.
         '''
-        if not self is self.root:
+        if self is not self.root:
             self.root.fill_derived_rules(rules, clear_old)
             return
 
@@ -1047,7 +1047,7 @@ class Snapshot(object):
         root = self._root
         if not root._file_handlers:
             raise RuntimeError('No file(s) to load from.')
-        if not name in root._load_name:
+        if name not in root._load_name:
             raise ValueError("There is no block '%s' to load!" % name)
 
         if environment.verbose >= environment.VERBOSE_NORMAL:
@@ -1145,7 +1145,7 @@ class Snapshot(object):
             block (SimArr):     The (entire) block.
         '''
         root = self._root
-        if not name in root._derive_rule_deps:
+        if name not in root._derive_rule_deps:
             raise ValueError("There is no block '%s' to derive!" % name)
 
         host = self.get_host_subsnap(name)

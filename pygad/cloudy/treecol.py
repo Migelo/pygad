@@ -2,7 +2,6 @@ __all__ = ['Gamma_HI', 'Rahmati_fGamma_HI', 'Rahmati_HI_mass', 'UVB_data']
 
 import numpy as np
 from .. import gadget
-from .. import physics
 from ..units import UnitQty
 
 

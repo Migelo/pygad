@@ -490,7 +490,7 @@ def x_ray_luminosity(s, lumtable='em.dat', tempbin=None, lx0bin=None, dlxbin=Non
 
     # Read in temperature bins and corresponding Lx0(T,Z=Zref) and (dLx/dZ)(T)
     # (both in 1e44 erg/s (per Zsol))
-    if tempbin == None:
+    if tempbin is None:
         tempbin, lx0bin, dlxbin = np.loadtxt(lumtable, usecols=(0, 3, 5), unpack=True)
     else:
         tempbin = np.asarray(tempbin)

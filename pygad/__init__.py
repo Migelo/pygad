@@ -66,21 +66,11 @@ For development:
     Similar is required for the submodules.
 '''
 # import all modules
-from . import utils
 from . import environment
 #from . import units            made visible directly below
-from . import physics
-from . import kernels
-from . import gadget
 #from . import transformation   made visible directly below
 #from . import snapshot         made visible directly below
-from . import octree
-from . import ssp
-from . import binning
-from . import analysis
 #from . import tools            prepare zoom moved to SnapshotCache, others -> Cmd-scripts
-from . import cloudy
-from . import plotting
 
 # the version of this pygad
 # this line gets changed by setup.py during installation, and hence is different
@@ -107,7 +97,6 @@ from .environment import gc_full_collect
 from .units import *
 from .transformation import *
 from .snapshot import *
-from .tools import prepare_zoom, read_info_file
 
 import gc
 # default seems to be (700, 10, 10)

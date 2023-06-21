@@ -99,10 +99,9 @@ __all__ = ['shrinking_sphere', 'virial_info', 'find_FoF_groups',
            'find_most_massive_progenitor']
 
 import numpy as np
-from .. import utils
 from ..units import *
 from ..utils import *
-import sys, os
+import sys
 from ..transformation import *
 from .properties import *
 from ..snapshot import *

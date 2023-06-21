@@ -344,9 +344,6 @@ if __name__ == '__main__' or __name__ == 'pygad.cmdtool.gCache': # imported by c
     t_start = time.time()
     import os
     import io
-    import gc
-    from fractions import Fraction
-    import numpy as np
     import pickle as pickle
     import pygad as pg                  # to enable easy testing of command-scripts use absolute
 
@@ -544,7 +541,7 @@ if __name__ == '__main__' or __name__ == 'pygad.cmdtool.gCache': # imported by c
                     else:
                         loadsf = False
                     snap_cache.load_snapshot(loadSF=loadsf)
-                except Exception as e:
+                except Exception:
                     print("error loading snapshot ")
                     load_OK = False
 
@@ -552,7 +549,7 @@ if __name__ == '__main__' or __name__ == 'pygad.cmdtool.gCache': # imported by c
                 if args.withplot:
                     gx = snap_cache.galaxy
                     if gx is not None:
-                        if not 'galaxy-all' in snap_cache.gx_properties:
+                        if 'galaxy-all' not in snap_cache.gx_properties:
                             if args.verbose:
                                 print("plot particles in galaxy ", gx.parts)
                             buf = plot_snapshot(snap_cache, snap_cache.galaxy, 'Galaxy star particles')

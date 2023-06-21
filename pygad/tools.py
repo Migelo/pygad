@@ -57,7 +57,7 @@ def read_info_file(filename):
                               'multiple times in info file ' + \
                               '"%s"! First one used.' % filename, file=sys.stderr)
                     info[name] = value
-            except ValueError as e:
+            except ValueError:
                 continue    # ignore error continue loading
 
     return info
@@ -1058,7 +1058,6 @@ def read_pyigm_COS_halos_EWs(transitions=('HI 1215', 'MgII 2796', 'MgII 2803', '
                                 'Mstars' (stellar masses of the associated
                                 galaxies), and more. Each entry is a UnitArr.
     '''
-    import pyigm
     from pyigm.cgm import cos_halos
     cos_halos = cos_halos.COSHalos()
     data = {trans: [] for trans in transitions}

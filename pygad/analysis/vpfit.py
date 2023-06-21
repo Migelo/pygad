@@ -51,7 +51,7 @@ from .. import environment
 import numpy as np
 import pylab as plt
 
-from .absorption_spectra import lines, Gaussian, Lorentzian, Voigt, line_profile
+from .absorption_spectra import lines, line_profile
 
 
 def fit_profiles(
@@ -174,7 +174,8 @@ def fit_profiles(
         while n_lines < max_lines:
             params, bounds = _add_line(params, bounds, l_reg, f_reg, l0, mode)
             n_lines = int(len(params) / 3)
-            chisq_fcn = lambda *args: _chisq(*args)
+            def chisq_fcn(*args):
+                return _chisq(*args)
             soln = minimize(
                 chisq_fcn,
                 params,
@@ -214,7 +215,8 @@ def fit_profiles(
             n_lines = best_nlines
             params = params[: 3 * n_lines]
             bounds = bounds[: 3 * n_lines]
-            chisq_fcn = lambda *args: _chisq(*args)
+            def chisq_fcn(*args):
+                return _chisq(*args)
             soln = minimize(
                 chisq_fcn,
                 params,
@@ -342,7 +344,7 @@ def find_regions(
     """
 
     num_pixels = len(wavelengths)
-    pixels = range(num_pixels)
+    range(num_pixels)
     min_pix = 1
     max_pix = num_pixels - 1
 
@@ -605,7 +607,7 @@ def write_lines(spec_name, line_list, starting_pixel=0):
     model_flux = np.exp(-np.clip(tau_model, -30, 30))
 
     # load data into arrays
-    region = line_list["region"]
+    line_list["region"]
     N = line_list["N"]
     dN = line_list["dN"]
     b = line_list["b"]
@@ -666,7 +668,7 @@ def plot_fit(
         tau_model += model_tau(line, p, waves)
     flux_model = np.exp(-np.clip(tau_model, -30, 30))
 
-    region = line_list["region"]
+    line_list["region"]
     N = line_list["N"]
     dN = line_list["dN"]
     b = line_list["b"]

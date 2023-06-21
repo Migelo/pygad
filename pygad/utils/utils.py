@@ -10,7 +10,6 @@ __all__ = ['DevNull', 'static_vars', 'nice_big_num_str', 'float_to_nice_latex',
 
 import numpy as np
 import re
-import scipy.spatial.distance
 import sys
 from .term import *
 import time

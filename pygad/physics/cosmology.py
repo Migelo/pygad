@@ -319,7 +319,6 @@ class FLRWCosmo(object):
             rho_crit (UnitArr): The critical density (by default in units of
                                 'Msol / kpc**3').
         '''
-        from ..snapshot.snapshot import Snapshot
         rho_crit = 3.0 * self.H(z) ** 2 / (8.0 * np.pi * G)
         rho_crit.convert_to('Msol / kpc**3')
         return rho_crit

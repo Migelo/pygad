@@ -9,7 +9,6 @@ from ..units import Unit, UnitQty
 from .. import gadget
 from .. import physics
 import numpy as np
-import copy
 import re
 import os
 
@@ -429,9 +428,7 @@ class IonisationTable(object):
             im (AxesImage):     The image instance created.
             cbar (Colorbar):    The colorbar.
         '''
-        import matplotlib as mpl
         from ..plotting import show_image
-        from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
         if ion is None:
             plts = []

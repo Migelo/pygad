@@ -45,7 +45,6 @@ Examples:
 '''
 __all__ = ['iter_idents_in_expr', 'EvalError', 'Evaluator', 'eval']
 
-import math
 import numpy as np
 import operator as op
 import ast

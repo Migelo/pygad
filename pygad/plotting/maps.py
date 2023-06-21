@@ -12,9 +12,7 @@ import matplotlib.pyplot as plt
 from .general import *
 from ..units import *
 from ..binning import *
-from ..gadget import config
 from ..snapshot import BoxMask
-import warnings
 from .. import environment
 
 def plot_map(m, colors=None, extent=None, vlim=None, clim=None,

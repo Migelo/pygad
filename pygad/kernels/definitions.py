@@ -63,7 +63,6 @@ __all__ = [
 ]
 
 import numpy as np
-from .. import C
 
 
 def cubic(u):

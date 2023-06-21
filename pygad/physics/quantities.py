@@ -36,7 +36,7 @@ from ..units import UnitError, UnitArr, UnitQty, Unit
 try:
     from collections.abc import Iterable
 except ImportError:
-    from collections import Iterable
+    pass
 
 
 # alpha elements, produced in (or actually before) SNII:
@@ -232,7 +232,6 @@ def SMH_Moster_2013(M_halo, z=0.0, return_scatter=False):
     one_minus_a = float(z / (z + 1.0))
 
     M_halo = UnitQty(M_halo, 'Msol', dtype=float)
-    from collections import Iterable
     if getattr(M_halo, 'shape', None) and M_halo.shape[0] > 1:
         ret = []
         for Mh in M_halo:
@@ -351,8 +350,8 @@ def SMH_Behroozi_2013(M_halo, z=0.0, return_scatter=False):
     delta = 3.508 + (2.608 * (a - 1.) - 0.043 * z) * nu
     gamma = 0.316 + (1.319 * (a - 1.) + 0.279 * z) * nu
 
-    mu = -0.020 + 0.081 * (a - 1.)
-    kappa = 0.045 - 0.155 * (a - 1.)
+    -0.020 + 0.081 * (a - 1.)
+    0.045 - 0.155 * (a - 1.)
 
     xi = 0.218 - 0.023 * (a - 1.)
 

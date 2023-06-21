@@ -2,16 +2,8 @@
 Basic loading of the fast C library.
 """
 from ctypes import (
-    POINTER,
-    byref,
-    c_char_p,
     c_double,
-    c_int,
-    c_size_t,
-    c_uint,
-    c_void_p,
     cdll,
-    create_string_buffer,
 )
 from glob import glob
 

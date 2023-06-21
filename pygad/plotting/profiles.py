@@ -6,13 +6,11 @@ Doctests impossible, since they would require visual inspection...
 __all__ = ['profile', 'history', 'SFR_history', 'flow_history']
 
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 from ..units import *
 from ..analysis import *
 from .. import environment
 from .. import utils
-from .. import physics
 import sys
 
 def profile(s, Rmax, qty, av=None, units=None, dens=True, proj=None,
