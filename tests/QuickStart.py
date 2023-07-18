@@ -42,7 +42,7 @@ warnings.filterwarnings("ignore")
 # Loading snapshots is easy! `pygad` supports format 1, format 2 (utilizing the info block), and HDF5:
 
 # %%
-s = pg.Snapshot("../pygad/snaps/snap_M1196_4x_470", load_double_prec=True)
+s = pg.Snapshot("./pygad/snaps/snap_M1196_4x_470", load_double_prec=True)
 print(s)
 
 # %% [markdown]
