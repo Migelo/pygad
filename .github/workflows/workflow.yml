@@ -43,4 +43,8 @@ jobs:
       - name: Test
         run: |
           python runTestsAll.py
+      - name: Test plotting
+        run: |
+          cp tests/QuickStart.py .
+          python QuickStart.py
         
