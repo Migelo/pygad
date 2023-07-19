@@ -246,8 +246,8 @@ def Octree(pos_data, idx=None, center=None, world_size=None):
         return Octree(s['pos'], center=[bz / 2.] * 3, world_size=bz)
 
     if environment.verbose >= environment.VERBOSE_TALKY:
-        print('build a Octree with %s positions' % (
-            utils.nice_big_num_str(len(s))))
+        print(('build a Octree with %s positions' % (
+            utils.nice_big_num_str(len(s)))))
         sys.stdout.flush()
 
     if center is None:
@@ -273,7 +273,7 @@ def Octree(pos_data, idx=None, center=None, world_size=None):
     root = OctNode(np.array(list(center)), float(world_size), 0)
 
     if idx is None:
-        idx = range(len(pos_data))
+        idx = list(range(len(pos_data)))
     for i in idx:
         root.insert(i, pos_data)
 

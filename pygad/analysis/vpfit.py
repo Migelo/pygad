@@ -188,10 +188,10 @@ def fit_profiles(
                 chisq_old = chisq_soln
                 best_nlines = n_lines
             if environment.verbose >= environment.VERBOSE_TACITURN:
-                print(
+                print((
                     "Region %d: %d lines gives chisq=%g (%g) after %d iters"
                     % (ireg, n_lines, chisq_soln, chisq_accept, soln.nit)
-                )
+                ))
             """
             if params[n_lines*3-1] < l[2] or params[n_lines*3-1] > l[-2]:
                 if environment.verbose <= environment.VERBOSE_TACITURN:
@@ -207,10 +207,10 @@ def fit_profiles(
 
         if chisq_soln > chisq_accept:  # try to go back to previous best solution
             if environment.verbose == environment.VERBOSE_TACITURN:
-                print(
+                print((
                     "Region %d uncoverged with %d lines, chisq=%g; retrying with %d"
                     % (ireg, n_lines, chisq_soln, best_nlines)
-                )
+                ))
             n_lines = best_nlines
             params = params[: 3 * n_lines]
             bounds = bounds[: 3 * n_lines]
@@ -226,10 +226,10 @@ def fit_profiles(
             chisq_soln = _chisq(params, l_reg, f_reg, n_reg, mode)
             if chisq_soln > chisq_accept:
                 if environment.verbose >= environment.VERBOSE_TACITURN:
-                    print(
+                    print((
                         "WARNING: region %d has large chisq=%g; check fit"
                         % (ireg, chisq_soln)
-                    )
+                    ))
 
         params += 0.02 * (
             2 * np.random.rand(len(params)) - 1
@@ -245,7 +245,7 @@ def fit_profiles(
 
         # append lines in this region onto line list
         if environment.verbose >= environment.VERBOSE_TACITURN:
-            print(
+            print((
                 "region %d (%g-%g): chisq= %g with %d lines"
                 % (
                     ireg,
@@ -254,7 +254,7 @@ def fit_profiles(
                     chisq_soln,
                     int(len(params) / 3),
                 )
-            )
+            ))
         for ip in range(n_lines):
             line_list["region"] = np.append(line_list["region"], ireg)
             line_list["N"] = np.append(line_list["N"], params[ip * 3])
@@ -342,7 +342,7 @@ def find_regions(
     """
 
     num_pixels = len(wavelengths)
-    pixels = range(num_pixels)
+    pixels = list(range(num_pixels))
     min_pix = 1
     max_pix = num_pixels - 1
 
@@ -441,7 +441,7 @@ def find_regions(
                 break
 
     if environment.verbose >= environment.VERBOSE_TACITURN:
-        print("Found {} detection regions".format(len(regions_l)))
+        print(("Found {} detection regions".format(len(regions_l))))
     return np.array(regions_l), np.array(regions_i)
 
 
@@ -469,7 +469,7 @@ def periodic_wrap(l, flux, noise):
     flux = np.concatenate((flux[starting_pixel:-1], flux[0 : starting_pixel + 1]))
     noise = np.concatenate((noise[starting_pixel:-1], noise[0 : starting_pixel + 1]))
     if environment.verbose >= environment.VERBOSE_TACITURN:
-        print("Periodically wrapping spectrum, starting_pixel= %d" % starting_pixel)
+        print(("Periodically wrapping spectrum, starting_pixel= %d" % starting_pixel))
 
     return flux, noise, starting_pixel
 
@@ -542,10 +542,10 @@ def write_spectrum(
 
     if os.path.isfile(spec_name) and not overwrite:
         if environment.verbose >= environment.VERBOSE_TACITURN:
-            print(
+            print((
                 "WARNING: write_spectrum() failed: File %s exists, and overwrite set to False"
                 % spec_name
-            )
+            ))
         return
 
     waves = lambda_rest * (redshift + 1.0) * (1.0 + vels / c)

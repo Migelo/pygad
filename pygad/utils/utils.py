@@ -471,10 +471,10 @@ class ProgressBar(object):
                  width=36, eta_average_over=20):
         if iterable is None and isinstance(length, int):
             self._length = length
-            self._iterable = range(length)
+            self._iterable = list(range(length))
         else:
             if isinstance(iterable, int):
-                iterable = range(iterable)
+                iterable = list(range(iterable))
             self._length = int(length) if length else len(iterable)
             self._iterable = iter(iterable)
         self.show_eta = bool(show_eta)

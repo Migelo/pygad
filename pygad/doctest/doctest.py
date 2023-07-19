@@ -1,6 +1,6 @@
 import re
 from math import isclose
-from doctest import (DONT_ACCEPT_TRUE_FOR_1, DONT_ACCEPT_BLANKLINE,
+from .doctest import (DONT_ACCEPT_TRUE_FOR_1, DONT_ACCEPT_BLANKLINE,
                      NORMALIZE_WHITESPACE, BLANKLINE_MARKER, ELLIPSIS,
                      _ellipsis_match)
 

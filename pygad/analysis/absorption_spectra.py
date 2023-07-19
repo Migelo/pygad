@@ -726,13 +726,13 @@ def find_line_contributers(
     if isinstance(line, str):
         line = str(line)
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print(
+        print((
             "find all necessary particles, beginning with those that have "
             + "the highest column density along the line of sight, that are "
             + "needed for getting %.1f%% of the total EW" % (100.0 * threshold)
-        )
+        ))
         if isinstance(line, str):
-            print('  line "%s" at %s' % (line, los))
+            print(('  line "%s" at %s' % (line, los)))
 
     if isinstance(line, str):
         line = lines[line]
@@ -755,7 +755,7 @@ def find_line_contributers(
         raise ValueError('Unknown `EW_space`: "%s"!' % EW_space)
     EW_full = EW(taus, edges)
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print("in %s space EW = %s" % (EW_space, EW_full))
+        print(("in %s space EW = %s" % (EW_space, EW_full)))
 
     # bisect by percentiles
     if environment.verbose >= environment.VERBOSE_NORMAL:
@@ -783,14 +783,14 @@ def find_line_contributers(
     contributing = np.array((restr_column > Nmid), dtype=bool)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print(
+        print((
             "%s of the %s N_intersecting particles needed "
             % (
                 utils.nice_big_num_str(np.sum(contributing)),
                 utils.nice_big_num_str(N_intersecting),
             )
             + "for a line with >= %.1f%% of the EW" % (100.0 * threshold)
-        )
+        ))
 
     return contributing
 
@@ -1043,24 +1043,24 @@ def mock_absorption_spectrum(
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print("create a mock absorption spectrum:")
-        print("  at", los)
+        print(("  at", los))
         if isinstance(ion, str):
-            print("  for", ion, "at lambda =", l)
+            print(("  for", ion, "at lambda =", l))
         else:
-            print("  at lambda =", l)
-        print("  with oscillator strength f =", f)
-        print("  => Xsec =", Xsec)
-        print("  and atomic weight", atomwt)
-        print("  => b(T=1e4K) =", b_0 * np.sqrt(1e4))
-        print("  and a lifetime of 1/A_ki =", (1.0 / A_ki))
-        print("  => Gamma =", Gamma)
+            print(("  at lambda =", l))
+        print(("  with oscillator strength f =", f))
+        print(("  => Xsec =", Xsec))
+        print(("  and atomic weight", atomwt))
+        print(("  => b(T=1e4K) =", b_0 * np.sqrt(1e4)))
+        print(("  and a lifetime of 1/A_ki =", (1.0 / A_ki)))
+        print(("  => Gamma =", Gamma))
         if v_turb is not None:
             v_perc = np.percentile(v_turb, [10, 90])
-            print(
+            print((
                 "  and a turbulent motion per particle of v_turb ~(%.1f - %.1f) %s"
                 % (v_perc[0], v_perc[-1], v_turb.units)
-            )
-        print('  using kernel "%s"' % kernel)
+            ))
+        print(('  using kernel "%s"' % kernel))
 
     v_edges = UnitArr(
         np.linspace(float(vel_extent[0]), float(vel_extent[1]), Nbins + 1),
@@ -1139,10 +1139,10 @@ def mock_absorption_spectrum(
             dV = sub["dV"].in_units_of(sub["pos"].units ** 3)
 
             if environment.verbose >= environment.VERBOSE_NORMAL:
-                print("  using an spatial extent of:", spatial_extent)
-                print(
+                print(("  using an spatial extent of:", spatial_extent))
+                print((
                     "  ... with %d bins of size %sx%s^2" % (N, col_width, spatial_res)
-                )
+                ))
 
             from ..binning import SPH_to_3Dgrid
 
@@ -1204,8 +1204,8 @@ def mock_absorption_spectrum(
             dV = sub["dV"].in_units_of(sub["pos"].units ** 3)
 
             if environment.verbose >= environment.VERBOSE_NORMAL:
-                print("  using an spatial extent of:", spatial_extent)
-                print("  ... with %d bins of length %s" % (N, spatial_res))
+                print(("  using an spatial extent of:", spatial_extent))
+                print(("  ... with %d bins of length %s" % (N, spatial_res)))
 
             from ..binning import SPH_3D_to_line
 
@@ -1394,9 +1394,9 @@ def mock_absorption_spectrum(
                 l_edges.units,
             )
             print("created line with:")
-            print("  EW =", EW_l)
-            print("  v0 =", v_mean)
-            print("  l0 =", l_mean)
+            print(("  EW =", EW_l))
+            print(("  v0 =", v_mean))
+            print(("  l0 =", l_mean))
         except:
             pass
 
@@ -1536,25 +1536,25 @@ def fit_continuum(l, flux, noise, order=0, sigma_lim=2.0, tol=1.0e-4, max_iter=1
         diff = abs((med_contin - med_old) / med_old)  # criteria for convergence
         med_old = med_contin
         if n_iter > max_iter:
-            print(
+            print((
                 "warning: continuum fitting failed after %d iterations: diff=%g > tol=%g"
                 % (n_iter, diff, tol)
-            )
+            ))
             break
         if len(l_unabs) < 0.1 * len(l):
-            print(
+            print((
                 "warning: continuum fitting failed, too few pixels left: only %d of %d"
                 % (len(l_unabs), len(l))
-            )
+            ))
             break
         n_iter += 1
     contin = np.polyval(p, l)
-    print(
+    print((
         "Continuum fit done: Median (using %d/%d pixels, %d iterations) is %g"
         % (len(l_unabs), len(l), n_iter, med_contin)
-    )
+    ))
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print("contin=", contin)
+        print(("contin=", contin))
     return contin  # when converged, evaluate final polynomial to get full continuum
 
 
@@ -1596,9 +1596,9 @@ def apply_LSF(l, flux, noise, grating="COS_G130M"):
     # convolve flux and noise
     flux_conv = convolve(flux, lsf_interp, boundary="wrap")
     noise_conv = convolve(noise, lsf_interp, boundary="wrap")
-    print(
+    print((
         "Applied LSF at <lambda>=%1g: %s, channel %s" % (np.mean(l), grating, channel)
-    )  # ,np.mean(flux_conv)-np.mean(flux)))
+    ))  # ,np.mean(flux_conv)-np.mean(flux)))
     return flux_conv, noise_conv
 
 

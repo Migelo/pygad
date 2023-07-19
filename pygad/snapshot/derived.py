@@ -158,7 +158,7 @@ def read_derived_rules(config, delete_old=False):
         raise IOError('Config file "%s" does not exist!' % config)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print('reading config file "%s"' % filename)
+        print(('reading config file "%s"' % filename))
 
     # The SafeConfigParser class has been renamed to ConfigParser in Python 3.2, not yet removed for compatibility
     cfg = SafeConfigParser(allow_no_value=True,
@@ -240,7 +240,7 @@ def read_derived_rules(config, delete_old=False):
             _rules[ion] = "calc_ion_mass(gas, '%s', '%s', selfshield=%s)" % (
                                     el, ionisation, iontable['selfshield'])
     else:
-        print("Warning: no ion table found in: " + iontable['tabledir'] + ";")
+        print(("Warning: no ion table found in: " + iontable['tabledir'] + ";"))
         print("         ion blocks (e.g. HI) will not be available")
 
     return _rules

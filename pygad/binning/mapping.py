@@ -126,9 +126,9 @@ def map_qty(s, extent, field, qty, av=None, reduction=None, Npx=256,
         softening = UnitQty(softening, s['pos'].units, subs=s)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print('create a %d x %d map (%.4g x %.4g %s)...' % (tuple(Npx) + \
+        print(('create a %d x %d map (%.4g x %.4g %s)...' % (tuple(Npx) + \
                 (extent[0,1]-extent[0,0],
-                 extent[1,1]-extent[1,0], extent.units)))
+                 extent[1,1]-extent[1,0], extent.units))))
 
     grid = np.zeros(Npx)
     if isinstance(qty, UnitArr):

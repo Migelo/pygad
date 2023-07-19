@@ -169,7 +169,7 @@ def find_maxima_prominence_isolation(arr, prominence=None, sortby='index',
         def find_one_sided_prominence(iex, ex, left):
             prom_one = np.inf
             vmin = ex[1]
-            nrange = range(iex-1,-1,-1) if left else range(iex+1,len(extrema))
+            nrange = list(range(iex-1,-1,-1)) if left else list(range(iex+1,len(extrema)))
             for n in nrange:
                 if extrema[n][0] == 'min':
                     if extrema[n][1] < vmin: vmin = extrema[n][1]

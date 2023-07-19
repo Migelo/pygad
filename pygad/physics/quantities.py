@@ -245,7 +245,7 @@ def SMH_Moster_2013(M_halo, z=0.0, return_scatter=False):
     M_halo = float(M_halo)
 
     inter = {}
-    for key, vals in param.items():
+    for key, vals in list(param.items()):
         inter[key] = vals[0] + vals[1] * one_minus_a
     inter['M1'] = 10 ** inter['M1']
 
@@ -278,7 +278,7 @@ def SMH_Moster_2013(M_halo, z=0.0, return_scatter=False):
                         -np.log10(np.e) / alpha * np.log(eta) \
                         * eta ** inter['gamma'] * one_minus_a]
         sigma = 0.0
-        for key in dmd.keys():
+        for key in list(dmd.keys()):
             sigma += (dmd[key][0] * param[key + 'e'][0]) ** 2 \
                      + (dmd[key][1] * param[key + 'e'][1]) ** 2
         sigma = np.sqrt(sigma) + 0.15

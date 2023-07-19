@@ -340,8 +340,8 @@ def flow_history(s, qty='mass', inout='infall', recycles='first/re',
     kwargs['linewidth'] = kwargs.get('linewidth', 2)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print('calculate the total %s rates...' % ('inflow' if inout=='infall'
-                                                   else 'outflow'))
+        print(('calculate the total %s rates...' % ('inflow' if inout=='infall'
+                                                   else 'outflow')))
         sys.stdout.flush()
     max_N_cycle = min( np.max(g['num_recycled']), max_cycle )
     t_edges = np.linspace(0, float(g.cosmology.universe_age()), kwargs['N']+1)
@@ -378,8 +378,8 @@ def flow_history(s, qty='mass', inout='infall', recycles='first/re',
     dt = t_edges[1:]-t_edges[:-1]
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
-        print('calculate the individual %s rates and plot...' % ('inflow'
-                if inout=='infall' else 'outflow'))
+        print(('calculate the individual %s rates and plot...' % ('inflow'
+                if inout=='infall' else 'outflow')))
         sys.stdout.flush()
     if 'ax' in kwargs:
         ax = kwargs['ax']
