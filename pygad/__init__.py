@@ -150,5 +150,5 @@ if not os.path.exists(module_dir+'./snaps'):
 from ._version import get_versions
 __version__ = get_versions()['version']
 if environment.verbose > environment.VERBOSE_QUIET:
-    print('imported pygad', __version__)
+    print(('imported pygad', __version__))
 del get_versions

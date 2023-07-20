@@ -97,7 +97,7 @@ def read_config(config):
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
         filenamep = os.path.split(filename)[1]
-        print('reading config file "%s"' % filenamep)
+        print(('reading config file "%s"' % filenamep))
 
     # The SafeConfigParser class has been renamed to ConfigParser in Python 3.2, not yet removed for compatibility
     cfg = SafeConfigParser(allow_no_value=True,
@@ -171,7 +171,7 @@ def read_config(config):
                 in cfg.items('hdf5 names') } )
     HDF5_to_std_name.clear()
     HDF5_to_std_name.update( { HDF5:std for std,HDF5 \
-            in std_name_to_HDF5.items() } )
+            in list(std_name_to_HDF5.items()) } )
 
 def get_block_units(block, gad_units=None):
     '''
@@ -196,7 +196,7 @@ def get_block_units(block, gad_units=None):
     gad_units['TIME'] = gad_units['LENGTH'] + ' / (' + gad_units['VELOCITY'] + ')'
 
     u = block_units[block]
-    for dimension, unit in gad_units.items():
+    for dimension, unit in list(gad_units.items()):
         if isinstance(unit, str):
             u = u.replace(dimension, '('+str(unit)+')')
         else:

@@ -184,8 +184,8 @@ class cOctree(object, metaclass=_MAX_TREE_LEVEL_class):
 
     def __init__(self, pos, H=None):
         if environment.verbose >= environment.VERBOSE_TALKY:
-            print('build a cOctree with %s positions' % (
-                utils.nice_big_num_str(len(s))))
+            print(('build a cOctree with %s positions' % (
+                utils.nice_big_num_str(len(s)))))
             sys.stdout.flush()
         pos = np.asarray(pos, dtype=np.float64)
         if pos.shape[1:] != (3,):

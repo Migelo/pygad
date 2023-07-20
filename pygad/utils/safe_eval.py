@@ -141,7 +141,7 @@ class Evaluator(object):
         self.namespace = {'None':None, 'True':True, 'False':False,
                 'Fraction':Fraction}
         for ns in [my_math.__dict__, namespace if namespace is not None else {}]:
-            self.namespace.update( { name:val for name,val in ns.items()
+            self.namespace.update( { name:val for name,val in list(ns.items())
                     if hasattr(val,'__call__')
                     or isinstance(val,(numbers.Number,str,np.ndarray)) } )
 

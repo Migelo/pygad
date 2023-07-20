@@ -190,7 +190,7 @@ def load_table(qty, metal_code, folder=None, base=None, ending=None, IMF=None):
 
     found = False
     if ending is None:
-        for ending, columns in table_names.items():
+        for ending, columns in list(table_names.items()):
             if qty in columns:
                 tbl = np.loadtxt(folder + '/' + (base%metal_code) + '.' + ending)
                 found = True
@@ -206,7 +206,7 @@ def load_table(qty, metal_code, folder=None, base=None, ending=None, IMF=None):
                            'SSP tables.')
     else:
         if environment.verbose >= environment.VERBOSE_TALKY:
-            print("Using SSP table: " + folder + '/' + (base%metal_code) + '.' + ending)
+            print(("Using SSP table: " + folder + '/' + (base%metal_code) + '.' + ending))
 
 
     return tbl[:,0], tbl[:,columns.index(qty)]
@@ -236,7 +236,7 @@ def inter_bc_qty(age, Z, qty, units=None, IMF=None):
                             fit eachother.
     '''
     if environment.verbose >= environment.VERBOSE_TALKY:
-        print('interpolate SSP tables for qty "%s"...' % qty)
+        print(('interpolate SSP tables for qty "%s"...' % qty))
 
     age = np.log10(UnitQty(age, 'yr')).view(np.ndarray)
     Z = UnitQty(Z).view(np.ndarray)
@@ -263,10 +263,10 @@ def inter_bc_qty(age, Z, qty, units=None, IMF=None):
 
     if environment.verbose >= environment.VERBOSE_TALKY:
         print('table limits:')
-        print('  age [yr]:    %.2e - %.2e' % (10**age_bins.min(),
-                                              10**age_bins.max()))
-        print('  metallicity: %.2e - %.2e' % (min(metallicity_name.keys()),
-                                              max(metallicity_name.keys())))
+        print(('  age [yr]:    %.2e - %.2e' % (10**age_bins.min(),
+                                              10**age_bins.max())))
+        print(('  metallicity: %.2e - %.2e' % (min(metallicity_name.keys()),
+                                              max(metallicity_name.keys()))))
 
     if environment.verbose >= environment.VERBOSE_TALKY:
         print('interpolate in age...')
@@ -274,7 +274,7 @@ def inter_bc_qty(age, Z, qty, units=None, IMF=None):
     # interpolate in age in all metallicities simultaneously (creating blocks for
     # each tabled metallicity for each particle, i.e. len(metallicity_name) entire
     # blocks -- there are much less metallcity bins than age bins!):
-    Q_mtl = {mtl:np.empty(len(age)) for mtl in metallicity_name.keys()}
+    Q_mtl = {mtl:np.empty(len(age)) for mtl in list(metallicity_name.keys())}
     for k in range(len(age_bins)+1):
         if k == 0:
             age_mask = age<age_bins[0]
@@ -289,7 +289,7 @@ def inter_bc_qty(age, Z, qty, units=None, IMF=None):
             n = [k-1, k]
             a_age = (age[age_mask] - age_bins[n[0]]) / (age_bins[n[1]] - age_bins[n[0]])
 
-        for mtl in metallicity_name.keys():
+        for mtl in list(metallicity_name.keys()):
             tbl = tbls[mtl]
             Q_mtl[mtl][age_mask] = a_age*tbl[n[1]] + (1.0-a_age)*tbl[n[0]]
 

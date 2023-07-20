@@ -91,7 +91,7 @@ FULL_ELEMENT_NAME = {
     'Ca': 'Calcium',
     'Fe': 'Iron',
 }
-SHORT_ELEMENT_NAME = {v: k for k, v in FULL_ELEMENT_NAME.items()}
+SHORT_ELEMENT_NAME = {v: k for k, v in list(FULL_ELEMENT_NAME.items())}
 # US and Canada do not know English...
 SHORT_ELEMENT_NAME['Aluminum'] = 'Al'
 
@@ -121,23 +121,23 @@ class Wiersma_CoolingTable(object):
         if verbose is None:
             verbose = environment.verbose
         if verbose >= environment.VERBOSE_NORMAL:
-            print('reading cooling tables from "%s"' % self._path)
+            print(('reading cooling tables from "%s"' % self._path))
         with h5py.File(self._path, 'r') as f:
             self._note = f['Header/Note'][()][0].decode('ascii')
             self._reference = f['Header/Reference'][()][0].decode('ascii')
             self._version = f['Header/Version'][()][0].decode('ascii')
             if verbose >= environment.VERBOSE_TALKY:
-                print('  note:       "%s"' % self._note)
-                print('  reference:  "%s"' % self._reference)
-                print('  version:    "%s"' % self._version)
+                print(('  note:       "%s"' % self._note))
+                print(('  reference:  "%s"' % self._reference))
+                print(('  version:    "%s"' % self._version))
 
             self._redshift = f['Header/Redshift'][()][0]
 
             spec = f['Header/Species_names'][()]
             self._species = spec.astype('|U10')
             if verbose >= environment.VERBOSE_TALKY:
-                print('  %2d species: %s' % (len(self._species),
-                                             ', '.join(self._species)))
+                print(('  %2d species: %s' % (len(self._species),
+                                             ', '.join(self._species))))
 
             if verbose >= environment.VERBOSE_TALKY:
                 print('  reading cooling tables for')
@@ -149,7 +149,7 @@ class Wiersma_CoolingTable(object):
             f['Metal_free/Mean_particle_mass'][()]
             for el in self._species:
                 if verbose >= environment.VERBOSE_TALKY:
-                    print('    %s...' % el)
+                    print(('    %s...' % el))
                 tbls[el] = f['%s/Net_Cooling' % el][()]
             if verbose >= environment.VERBOSE_TALKY:
                 print('  reading table bins')
@@ -157,9 +157,9 @@ class Wiersma_CoolingTable(object):
             self._T_bins = f['Metal_free/Temperature_bins'][()]
             self._fHe_bins = f['Metal_free/Helium_mass_fraction_bins'][()]
             if verbose >= environment.VERBOSE_TALKY:
-                print('    nH [cm^-3]: ', self.nH_range)
-                print('    T [K]:      ', self.T_range)
-                print('    fHe:        ', self.fHe_range)
+                print(('    nH [cm^-3]: ', self.nH_range))
+                print(('    T [K]:      ', self.T_range))
+                print(('    fHe:        ', self.fHe_range))
 
             if verbose >= environment.VERBOSE_TALKY:
                 print('  reading solar abundancies')
@@ -326,7 +326,7 @@ class Wiersma_CoolingTable(object):
                                "(z=%0.2f)!" % self._redshift)
         g = s.gas if (len(s.gas) != len(s) or len(s) == 0) else s
         if verbose >= environment.VERBOSE_NORMAL:
-            print('calculate cooling rates for\n  %s' % g)
+            print(('calculate cooling rates for\n  %s' % g))
 
         T = g['temp'].in_units_of('K', subs=s).view(np.ndarray)
         nH = g['nH'].in_units_of('cm**-3', subs=s).view(np.ndarray)
@@ -345,7 +345,7 @@ class Wiersma_CoolingTable(object):
         for species in self._species:
             try:
                 if verbose >= environment.VERBOSE_NORMAL:
-                    print('  %s...' % species)
+                    print(('  %s...' % species))
                 el = SHORT_ELEMENT_NAME[species]
                 solar_abund = \
                     self._solar_mass_frac[np.where(self._solar_species == species)][0]
@@ -353,7 +353,7 @@ class Wiersma_CoolingTable(object):
                           * (g[el] / g['mass']) / solar_abund
                 metal_cool += el_cool
             except ValueError as e:
-                print("%s: %s" % (type(e).__name__, e.message))
+                print(("%s: %s" % (type(e).__name__, e.message)))
         if verbose >= environment.VERBOSE_NORMAL:
             print('  H+He...')
         hhe_cool = self.get_cooling_for_species('HHe', T, nH, fHe)
