@@ -24,5 +24,5 @@
   ]
 		}
   },
-  "postCreateCommand": "sudo apt update; sudo apt-get install -y git-lfs vim libgsl-dev g++ gcc build-essential python3-pip python3-venv python-is-python3; git lfs fetch; git lfs track '*.tar.gz'; git lfs checkout; find data/*.tar.gz | xargs -I% tar xzf % -C pygad; sudo pip install --upgrade pip; sudo pip install -e .; sudo pip install ipython ipykernel"
+  "postCreateCommand": "sudo apt update; sudo apt-get install -y git-lfs vim libgsl-dev g++ gcc build-essential python3-pip python3-venv python-is-python3; git lfs fetch; git lfs track '*.tar.gz'; git lfs checkout; find data/*.tar.gz | xargs -I% tar xzf % -C pygad; sudo pip install --upgrade pip; sudo pip install -e .; sudo pip install ipython ipykernel; wget -O snapdir_030.tar.gz https://heibox.uni-heidelberg.de/f/dc65a8c75220477eb62d/?dl=1; tar xzf snapdir_030.tar.gz"
 }
