@@ -5,9 +5,9 @@
     "cpus": 4
   },
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {
-      "dockerDashComposeVersion": "v2"
-    },
+    // "ghcr.io/devcontainers/features/docker-in-docker:2": {
+    //   "dockerDashComposeVersion": "v2"
+    // },
     "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
       "packages": "git-lfs,vim,libgsl-dev,g++,gcc,build-essential,python3-pip,python3-venv,python-is-python3"
     }
@@ -33,6 +33,6 @@
       ]
     }
   },
-  "onCreateCommand": "git lfs fetch; git lfs track '*.tar.gz'; git lfs checkout; find data/*.tar.gz | xargs -I% tar xzf % -C pygad; sudo pip install --upgrade pip; sudo pip install -e .; sudo pip install ipython ipykernel; wget -O snapdir_030.tar.gz https://heibox.uni-heidelberg.de/f/dc65a8c75220477eb62d/?dl=1; tar xzf snapdir_030.tar.gz"
+  "onCreateCommand": "git lfs fetch; git lfs checkout; find data/*.tar.gz | xargs -I% tar xzf % -C pygad; sudo pip install --upgrade pip; sudo pip install -e .; sudo pip install ipython ipykernel jupyter"
   // "postCreateCommand": "git lfs fetch; git lfs track '*.tar.gz'; git lfs checkout; find data/*.tar.gz | xargs -I% tar xzf % -C pygad; sudo pip install --upgrade pip; sudo pip install -e .; sudo pip install ipython ipykernel; wget -O snapdir_030.tar.gz https://heibox.uni-heidelberg.de/f/dc65a8c75220477eb62d/?dl=1; tar xzf snapdir_030.tar.gz"
 }
