@@ -1,5 +1,5 @@
 # pygad README
-[![Build Status](https://travis-ci.com/broett/pygad.svg?branch=master)](https://travis-ci.com/broett/pygad)
+[![Python package](https://github.com/Migelo/pygad/actions/workflows/workflow.yml/badge.svg)](https://github.com/Migelo/pygad/actions/workflows/workflow.yml)
 
 This module is a light-weighted (despite having ~25.000 lines of code and documentation) but comprehensive Python module that serves as a framework and basis for analysis of Gadget snapshots.
 
