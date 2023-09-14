@@ -69,12 +69,12 @@ for version >=4.7).
 
 Clone and install the git repository:
 
-```
-$ git clone https://bitbucket.org/broett/pygad
+```bash
+$ git clone https://github.com/Migelo/pygad.git
 $ cd pygad
-$ sudo pip install .
+$ pip install .
 ```
-I would actually recommend `pip install -e .` (see the [wiki entry][WikiInstallation] for more). This way of installing only links the pygad folder to your site-packages. This means any changes to the code will be immediately reflected, no need for reinstallation to apply the new changes.
+I would actually recommend `pip install -e . --config-settings editable_mode=strict` (see the [wiki entry][WikiInstallation] for more). This way of installing only links the pygad folder to your site-packages. This means any changes to the code will be immediately reflected, no need for reinstallation to apply the new changes.
 
 For full functionality, pygad will automatically download the tables for [Bruzual & Charlot (2003)][BC03] SSP model and ionisation Cloudy tables (here for [Haardt & Madau, 2001][HM01]) as well as some test snapshots and cooling function tables. The downloaded files are put in the 
 
@@ -90,8 +90,7 @@ This goes a beyond the scope of a README; be referred to the [wiki][WikiConfig].
 
 For a starter you could try something like the following in iPython:
 
-```
-#!python
+```python
 import matplotlib.pyplot as plt
 import pygad
 import pygad.plotting   # needs to be imported explicitly
@@ -100,16 +99,15 @@ snap, halo = pygad.tools.prepare_zoom(s)
 R200, M200 = pygad.analysis.virial_info(snap)
 fig, ax, cbar = pygad.plotting.image(snap.gas, extent='5 Mpc')
 ax.add_artist(plot.Circle([0,0], R200, facecolor='none', edgecolor='w'))
-plt.draw()
 ```
 
-There is a iPython Notebook called `QuickStart.ipynb` in the [bitbucket downloads][Downloads] that shows some more of the features.
+There is a Jupyter Notebook called `QuickStart.ipynb` in the root of this repo that shows some more of the features.
 Please, also read the [wiki][WikiHome].
 
-iPython Notebooks can be started with
+The showcase notebook can be started with
 
 ```
-ipython notenook path/to/notebook.ipnb
+jupyter notebook QuickStart.ipynb
 ```
 
 ---
@@ -123,16 +121,15 @@ contact any of the current maintainers:
 
 [cernetic@mpa-garching.mpg.de](mailto:cernetic@mpa-garching.mpg.de)
 
-[mfrigo@mpa-garching.mpg.de](mailto:mfrigo@mpa-garching.mpg.de)
 
 
-[pygad]: https://bitbucket.org/broett/pygad
+[pygad]: https://github.com/Migelo/pygad
 [pynbody]: https://pynbody.github.io
 [HM01]: https://ui.adsabs.harvard.edu/#abs/2001cghr.confE..64H/abstract
 [BC03]: http://www.bruzual.org
-[Downloads]: https://bitbucket.org/broett/pygad/downloads
-[WikiHome]: https://bitbucket.org/broett/pygad/wiki/Home
-[WikiInstallation]: https://bitbucket.org/broett/pygad/wiki/Installation
-[WikiConfig]: https://bitbucket.org/broett/pygad/wiki/Configuration
-[FAQ]: https://bitbucket.org/broett/pygad/wiki/FAQ
+[Downloads]: https://github.com/Migelo/pygad/downloads
+[WikiHome]: https://github.com/Migelo/pygad/wiki/Home
+[WikiInstallation]: https://github.com/Migelo/pygad/wiki/Installation
+[WikiConfig]: https://github.com/Migelo/pygad/wiki/Configuration
+[FAQ]: https://github.com/Migelo/pygad/wiki/FAQ
 [GSL]: http://www.gnu.org/software/gsl/
