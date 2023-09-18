@@ -302,6 +302,13 @@ lines = {
         "atomwt": "24.305 u",
         "element": "Mg",
     },
+    "MgII2803": {
+        "ion": "MgII",
+        "l": "2803.531 Angstrom",
+        "f": 0.3054,
+        "atomwt": "24.305 u",
+        "element": "Mg",
+    },
     "SiII1190": {
         "ion": "SiII",
         "l": "1190.416 Angstrom",
