@@ -161,7 +161,7 @@ def age_from_form(form, subs, cosmic_time=None, cosmo=None, units='Gyr', paralle
             cosmic_time = UnitScalar(snap.time, gadget.get_block_units('AGE '),
                                      subs=subs)
 
-    form = form.copy().view(UnitArr)
+    form = abs(form.copy().view(UnitArr))
 
     if str(form.units).endswith('_form]'):
         # (a ->) z -> Gyr (-> time_units)
