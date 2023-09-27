@@ -1079,6 +1079,8 @@ def mock_absorption_spectrum(
         ion = s.gas.get(ion)
     else:
         ion = UnitQty(ion, units=s["mass"].units, subs=s)
+    print (ion.units)
+    print ((ion.astype(np.float64) / atomwt).units)
     # double precision needed in order not to overflow
     # 1 Msol / 1 u = 1.2e57, float max = 3.4e38, but double max = 1.8e308
     n = (ion.astype(np.float64) / atomwt).in_units_of(1, subs=s)
