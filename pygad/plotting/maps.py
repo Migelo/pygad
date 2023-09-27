@@ -121,6 +121,8 @@ def plot_map(m, colors=None, extent=None, vlim=None, clim=None,
     if m.ndim != 2:
         raise ValueError('Map has to be 2-dim.!')
     if colors is not None and colors.shape != m.shape:
+        print (colors)
+        print (colors.shape, m.shape)
         raise ValueError('Color map shape does not match!')
     extent, Npx, res = grid_props(extent=extent, Npx=m.shape, dim=2)
 
