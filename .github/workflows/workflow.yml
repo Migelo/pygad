@@ -6,8 +6,10 @@ jobs:
   build:
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
-        os: ["ubuntu-latest", "macos-latest"]
+        python-version: ["3.9",]
+        # python-version: ["3.8", "3.9", "3.10", "3.11"]
+        os: ["macos-latest", ]
+        # os: ["ubuntu-latest", "macos-latest"]
 
     runs-on: ${{ matrix.os }}
     steps:
