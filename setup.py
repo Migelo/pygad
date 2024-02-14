@@ -25,6 +25,9 @@ subprocess.run(["make", "clean"], cwd=setup_dir + "/pygad/C", check=False)
 
 gsl_include = ""
 gsl_lib = ""
+library_dirs = [
+    "/opt/homebrew/Cellar/gsl/2.7.1/lib",
+]
 include_dirs = [
     "/usr/include/",
     "pygad/C/include/",
@@ -35,6 +38,7 @@ if os.getenv("GSL_HOME") is not None:
     gsl_include = os.getenv("GSL_HOME") + "/include"
     include_dirs.append(gsl_include)
     gsl_lib = os.getenv("GSL_HOME") + "/lib"
+    library_dirs.append(gsl_lib)
 
 ext_module = Extension(
     "pygad/C/cpygad",
@@ -52,7 +56,7 @@ ext_module = Extension(
     ],
     libraries=["m", "gsl", "gslcblas", "gomp"],
     extra_link_args=["-fopenmp"],
-    library_dirs=[gsl_lib],
+    library_dirs=library_dirs,
 )
 
 setup(
