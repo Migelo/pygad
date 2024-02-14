@@ -21,23 +21,26 @@ for root, dirs, files in os.walk(setup_dir):
         modules.append(submod)
 
 # clean and make the cpygad.so library
-subprocess.run(["make", "clean"], cwd=setup_dir + "/pygad/C", check=True)
+subprocess.run(["make", "clean"], cwd=setup_dir + "/pygad/C", check=False)
 
 gsl_include = ""
 gsl_lib = ""
+include_dirs = [
+    "/usr/include/",
+    "pygad/C/include/",
+    "/opt/homebrew/opt/gsl/include/",
+    "/opt/local/",
+]
 if os.getenv("GSL_HOME") is not None:
     gsl_include = os.getenv("GSL_HOME") + "/include"
+    include_dirs.append(gsl_include)
     gsl_lib = os.getenv("GSL_HOME") + "/lib"
 
 ext_module = Extension(
     "pygad/C/cpygad",
     language="c++",
     sources=glob("pygad/C/src/*"),
-    include_dirs=[
-        "pygad/C/include",
-        "/usr/include",
-        gsl_include,
-    ],
+    include_dirs=include_dirs,
     extra_compile_args=[
         "-fPIC",
         "-std=c++11",
