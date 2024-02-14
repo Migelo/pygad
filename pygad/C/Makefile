@@ -1,10 +1,14 @@
-GSL_HOME	:= ${GSL_HOME} /opt/local
+GSL_HOME	:= ${GSL_HOME} /opt/local/ /opt/homebrew/opt/gsl/
 GSL_LIB		:= $(wildcard /usr/lib/libgsl.*)
 ifneq ($(wildcard ${GSL_LIB}),)
-	GSL_HOME	:= ${GSL_HOME} /usr
+    GSL_HOME	:= ${GSL_HOME} /usr
 endif
 
-CC 		= g++
+ifeq ($(shell uname), Darwin)
+    CC = g++-13
+else
+    CC = g++
+endif
 CFLAGS 	= -std=c++11
 CFLAGS  += -pedantic -Wall -Wextra -Wno-unused-parameter
 CFLAGS 	+= -O3 -DNDEBUG -fopenmp
