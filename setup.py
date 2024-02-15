@@ -26,7 +26,7 @@ subprocess.run(["make", "clean"], cwd=setup_dir + "/pygad/C", check=False)
 gsl_include = ""
 gsl_lib = ""
 library_dirs = [
-    "/opt/homebrew/Cellar/gsl/2.7.1/lib",
+    "/opt/homebrew/opt/gsl/lib",
 ]
 include_dirs = [
     "/usr/include/",

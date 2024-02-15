@@ -23,6 +23,7 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           brew install git-lfs gsl gcc@13
+          brew --prefix gsl 
       - name: Get files from LFS
         run: |
           git lfs fetch
