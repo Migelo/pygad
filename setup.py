@@ -27,6 +27,7 @@ gsl_include = ""
 gsl_lib = ""
 library_dirs = [
     "/opt/homebrew/opt/gsl/lib",
+    "/usr/local/opt/gsl/lib/",
 ]
 include_dirs = [
     "/usr/include/",
