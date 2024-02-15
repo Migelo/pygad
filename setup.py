@@ -33,6 +33,7 @@ include_dirs = [
     "pygad/C/include/",
     "/opt/homebrew/opt/gsl/include/",
     "/opt/local/",
+    "/usr/local/opt/gsl/include/",
 ]
 if os.getenv("GSL_HOME") is not None:
     gsl_include = os.getenv("GSL_HOME") + "/include"
