@@ -22,7 +22,6 @@ import warnings
 import gc
 import sys
 
-
 def calc_cooling_rates(s, tbl='CoolingTables/z_0.000.hdf5'):
     '''
     Calculate the total cooling rates for the given snapshot.
@@ -329,3 +328,53 @@ def get_luminosities(stars, band='bolometric', IMF=None):
 
 get_luminosities._deps = set(['age', 'metallicity', 'mass'])
 
+def calc_hsml_arepo_VS(mass, rho, subs=None):
+    from .sim_arr import SimArr
+    volume = mass / rho
+    # using the 2.5*cbrt(vol) eqn from Volker, assuming a cubic volume
+    hsml = SimArr(2.5*np.cbrt(volume), "ckpc h_0**-1", subs=subs)
+    return hsml
+
+calc_hsml_arepo_VS._deps = set(['mass', 'rho'])
+
+def calc_hsml_arepo_MG(mass, rho, subs=None):
+    from .sim_arr import SimArr
+    volume = mass / rho
+    # using the cbrt(3/4 * vol / pi) eqn from Matteo, assuming a spherical volume
+    hsml = SimArr(np.cbrt(0.75 * volume / np.pi), "ckpc h_0**-1", subs=subs)
+    return hsml
+
+calc_hsml_arepo_MG._deps = set(['mass', 'rho'])
+
+def calc_hsml_tree(pos, mass, subs=None):
+    from .sim_arr import SimArr
+    import pysph
+    # using the tree method from Ruediger
+    tree = pysph.makeTree( pos )
+    nthreads = 64
+    hsml  = tree.calcHsmlMulti( pos.astype('f8'), pos.astype('f8'), 
+                                mass.astype('f8'), 64, numthreads=nthreads, density=False )
+    hsml = SimArr(hsml, "ckpc h_0**-1", subs=subs)#'kpc')
+    
+    return hsml
+
+calc_hsml_tree._deps = set(['pos', 'mass'])
+
+
+def calc_hsml_combo(pos, mass, rho, subs=None):
+    from .sim_arr import SimArr
+    import pysph
+    # combines the tree method and the 2.5*cbrt(vol) method and find the greater value
+    volume = mass / rho
+    hsml = SimArr(2.5*np.cbrt(volume), "ckpc h_0**-1", subs=subs)
+    tree = pysph.makeTree( pos )
+    nthreads = 64
+    hsml2  = tree.calcHsmlMulti( pos.astype('f8'), pos.astype('f8'), 
+                                mass.astype('f8'), 64, numthreads=nthreads, density=False )
+    hsml2 = SimArr(hsml2, "ckpc h_0**-1", subs=subs)#'kpc')
+    hsml_max = np.maximum(hsml2, hsml)
+    hsml_max = SimArr(hsml_max, "ckpc h_0**-1", subs=subs) #'kpc')
+
+    return hsml_max
+
+calc_hsml_combo._deps = set(['pos', 'mass', 'rho'])
