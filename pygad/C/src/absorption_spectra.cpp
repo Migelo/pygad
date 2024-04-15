@@ -36,13 +36,20 @@ void _absorption_spectrum_multiple_los(size_t N,        // number of particles/c
       kernel.require_table_size(0, 1024);
     }
 
+  constexpr bool full_column_calc = false;
+
   std::memset(taus, 0, Nlos * Nbins * sizeof(double));
   std::memset(los_dens, 0, Nlos * Nbins * sizeof(double));
   std::memset(los_dens_phys, 0, Nlos * Nbins * sizeof(double));   // DS: density array
   std::memset(los_metal_frac, 0, Nlos * Nbins * sizeof(double));  // SA: LOS metal mass fraction
   std::memset(los_temp, 0, Nlos * Nbins * sizeof(double));
   std::memset(los_vpec, 0, Nlos * Nbins * sizeof(double));  // DS: LOS peculiar velocity field
-  std::memset(column, 0, Nlos * N * sizeof(double));
+  if(full_column_calc)
+    std::memset(column, 0, Nlos * N * sizeof(double));
+  else
+    std::memset(column, 0, 1 * sizeof(double));
+
+  // size_t totalMemoryNlos = Nlos * Nbins * 6 * sizeof(double);
 
   const double FWHM_L = 2 * Gamma;
 
@@ -55,8 +62,9 @@ void _absorption_spectrum_multiple_los(size_t N,        // number of particles/c
 
       for(size_t j = 0; j < N; j++)
         {
-          column[los_idx * N + j] = 0.0;  // for proper values when skipping
-          double Nj               = n[j];
+          if(full_column_calc)
+            column[los_idx * N + j] = 0.0;  // for proper values when skipping
+          double Nj = n[j];
 
           if(Nj == 0.0)
             continue;
@@ -72,7 +80,8 @@ void _absorption_spectrum_multiple_los(size_t N,        // number of particles/c
                 continue;
               Nj *= kernel.proj_value(dj / hj, hj);
             }
-          column[los_idx * N + j] = Nj;  // store that quantity
+          if(full_column_calc)
+            column[los_idx * N + j] = Nj;  // store that quantity
 
           // column density of the particles / cells along the line of sight
           double vj  = vel[j];
@@ -115,7 +124,8 @@ void _absorption_spectrum_multiple_los(size_t N,        // number of particles/c
               double v_width = 5.0 * b;
               if(vj + v_width < vel_extent[0] or vj - v_width > vel_extent[1])
                 {
-                  column[los_idx * N + j] = 0.0;
+                  if(full_column_calc)
+                    column[los_idx * N + j] = 0.0;
                   continue;  // out of bounds -- don't bin into bin #0 or #Nbins-1
                 }
               vi_min = std::max<double>(0.0, std::floor((vj - v_width - vel_extent[0]) / dv));
@@ -132,10 +142,11 @@ void _absorption_spectrum_multiple_los(size_t N,        // number of particles/c
               los_vpec[los_idx * Nbins + vi_min] += vzj * Nj;       // DS: LOS peculiar velocity field
               los_metal_frac[los_idx * Nbins + vi_min] += Zj * Nj;  // SA: LOS metal mass fraction
 
-              if(not in_lims(vj, v_lims))
-                {
-                  column[los_idx * N + j] = 0.0;
-                }
+              if(full_column_calc)
+                if(not in_lims(vj, v_lims))
+                  {
+                    column[los_idx * N + j] = 0.0;
+                  }
             }
           else
             {
@@ -202,7 +213,8 @@ void _absorption_spectrum_multiple_los(size_t N,        // number of particles/c
                     contrib_lim += Dtb;
                 }
 
-              column[los_idx * N + j] *= contrib_lim;  //  / contrib_total;
+              if(full_column_calc)
+                column[los_idx * N + j] *= contrib_lim;  //  / contrib_total;
             }
         }
 

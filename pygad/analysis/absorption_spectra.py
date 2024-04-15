@@ -1940,7 +1940,11 @@ def mock_absorption_spectra_multilos(
     los_vpec = np.empty((Nlos,Nbins), dtype=np.float64)  # DS: LOS peculiar velocity field
     los_metal_frac = np.empty((Nlos,Nbins), dtype=np.float64)  # SA: LOS metallicity field
     restr_column_lims = restr_column_lims.view(np.ndarray).astype(np.float64)
-    restr_column = np.empty((Nlos,N), dtype=np.float64)
+    full_column_calc = False
+    if full_column_calc:
+        restr_column = np.empty((Nlos,N), dtype=np.float64)
+    else:
+        restr_column = np.empty((1), dtype=np.float64)
     C.cpygad.absorption_spectrum_multiple_los(
         method == "particles",
         C.c_size_t(N),
