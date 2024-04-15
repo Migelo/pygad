@@ -50,10 +50,6 @@ void _absorption_spectrum_multiple_los(size_t N,        // number of particles/c
   for(size_t los_idx = 0; los_idx < Nlos; los_idx++)
     {
       double los_pos[2];
-      // int los_idx = static_cast<int>(los_idx);
-      // los_pos = los_pos_arr[los_idx];
-      los_pos[0] = los_pos_arr[los_idx * 2 + 0];
-      los_pos[1] = los_pos_arr[los_idx * 2 + 1];
       los_pos[0] = los_pos_arr[los_idx * 2 + 0];
       los_pos[1] = los_pos_arr[los_idx * 2 + 1];
 
@@ -76,7 +72,6 @@ void _absorption_spectrum_multiple_los(size_t N,        // number of particles/c
                 continue;
               Nj *= kernel.proj_value(dj / hj, hj);
             }
-          column[los_idx * N + j] = Nj;  // store that quantity
           column[los_idx * N + j] = Nj;  // store that quantity
 
           // column density of the particles / cells along the line of sight
@@ -143,9 +138,9 @@ void _absorption_spectrum_multiple_los(size_t N,        // number of particles/c
 #pragma omp atomic
               los_metal_frac[los_idx * Nbins + vi_min] += Zj * Nj;  // SA: LOS metal mass fraction
 
-              if(not in_lims(vj, v_lims))
+              if(not in_lims(vj, v_lims)){
                 column[los_idx * N + j] = 0.0;
-                column[los_idx * N + j] = 0.0;
+              }
             }
           else
             {
@@ -219,22 +214,15 @@ void _absorption_spectrum_multiple_los(size_t N,        // number of particles/c
                 }
 
               column[los_idx * N + j] *= contrib_lim;  //  / contrib_total;
-              column[los_idx * N + j] *= contrib_lim;  //  / contrib_total;
             }
         }
 
       for(size_t i = 0; i < Nbins; i++)
         {
           taus[los_idx * Nbins + i] *= Xsec / dv;
-          taus[los_idx * Nbins + i] *= Xsec / dv;
 
           if(los_dens[los_idx * Nbins + i] != 0.0)
-          if(los_dens[los_idx * Nbins + i] != 0.0)
             {
-              los_temp[los_idx * Nbins + i] /= los_dens[los_idx * Nbins + i];
-              los_dens_phys[los_idx * Nbins + i] /= los_dens[los_idx * Nbins + i];   // DS: density skewer
-              los_vpec[los_idx * Nbins + i] /= los_dens[los_idx * Nbins + i];        // DS: LOS peculiar velocity field
-              los_metal_frac[los_idx * Nbins + i] /= los_dens[los_idx * Nbins + i];  // SA: LOS metal mass fraction
               los_temp[los_idx * Nbins + i] /= los_dens[los_idx * Nbins + i];
               los_dens_phys[los_idx * Nbins + i] /= los_dens[los_idx * Nbins + i];   // DS: density skewer
               los_vpec[los_idx * Nbins + i] /= los_dens[los_idx * Nbins + i];        // DS: LOS peculiar velocity field
