@@ -62,8 +62,10 @@ void _absorption_spectrum_multiple_los(size_t N,        // number of particles/c
   const double FWHM_L = 2 * Gamma;
 
 #pragma omp parallel for default(shared) schedule(dynamic, 20)
-  for(int los_idx = 0; los_idx < Nlos; los_idx++)
+  for(size_t los_idx = 0; los_idx < Nlos; los_idx++)
     {
+      double los_pos[2];
+      // los_pos = los_pos_arr[los_idx];
       los_pos[0] = los_pos_arr[los_idx][0];
       los_pos[1] = los_pos_arr[los_idx][1];
 
@@ -458,7 +460,7 @@ void _absorption_spectrum(size_t N, double *pos, double *vel,
 
               column[j] *= contrib_lim;  //  / contrib_total;
             }
-        }
+        
     }
 
   for(size_t i = 0; i < Nbins; i++)
@@ -472,7 +474,7 @@ void _absorption_spectrum(size_t N, double *pos, double *vel,
           los_vpec[i] /= los_dens[i];        // DS: LOS peculiar velocity field
           los_metal_frac[i] /= los_dens[i];  // SA: LOS metal mass fraction
         }
-    // }
+    }
 }
 
 extern "C" void absorption_spectrum(bool particles, size_t N, double *pos, double *vel,
@@ -535,7 +537,7 @@ extern "C" void absorption_spectrum_multiple_los(bool particles,
                          double *v_lims,
                          double *column,
                          const char *kernel_,
-                         double periodic);
+                         double periodic)
                 
 {
   if(particles)

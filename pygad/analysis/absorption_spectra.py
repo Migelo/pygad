@@ -835,6 +835,7 @@ def mock_absorption_spectrum_of(s, los, line, vel_extent, **kwargs):
         )
     print (len(los))
     if len(los) == 2:
+        print ("single LOS")
         return mock_absorption_spectrum(
             s,
             los,
@@ -848,6 +849,7 @@ def mock_absorption_spectrum_of(s, los, line, vel_extent, **kwargs):
             **kwargs
         )
     else:
+        print ("multiple LOS")
         return mock_absorption_spectra_multilos(
             s,
             los,
