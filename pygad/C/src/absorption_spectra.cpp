@@ -36,28 +36,26 @@ void _absorption_spectrum_multiple_los(size_t N,        // number of particles/c
       kernel.require_table_size(0, 1024);
     }
 
-  // std::memset(taus, 0, Nlos * Nbins * sizeof(double));
-  // std::memset(los_dens, 0, Nlos * Nbins * sizeof(double));
-  // std::memset(los_dens_phys, 0, Nlos * Nbins * sizeof(double));   // DS: density array
-  // std::memset(los_metal_frac, 0, Nlos * Nbins * sizeof(double));  // SA: LOS metal mass fraction
-  // std::memset(los_temp, 0, Nlos * Nbins * sizeof(double));
-  // std::memset(los_vpec, 0, Nlos * Nbins * sizeof(double));  // DS: LOS peculiar velocity field
 
-  std::vector<std::vector<double>> taus;
-  std::vector<std::vector<double>> los_dens;
-  std::vector<std::vector<double>> los_dens_phys;
-  std::vector<std::vector<double>> los_metal_frac;
-  std::vector<std::vector<double>> los_temp;
-  std::vector<std::vector<double>> los_vpec;
-  std::vector<std::vector<double>> column;
 
-  taus.resize(Nlos);
-  los_dens.resize(Nlos);
-  los_dens_phys.resize(Nlos);
-  los_metal_frac.resize(Nlos);
-  los_temp.resize(Nlos);
-  los_vpec.resize(Nlos);
-  column.resize(Nlos);
+
+  std::memset(taus, 0, Nlos * Nbins * sizeof(double));
+  std::memset(los_dens, 0, Nlos * Nbins * sizeof(double));
+  std::memset(los_dens_phys, 0, Nlos * Nbins * sizeof(double));   // DS: density array
+  std::memset(los_metal_frac, 0, Nlos * Nbins * sizeof(double));  // SA: LOS metal mass fraction
+  std::memset(los_temp, 0, Nlos * Nbins * sizeof(double));
+  std::memset(los_vpec, 0, Nlos * Nbins * sizeof(double));  // DS: LOS peculiar velocity field
+  std::memset(column, 0, Nlos * N * sizeof(double)); 
+  
+
+
+  // taus.resize(Nlos);
+  // los_dens.resize(Nlos);
+  // los_dens_phys.resize(Nlos);
+  // los_metal_frac.resize(Nlos);
+  // los_temp.resize(Nlos);
+  // los_vpec.resize(Nlos);
+  // column.resize(Nlos);
 
   const double FWHM_L = 2 * Gamma;
 
@@ -66,18 +64,12 @@ void _absorption_spectrum_multiple_los(size_t N,        // number of particles/c
     {
       double los_pos[2];
       // los_pos = los_pos_arr[los_idx];
-      los_pos[0] = los_pos_arr[los_idx][0];
-      los_pos[1] = los_pos_arr[los_idx][1];
+      los_pos[0] = los_pos_arr[los_idx * 2 + 0];
+      los_pos[1] = los_pos_arr[los_idx * 2 + 1];
 
-      taus[los_idx].resize(Nbins);
-      los_dens[los_idx].resize(Nbins);
-      los_dens_phys[los_idx].resize(Nbins);
-      los_metal_frac[los_idx].resize(Nbins);
-      los_temp[los_idx].resize(Nbins);
-      los_vpec[los_idx].resize(Nbins);
       for(size_t j = 0; j < N; j++)
         {
-          column[los_idx][j] = 0.0;  // for proper values when skipping
+          // column[los_idx][j] = 0.0;  // for proper values when skipping
           double Nj = n[j];
 
           if(Nj == 0.0)
@@ -94,7 +86,7 @@ void _absorption_spectrum_multiple_los(size_t N,        // number of particles/c
                 continue;
               Nj *= kernel.proj_value(dj / hj, hj);
             }
-          column[los_idx][j] = Nj;  // store that quantity
+          column[los_idx * N + j] = Nj;  // store that quantity
 
           // column density of the particles / cells along the line of sight
           double vj  = vel[j];
@@ -147,21 +139,15 @@ void _absorption_spectrum_multiple_los(size_t N,        // number of particles/c
           if(vi_min == vi_max)
             {
               assert(std::abs(vi_min - vi) < 0.501);
-#pragma omp atomic
-              taus[los_idx][vi_min] += Nj;
-#pragma omp atomic
-              los_dens[los_idx][vi_min] += Nj;
-#pragma omp atomic
-              los_dens_phys[los_idx][vi_min] += Rhj * Nj;  // DS: density skewer
-#pragma omp atomic
-              los_temp[los_idx][vi_min] += Tj * Nj;
-#pragma omp atomic
-              los_vpec[los_idx][vi_min] += vzj * Nj;  // DS: LOS peculiar velocity field
-#pragma omp atomic
-              los_metal_frac[los_idx][vi_min] += Zj * Nj;  // SA: LOS metal mass fraction
+              taus[los_idx * Nbins + vi_min] += Nj;
+              los_dens[los_idx * Nbins + vi_min] += Nj;
+              los_dens_phys[los_idx * Nbins + vi_min] += Rhj * Nj;  // DS: density skewer
+              los_temp[los_idx * Nbins + vi_min] += Tj * Nj;
+              los_vpec[los_idx * Nbins + vi_min] += vzj * Nj;  // DS: LOS peculiar velocity field
+              los_metal_frac[los_idx * Nbins + vi_min] += Zj * Nj;  // SA: LOS metal mass fraction
 
               if(not in_lims(vj, v_lims))
-                column[los_idx][j] = 0.0;
+                column[los_idx * N + j] = 0.0;
             }
           else
             {
@@ -216,38 +202,32 @@ void _absorption_spectrum_multiple_los(size_t N,        // number of particles/c
                     }
                   double DtbNj = Dtb * Nj;
                   // TODO: addtional loop for the Lorentz profile
-#pragma omp atomic
-                  taus[los_idx][i] += DtbNj;
-#pragma omp atomic
-                  los_dens[los_idx][i] += DtbNj;
-#pragma omp atomic
-                  los_dens_phys[los_idx][i] += Rhj * DtbNj;  // DS: density skewer
-#pragma omp atomic
-                  los_temp[los_idx][i] += Tj * DtbNj;
-#pragma omp atomic
-                  los_vpec[los_idx][i] += vzj * DtbNj;  // DS: LOS peculiar velocity field
-#pragma omp atomic
-                  los_metal_frac[los_idx][i] += Zj * DtbNj;  // SA: LOS metal mass fraction
+                  taus[los_idx * Nbins + i] += DtbNj;
+                  los_dens[los_idx * Nbins + i] += DtbNj;
+                  los_dens_phys[los_idx * Nbins + i] += Rhj * DtbNj;  // DS: density skewer
+                  los_temp[los_idx * Nbins + i] += Tj * DtbNj;
+                  los_vpec[los_idx * Nbins + i] += vzj * DtbNj;  // DS: LOS peculiar velocity field
+                  los_metal_frac[los_idx * Nbins + i] += Zj * DtbNj;  // SA: LOS metal mass fraction
 
                   // contrib_total += Dtb;
                   if(in_lims(vj + Dv, v_lims))
                     contrib_lim += Dtb;
                 }
 
-              column[los_idx][j] *= contrib_lim;  //  / contrib_total;
+              column[los_idx * N + j] *= contrib_lim;  //  / contrib_total;
             }
         }
 
       for(size_t i = 0; i < Nbins; i++)
         {
-          taus[los_idx][i] *= Xsec / dv;
+          taus[los_idx * Nbins + i] *= Xsec / dv;
 
-          if(los_dens[los_idx][i] != 0.0)
+          if(los_dens[los_idx * Nbins + i] != 0.0)
             {
-              los_temp[los_idx][i] /= los_dens[los_idx][i];
-              los_dens_phys[los_idx][i] /= los_dens[los_idx][i];   // DS: density skewer
-              los_vpec[los_idx][i] /= los_dens[los_idx][i];        // DS: LOS peculiar velocity field
-              los_metal_frac[los_idx][i] /= los_dens[los_idx][i];  // SA: LOS metal mass fraction
+              los_temp[los_idx * Nbins + i] /= los_dens[los_idx * Nbins + i];
+              los_dens_phys[los_idx * Nbins + i] /= los_dens[los_idx * Nbins + i];   // DS: density skewer
+              los_vpec[los_idx * Nbins + i] /= los_dens[los_idx * Nbins + i];        // DS: LOS peculiar velocity field
+              los_metal_frac[los_idx * Nbins + i] /= los_dens[los_idx * Nbins + i];  // SA: LOS metal mass fraction
             }
         }
     }
