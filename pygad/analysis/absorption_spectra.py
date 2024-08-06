@@ -129,7 +129,7 @@ from numbers import Number
 # lines["Lyman_gamma"] = lines["H972"]
 datz = np.genfromtxt(
     environment.module_dir+"analysis/line_data.csv", 
-    dtype=[('', 'U10'), ('ion', 'U10'), ('l', 'U20'), ('f', 'U20'), ('atomwt', 'U10'), ('A_ki', 'U20'), ('element', 'U2')],
+    dtype=[('', 'U20'), ('ion', 'U10'), ('l', 'U20'), ('f', 'U20'), ('atomwt', 'U20'), ('A_ki', 'U20'), ('element', 'U2')],
     delimiter=',', 
     skip_header=1)
 for i, line in enumerate(datz):
