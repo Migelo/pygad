@@ -113,27 +113,38 @@ from .. import utils
 from .. import C
 from .. import environment
 import numpy as np
-import pandas as pd
 from scipy.special import wofz
 from numbers import Number
 
-pd.options.mode.chained_assignment = None  # default='warn'
+# pd.options.mode.chained_assignment = None  # default='warn'
 ## loading line data from .csv file [initially saved using lines dict defined in this file, 
 ## .csv file can be manually updated with updated line data]
 ## can still access lines in the same way as before
 ## e.g., lines = pg.analysis.absorption_spectra.lines
-df = pd.read_csv(environment.module_dir+"analysis/line_data.csv",index_col=0)
-df['A_ki'][df['A_ki'].isnull()] = 0.0
-lines = df.to_dict(orient='index')
-lines["Lyman_alpha"] = lines["H1215"]
-lines["Lyman_beta"] = lines["H1025"]
-lines["Lyman_gamma"] = lines["H972"]
+# df = pd.read_csv(environment.module_dir+"analysis/line_data.csv",index_col=0)
+# df['A_ki'][df['A_ki'].isnull()] = 0.0
+# lines = df.to_dict(orient='index')
+# lines["Lyman_alpha"] = lines["H1215"]
+# lines["Lyman_beta"] = lines["H1025"]
+# lines["Lyman_gamma"] = lines["H972"]
+datz = np.genfromtxt(
+    environment.module_dir+"analysis/line_data.csv", 
+    dtype=[('', 'U10'), ('ion', 'U10'), ('l', 'U20'), ('f', 'U20'), ('atomwt', 'U10'), ('A_ki', 'U20'), ('element', 'U2')],
+    delimiter=',', 
+    skip_header=1)
+for i, line in enumerate(datz):
+    if line["A_ki"] == '':
+        datz[i]["A_ki"] = "0.0 s**-1"
+lines = {}
+for line in datz:
+    lines[line[0]] = {"ion": line[1], "l": line[2], "f": line[3], 
+                      "atomwt": line[4], "A_ki": line[5], "element": line[6]}
 
 ## loading LSF data from .npy file [initially saved using LSF_data dict defined in this file,
 ## towards the end, ~3k lines, now moved to an unused LSF_data.txt file (only for visual purpose)]
 ## can still access lines in the same way as before
 ## e.g., LSF_data = pg.analysis.absorption_spectra.LSF_data
-lsfdata=np.load(environment.module_dir+'analysis/LSF_data.npy', allow_pickle=True)
+lsfdata = np.load(environment.module_dir+'analysis/LSF_data.npy', allow_pickle=True)
 LSF_data = lsfdata[()]
 
 def line_quantity(line, qty):
