@@ -579,7 +579,7 @@ def mock_absorption_spectrum_of(s, los, line, vel_extent, **kwargs):
             **kwargs
         )
     else:
-        print ("multiple LOS")
+        print ("multiple LOS, number of LOS is ", len(los))
         return mock_absorption_spectra_multilos(
             s,
             los,
@@ -729,10 +729,15 @@ def mock_absorption_spectrum(
         taus (np.ndarray):      The optical depths for the velocity bins.
         los_dens (UnitArr):     The column densities restricted to the velocity
                                 bins (in cm^-2).
-        los_dens_phys (UnitArr):The gas density for the velocity bins (in g cm^-3)
+        los_dens_phys (UnitArr):The gas density for the velocity bins (in g cm^-3),
+                                if return_los_phys=True.
         los_temp (UnitArr):     The (mass-weighted) particle temperatures
                                 restricted to the velocity bins (in K).
-        vel (UnitArr):          The LOS velocities of particles (in km/s)
+        los_metal_frac(UnitArr):The metal mass fraction for the velocity bins, or
+                                the metallicity (if no element is defined, or if 
+                                element is H or He), if return_los_phys=True.
+        los_vpec (UnitArr):     The LOS velocities of particles (in km/s) [formerly
+                                defined as 'vel'], if return_los_phys=True.
         v_edges (UnitArr):      The velocities at the bin edges.
         restr_column (np.ndarray):
                                 The column densities of the particles/cells along
@@ -1305,10 +1310,15 @@ def mock_absorption_spectra_multilos(
         taus (np.ndarray):      The optical depths for the velocity bins.
         los_dens (UnitArr):     The column densities restricted to the velocity
                                 bins (in cm^-2).
-        los_dens_phys (UnitArr):The gas density for the velocity bins (in g cm^-3)
+        los_dens_phys (UnitArr):The gas density for the velocity bins (in g cm^-3),
+                                if return_los_phys=True.
         los_temp (UnitArr):     The (mass-weighted) particle temperatures
                                 restricted to the velocity bins (in K).
-        vel (UnitArr):          The LOS velocities of particles (in km/s)
+        los_metal_frac(UnitArr):The metal mass fraction for the velocity bins, or
+                                the metallicity (if no element is defined, or if 
+                                element is H or He), if return_los_phys=True.
+        los_vpec (UnitArr):     The LOS velocities of particles (in km/s) [formerly
+                                defined as 'vel'], if return_los_phys=True.
         v_edges (UnitArr):      The velocities at the bin edges.
         restr_column (np.ndarray):
                                 The column densities of the particles/cells along
@@ -1326,7 +1336,7 @@ def mock_absorption_spectra_multilos(
         raise ValueError("x- and y-axis must be in [0,1,2] and different!")
     los_arr = UnitQty(los, s["pos"].units, dtype=np.float64, subs=s)
     Nlos = len(los_arr)
-    print ("number of LOS is ", Nlos)
+    #print ("number of LOS is ", Nlos)
     zero_Hubble_flow_at = UnitScalar(zero_Hubble_flow_at, s["pos"].units, subs=s)
     vel_extent = UnitQty(vel_extent, "km/s", dtype=np.float64, subs=s)
     if restr_column_lims is None:
