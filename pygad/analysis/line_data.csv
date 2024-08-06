@@ -39,6 +39,6 @@ SII1250,SII,1250.584 Angstrom,0.00543,32.065 u,,S
 SII1253,SII,1253.811 Angstrom,0.0109,32.065 u,,S
 SII1259,SII,1259.519 Angstrom,0.0166,32.065 u,,S
 SIII1190,SIII,1190.203 Angstrom,0.0231,32.065 u,,S
-Lyman_alpha,HI,1215.6701 Angstrom,0.4164,1.00794 [u],4.6986e+08 s**-1,H
-Lyman_beta,HI,1025.722 Angstrom,0.079121,1.00794 [u],5.5751e+07 s**-1,H
-Lyman_gamma,HI,972.5368 Angstrom,0.029,1.00794 [u],1.2785e+07 s**-1,H
+Lyman_alpha,HI,1215.6701 Angstrom,0.4164,1.00794 u,4.6986e+08 s**-1,H
+Lyman_beta,HI,1025.722 Angstrom,0.079121,1.00794 u,5.5751e+07 s**-1,H
+Lyman_gamma,HI,972.5368 Angstrom,0.029,1.00794 u,1.2785e+07 s**-1,H
