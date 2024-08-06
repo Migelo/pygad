@@ -353,6 +353,7 @@ class Snapshot(object):
             if block.dtype is not None}
 
         s._N_part = list(map(int, greader.header['N_part_all']))
+        print (s._N_part)
         s._time = greader.header['time']
         s._redshift = greader.header['redshift']
         s._boxsize = SimArr(greader.header['boxsize'],
@@ -374,26 +375,47 @@ class Snapshot(object):
             s._boxsize.convert_to(s._boxsize.units.free_of_factors(['a', 'h_0']),
                                   subs=s)
 
-        if greader.header['N_files'] > 1:
-            s._descriptor += '.0-' + str(greader.header['N_files'])
-            # ensure Python int's to avoid overflows
-            N_part = list(map(int, greader.header['N_part']))
-            for n in range(1, greader.header['N_files']):  # first already done
-                filename = base + '.' + str(n) + suffix
-                greader = gadget.FileReader(filename, unclear_blocks=unclear_blocks)
-                s._file_handlers.append(greader)
+        if s._arepo_snap_type:
+            s._N_part = list(map(int, greader.header['N_part']))
+            print (s._N_part)
+            #pass
+            # update loadable blocks:
+            for block in greader.infos():
+                #print (f"{len(greader.infos())=}")
+                #print (block.ptypes)
+                if block.name in s._block_avail:
+                    s._block_avail[block.name] = [(o or n) for o, n \
+                                                in zip(s._block_avail[block.name], block.ptypes)]
+                else:
+                    s._block_avail[block.name] = block.ptypes
+            # s._N_part[3] = 0
+        else:
+            if greader.header['N_files'] > 1:
+                s._descriptor += '.0-' + str(greader.header['N_files'])
+                #print (s._descriptor)
                 # ensure Python int's to avoid overflows
-                for i in range(6): N_part[i] += int(greader.header['N_part'][i])
-                # update loadable blocks:
-                for block in greader.infos():
-                    if block.name in s._block_avail:
-                        s._block_avail[block.name] = [(o or n) for o, n \
-                                                      in zip(s._block_avail[block.name], block.ptypes)]
-                    else:
-                        s._block_avail[block.name] = block.ptypes
-            if N_part != s._N_part:
-                # more particles than fit into a native int
-                s._N_part = N_part
+                N_part = list(map(int, greader.header['N_part']))
+                #print (N_part)
+                for n in range(1, greader.header['N_files']):  # first already done
+                    filename = base + '.' + str(n) + suffix
+                    greader = gadget.FileReader(filename, unclear_blocks=unclear_blocks)
+                    s._file_handlers.append(greader)
+                    print (s._file_handlers)
+                    # ensure Python int's to avoid overflows
+                    for i in range(6): 
+                        N_part[i] += int(greader.header['N_part'][i])
+                        print (i, N_part)
+                    # update loadable blocks:
+                    for block in greader.infos():
+                        if block.name in s._block_avail:
+                            s._block_avail[block.name] = [(o or n) for o, n \
+                                                        in zip(s._block_avail[block.name], block.ptypes)]
+                        else:
+                            s._block_avail[block.name] = block.ptypes
+                print (s._N_part)
+                if N_part != s._N_part:
+                    # more particles than fit into a native int
+                    s._N_part = N_part
 
         # Process block names: make standard names lower case (except ID) and replace
         # spaces with underscores for HDF5 names. Also strip names
@@ -421,8 +443,8 @@ class Snapshot(object):
         # now the mass block is named 'mass' for all cases (HDF5 or other)
         s._block_avail['mass'] = [n > 0 for n in s._N_part]
 
-        if s.headers()[0]["flg_arepo"]:
-            s.get_arepo_blocks()
+        #if s.headers()[0]["flg_arepo"]:
+        #    s.get_arepo_blocks()
 
         s.fill_derived_rules()
 
@@ -473,6 +495,7 @@ class Snapshot(object):
         self._always_cache          = set() # _derive_rule_deps is empty; gets
                                             # filled in Snap() with
                                             # derived.general['always_cache']
+        #self._arepo_snap_type       = False
         # Horst: copy configuration to snapshot-property
         if H_neutral_only is None:
             self._H_neutral_only        = gadget.config.general['H_neutral_only']
@@ -863,25 +886,65 @@ class Snapshot(object):
                 [k for k in list(self._root.__class__.__dict__.keys())
                         if not k.startswith('_')] + \
                 self.families()
-
-    def get_arepo_blocks(self):
+    @property
+    def hsml3(self):
         from .sim_arr import SimArr
-        #default pos is the Voronoi center of gas cells -> use center of mass instead
-        self.gas["CenterOfMass"].units = None
-        self.gas["pos"] = SimArr(self.gas["CenterOfMass"], "ckpc h_0**-1", snap=self)
-
-        #Approximate hsml for binning/plotting, from radius of sphere with Voronoi cell volume
+        import pysph
         if "Volume" not in self.gas.loadable_blocks():
+            print (np.shape(self.gas["pos"]), np.shape(self.gas["mass"]), np.shape(self.gas["rho"]))
             self.gas["Volume"] = self.gas["mass"] / self.gas["rho"]
-        self.gas["hsml"] = SimArr(np.cbrt(0.75 * self.gas["Volume"] / np.pi), "ckpc h_0**-1", snap=self)
+        hsml = SimArr(np.cbrt(0.75 * self.gas["Volume"] / np.pi), "ckpc h_0**-1", snap=self)
+        
+        tree = pysph.makeTree( self.gas['pos'] )
+        nthreads = 32
+        hsml2  = tree.calcHsmlMulti( self.gas['pos'].astype('f8'), self.gas['pos'].astype('f8'), 
+                                   self.gas['mass'].astype('f8'), 64, numthreads=nthreads, density=False )
+        self.gas['hsml2'] = SimArr(hsml2, "ckpc h_0**-1", snap=self)#'kpc')
+        hsml3 = np.maximum( hsml2, hsml)
+        hsml3 = SimArr(hsml3, "ckpc h_0**-1", snap=self) #'kpc')
+        #setattr(self.gas, 'hsml3', hsml3)
+        self.gas._add_custom_block(hsml3, "hsml3")
+        return hsml3
 
-        # Hydrogen mass fraction is used for calculating temperatures
-        if "H" not in self.gas.loadable_blocks():
-            self.gas["H"] = 0.76 * self.gas["mass"]
 
-        #In IllustrisTNG "stars" with negative formation time are actually wind cells
-        if "GFM_StellarFormationTime" in self.stars.loadable_blocks():
-            self.stars = self.stars[self.stars["GFM_StellarFormationTime"] > 0.]
+    # def get_arepo_blocks(self):
+    #     from .sim_arr import SimArr
+    #     import pysph
+    #     #default pos is the Voronoi center of gas cells -> use center of mass instead
+    #     #self.gas["CenterOfMass"].units = None
+    #     #self.gas["pos"] = SimArr(self.gas["CenterOfMass"], "ckpc h_0**-1", snap=self)
+    #     #self.gas["pos"].convert_to("kpc")
+    #     #self.gas["pos"] = SimArr(self.gas["pos2"].convert_to("kpc"), snap=self)
+
+    #     #Approximate hsml for binning/plotting, from radius of sphere with Voronoi cell volume
+    #     #print (self.loadable_blocks())
+    #     #print (self.available_blocks())
+    #     #print (self.gas.loadable_blocks())
+    #     #print (self.gas.available_blocks())
+    #     #for xy in self.gas.loadable_blocks():
+    #         #print (xy, np.shape(self.gas[str(xy)]))
+    #     if "Volume" not in self.gas.loadable_blocks():
+    #         print (np.shape(self.gas["pos"]), np.shape(self.gas["mass"]), np.shape(self.gas["rho"]))
+    #         self.gas["Volume"] = self.gas["mass"] / self.gas["rho"]
+    #     self.gas["hsml"] = SimArr(np.cbrt(0.75 * self.gas["Volume"] / np.pi), "ckpc h_0**-1", snap=self)
+        
+    #     tree = pysph.makeTree( self.gas['pos'] )
+    #     nthreads = 32
+    #     hsml2  = tree.calcHsmlMulti( self.gas['pos'].astype('f8'), self.gas['pos'].astype('f8'), 
+    #                                 self.gas['mass'].astype('f8'), 64, numthreads=nthreads, density=False )
+    #     self.gas['hsml2'] = SimArr(hsml2, "ckpc h_0**-1", snap=self)#'kpc')
+    #     hsml3 = np.maximum( hsml2, self.gas["hsml"] )
+    #     self.gas['hsml3'] = SimArr(hsml3, "ckpc h_0**-1", snap=self) #'kpc')
+
+    #     # Hydrogen mass fraction is used for calculating temperatures
+    #     if "H" not in self.gas.loadable_blocks():
+    #         self.gas["H"] = 0.76 * self.gas["mass"]
+    #     #num = self.gas['mass'].size
+    #     self.gas['elements'] = self.gas['Z']*(self.gas['mass'].reshape(self.gas['mass'].size,1))
+
+    #     #In IllustrisTNG "stars" with negative formation time are actually wind cells
+    #     if "GFM_StellarFormationTime" in self.stars.loadable_blocks():
+    #         self.stars = self.stars[self.stars["GFM_StellarFormationTime"] > 0.]
 
     def get_host_subsnap(self, block_name):
         '''
@@ -899,13 +962,22 @@ class Snapshot(object):
         '''
         root = self._root
         parts = root._N_part
+        ptype_list = [0, 1, 2, 3, 4, 5]
+        # Arepo snaps PartType == 3 are trace particles without anything relevant
+        if root._arepo_snap_type:
+            ptype_list = [0, 4, 5]
+            #print ("pty arepo", ptype_list)
+        #else:
+            #print ("pty not arepo", ptype_list)
+
         # It might happen, that a block is tagged as present for some particle
         # types that does not exist at all. Hence, the following:
         avail = root._block_avail[block_name]
-        ptypes = [pt for pt in range(6) if (avail[pt] and parts[pt])]
+        ptypes = [pt for pt in ptype_list if (avail[pt] and parts[pt])]
+        #print ("get_host_subsnap  ", block_name, ptypes)
 
-        # block available for all families? -> root
-        if not any( [parts[pt] for pt in range(6) if pt not in ptypes] ):
+        # block available for all families? -> root            
+        if not any( [parts[pt] for pt in ptype_list if pt not in ptypes] ):
             return root
 
         # find biggest family sub-snapshot (that is an attribute of root) which has
@@ -1341,7 +1413,9 @@ class Snapshot(object):
     def load_all_blocks(self):
         '''Load all blocks from file. (No block deriving, though.)'''
         for name in self._root._load_name:
+            print (name)
             host = self.get_host_subsnap(name)
+            print (host)
             host[name]
 
     def delete_blocks(self, derived=None, loaded=None):
@@ -1562,6 +1636,7 @@ class SubSnapshot(Snapshot):
         self._base      = base
         self._root      = base._root
         self._blocks    = {}
+        # self._arepo_snap_type = super._arepo_snap_type
 
         if isinstance(mask, slice):
             if mask.step == 0:
