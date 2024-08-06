@@ -796,7 +796,7 @@ def _same_units_binary(a, b):
 @UnitArr.ufunc_rule(np.trunc)
 @UnitArr.ufunc_rule(np.round)  # TODO: does not work, since the
 @UnitArr.ufunc_rule(np.around)  # function does something more inbetween
-@UnitArr.ufunc_rule(np.round_)  # than others (and calls np.rint)
+@UnitArr.ufunc_rule(np.round)  # than others (and calls np.rint)
 @UnitArr.ufunc_rule(np.rint)
 @UnitArr.ufunc_rule(np.fix)
 @UnitArr.ufunc_rule(np.transpose)
