@@ -1466,12 +1466,12 @@ class Snapshot(object):
         from ..ssp import inter_bc_qty, lum_to_mag
 
         # prepare evaluator
-        from numpy.core.umath_tests import inner1d
+        from numpy import inner
         from .. import analysis
         namespace = {} if namespace is None else namespace.copy()
         namespace.update( {'dist':dist, 'Unit':Unit, 'Units':Units,
                            'UnitArr':UnitArr, 'UnitQty':UnitQty,
-                           'UnitScalar':UnitScalar, 'inner1d':inner1d,
+                           'UnitScalar':UnitScalar, 'inner':inner,
                            'inter_bc_qty':inter_bc_qty, 'lum_to_mag':lum_to_mag,
                            'perm_inv':utils.perm_inv,
                            'solar':physics.solar, 'WMAP7':physics.WMAP7,

@@ -137,7 +137,6 @@ Examples:
 __all__ = ['UnitArr', 'UnitQty', 'UnitScalar']
 
 import numpy as np
-import numpy.core.umath_tests
 from . import units
 from .units import *
 from .units import _UnitClass
@@ -809,7 +808,7 @@ def _same_units_unary(a):
 @UnitArr.ufunc_rule(np.multiply)
 @UnitArr.ufunc_rule(np.cross)
 @UnitArr.ufunc_rule(np.dot)
-@UnitArr.ufunc_rule(np.core.umath_tests.inner1d)
+@UnitArr.ufunc_rule(np.inner)
 def _mul_units(a, b):
     a_units = getattr(a, 'units', None)
     b_units = getattr(b, 'units', None)
