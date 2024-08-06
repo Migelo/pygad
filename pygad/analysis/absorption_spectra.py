@@ -118,7 +118,7 @@ from scipy.special import wofz
 from numbers import Number
 
 pd.options.mode.chained_assignment = None  # default='warn'
-df = pd.read_csv("/u/jotan/pygad/pygad/analysis/line_data.csv",index_col=0)
+df = pd.read_csv("line_data.csv",index_col=0)
 df['A_ki'][df['A_ki'].isnull()] = 0.0
 lines = df.to_dict(orient='index')
 lines["Lyman_alpha"] = lines["H1215"]
