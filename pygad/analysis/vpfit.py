@@ -188,10 +188,12 @@ def fit_profiles(
                 chisq_old = chisq_soln
                 best_nlines = n_lines
             if environment.verbose >= environment.VERBOSE_TACITURN:
-                print((
-                    "Region %d: %d lines gives chisq=%g (%g) after %d iters"
-                    % (ireg, n_lines, chisq_soln, chisq_accept, soln.nit)
-                ))
+                print(
+                    (
+                        "Region %d: %d lines gives chisq=%g (%g) after %d iters"
+                        % (ireg, n_lines, chisq_soln, chisq_accept, soln.nit)
+                    )
+                )
             """
             if params[n_lines*3-1] < l[2] or params[n_lines*3-1] > l[-2]:
                 if environment.verbose <= environment.VERBOSE_TACITURN:
@@ -207,10 +209,12 @@ def fit_profiles(
 
         if chisq_soln > chisq_accept:  # try to go back to previous best solution
             if environment.verbose == environment.VERBOSE_TACITURN:
-                print((
-                    "Region %d uncoverged with %d lines, chisq=%g; retrying with %d"
-                    % (ireg, n_lines, chisq_soln, best_nlines)
-                ))
+                print(
+                    (
+                        "Region %d uncoverged with %d lines, chisq=%g; retrying with %d"
+                        % (ireg, n_lines, chisq_soln, best_nlines)
+                    )
+                )
             n_lines = best_nlines
             params = params[: 3 * n_lines]
             bounds = bounds[: 3 * n_lines]
@@ -226,10 +230,12 @@ def fit_profiles(
             chisq_soln = _chisq(params, l_reg, f_reg, n_reg, mode)
             if chisq_soln > chisq_accept:
                 if environment.verbose >= environment.VERBOSE_TACITURN:
-                    print((
-                        "WARNING: region %d has large chisq=%g; check fit"
-                        % (ireg, chisq_soln)
-                    ))
+                    print(
+                        (
+                            "WARNING: region %d has large chisq=%g; check fit"
+                            % (ireg, chisq_soln)
+                        )
+                    )
 
         params += 0.02 * (
             2 * np.random.rand(len(params)) - 1
@@ -245,16 +251,18 @@ def fit_profiles(
 
         # append lines in this region onto line list
         if environment.verbose >= environment.VERBOSE_TACITURN:
-            print((
-                "region %d (%g-%g): chisq= %g with %d lines"
-                % (
-                    ireg,
-                    regions_l[ireg, 0],
-                    regions_l[ireg, 1],
-                    chisq_soln,
-                    int(len(params) / 3),
+            print(
+                (
+                    "region %d (%g-%g): chisq= %g with %d lines"
+                    % (
+                        ireg,
+                        regions_l[ireg, 0],
+                        regions_l[ireg, 1],
+                        chisq_soln,
+                        int(len(params) / 3),
+                    )
                 )
-            ))
+            )
         for ip in range(n_lines):
             line_list["region"] = np.append(line_list["region"], ireg)
             line_list["N"] = np.append(line_list["N"], params[ip * 3])
@@ -277,7 +285,7 @@ def fit_profiles(
                 line_list["EW"], EquivalentWidth(_tau_to_flux(tau_line), l_reg)
             )
 
-    return line_list
+    return line_list  # , tau_line
 
 
 def model_tau(line, p, l, mode="Voigt"):
@@ -542,10 +550,12 @@ def write_spectrum(
 
     if os.path.isfile(spec_name) and not overwrite:
         if environment.verbose >= environment.VERBOSE_TACITURN:
-            print((
-                "WARNING: write_spectrum() failed: File %s exists, and overwrite set to False"
-                % spec_name
-            ))
+            print(
+                (
+                    "WARNING: write_spectrum() failed: File %s exists, and overwrite set to False"
+                    % spec_name
+                )
+            )
         return
 
     waves = lambda_rest * (redshift + 1.0) * (1.0 + vels / c)
