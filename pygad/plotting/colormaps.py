@@ -14,7 +14,7 @@ from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 def _create_new_listed_cm(name, data, bad='black'):
     cmap = ListedColormap(data, name=name)
     cmap.set_bad(bad)
-    mpl.cm.register_cmap(name=name, cmap=cmap)
+    mpl.colormaps.register(name=name, cmap=cmap)
     return cmap
 
 
@@ -37,7 +37,7 @@ cm_age = LinearSegmentedColormap('age',
          }
                                  )
 cm_age.set_bad('black')
-mpl.cm.register_cmap(name='age', cmap=cm_age)
+mpl.colormaps.register(name='age', cmap=cm_age)
 
 cm_k_g = LinearSegmentedColormap('BlackGreen',
         {'red':   ((0.0, 0.0, 0.0),
@@ -51,7 +51,7 @@ cm_k_g = LinearSegmentedColormap('BlackGreen',
          }
                                  )
 cm_k_g.set_bad('black')
-mpl.cm.register_cmap(name='BlackGreen', cmap=cm_k_g)
+mpl.colormaps.register(name='BlackGreen', cmap=cm_k_g)
 
 cm_k_p = LinearSegmentedColormap('BlackPurple',
         {'red':   ((0.0, 0.0, 0.0),
@@ -63,7 +63,7 @@ cm_k_p = LinearSegmentedColormap('BlackPurple',
          }
                                  )
 cm_k_p.set_bad('black')
-mpl.cm.register_cmap(name='BlackPurple', cmap=cm_k_p)
+mpl.colormaps.register(name='BlackPurple', cmap=cm_k_p)
 
 cm_isolum = [[ 0.60650245, 0.52403835, 0.96984564],
              [ 0.60010679, 0.52742294, 0.96805436],
