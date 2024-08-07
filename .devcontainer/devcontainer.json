@@ -9,15 +9,16 @@
     //   "dockerDashComposeVersion": "v2"
     // },
     "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
-      "packages": "git-lfs,vim,libgsl-dev,g++,gcc,build-essential,python3-pip,python3-venv,python-is-python3"
+      "packages": "git-lfs,vim,libgsl-dev,g++,gcc,build-essential,python3-pip,python3-venv,python-is-python3,clang-format"
     }
   },
   "customizations": {
     "vscode": {
       "extensions": [
+        "eamodio.gitlens",
         "GitHub.codespaces",
         "GitHub.copilot",
-        "GitHub.copilot-labs",
+        "GitHub.copilot-chat",
         "GitHub.github-vscode-theme",
         "GitHub.vscode-pull-request-github",
         "github.vscode-github-actions",
@@ -29,7 +30,13 @@
         "ms-toolsai.jupyter-keymap",
         "ms-toolsai.jupyter-renderers",
         "ms-toolsai.vscode-jupyter-cell-tags",
-        "ms-toolsai.vscode-jupyter-slideshow"
+        "ms-toolsai.vscode-jupyter-slideshow",
+        "ms-vscode.cmake-tools",
+        "ms-vscode.cpptools",
+        "ms-vscode.cpptools-extension-pack",
+        "ms-vscode.cpptools-themes",
+        "twxs.cmake",
+        "xaver.clang-format"
       ]
     }
   },
