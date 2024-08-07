@@ -246,7 +246,7 @@ def virial_info(s, center=None, odens=200.0, N_min=10):
            UnitArr(info[1], s['mass'].units)
 
 
-NO_FOF_GROUP_ID = int(np.array(-1, np.uintp))
+NO_FOF_GROUP_ID = int(np.array(-1, np.int64))
 
 
 def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True, periodic_boundary=2, boxsize_manual=None, verbose=None):
