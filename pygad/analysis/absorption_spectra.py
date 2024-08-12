@@ -89,6 +89,7 @@ Doctests:
         N = 1.099e+14 [cm**-2]; EW = 0.167 [Angstrom]
     >>> environment.verbose = environment.VERBOSE_NORMAL
 """
+
 __all__ = [
     "mock_absorption_spectrum_of",
     "mock_absorption_spectrum",
@@ -1061,8 +1062,10 @@ def mock_absorption_spectrum(
 
     # add the Hubble flow
     zero_Hubble_flow_at.convert_to(los_pos.units, subs=s)
-    H_flow = s.cosmology.H(s.redshift) * (los_pos - zero_Hubble_flow_at)
+    # H_flow = s.cosmology.H(s.redshift) * (los_pos - zero_Hubble_flow_at)
+    H_flow = UnitArr(0, "km/s")
     H_flow.convert_to(vel.units, subs=s)
+    print("H_flow is set to ", H_flow)
     vpec_z = vel  # DS: peculiar LOS velocities
     vel = vel + H_flow
 
@@ -1350,7 +1353,7 @@ def mock_absorption_spectra_multilos(
         raise ValueError("x- and y-axis must be in [0,1,2] and different!")
     los_arr = UnitQty(los, s["pos"].units, dtype=np.float64, subs=s)
     Nlos = len(los_arr)
-    #print ("number of LOS is ", Nlos)
+    # print ("number of LOS is ", Nlos)
     zero_Hubble_flow_at = UnitScalar(zero_Hubble_flow_at, s["pos"].units, subs=s)
     vel_extent = UnitQty(vel_extent, "km/s", dtype=np.float64, subs=s)
     if restr_column_lims is None:
@@ -1643,9 +1646,16 @@ def mock_absorption_spectra_multilos(
         los_pos = s.gas["pos"][:, zaxis]
 
     # add the Hubble flow
+    # zero_Hubble_flow_at.convert_to(los_pos.units, subs=s)
+    # H_flow = s.cosmology.H(s.redshift) * (los_pos - zero_Hubble_flow_at)
+    # H_flow.convert_to(vel.units, subs=s)
+    # vpec_z = vel  # DS: peculiar LOS velocities
+    # vel = vel + H_flow
     zero_Hubble_flow_at.convert_to(los_pos.units, subs=s)
-    H_flow = s.cosmology.H(s.redshift) * (los_pos - zero_Hubble_flow_at)
+    # H_flow = s.cosmology.H(s.redshift) * (los_pos - zero_Hubble_flow_at)
+    H_flow = UnitArr(0, "km/s")
     H_flow.convert_to(vel.units, subs=s)
+    print("H_flow is set to ", H_flow)
     vpec_z = vel  # DS: peculiar LOS velocities
     vel = vel + H_flow
 
