@@ -1070,22 +1070,23 @@ def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
     else:
         outfile = DevNull()
     halos = []
-    with ProgressBar(
-            range(min(N_FoF, max_halos) if exclude is None else N_FoF),
-            show_eta=False,
-            show_percent=False,
-            label='initialize halos',
-            file=outfile) as pbar:
-        if not progressbar:
-            print('initialize halos from FoF group IDs...')
-            sys.stdout.flush()
-        for i in pbar:
-            h = Halo(halo=s[FoF == i], root=s, calc=calc)
-            h.linking_length = l
-            if exclude is None or not exclude(h, s):
-                halos.append(h)
-            if len(halos) == max_halos:
-                break
+    #with ProgressBar(
+    #        range(min(N_FoF, max_halos) if exclude is None else N_FoF),
+    #        show_eta=False,
+    #        show_percent=False,
+    #        label='initialize halos',
+    #        file=outfile) as pbar:
+    if not progressbar:
+        print('initialize halos from FoF group IDs...')
+        sys.stdout.flush()
+    for i in range(min(N_FoF, max_halos) if exclude is None else N_FoF):
+        print (i)
+        h = Halo(halo=s[FoF == i], root=s, calc=calc)
+        h.linking_length = l
+        if exclude is None or not exclude(h, s):
+            halos.append(h)
+        if len(halos) == max_halos:
+            break
 
     if verbose >= environment.VERBOSE_NORMAL:
         print('initialized %d halos.' % (len(halos)))
@@ -1120,7 +1121,7 @@ def find_most_massive_progenitor(s, halos, h0):
     '''
     if len(halos) == 0:
         return None
-
+    print (h0, h0.mass)
     h0_mass = h0.mass.in_units_of(halos[0].mass.units, subs=s)
 
     # propably one of the closest halos (with at least 10% of the mass), find them
