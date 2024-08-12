@@ -7,7 +7,7 @@ required...
     >>> for cmap in ['jet', 'rainbow', #'plasma', 'viridis',
     ...              'age', 'isolum']:
     ...     if isinstance(cmap, str):
-    ...         cmap = plt.cm.get_cmap(cmap)
+    ...         cmap = mpl.colormaps[cmap]
     ...     normed_cmap = isolum_cmap(cmap)
     ...     colors = normed_cmap(np.arange(normed_cmap.N))
     ...     lum = luminance(colors)
@@ -67,7 +67,7 @@ def isolum_cmap(cmap, isolum=1.0, desat=None):
         isolum (Colormap):      The iso-luminance colormap.
     '''
     if isinstance(cmap, str):
-        cmap = plt.cm.get_cmap(cmap)
+        cmap = mpl.colormaps[cmap]
     colors = cmap(np.arange(cmap.N))
 
     if desat is not None:
@@ -124,7 +124,7 @@ def color_code(im_lum, im_col, cmap=CM_DEF, vlim=None, clim=None,
     im_lum = scale01(im_lum, vlim)
     im_col = scale01(im_col, clim)
 
-    if isinstance(cmap, str): cmap = mpl.cm.get_cmap(cmap)
+    if isinstance(cmap, str): cmap = mpl.colormaps[cmap]
     im = cmap(im_col)
 
     if zero_is_white:
@@ -282,12 +282,12 @@ def scatter_map(x, y, s=None, qty=None, av=None, bins=150, extent=None,
         av = s.get(av)
     if cmap is None:
         cmap = CM_DEF if colors is None else 'isolum'
-        cmap = mpl.cm.get_cmap(cmap)
+        cmap = mpl.colormaps[cmap]
         cmap.set_bad('w' if zero_is_white else 'k')
         if fontcolor is None:
             fontcolor = 'k' if zero_is_white else 'w'
     if isinstance(cmap, str):
-        cmap = mpl.cm.get_cmap(cmap)
+        cmap = mpl.colormaps[cmap]
     if isinstance(colors, str):
         cname = colors
         colors = s.get(colors)
@@ -518,7 +518,7 @@ def add_cbar(ax, cbartitle, clim, cmap=None, fontcolor='black', fontsize=14,
                         mpl.patheffects.Normal()]
 
     if isinstance(cmap, str):
-        cmap = mpl.cm.get_cmap(cmap)
+        cmap = mpl.colormaps[cmap]
     cax = inset_axes(ax, width="70%", height="3%", loc=1)
     norm = mpl.colors.Normalize(vmin=clim[0], vmax=clim[1])
 

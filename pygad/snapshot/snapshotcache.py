@@ -76,7 +76,7 @@ class SnapshotCache:
         self.__D_E    = None        # 'E'
         self.__D_r    = None        # 'r'         # spherical radius
         self.__D_rcyl = None        # 'rcyl'      # dist(pos[:, :2]); cylindrical radius
-        self.__D_vrad = None        # 'vrad'      # inner1d(pos, vel) / r;  radial velocities
+        self.__D_vrad = None        # 'vrad'      # inner(pos, vel) / r;  radial velocities
         self.__D_momentum = None        # 'momentum' # (mass * vel.T).T; momentum
         self.__D_angmom   = None        # 'angmom'   # UnitQty(cross(pos, momentum), pos.units * momentum.units); angular momentum
         # the angular momentum a particle on a circular orbit with the same energy would have
