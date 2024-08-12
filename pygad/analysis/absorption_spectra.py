@@ -116,11 +116,13 @@ import numpy as np
 from scipy.special import wofz
 from numbers import Number
 
-# pd.options.mode.chained_assignment = None  # default='warn'
-## loading line data from .csv file [initially saved using lines dict defined in this file, 
-## .csv file can be manually updated with updated line data]
+## loading line data from .csv file [initially saved using lines dict defined in this file,
+## .csv file can be manually updated with updated line data.]
+## 240803: dict moved from beginning of file to end of file, commented out;
+## 240812: commented out line dict moved to unused lines_LSF_data.txt file (only for visual purpose)
 ## can still access lines in the same way as before
 ## e.g., lines = pg.analysis.absorption_spectra.lines
+# pd.options.mode.chained_assignment = None  # default='warn'
 # df = pd.read_csv(environment.module_dir+"analysis/line_data.csv",index_col=0)
 # df['A_ki'][df['A_ki'].isnull()] = 0.0
 # lines = df.to_dict(orient='index')
@@ -128,9 +130,9 @@ from numbers import Number
 # lines["Lyman_beta"] = lines["H1025"]
 # lines["Lyman_gamma"] = lines["H972"]
 datz = np.genfromtxt(
-    environment.module_dir+"analysis/line_data.csv", 
-    dtype=[('', 'U20'), ('ion', 'U10'), ('l', 'U20'), ('f', 'U20'), ('atomwt', 'U20'), ('A_ki', 'U20'), ('element', 'U2')],
-    delimiter=',', 
+    environment.module_dir + "analysis/line_data.csv", 
+    dtype=[("", "U20"), ("ion", "U10"), ("l", "U20"), ("f", "U20"), ("atomwt", "U20"), ("A_ki", "U20"), ("element", "U2")],
+    delimiter=",", 
     skip_header=1)
 for i, line in enumerate(datz):
     if line["A_ki"] == '':
@@ -139,12 +141,13 @@ lines = {}
 for line in datz:
     lines[line[0]] = {"ion": line[1], "l": line[2], "f": line[3], 
                       "atomwt": line[4], "A_ki": line[5], "element": line[6]}
-
+    
 ## loading LSF data from .npy file [initially saved using LSF_data dict defined in this file,
 ## towards the end, ~3k lines, now moved to an unused LSF_data.txt file (only for visual purpose)]
+## 240812: renamed LSF_data.txt to lines_LSF_data.txt
 ## can still access lines in the same way as before
 ## e.g., LSF_data = pg.analysis.absorption_spectra.LSF_data
-lsfdata = np.load(environment.module_dir+'analysis/LSF_data.npy', allow_pickle=True)
+lsfdata = np.load(environment.module_dir + "analysis/LSF_data.npy", allow_pickle=True)
 LSF_data = lsfdata[()]
 
 def line_quantity(line, qty):
@@ -188,7 +191,7 @@ def Lorentzian(x, gamma):
     Returns:
         y (float, np.ndarray):  The value(s) of the Gaussian.
     """
-    return gamma / (np.pi * (x ** 2 + gamma ** 2))
+    return gamma / (np.pi * (x**2 + gamma**2))
 
 
 def Voigt(x, sigma, gamma):
@@ -290,7 +293,7 @@ def line_profile(
         N = N.in_units_of("cm**-2")
     except:
         N = (N / atomwt).in_units_of("cm**-2")
-    sigma0 = f * q_e ** 2 / (4.0 * epsilon0 * m_e * c)
+    sigma0 = f * q_e**2 / (4.0 * epsilon0 * m_e * c)
     sigma0.convert_to("cm**2 / s")
     if b is None:
         T = UnitScalar(T, "K")
@@ -807,9 +810,9 @@ def mock_absorption_spectrum(
 
     b_0 = np.sqrt(2.0 * kB * UnitScalar("1 K") / atomwt)
     b_0.convert_to(v_units)
-    s0 = q_e ** 2 / (4.0 * epsilon0 * m_e * c)
+    s0 = q_e**2 / (4.0 * epsilon0 * m_e * c)
     Xsec = f * s0 * l
-    Xsec = Xsec.in_units_of(l_units ** 2 * v_units, subs=s)
+    Xsec = Xsec.in_units_of(l_units**2 * v_units, subs=s)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print("create a mock absorption spectrum:")
@@ -1021,7 +1024,7 @@ def mock_absorption_spectrum(
         else:
             raise ValueError("Unkown method '%s'!" % method)
 
-        n.convert_to(l_units ** -2, subs=s)
+        n.convert_to(l_units**-2, subs=s)
         pos = None  # no use of positions in the C function
         hsml = None  # no use of smoothing lengths in the C function
         # inplace conversion possible (later conversion does not add to runtime!)
@@ -1098,7 +1101,7 @@ def mock_absorption_spectrum(
         )
 
     b_0 = float(b_0.in_units_of(v_units, subs=s))
-    Xsec = float(Xsec.in_units_of(l_units ** 2 * v_units, subs=s))
+    Xsec = float(Xsec.in_units_of(l_units**2 * v_units, subs=s))
     Gamma = float(Gamma.in_units_of(v_units))
 
     taus = np.empty(Nbins, dtype=np.float64)
@@ -1390,9 +1393,9 @@ def mock_absorption_spectra_multilos(
 
     b_0 = np.sqrt(2.0 * kB * UnitScalar("1 K") / atomwt)
     b_0.convert_to(v_units)
-    s0 = q_e ** 2 / (4.0 * epsilon0 * m_e * c)
+    s0 = q_e**2 / (4.0 * epsilon0 * m_e * c)
     Xsec = f * s0 * l
-    Xsec = Xsec.in_units_of(l_units ** 2 * v_units, subs=s)
+    Xsec = Xsec.in_units_of(l_units**2 * v_units, subs=s)
 
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print("create a mock absorption spectrum:")
@@ -1604,7 +1607,7 @@ def mock_absorption_spectra_multilos(
         else:
             raise ValueError("Unkown method '%s'!" % method)
 
-        n.convert_to(l_units ** -2, subs=s)
+        n.convert_to(l_units**-2, subs=s)
         pos = None  # no use of positions in the C function
         hsml = None  # no use of smoothing lengths in the C function
         # inplace conversion possible (later conversion does not add to runtime!)
@@ -1681,7 +1684,7 @@ def mock_absorption_spectra_multilos(
         )
 
     b_0 = float(b_0.in_units_of(v_units, subs=s))
-    Xsec = float(Xsec.in_units_of(l_units ** 2 * v_units, subs=s))
+    Xsec = float(Xsec.in_units_of(l_units**2 * v_units, subs=s))
     Gamma = float(Gamma.in_units_of(v_units))
 
     taus = np.empty((Nlos,Nbins), dtype=np.float64)
@@ -1959,291 +1962,3 @@ def apply_LSF(l, flux, noise, grating="COS_G130M"):
         "Applied LSF at <lambda>=%1g: %s, channel %s" % (np.mean(l), grating, channel)
     ))  # ,np.mean(flux_conv)-np.mean(flux)))
     return flux_conv, noise_conv
-
-
-# lines = {
-#     "H1215": {
-#         "ion": "HI",
-#         "l": "1215.6701 Angstrom",
-#         "f": 0.4164,
-#         "atomwt": m_H,
-#         "A_ki": "4.6986e+08 s**-1",
-#         "element": "H",
-#     },
-#     "H1025": {
-#         "ion": "HI",
-#         "l": "1025.722 Angstrom",
-#         "f": 0.079121,
-#         "atomwt": m_H,
-#         "A_ki": "5.5751e+07 s**-1",
-#         "element": "H",
-#     },
-#     "H972": {
-#         "ion": "HI",
-#         "l": "972.5368 Angstrom",
-#         "f": 2.900e-02,
-#         "atomwt": m_H,
-#         "A_ki": "1.2785e+07 s**-1",
-#         "element": "H",
-#     },
-#     "HeII": {
-#         "ion": "HeII",
-#         "l": "303.918 Angstrom",
-#         "f": 0.4173,
-#         "atomwt": "3.971 u",
-#         "element": "He",
-#     },
-#     "CII1036": {
-#         "ion": "CII",
-#         "l": "1036.337 Angstrom",
-#         "f": 0.1270,
-#         "atomwt": "12.011 u",
-#         "element": "C",
-#     },
-#     "CII1334": {
-#         "ion": "CII",
-#         "l": "1334.532 Angstrom",
-#         "f": 0.1270,
-#         "atomwt": "12.011 u",
-#         "element": "C",
-#     },
-#     "CII1335": {
-#         "ion": "CII",
-#         "l": "1335.708 Angstrom",
-#         "f": 0.1140,
-#         "atomwt": "12.011 u",
-#         "element": "C",
-#     },
-#     "CIII977": {
-#         "ion": "CIII",
-#         "l": "977.020 Angstrom",
-#         "f": 0.7620,
-#         "atomwt": "12.011 u",
-#         "element": "C",
-#     },
-#     "CIV1548": {
-#         "ion": "CIV",
-#         "l": "1548.195 Angstrom",
-#         "f": 0.1908,
-#         "atomwt": "12.011 u",
-#         "element": "C",
-#     },
-#     "CIV1550": {
-#         "ion": "CIV",
-#         "l": "1550.777 Angstrom",
-#         "f": 0.09520,
-#         "atomwt": "12.011 u",
-#         "element": "C",
-#     },
-#     "NI1199": {
-#         "ion": "NI",
-#         "l": "1199.550 Angstrom",
-#         "f": 0.1300,
-#         "atomwt": "14.0067 u",
-#         "element": "N",
-#     },
-#     "NI1200": {
-#         "ion": "NI",
-#         "l": "1200.223 Angstrom",
-#         "f": 0.0862,
-#         "atomwt": "14.0067 u",
-#         "element": "N",
-#     },
-#     "NI1201": {
-#         "ion": "NI",
-#         "l": "1200.710 Angstrom",
-#         "f": 0.043,
-#         "atomwt": "14.0067 u",
-#         "element": "N",
-#     },
-#     "NII1083": {
-#         "ion": "NII",
-#         "l": "1083.994 Angstrom",
-#         "f": 0.1150,
-#         "atomwt": "14.0067 u",
-#         "element": "N",
-#     },
-#     "NV1238": {
-#         "ion": "NV",
-#         "l": "1238.821 Angstrom",
-#         "f": 0.1560,
-#         "atomwt": "14.0067 u",
-#         "element": "N",
-#     },
-#     "NV1242": {
-#         "ion": "NV",
-#         "l": "1242.804 Angstrom",
-#         "f": 0.0780,
-#         "atomwt": "14.0067 u",
-#         "element": "N",
-#     },
-#     "OI1302": {
-#         "ion": "OI",
-#         "l": "1302.168 Angstrom",
-#         "f": 0.05190,
-#         "atomwt": "15.9994 u",
-#         "element": "O",
-#     },
-#     "OI1304": {
-#         "ion": "OI",
-#         "l": "1304.858 Angstrom",
-#         "f": 0.04877,
-#         "atomwt": "15.9994 u",
-#         "element": "O",
-#     },
-#     "OI1306": {
-#         "ion": "OI",
-#         "l": "1306.029 Angstrom",
-#         "f": 0.04873,
-#         "atomwt": "15.9994 u",
-#         "element": "O",
-#     },
-#     "OIV787": {
-#         "ion": "OIV",
-#         "l": "787.711 Angstrom",
-#         "f": 0.110,
-#         "atomwt": "15.9994 u",
-#         "element": "O",
-#     },
-#     "OVI1031": {
-#         "ion": "OVI",
-#         "l": "1031.927 Angstrom",
-#         "f": 0.1329,
-#         "atomwt": "15.9994 u",
-#         "element": "O",
-#     },
-#     "OVI1037": {
-#         "ion": "OVI",
-#         "l": "1037.617 Angstrom",
-#         "f": 0.06590,
-#         "atomwt": "15.9994 u",
-#         "element": "O",
-#     },
-#     "OVII21": {
-#         "ion": "OVII",
-#         "l": "21.602 Angstrom",
-#         "f": 0.696,
-#         "atomwt": "15.9994 u",
-#         "element": "O",
-#     },
-#     "OVIII19": {
-#         "ion": "OVIII",
-#         "l": "18.969 Angstrom",
-#         "f": 0.416,
-#         "atomwt": "15.9994 u",
-#         "element": "O",
-#     },
-#     "NeVIII770": {
-#         "ion": "NeVIII",
-#         "l": "770.409 Angstrom",
-#         "f": 0.103,
-#         "atomwt": "20.180 u",
-#         "element": "Ne",
-#     },
-#     "MgII2796": {
-#         "ion": "MgII",
-#         "l": "2796.352 Angstrom",
-#         "f": 0.6123,
-#         "atomwt": "24.305 u",
-#         #"A_ki": "2.6e+08 s**-1",
-#         "element": "Mg",
-#     },
-#     "MgII2803": {
-#         "ion": "MgII",
-#         "l": "2803.531 Angstrom",
-#         "f": 0.3054,
-#         "atomwt": "24.305 u",
-#         "element": "Mg",
-#     },
-#     "SiII1190": {
-#         "ion": "SiII",
-#         "l": "1190.416 Angstrom",
-#         "f": 0.2930,
-#         "atomwt": "28.086 u",
-#         "element": "Si",
-#     },
-#     "SiII1193": {
-#         "ion": "SiII",
-#         "l": "1193.290 Angstrom",
-#         "f": 0.5850,
-#         "atomwt": "28.086 u",
-#         "element": "Si",
-#     },
-#     "SiII1260": {
-#         "ion": "SiII",
-#         "l": "1260.522 Angstrom",
-#         "f": 1.180,
-#         "atomwt": "28.086 u",
-#         "element": "Si",
-#     },
-#     "SiIII1206": {
-#         "ion": "SiIII",
-#         "l": "1206.500 Angstrom",
-#         "f": 1.669,
-#         "atomwt": "28.086 u",
-#         "element": "Si",
-#     },
-#     "SiIV1393": {
-#         "ion": "SiIV",
-#         "l": "1393.755 Angstrom",
-#         "f": 0.5140,
-#         "atomwt": "28.086 u",
-#         "element": "Si",
-#     },
-#     "SiIV1402": {
-#         "ion": "SiIV",
-#         "l": "1402.770 Angstrom",
-#         "f": 0.2553,
-#         "atomwt": "28.086 u",
-#         "element": "Si",
-#     },
-#     "SI1295": {
-#         "ion": "SI",
-#         "l": "1295.653 Angstrom",
-#         "f": 0.08700,
-#         "atomwt": "32.065 u",
-#         "element": "S",
-#     },
-#     "SI1425": {
-#         "ion": "SI",
-#         "l": "1425.030 Angstrom",
-#         "f": 0.1250,
-#         "atomwt": "32.065 u",
-#         "element": "S",
-#     },
-#     "SI1473": {
-#         "ion": "SI",
-#         "l": "1473.994 Angstrom",
-#         "f": 0.08280,
-#         "atomwt": "32.065 u",
-#         "element": "S",
-#     },
-#     "SII1250": {
-#         "ion": "SII",
-#         "l": "1250.584 Angstrom",
-#         "f": 0.00543,
-#         "atomwt": "32.065 u",
-#         "element": "S",
-#     },
-#     "SII1253": {
-#         "ion": "SII",
-#         "l": "1253.811 Angstrom",
-#         "f": 0.01090,
-#         "atomwt": "32.065 u",
-#         "element": "S",
-#     },
-#     "SII1259": {
-#         "ion": "SII",
-#         "l": "1259.519 Angstrom",
-#         "f": 0.01660,
-#         "atomwt": "32.065 u",
-#         "element": "S",
-#     },
-#     "SIII1190": {
-#         "ion": "SIII",
-#         "l": "1190.203 Angstrom",
-#         "f": 0.02310,
-#         "atomwt": "32.065 u",
-#         "element": "S",
-#     },
-# }

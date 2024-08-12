@@ -1,37 +1,37 @@
-from pygad.analysis.absorption_spectra import lines, Gaussian, Lorentzian, Voigt, line_profile
-from pygad.units import Unit, UnitArr, UnitQty, UnitScalar
+from pygad.analysis.absorption_spectra import (
+    lines,
+    line_profile,
+)
+from pygad.units import UnitArr
 import pygad.environment as environment
-import os
 import sys
 
 import numpy as np
-import os
-import sys
 import h5py
 import matplotlib.pyplot as plt
 import pygad as pg
-from physics import wave_to_vel, vel_to_wave, tau_to_flux
+from physics import wave_to_vel, tau_to_flux
 from utils import read_h5_into_dict
-from scipy import signal
-plt.rcParams['text.usetex'] = False
+
+plt.rcParams["text.usetex"] = False
 import scipy
 
-def find_peaks(flux_data,wavelength_data,min_height,distance):
 
-    inverse_flux = 1-flux_data
+def find_peaks(flux_data, wavelength_data, min_height, distance):
+    inverse_flux = 1 - flux_data
     min_height = min_height
     distance = distance
-    index,height = scipy.signal.find_peaks(inverse_flux,height=min_height,distance=distance)
+    index, height = scipy.signal.find_peaks(
+        inverse_flux, height=min_height, distance=distance
+    )
 
     widths = scipy.signal.peak_widths(inverse_flux, index)[0]
     wavelength_subset = wavelength_data[index]
-    return(index,height,widths)
+    return (index, height, widths)
+
 
 class Spectrum(object):
-
-
     def __init__(self, spectrum_file, **kwargs):
-
         self.spectrum_file = spectrum_file
         for key in kwargs:
             setattr(self, key, kwargs[key])
@@ -39,20 +39,20 @@ class Spectrum(object):
         for key in data:
             setattr(self, key, data[key])
         del data
-        f = h5py.File(spectrum_file, 'r')
-        self.gal_velocity_pos = np.array(f['galaxy_properties/vlos'])
-        self.redshift = np.array(f['redshift'])
-        self.lambda_rest = np.array(f['lambda_rest'])
-        self.velocities = np.array(f['velocity'])
-        self.wavelengths = self.lambda_rest * (self.redshift + 1) * (1 + self.velocities / 3e5)
-        print(self.wavelengths[0],self.wavelengths[-1])
-        self.fluxes = np.array(f['flux'])
-        self.noise = np.array(f['noise'])
+        f = h5py.File(spectrum_file, "r")
+        self.gal_velocity_pos = np.array(f["galaxy_properties/vlos"])
+        self.redshift = np.array(f["redshift"])
+        self.lambda_rest = np.array(f["lambda_rest"])
+        self.velocities = np.array(f["velocity"])
+        self.wavelengths = (
+            self.lambda_rest * (self.redshift + 1) * (1 + self.velocities / 3e5)
+        )
+        print(self.wavelengths[0], self.wavelengths[-1])
+        self.fluxes = np.array(f["flux"])
+        self.noise = np.array(f["noise"])
         self.continuum = np.ones(len(self.velocities))
 
-
-    def get_initial_window(self, vel_range, v_central=None, v_boxsize=10000.):
-
+    def get_initial_window(self, vel_range, v_central=None, v_boxsize=10000.0):
         # get the portion of the CGM spectrum that we want to fit
 
         def _find_nearest(array, value):
@@ -68,16 +68,14 @@ class Spectrum(object):
         N = int((v_end - v_start) / dv)
 
         # get the start and end indices
-        if v_start < 0.:
+        if v_start < 0.0:
             v_start += v_boxsize
         i_start = _find_nearest(self.velocities, v_start)
         i_end = i_start + N
 
         return i_start, i_end, N
 
-
     def extend_to_continuum(self, i_start, i_end, N, contin_level=None):
-
         # from the initial velocity window, extend the start and end back to the level of the continuum of the input spectrum/
 
         if contin_level is None:
@@ -85,7 +83,7 @@ class Spectrum(object):
 
         continuum = False
         while not continuum:
-            _flux = self.fluxes.take(i_start, mode='wrap')
+            _flux = self.fluxes.take(i_start, mode="wrap")
             if np.abs(_flux - contin_level) / contin_level > 0.02:
                 i_start -= 1
                 N += 1
@@ -94,7 +92,7 @@ class Spectrum(object):
 
         continuum = False
         while not continuum:
-            _flux = self.fluxes.take(i_end, mode='wrap')
+            _flux = self.fluxes.take(i_end, mode="wrap")
             if np.abs(_flux - contin_level) / contin_level > 0.02:
                 i_end += 1
                 N += 1
@@ -102,31 +100,36 @@ class Spectrum(object):
                 continuum = True
 
         return i_start, i_end, N
-   
 
-    def buffer_with_continuum(self, waves, flux, nbuffer=50, snr_default=30.):
-
+    def buffer_with_continuum(self, waves, flux, nbuffer=50, snr_default=30.0):
         # add a buffer to either end of the velocity window at the continuum level to aid the voigt fitting.
 
-        if hasattr(self, 'snr'):
+        if hasattr(self, "snr"):
             snr = self.snr
         else:
             snr = snr_default
         dl = waves[1] - waves[0]
-        l_start = np.arange(waves[0] - dl*nbuffer, waves[0], dl)
-        l_end = np.arange(waves[-1]+dl, waves[-1] + dl*(nbuffer+1), dl)
-        
+        l_start = np.arange(waves[0] - dl * nbuffer, waves[0], dl)
+        l_end = np.arange(waves[-1] + dl, waves[-1] + dl * (nbuffer + 1), dl)
+
         waves = np.concatenate((l_start, waves, l_end))
 
-        sigma_noise = 1./snr
-        new_noise = np.random.normal(0.0, sigma_noise, 2*nbuffer)
-        flux = np.concatenate((tau_to_flux(np.zeros(nbuffer)) + new_noise[:nbuffer], flux, tau_to_flux(np.zeros(nbuffer)) + new_noise[nbuffer:]))
-        
+        sigma_noise = 1.0 / snr
+        new_noise = np.random.normal(0.0, sigma_noise, 2 * nbuffer)
+        flux = np.concatenate(
+            (
+                tau_to_flux(np.zeros(nbuffer)) + new_noise[:nbuffer],
+                flux,
+                tau_to_flux(np.zeros(nbuffer)) + new_noise[nbuffer:],
+            )
+        )
+
         return waves, flux
 
-    def prepare_spectrum(self, vel_range, do_continuum_buffer=True, nbuffer=50, snr_default=30):
-
-        # cut out the portion of the spectrum that we want within some velocity range, making sure the section we cut out 
+    def prepare_spectrum(
+        self, vel_range, do_continuum_buffer=True, nbuffer=50, snr_default=30
+    ):
+        # cut out the portion of the spectrum that we want within some velocity range, making sure the section we cut out
         # goes back up to the conintuum level (no dicontinuities)
 
         i_start, i_end, N = self.get_initial_window(vel_range)
@@ -138,8 +141,8 @@ class Spectrum(object):
             i_end += len(self.wavelengths)
 
         # extract the wavelengths and fluxes for fitting
-        self.waves_fit = self.wavelengths.take(range(i_start, i_end), mode='wrap')
-        self.fluxes_fit = self.fluxes.take(range(i_start, i_end), mode='wrap')
+        self.waves_fit = self.wavelengths.take(range(i_start, i_end), mode="wrap")
+        self.fluxes_fit = self.fluxes.take(range(i_start, i_end), mode="wrap")
 
         # check if the start and end wavelengths go over the limits of the box
         i_wrap = len(self.wavelengths) - i_start
@@ -152,86 +155,112 @@ class Spectrum(object):
 
         # add a buffer of continuum to either side to help the voigt fitter identify where to fit
         if do_continuum_buffer is True:
-            self.waves_fit, self.fluxes_fit = self.buffer_with_continuum(self.waves_fit, self.fluxes_fit, nbuffer=nbuffer)
+            self.waves_fit, self.fluxes_fit = self.buffer_with_continuum(
+                self.waves_fit, self.fluxes_fit, nbuffer=nbuffer
+            )
 
         # get the noise level
-        if hasattr(self, 'snr'):
+        if hasattr(self, "snr"):
             snr = self.snr
         else:
             snr = snr_default
-        self.noise_fit = np.asarray([1./snr] * len(self.fluxes_fit))
+        self.noise_fit = np.asarray([1.0 / snr] * len(self.fluxes_fit))
 
-
-    def fit_spectrum_old(self, vel_range=600., nbuffer=20):
-
+    def fit_spectrum_old(self, vel_range=600.0, nbuffer=20):
         # old fitting routine - not required
 
         contin_level = self.continuum[0]
         self.extend_to_continuum(vel_range, contin_level)
 
-        self.line_list = pg.analysis.fit_profiles(self.ion_name, self.wavelengths[self.vel_mask], self.fluxes[self.vel_mask], self.noise[self.vel_mask],
-                                                  chisq_lim=2.5, max_lines=10, logN_bounds=[12,17], b_bounds=[2,100], mode='Voigt')
-    
-        self.line_list['v'] = wave_to_vel(self.line_list['l'], self.lambda_rest, self.redshift)
+        self.line_list = pg.analysis.fit_profiles(
+            self.ion_name,
+            self.wavelengths[self.vel_mask],
+            self.fluxes[self.vel_mask],
+            self.noise[self.vel_mask],
+            chisq_lim=2.5,
+            max_lines=10,
+            logN_bounds=[12, 17],
+            b_bounds=[2, 100],
+            mode="Voigt",
+        )
 
-        outwith_vel_mask = ~((self.line_list['v'] > self.gal_velocity_pos - vel_range) & (self.line_list['v'] < self.gal_velocity_pos + vel_range))
+        self.line_list["v"] = wave_to_vel(
+            self.line_list["l"], self.lambda_rest, self.redshift
+        )
+
+        outwith_vel_mask = ~(
+            (self.line_list["v"] > self.gal_velocity_pos - vel_range)
+            & (self.line_list["v"] < self.gal_velocity_pos + vel_range)
+        )
 
         for k in self.line_list.keys():
             self.line_list[k] = np.delete(self.line_list[k], outwith_vel_mask)
-
 
     def fit_periodic_spectrum(self):
-
         # the fitting approach for periodic spectra, i.e. those which span the length of the Simba volume
 
-        wrap_flux, wrap_noise, wrap_start = pg.analysis.periodic_wrap(self.wavelengths, self.fluxes, self.noise)
-        self.line_list = pg.analysis.fit_profiles(self.ion_name, self.wavelengths, wrap_flux, wrap_noise,
-                                         chisq_lim=2.5, max_lines=10, logN_bounds=[12,17], b_bounds=[2,100], mode='Voigt')
-        self.line_list['l'] = pg.analysis.periodic_unwrap_wavelength(self.line_list['l'], self.wavelengths, wrap_start)
-        self.line_list['v'] = wave_to_vel(self.line_list['l'], self.lambda_rest, self.redshift)
+        wrap_flux, wrap_noise, wrap_start = pg.analysis.periodic_wrap(
+            self.wavelengths, self.fluxes, self.noise
+        )
+        self.line_list = pg.analysis.fit_profiles(
+            self.ion_name,
+            self.wavelengths,
+            wrap_flux,
+            wrap_noise,
+            chisq_lim=2.5,
+            max_lines=10,
+            logN_bounds=[12, 17],
+            b_bounds=[2, 100],
+            mode="Voigt",
+        )
+        self.line_list["l"] = pg.analysis.periodic_unwrap_wavelength(
+            self.line_list["l"], self.wavelengths, wrap_start
+        )
+        self.line_list["v"] = wave_to_vel(
+            self.line_list["l"], self.lambda_rest, self.redshift
+        )
 
-        outwith_vel_mask = ~((self.line_list['v'] > self.gal_velocity_pos - vel_range) & (self.line_list['v'] < self.gal_velocity_pos + vel_range))
+        outwith_vel_mask = ~(
+            (self.line_list["v"] > self.gal_velocity_pos - vel_range)
+            & (self.line_list["v"] < self.gal_velocity_pos + vel_range)
+        )
 
         for k in self.line_list.keys():
             self.line_list[k] = np.delete(self.line_list[k], outwith_vel_mask)
 
-
     def get_tau_model(self):
-
         # compute the total optical depth of the model from the individual lines
 
         self.tau_model = np.zeros(len(self.wavelengths))
         for i in range(len(self.line_list["N"])):
-            p = np.array([self.line_list["N"][i], self.line_list["b"][i], self.line_list["l"][i]])
-            self.tau_model += pg.analysis.model_tau(self.ion_name, p, self.wavelengths, 'Voigt')
+            p = np.array(
+                [self.line_list["N"][i], self.line_list["b"][i], self.line_list["l"][i]]
+            )
+            self.tau_model += pg.analysis.model_tau(
+                self.ion_name, p, self.wavelengths, "Voigt"
+            )
 
-    
     def get_fluxes_model(self):
-
         # compute the total flux from the individual lines
 
         self.get_tau_model()
         self.fluxes_model = tau_to_flux(self.tau_model)
 
-
     def write_line_list(self):
-
         # save the components of the fit in h5 format to the original input file
 
-        with h5py.File(self.spectrum_file, 'a') as hf:
-            print('Creating line list')
-            if 'line_list' in hf.keys():
-                print('Deleting old line list')
-                del hf['line_list']
-            elif 'lines' in hf.keys():
-                del hf['lines']
+        with h5py.File(self.spectrum_file, "a") as hf:
+            print("Creating line list")
+            if "line_list" in hf.keys():
+                print("Deleting old line list")
+                del hf["line_list"]
+            elif "lines" in hf.keys():
+                del hf["lines"]
             line_list = hf.create_group("line_list")
             for k in self.line_list.keys():
                 line_list.create_dataset(k, data=np.array(self.line_list[k]))
 
-
-    def plot_fit(self, ax=None, vel_range=600., filename=None):
-
+    def plot_fit(self, ax=None, vel_range=600.0, filename=None):
         # plot the results :)
 
         if ax is None:
@@ -239,72 +268,108 @@ class Spectrum(object):
 
         x_val = self.wavelengths
 
-        ax.plot(x_val, self.fluxes, label='data', c='tab:grey', lw=2, ls='-')
+        ax.plot(x_val, self.fluxes, label="data", c="tab:grey", lw=2, ls="-")
 
         self.get_fluxes_model()
-        for i in range(len(self.line_list['N'])):
-            p = np.array([self.line_list['N'][i], self.line_list['b'][i], self.line_list['l'][i]])
-            print('Plotting',i,p)
+        for i in range(len(self.line_list["N"])):
+            p = np.array(
+                [self.line_list["N"][i], self.line_list["b"][i], self.line_list["l"][i]]
+            )
+            print("Plotting", i, p)
             _tau_model = pg.analysis.model_tau(self.ion_name, p, self.wavelengths)
-            ax.plot(x_val, tau_to_flux(_tau_model), alpha=0.5, lw=1, ls='--', label='%g %g'%(self.line_list['N'][i],self.line_list['b'][i]))
+            ax.plot(
+                x_val,
+                tau_to_flux(_tau_model),
+                alpha=0.5,
+                lw=1,
+                ls="--",
+                label="%g %g" % (self.line_list["N"][i], self.line_list["b"][i]),
+            )
 
-        #ax.plot(x_val, self.fluxes_model, label='model', c='tab:pink', ls='--', lw=2)
+        # ax.plot(x_val, self.fluxes_model, label='model', c='tab:pink', ls='--', lw=2)
 
         ax.set_ylim(-0.1, 1.1)
         ax.set_xlim(x_val[0], x_val[-1])
-        #ax.set_xlim(0, self.gal_velocity_pos +vel_range)
-        #ax.set_xlim(max(self.gal_velocity_pos-2*vel_range, 0), min(self.gal_velocity_pos+2*vel_range, self.velocities[-1]))
-        ax.legend(loc='best',fontsize=8)
-        
-        #chisq = np.around(np.unique(self.line_list['Chisq']), 2)
-        #chisq = [str(i) for i in chisq]
-        #plt.title(r'$\chi^2_r = {x}$'.format(x = ', '.join(chisq) ))
-        
-        if filename == None:
-            filename = self.spectrum_file.split('/')[-1].replace('.h5', '.png')
-        #plt.savefig(f'../figures/spec_{i}.png')
+        # ax.set_xlim(0, self.gal_velocity_pos +vel_range)
+        # ax.set_xlim(max(self.gal_velocity_pos-2*vel_range, 0), min(self.gal_velocity_pos+2*vel_range, self.velocities[-1]))
+        ax.legend(loc="best", fontsize=8)
+
+        # chisq = np.around(np.unique(self.line_list['Chisq']), 2)
+        # chisq = [str(i) for i in chisq]
+        # plt.title(r'$\chi^2_r = {x}$'.format(x = ', '.join(chisq) ))
+
+        if filename is None:
+            filename = self.spectrum_file.split("/")[-1].replace(".h5", ".png")
+        # plt.savefig(f'../figures/spec_{i}.png')
         plt.show()
-        #plt.savefig('../figures/spec_gal_1.png')
+        # plt.savefig('../figures/spec_gal_1.png')
         plt.close()
 
-
-    def main(self, vel_range, do_continuum_buffer=True, nbuffer=50, 
-             snr_default=30., chisq_unacceptable=25, chisq_asym_thresh=-3., 
-             do_prepare=True, do_regions=False, do_fit=True, write_lines=True, plot_fit=False):
- 
+    def main(
+        self,
+        vel_range,
+        do_continuum_buffer=True,
+        nbuffer=50,
+        snr_default=30.0,
+        chisq_unacceptable=25,
+        chisq_asym_thresh=-3.0,
+        do_prepare=True,
+        do_regions=False,
+        do_fit=True,
+        write_lines=True,
+        plot_fit=False,
+    ):
         self.chisq_asym_thresh = chisq_asym_thresh
 
         # prepare the portion of the spectrum to fit
         # extract from full spectrum, wrap periodically, buffer with a continuum, set the noise level for fitting
         if do_prepare:
-            print('Preparing spectrum vel_range=',vel_range)
-            self.prepare_spectrum(vel_range, do_continuum_buffer=True, nbuffer=50, snr_default=30.,)
+            print("Preparing spectrum vel_range=", vel_range)
+            self.prepare_spectrum(
+                vel_range,
+                do_continuum_buffer=True,
+                nbuffer=50,
+                snr_default=30.0,
+            )
 
         # to identify the region boundaries only:
         if do_regions:
             if do_prepare is not True:
-                print('Spectrum not prepared; set do_prepare=True and retry :)')
+                print("Spectrum not prepared; set do_prepare=True and retry :)")
                 return
             else:
                 self.line_list = {}
-                self.regions_l, self.regions_i, _ = pg.analysis.find_regions(self.waves_fit, self.fluxes_fit, self.noise_fit, min_region_width=2, extend=True)
-                print(f'These are the regions {self.regions_l}')
-                self.line_list['region'] = np.arange(len(self.regions_l))
+                self.regions_l, self.regions_i, _ = pg.analysis.find_regions(
+                    self.waves_fit,
+                    self.fluxes_fit,
+                    self.noise_fit,
+                    min_region_width=2,
+                    extend=True,
+                )
+                print(f"These are the regions {self.regions_l}")
+                self.line_list["region"] = np.arange(len(self.regions_l))
 
         # to perform the voigt fitting:
         if do_fit:
-            if self.ion_name == 'H1215':
+            if self.ion_name == "H1215":
                 logN_bounds = [12, 19]
-                b_bounds=[5,200]
+                b_bounds = [5, 200]
             else:
                 logN_bounds = [10, 17]
-            b_bounds=[1,100]
-            print('Doing fitting for ion=',self.ion_name)
-            self.line_list = fit_profiles_sat(self.ion_name, self.waves_fit, self.fluxes_fit, self.noise_fit,
-                                                      chisq_lim=2.5,
-                                                      max_lines=10, logN_bounds=logN_bounds, 
-                                                      b_bounds=b_bounds, mode='Voigt')
-            '''
+            b_bounds = [1, 100]
+            print("Doing fitting for ion=", self.ion_name)
+            self.line_list = fit_profiles_sat(
+                self.ion_name,
+                self.waves_fit,
+                self.fluxes_fit,
+                self.noise_fit,
+                chisq_lim=2.5,
+                max_lines=10,
+                logN_bounds=logN_bounds,
+                b_bounds=b_bounds,
+                mode="Voigt",
+            )
+            """
             self.line_list = pg.analysis.fit_profiles(self.ion_name, self.wavelengths[self.vel_mask], self.fluxes[self.vel_mask], self.noise[self.vel_mask],
                                                   chisq_lim=2.5, max_lines=10, logN_bounds=[12,17], b_bounds=[3,100], mode='Voigt')
             self.line_list = pg.analysis.fit_profiles(self.ion_name, self.waves_fit, self.fluxes_fit, self.noise_fit,
@@ -312,28 +377,25 @@ class Spectrum(object):
                                                       chisq_asym_thresh=chisq_asym_thresh, 
                                                       max_lines=10, logN_bounds=logN_bounds, 
                                                       b_bounds=b_bounds, mode='Voigt')
-            '''
-            
+            """
+
             wave_boxsize = self.wavelengths[-1] - self.wavelengths[0]
             dl = self.wavelengths[1] - self.wavelengths[0]
-            
+
             # adjust the output lines to cope with wrapping
-            for i in range(len(self.line_list['l'])):
-                if self.line_list['l'][i] > self.wavelengths[-1]:
-                    self.line_list['l'][i]  -= (wave_boxsize + dl)
-                elif self.line_list['l'][i] < self.wavelengths[0]:
-                    self.line_list['l'][i] += (wave_boxsize + dl)
+            for i in range(len(self.line_list["l"])):
+                if self.line_list["l"][i] > self.wavelengths[-1]:
+                    self.line_list["l"][i] -= wave_boxsize + dl
+                elif self.line_list["l"][i] < self.wavelengths[0]:
+                    self.line_list["l"][i] += wave_boxsize + dl
 
         # keep the fit, save to the original spectrum file
-        #print(self.line_list)
+        # print(self.line_list)
         if write_lines:
             self.write_line_list()
 
         if plot_fit:
             self.plot_fit()
-
-
-
 
 
 def fit_profiles_sat(
@@ -344,7 +406,7 @@ def fit_profiles_sat(
     chisq_lim=2.5,
     max_lines=10,
     mode="Voigt",
-    logN_bounds=[8,20],
+    logN_bounds=[8, 20],
     b_bounds=[1, 300],
 ):
     """
@@ -379,10 +441,10 @@ def fit_profiles_sat(
 
     """
 
-    verbose = (environment.verbose >= environment.VERBOSE_QUIET)
-    np.set_printoptions(formatter={'float': '{:.4f}'.format})
+    verbose = environment.verbose >= environment.VERBOSE_QUIET
+    np.set_printoptions(formatter={"float": "{:.4f}".format})
 
-    #plt.plot(l,flux)
+    # plt.plot(l,flux)
     if isinstance(line, str):
         line = lines[line]
     l0 = line["l"]
@@ -395,30 +457,38 @@ def fit_profiles_sat(
     def _tau_to_flux(tau):  # return flux from tau, avoiding over/underflow
         return np.exp(-np.clip(tau, -50, 50))
 
-    def _chisq_asym(p, l, flux, noise, mode):  # reduced chisq, suppressing saturated regions
-        #chisq_asym = -1.
+    def _chisq_asym(
+        p, l, flux, noise, mode
+    ):  # reduced chisq, suppressing saturated regions
+        # chisq_asym = -1.
         model_flux = _tau_to_flux(model_tau(line, p, l, mode))
         dx_array = (flux - model_flux) / noise
-        #dx_array = np.where(dx_array > chisq_asym, dx_array, dx_array - (dx_array - chisq_asym)**2)
-        dx_array = np.where(flux < 0., 0., dx_array)
+        # dx_array = np.where(dx_array > chisq_asym, dx_array, dx_array - (dx_array - chisq_asym)**2)
+        dx_array = np.where(flux < 0.0, 0.0, dx_array)
         return np.sum(dx_array * dx_array) / np.count_nonzero(dx_array)
 
     def _chisq(p, l, flux, noise, mode):  # reduced chisq
         model_flux = _tau_to_flux(model_tau(line, p, l, mode))
         dx_array = (flux - model_flux) / noise
-        #dx_array = np.where(flux < abs(noise), 0., dx_array)
+        # dx_array = np.where(flux < abs(noise), 0., dx_array)
         return np.sum(dx_array * dx_array) / np.count_nonzero(dx_array)
 
-    def _add_line(p, bnd, l, flux, noise, l0, mode, i_line=None, grow_line=True):  # adds N, b, l for a new line
+    def _add_line(
+        p, bnd, l, flux, noise, l0, mode, i_line=None, grow_line=True
+    ):  # adds N, b, l for a new line
         if len(p) == 0:
             resid = flux
         else:
-            resid = 1.0 + flux - _tau_to_flux(model_tau(line, p, l, mode))  # residual spectrum
+            resid = (
+                1.0 + flux - _tau_to_flux(model_tau(line, p, l, mode))
+            )  # residual spectrum
         l_bounds = [l[1], l[-2]]
 
         if grow_line:
             # Grow line to max (N,b) allowed given the residual
-            n_guess, b_guess, l_guess = _grow_line(l, flux, noise, resid, l0, mode, i_line=i_line)
+            n_guess, b_guess, l_guess = _grow_line(
+                l, flux, noise, resid, l0, mode, i_line=i_line
+            )
         else:
             # Make an educated guess at the new line parameters
             b_guess = (
@@ -434,8 +504,8 @@ def fit_profiles_sat(
         p = np.append(p, l_guess)  # add line @min of residual flux
 
         # append bounds
-        n_bounds = [n_guess-0.5, n_guess+0.5]
-        b_bounds = [b_guess*0.5, b_guess*2]
+        n_bounds = [n_guess - 0.5, n_guess + 0.5]
+        b_bounds = [b_guess * 0.5, b_guess * 2]
         if len(bnd) == 0:
             bnd = np.array([n_bounds])
         else:
@@ -444,9 +514,20 @@ def fit_profiles_sat(
         bnd = np.append(bnd, np.array([l_bounds]), axis=0)
         return p, bnd
 
-    def _grow_line(l, flux, noise, resid, l0, mode, i_line=None, floor_sigma=1.5, smooth_sigma=1., unsat_sigma=3.):  # adds N, b, l for a new line at l by growing N, b
+    def _grow_line(
+        l,
+        flux,
+        noise,
+        resid,
+        l0,
+        mode,
+        i_line=None,
+        floor_sigma=1.5,
+        smooth_sigma=1.0,
+        unsat_sigma=3.0,
+    ):  # adds N, b, l for a new line at l by growing N, b
         # compute location of new line, if pixel value not specified in i_line
-        if smooth_sigma > 0.:
+        if smooth_sigma > 0.0:
             smoothed = scipy.ndimage.gaussian_filter1d(resid, smooth_sigma)
         else:
             smoothed = resid
@@ -455,25 +536,39 @@ def fit_profiles_sat(
 
         l_line = l[i_line]
         if resid[i_line] < np.min(abs(noise)):
-            # if saturated use the center of the saturated region 
+            # if saturated use the center of the saturated region
             i_lo = i_line
-            while resid[i_lo] < unsat_sigma * noise[i_lo] and i_lo > 0: i_lo -= 1
+            while resid[i_lo] < unsat_sigma * noise[i_lo] and i_lo > 0:
+                i_lo -= 1
             i_hi = i_line
-            while resid[i_hi] < unsat_sigma * noise[i_hi] and i_hi < len(l)-1: i_hi += 1
-            i_line = int(0.5 * (i_lo+i_hi))
+            while resid[i_hi] < unsat_sigma * noise[i_hi] and i_hi < len(l) - 1:
+                i_hi += 1
+            i_line = int(0.5 * (i_lo + i_hi))
             l_line = l[i_line]
-            N_lim  = logN_bounds[1]
-            b_lim = 2.*min(abs(l_line-l[i_lo]),abs(l[i_hi]-l_line)) * 3.e5 / float(l0)
+            N_lim = logN_bounds[1]
+            b_lim = (
+                2.0
+                * min(abs(l_line - l[i_lo]), abs(l[i_hi] - l_line))
+                * 3.0e5
+                / float(l0)
+            )
         else:
             # if unsaturated use min of smoothed residual
             N_lim = 15.0
-            fdec_bottom = 1.-resid[i_line]
+            fdec_bottom = 1.0 - resid[i_line]
             i_lo = i_line
-            while 1.-resid[i_lo] < 0.5 * fdec_bottom and i_lo > 0: i_lo -= 1
+            while 1.0 - resid[i_lo] < 0.5 * fdec_bottom and i_lo > 0:
+                i_lo -= 1
             i_hi = i_line
-            while 1.-resid[i_hi] < 0.5 * fdec_bottom and i_hi < len(l)-1: i_hi += 1
-            b_lim = 4.*min(abs(l_line-l[i_lo]),abs(l[i_hi]-l_line)) * 3.e5 / float(l0)
-        b_lim = min(max(b_lim, max(b_bounds[0],20)), b_bounds[1])
+            while 1.0 - resid[i_hi] < 0.5 * fdec_bottom and i_hi < len(l) - 1:
+                i_hi += 1
+            b_lim = (
+                4.0
+                * min(abs(l_line - l[i_lo]), abs(l[i_hi] - l_line))
+                * 3.0e5
+                / float(l0)
+            )
+        b_lim = min(max(b_lim, max(b_bounds[0], 20)), b_bounds[1])
 
         # Set floor which model cannot go below
         floor = smoothed - floor_sigma * noise
@@ -484,35 +579,47 @@ def fit_profiles_sat(
         # incremeent N,b until model goes below floor
         N_min = logN_bounds[0]
         p_allowed = np.array([logN_bounds[0], b_bounds[0], l_line])
-        chisq = [1.e20]
+        chisq = [1.0e20]
         for bpar in b_range:
             for Ncol in N_range:
                 if Ncol < N_min:
                     continue
                 p_trial = np.array([Ncol, bpar, l_line])
                 model = _tau_to_flux(model_tau(line, p_trial, l, mode))
-                diff = model-floor
-                # Save the largest line that satisfies the condition model>floor everywhere 
-                if np.any(diff<0):
-                    #print('Cannot add:',bpar,Ncol,floor[diff<0], diff[diff<0], l_line,l[diff<0],l[0],l[-1])
+                diff = model - floor
+                # Save the largest line that satisfies the condition model>floor everywhere
+                if np.any(diff < 0):
+                    # print('Cannot add:',bpar,Ncol,floor[diff<0], diff[diff<0], l_line,l[diff<0],l[0],l[-1])
                     break
                 else:
                     p_allowed = np.append(p_allowed, p_trial)
                     # compute chi-sq just near this line
                     i_lo = np.argmin(model)
-                    while (1.-model[i_lo]) > 0.5 * (1.-model[i_line]) and i_lo > 0: i_lo -= 1
+                    while (1.0 - model[i_lo]) > 0.5 * (
+                        1.0 - model[i_line]
+                    ) and i_lo > 0:
+                        i_lo -= 1
                     i_hi = np.argmin(model)
-                    while (1.-model[i_hi]) > 0.5 * (1.-model[i_line]) and i_hi < len(model)-2: i_hi += 1
-                    dx_array = (resid[i_lo:i_hi+1] - model[i_lo:i_hi+1]) / noise[i_lo:i_hi+1]
+                    while (1.0 - model[i_hi]) > 0.5 * (
+                        1.0 - model[i_line]
+                    ) and i_hi < len(model) - 2:
+                        i_hi += 1
+                    dx_array = (
+                        resid[i_lo : i_hi + 1] - model[i_lo : i_hi + 1]
+                    ) / noise[i_lo : i_hi + 1]
                     chi2 = np.sum(dx_array * dx_array) / np.count_nonzero(dx_array)
                     chisq.append(chi2)
-                    #print('Could add:',bpar,Ncol,l_line,chisq[-1])
-        i_p = np.argmin(np.array(chisq))  # from all allowed lines, choose one with lowest chisq
-        return p_allowed[3*i_p], p_allowed[3*i_p+1], l_line
+                    # print('Could add:',bpar,Ncol,l_line,chisq[-1])
+        i_p = np.argmin(
+            np.array(chisq)
+        )  # from all allowed lines, choose one with lowest chisq
+        return p_allowed[3 * i_p], p_allowed[3 * i_p + 1], l_line
 
     def _maxiter(n, nmax):
-        if n <= 5: return 100
-        else: return max(50, 50+(nmax-n)*10)
+        if n <= 5:
+            return 100
+        else:
+            return max(50, 50 + (nmax - n) * 10)
 
     # identify independent regions to fit within the spectrum
     regions_l, regions_i, _ = find_regions(l, flux, noise, min_region_width=2)
@@ -527,16 +634,15 @@ def fit_profiles_sat(
         "N": np.array([]),
         "dN": np.array([]),
         "EW": np.array([]),
-        "Chisq": np.array([])
+        "Chisq": np.array([]),
     }
 
     # loop over regions
     from scipy.optimize import minimize
-    
+
     sat_regions = False
-    
+
     for ireg in range(len(regions_l)):
-    
         params = []
         bounds = []
         n_lines = 0
@@ -546,66 +652,97 @@ def fit_profiles_sat(
         l_reg = l[regions_i[ireg, 0] : regions_i[ireg, 1]]
         f_reg = flux[regions_i[ireg, 0] : regions_i[ireg, 1]]
         n_reg = noise[regions_i[ireg, 0] : regions_i[ireg, 1]]
-        #plt.plot(l_reg,f_reg)
-
+        # plt.plot(l_reg,f_reg)
 
         ###Saturated Region Detection
-        regions_l_sat, regions_i_sat, bounding_i = find_regions_sat(l_reg,f_reg,n_reg,min_region_width=15)
-        bounding_i = [] # don't use sat region detection
-        
+        regions_l_sat, regions_i_sat, bounding_i = find_regions_sat(
+            l_reg, f_reg, n_reg, min_region_width=15
+        )
+        bounding_i = []  # don't use sat region detection
+
         params_reg = []
-        bounds_reg =  []
+        bounds_reg = []
         best_nlines = 0
         if len(bounding_i) != 0:
             sat_regions = True
             if verbose:
-                print('Region %d has %d saturated area(s) at pixels:'%(ireg, len(regions_i_sat)), regions_i_sat)
+                print(
+                    "Region %d has %d saturated area(s) at pixels:"
+                    % (ireg, len(regions_i_sat)),
+                    regions_i_sat,
+                )
             for ireg_sat in range(len(regions_l_sat)):
-                l_reg_sat = l_reg[regions_i_sat[ireg_sat, 0] : regions_i_sat[ireg_sat, 1]]
-                f_reg_sat = f_reg[regions_i_sat[ireg_sat, 0] : regions_i_sat[ireg_sat, 1]]
-                n_reg_sat = n_reg[regions_i_sat[ireg_sat, 0] : regions_i_sat[ireg_sat, 1]]
-                
-                #plt.plot(l_reg_sat,f_reg_sat)
-                l_reg_bound_left =  l_reg[bounding_i[ireg_sat, 0][0] : bounding_i[ireg_sat, 0][1]]
-                l_reg_bound_right =  l_reg[bounding_i[ireg_sat, 1][0] : bounding_i[ireg_sat, 1][1]]
-                f_reg_bound_left =  f_reg[bounding_i[ireg_sat, 0][0] : bounding_i[ireg_sat, 0][1]]
-                f_reg_bound_right =  f_reg[bounding_i[ireg_sat, 1][0] : bounding_i[ireg_sat, 1][1]]
-                n_reg_bound_left = n_reg[bounding_i[ireg_sat, 0][0] : bounding_i[ireg_sat, 0][1]]
-                n_reg_bound_right = n_reg[bounding_i[ireg_sat, 1][0] : bounding_i[ireg_sat, 1][1]]
-                
+                l_reg_sat = l_reg[
+                    regions_i_sat[ireg_sat, 0] : regions_i_sat[ireg_sat, 1]
+                ]
+                f_reg_sat = f_reg[
+                    regions_i_sat[ireg_sat, 0] : regions_i_sat[ireg_sat, 1]
+                ]
+                n_reg_sat = n_reg[
+                    regions_i_sat[ireg_sat, 0] : regions_i_sat[ireg_sat, 1]
+                ]
+
+                # plt.plot(l_reg_sat,f_reg_sat)
+                l_reg_bound_left = l_reg[
+                    bounding_i[ireg_sat, 0][0] : bounding_i[ireg_sat, 0][1]
+                ]
+                l_reg_bound_right = l_reg[
+                    bounding_i[ireg_sat, 1][0] : bounding_i[ireg_sat, 1][1]
+                ]
+                f_reg_bound_left = f_reg[
+                    bounding_i[ireg_sat, 0][0] : bounding_i[ireg_sat, 0][1]
+                ]
+                f_reg_bound_right = f_reg[
+                    bounding_i[ireg_sat, 1][0] : bounding_i[ireg_sat, 1][1]
+                ]
+                n_reg_bound_left = n_reg[
+                    bounding_i[ireg_sat, 0][0] : bounding_i[ireg_sat, 0][1]
+                ]
+                n_reg_bound_right = n_reg[
+                    bounding_i[ireg_sat, 1][0] : bounding_i[ireg_sat, 1][1]
+                ]
+
                 # set up sat region bounds for evaluating chisq
-                width = (l_reg_bound_right[0]-l_reg_bound_left[-1])
+                width = l_reg_bound_right[0] - l_reg_bound_left[-1]
                 l_bounds_sat = [l_reg_bound_left[0], l_reg_bound_right[-1]]
-                l_reg_bounds = np.concatenate((l_reg_bound_left,l_reg_bound_right))
-                f_reg_bounds = np.concatenate((f_reg_bound_left,f_reg_bound_right))
-                n_reg_bounds = np.concatenate((n_reg_bound_left,n_reg_bound_right))
+                l_reg_bounds = np.concatenate((l_reg_bound_left, l_reg_bound_right))
+                f_reg_bounds = np.concatenate((f_reg_bound_left, f_reg_bound_right))
+                n_reg_bounds = np.concatenate((n_reg_bound_left, n_reg_bound_right))
 
                 # set up grid search for best fit
                 N_range = np.linspace(start=logN_bounds[0], stop=logN_bounds[1], num=20)
-                b_range = np.linspace(start=np.log10(b_bounds[0]), stop=np.log10(b_bounds[1]), num=20)
+                b_range = np.linspace(
+                    start=np.log10(b_bounds[0]), stop=np.log10(b_bounds[1]), num=20
+                )
                 b_range = 10**b_range
-                i_middle = int((regions_i_sat[ireg_sat, 0] + regions_i_sat[ireg_sat, 1]) / 2)
+                i_middle = int(
+                    (regions_i_sat[ireg_sat, 0] + regions_i_sat[ireg_sat, 1]) / 2
+                )
                 middle_guess = l_reg[i_middle]
                 bounds = np.array(np.array([logN_bounds]))
                 bounds = np.append(bounds, np.array([b_bounds]), axis=0)
                 bounds = np.append(bounds, np.array([l_bounds_sat]), axis=0)
 
                 # find best fit
-                chisq_best = 1.e20
+                chisq_best = 1.0e20
                 for Ncol in N_range:
                     for bpar in b_range:
                         params = np.array([Ncol, bpar, middle_guess])
-                        chisq_soln = _chisq(params, l_reg_bounds, f_reg_bounds, n_reg_bounds, mode)
+                        chisq_soln = _chisq(
+                            params, l_reg_bounds, f_reg_bounds, n_reg_bounds, mode
+                        )
                         if chisq_soln < chisq_best:
                             chisq_best = chisq_soln
                             Nbest = Ncol
                             bbest = bpar
                 params = np.array([Nbest, bbest, middle_guess])
                 if verbose:
-                    print("Found best-fit sat line (chisq=%g) with params"%(chisq_best), params)
+                    print(
+                        "Found best-fit sat line (chisq=%g) with params" % (chisq_best),
+                        params,
+                    )
 
-
-                '''
+                """
                 for Ncol in [14,15,16,17,18,19,20,21,22,23]:
                     p_guess = Ncol
                     params = np.array([(p_guess),width,middle_guess])
@@ -652,22 +789,20 @@ def fit_profiles_sat(
                     options={"maxiter": 100},
                 )
                 cov = soln.hess_inv  # covariance matrix of final soluiton
-                '''
-                
+                """
+
                 if len(params_reg) == 0:
                     params_reg = np.array(params)
                 else:
-                    params_reg = np.append(params_reg,np.array(params))
-                
+                    params_reg = np.append(params_reg, np.array(params))
+
                 if len(bounds_reg) == 0:
                     bounds_reg = np.array(bounds)
                 else:
                     bounds_reg = np.append(bounds_reg, np.array(bounds))
-            
-            
-            
+
             ## re-compute the parameters for the full region with all saturated lines
-            '''
+            """
             params_reg += 0.02 * (
                 2 * np.random.rand(len(params_reg)) - 1
             )  # jiggle params and refit to compute hessian
@@ -681,7 +816,7 @@ def fit_profiles_sat(
             chisq_soln = _chisq(params_reg, l_reg, f_reg, n_reg, mode)
             cov = soln.hess_inv  # covariance matrix of final soluiton
             # append lines in this region onto line list
-            '''
+            """
             if verbose:
                 print(
                     "Saturated line gives full region %d (%g-%g): chisq= %g with %d lines"
@@ -694,17 +829,16 @@ def fit_profiles_sat(
                     )
                 )
 
-
-            params = np.reshape(params_reg,(int(len(params_reg) / 3),3))
-            #print(bounds_reg)
-            bounds =  np.reshape(bounds_reg,(int(len(params_reg)),2))
+            params = np.reshape(params_reg, (int(len(params_reg) / 3), 3))
+            # print(bounds_reg)
+            bounds = np.reshape(bounds_reg, (int(len(params_reg)), 2))
             #####Recheck, arbitrary value
             if chisq_soln > 10000:
                 params = []
                 bounds = []
                 sat_regions = False
-                print('ChiSquare is too big, probably no saturated region.')
-        else: 
+                print("ChiSquare is too big, probably no saturated region.")
+        else:
             params = []
             bounds = []
             n_lines = 0
@@ -715,48 +849,85 @@ def fit_profiles_sat(
             l_reg = l[regions_i[ireg, 0] : regions_i[ireg, 1]]
             f_reg = flux[regions_i[ireg, 0] : regions_i[ireg, 1]]
             n_reg = noise[regions_i[ireg, 0] : regions_i[ireg, 1]]
-            
 
         if len(params) != 0:
-            resid = ( 1.0 + f_reg - _tau_to_flux(model_tau(line, params.flatten(), l_reg, mode)) )  # residual spectrum
+            resid = (
+                1.0
+                + f_reg
+                - _tau_to_flux(model_tau(line, params.flatten(), l_reg, mode))
+            )  # residual spectrum
             ## get peaks from finding function
-            index,height,widths = find_peaks(resid,l_reg,0.4,5)
+            index, height, widths = find_peaks(resid, l_reg, 0.4, 5)
         else:
-            distance = int(len(l_reg)/20)
+            distance = int(len(l_reg) / 20)
             if distance < 1:
                 distance = 1
-            #index,height,widths = find_peaks(f_reg,l_reg,0.2,distance)
-            #n_lines = len(index)
+            # index,height,widths = find_peaks(f_reg,l_reg,0.2,distance)
+            # n_lines = len(index)
 
         # find the absorption peaks in the region
-        smoothed = scipy.ndimage.gaussian_filter1d(f_reg, 1.0)  # smooth a little bit to avoid noise peaks
-        index,height = scipy.signal.find_peaks(1.-f_reg, prominence=3.*n_reg, height=(0,0.9))
+        smoothed = scipy.ndimage.gaussian_filter1d(
+            f_reg, 1.0
+        )  # smooth a little bit to avoid noise peaks
+        index, height = scipy.signal.find_peaks(
+            1.0 - f_reg, prominence=3.0 * n_reg, height=(0, 0.9)
+        )
         for i_line in index:
-            params, bounds = _add_line(params, bounds, l_reg, f_reg, n_reg, float(l0.split()[0]), mode, i_line=i_line)
+            params, bounds = _add_line(
+                params,
+                bounds,
+                l_reg,
+                f_reg,
+                n_reg,
+                float(l0.split()[0]),
+                mode,
+                i_line=i_line,
+            )
             n_lines = int(len(params) / 3)
             chisq_soln = _chisq(params, l_reg, f_reg, n_reg, mode)
             if verbose:
-                print(f'Region {ireg}: Added peak line {n_lines-1} with N={params[-3]}, b={params[-2]}, l={params[-1]}, chisq={chisq_soln}')
-        index,height = scipy.signal.find_peaks(1.-f_reg, prominence=3.*n_reg, height=(0.9,1.e20))
+                print(
+                    f"Region {ireg}: Added peak line {n_lines-1} with N={params[-3]}, b={params[-2]}, l={params[-1]}, chisq={chisq_soln}"
+                )
+        index, height = scipy.signal.find_peaks(
+            1.0 - f_reg, prominence=3.0 * n_reg, height=(0.9, 1.0e20)
+        )
         for i_line in index:
-            params, bounds = _add_line(params, bounds, l_reg, f_reg, n_reg, float(l0.split()[0]), mode, i_line=i_line)
+            params, bounds = _add_line(
+                params,
+                bounds,
+                l_reg,
+                f_reg,
+                n_reg,
+                float(l0.split()[0]),
+                mode,
+                i_line=i_line,
+            )
             n_lines = int(len(params) / 3)
             chisq_soln = _chisq(params, l_reg, f_reg, n_reg, mode)
             if verbose:
-                print(f'Region {ireg}: Added peak line {n_lines-1} with N={params[-3]}, b={params[-2]}, l={params[-1]}, chisq={chisq_soln}')
+                print(
+                    f"Region {ireg}: Added peak line {n_lines-1} with N={params[-3]}, b={params[-2]}, l={params[-1]}, chisq={chisq_soln}"
+                )
 
-        # populate a first-guess set of lines in region 
+        # populate a first-guess set of lines in region
         n_lines = 0
-        chisq_best = 1.e20
-        chisq_old = 1.e20
-        delta_l = l_reg[1]-l_reg[0]
-        while n_lines < max_lines-1:
-            params, bounds = _add_line(params, bounds, l_reg, f_reg, n_reg, float(l0.split()[0]), mode)
-            #if params[-1] in params[2::3]:
+        chisq_best = 1.0e20
+        chisq_old = 1.0e20
+        delta_l = l_reg[1] - l_reg[0]
+        while n_lines < max_lines - 1:
+            params, bounds = _add_line(
+                params, bounds, l_reg, f_reg, n_reg, float(l0.split()[0]), mode
+            )
+            # if params[-1] in params[2::3]:
             #    print(f'jiggling line {params[-1]} {params[2::3]}')
-            #    params[-1] = params[-1] + delta_l * (0.5*np.random.rand() - 1)  
+            #    params[-1] = params[-1] + delta_l * (0.5*np.random.rand() - 1)
             n_lines = int(len(params) / 3)
-            resid = 1.0 + f_reg - _tau_to_flux(model_tau(line, params.flatten(), l_reg, mode))  # residual spectrum
+            resid = (
+                1.0
+                + f_reg
+                - _tau_to_flux(model_tau(line, params.flatten(), l_reg, mode))
+            )  # residual spectrum
             chisq_soln = _chisq(params, l_reg, f_reg, n_reg, mode)
             if chisq_soln < chisq_best:
                 best_nlines = n_lines
@@ -764,12 +935,16 @@ def fit_profiles_sat(
                 best_bounds = bounds
                 chisq_best = chisq_soln
             if verbose:
-                print(f'Region {ireg}: Added line {n_lines-1} with N={params[-3]}, b={params[-2]}, l={params[-1]}, chisq={chisq_soln}')
+                print(
+                    f"Region {ireg}: Added line {n_lines-1} with N={params[-3]}, b={params[-2]}, l={params[-1]}, chisq={chisq_soln}"
+                )
             if chisq_soln < chisq_accept:  # we're all good :)
                 break
             if chisq_soln > 0.99 * chisq_old:  # we're not improving fast enough :(
                 break
-            if params[-3] == logN_bounds[0] and params[-2] == b_bounds[0]:  # line added isn't significant
+            if (
+                params[-3] == logN_bounds[0] and params[-2] == b_bounds[0]
+            ):  # line added isn't significant
                 params = np.delete(params, [-3, -2, -1], axis=0)
                 bounds = np.delete(bounds, [-3, -2, -1], axis=0)
                 n_lines = int(len(params) / 3)
@@ -777,12 +952,16 @@ def fit_profiles_sat(
                 break
             chisq_old = chisq_soln
         if verbose:
-            print(f'Region {ireg}: Found {n_lines} lines in first guess, chisq={chisq_soln}')
+            print(
+                f"Region {ireg}: Found {n_lines} lines in first guess, chisq={chisq_soln}"
+            )
 
         # loop to add lines until desired chisq achieved
         chisq_old = chisq_soln
         while n_lines < max_lines and chisq_soln > chisq_accept:
-            params, bounds = _add_line(params, bounds, l_reg, f_reg, n_reg, float(l0.split()[0]), mode)
+            params, bounds = _add_line(
+                params, bounds, l_reg, f_reg, n_reg, float(l0.split()[0]), mode
+            )
             n_lines = int(len(params) / 3)
             chisq_fcn = lambda *args: _chisq(*args)
             soln = minimize(
@@ -795,7 +974,10 @@ def fit_profiles_sat(
             params = soln.x  # set params to new chisq-minimized values
             chisq_soln = _chisq(params, l_reg, f_reg, n_reg, mode)
             if verbose:
-                print( "Region %d: %d lines gives chisq=%g (%g) after %d iters" % (ireg, n_lines, chisq_soln, chisq_accept, soln.nit))
+                print(
+                    "Region %d: %d lines gives chisq=%g (%g) after %d iters"
+                    % (ireg, n_lines, chisq_soln, chisq_accept, soln.nit)
+                )
             if chisq_soln < chisq_best:
                 best_nlines = n_lines
                 best_params = params
@@ -806,7 +988,7 @@ def fit_profiles_sat(
             else:
                 chisq_old = chisq_soln
                 # if after 4 lines fit is not improving (enough), no point in continuing
-                if n_lines > 4: 
+                if n_lines > 4:
                     break
             if chisq_soln < chisq_accept:
                 break
@@ -817,7 +999,10 @@ def fit_profiles_sat(
             n_lines = int(len(params) / 3)
             chisq_soln = _chisq(params, l_reg, f_reg, n_reg, mode)
             if verbose:
-                print( "Region %d: Reverting to best with with %d lines and chisq=%g" % (ireg, n_lines, chisq_soln))
+                print(
+                    "Region %d: Reverting to best with with %d lines and chisq=%g"
+                    % (ireg, n_lines, chisq_soln)
+                )
             chisq_fcn = lambda *args: _chisq(*args)
             soln = minimize(
                 chisq_fcn,
@@ -829,7 +1014,7 @@ def fit_profiles_sat(
             params = soln.x  # set params to new chisq-minimized values
             chisq_soln = _chisq(params, l_reg, f_reg, n_reg, mode)
 
-        '''
+        """
         # if any single line strongly exceeds flux decrement anywhere, try removing 
         if chisq_soln > 3*chisq_accept:  
             floor = f_reg - 4. * n_reg
@@ -870,10 +1055,10 @@ def fit_profiles_sat(
                         if verbose:
                             print(f'Region {ireg}: Replaced line, chisq improved to {chisq_best}')
                 ip += 1
-        '''
+        """
 
         # jiggle params and refit to compute hessian
-        params += 0.02 * ( 2 * np.random.rand(len(params)) - 1)  
+        params += 0.02 * (2 * np.random.rand(len(params)) - 1)
         chisq_fcn = lambda *args: _chisq(*args)
         soln = minimize(
             chisq_fcn,
@@ -886,7 +1071,9 @@ def fit_profiles_sat(
         chisq_new = _chisq(params, l_reg, f_reg, n_reg, mode)
         if chisq_new < chisq_best:
             if verbose:
-                print(f'Region {ireg}: Fit improved with jiggled params chisq={chisq_new}')
+                print(
+                    f"Region {ireg}: Fit improved with jiggled params chisq={chisq_new}"
+                )
             params = soln.x
             n_lines = int(len(params) / 3)
             best_nlines = n_lines
@@ -897,25 +1084,35 @@ def fit_profiles_sat(
         # remove small lines as long as chisq doesn't go up by much
         while n_lines > 1:
             trial_params = params
-            N_array = np.array([params[ip*3] for ip in np.arange(n_lines)])
+            N_array = np.array([params[ip * 3] for ip in np.arange(n_lines)])
             i_del = np.argmin(N_array)
-            trial_params = np.delete(params, [i_del, i_del+1, i_del+2], axis=0)
+            trial_params = np.delete(params, [i_del, i_del + 1, i_del + 2], axis=0)
             chisq_trial = _chisq(trial_params, l_reg, f_reg, n_reg, mode)
-            delta_chisq = abs(chisq_trial-chisq_soln)/chisq_trial
+            delta_chisq = abs(chisq_trial - chisq_soln) / chisq_trial
             if delta_chisq < 0.01 or chisq_trial < chisq_accept:
                 if verbose:
-                    print("Removing line %d (N=%g)?"%(i_del, N_array[i_del]), chisq_trial, chisq_soln, abs(chisq_trial-chisq_soln)/chisq_trial)
+                    print(
+                        "Removing line %d (N=%g)?" % (i_del, N_array[i_del]),
+                        chisq_trial,
+                        chisq_soln,
+                        abs(chisq_trial - chisq_soln) / chisq_trial,
+                    )
                 params = trial_params
-                bounds = np.delete(bounds, [i_del, i_del+1, i_del+2], axis=0)
+                bounds = np.delete(bounds, [i_del, i_del + 1, i_del + 2], axis=0)
                 chisq_soln = chisq_trial
-                n_lines = int(len(params)/3)
+                n_lines = int(len(params) / 3)
             else:
                 break
 
         if verbose:
-            print(f"Region {ireg}: FINAL FIT {n_lines} lines, N={params[0::3]}, chisq={chisq_soln}")
+            print(
+                f"Region {ireg}: FINAL FIT {n_lines} lines, N={params[0::3]}, chisq={chisq_soln}"
+            )
             if chisq_soln > chisq_accept:
-                print( "Region %d: WARNING large chisq=%g > %g; check fit" % (ireg, chisq_soln, chisq_accept))
+                print(
+                    "Region %d: WARNING large chisq=%g > %g; check fit"
+                    % (ireg, chisq_soln, chisq_accept)
+                )
 
         # load final line list
         chisq_soln = _chisq(params, l_reg, f_reg, n_reg, mode)
@@ -941,16 +1138,21 @@ def fit_profiles_sat(
                 line_list["EW"], EquivalentWidth(_tau_to_flux(tau_line), l_reg)
             )
             line_list["Chisq"] = np.append(line_list["Chisq"], chisq_soln)
-            #if verbose:
+            # if verbose:
             #    print('Region %d: line'%ireg,ip,params[ip*3],params[ip*3+1],params[ip*3+2])
-
 
     return line_list
 
 
-
 def find_regions(
-    wavelengths, fluxes, noise, min_region_width=2, N_sigma=10.0, extend=False, buffer=3, det_flag=False
+    wavelengths,
+    fluxes,
+    noise,
+    min_region_width=2,
+    N_sigma=10.0,
+    extend=False,
+    buffer=3,
+    det_flag=False,
 ):
     """
     Finds detection regions above some detection threshold and minimum width.
@@ -999,7 +1201,6 @@ def find_regions(
 
     # this part can remain the same, since it uses EW in wavelength units, not flux
     for std in range(std_min, std_max):
-
         gaussian = np.exp(-0.5 * (xarr / std) ** 2)
 
         flux_func = np.convolve(flux_ews, gaussian, "same")
@@ -1021,26 +1222,24 @@ def find_regions(
         if start == 0 and det_ratio[i] > 0 and fluxes[i] < 1.0:  ##greater 0
             start = i
         elif start != 0 and (det_ratio[i] < 0 or fluxes[i] > 1.0):
-            #if (i - start) > min_region_width:
+            # if (i - start) > min_region_width:
             end = i
-            
-            
+
             region_endpoints.append([start, end])
             start = 0
 
     significant_region_endpoints = []
-    for reg in region_endpoints:    
-       
+    for reg in region_endpoints:
         det_ratio = np.array(det_ratio)
-        significance = np.sqrt(np.sum(det_ratio[reg[0]:reg[1]]**2))
-       # if reg[1]-reg[0] >10:
-            #print(reg)
-            #print(significance)
-            #plt.plot(wavelengths[reg],fluxes[reg])
+        significance = np.sqrt(np.sum(det_ratio[reg[0] : reg[1]] ** 2))
+        # if reg[1]-reg[0] >10:
+        # print(reg)
+        # print(significance)
+        # plt.plot(wavelengths[reg],fluxes[reg])
 
         if significance == np.inf:
             significance = 0
-        if significance > N_sigma: # and reg[1]>60 and reg[0]< (len(fluxes)-60):
+        if significance > N_sigma:  # and reg[1]>60 and reg[0]< (len(fluxes)-60):
             significant_region_endpoints.append(reg)
     # made extend a kwarg option
     # lines may not go down to 0 again before next line starts
@@ -1063,58 +1262,54 @@ def find_regions(
 
     else:
         regions_expanded = significant_region_endpoints
-    #print(significant_region_endpoints)
+    # print(significant_region_endpoints)
     # Change to return the region indices
     # Combine overlapping regions, check for detection based on noise value
     # and extend each region again by a buffer
     regions_l = []
     regions_i = []
     buffer = buffer
-    for i in range(len(regions_expanded)-1):
-        #print(len(regions_expanded),i)
+    for i in range(len(regions_expanded) - 1):
+        # print(len(regions_expanded),i)
         if len(regions_expanded) == i:
             break
         start = regions_expanded[i][0]
         end = regions_expanded[i][1]
-        #print(start,end)
-        #print(regions_expanded[i+1])
-        #print('difference'+str(regions_expanded[i+1][0]-end))
-        if len(regions_expanded) == i+1:
+        # print(start,end)
+        # print(regions_expanded[i+1])
+        # print('difference'+str(regions_expanded[i+1][0]-end))
+        if len(regions_expanded) == i + 1:
             break
-        if (regions_expanded[i+1][0]-end) < 5:
-            regions_expanded[i][1] = regions_expanded[i+1][1]
-            regions_expanded=np.delete(regions_expanded,(i+1),axis=0)
-        #print(regions_expanded)
-        
+        if (regions_expanded[i + 1][0] - end) < 5:
+            regions_expanded[i][1] = regions_expanded[i + 1][1]
+            regions_expanded = np.delete(regions_expanded, (i + 1), axis=0)
+        # print(regions_expanded)
+
         end_init = end
     for i in range(len(regions_expanded)):
-        
         start = regions_expanded[i][0]
         end = regions_expanded[i][1]
         # TODO: this part seems to merge regions if they overlap - try printing this out to see if it can be modified to not merge regions?
-        #print((len(regions_expanded) - 1), regions_expanded[i + 1][0],end)
-        #if i < (len(regions_expanded) - 1) and end > regions_expanded[i + 1][0]:
+        # print((len(regions_expanded) - 1), regions_expanded[i + 1][0],end)
+        # if i < (len(regions_expanded) - 1) and end > regions_expanded[i + 1][0]:
         #    end = regions_expanded[i + 1][1]
         #    print('merged')
-            
+
         for j in range(start, end):
-            
             flux_dec = 1.0 - fluxes[j]
-            #if flux_dec > abs(noise[j]):# * N_sigma:
+            # if flux_dec > abs(noise[j]):# * N_sigma:
             if start >= buffer:
                 start -= buffer
             if end < len(wavelengths) - buffer:
                 end += buffer
             regions_l.append([wavelengths[start], wavelengths[end]])
             regions_i.append([start, end])
-            
+
             break
-    
+
     if environment.verbose >= environment.VERBOSE_TACITURN:
         print("Found {} detection regions".format(len(regions_l)))
     return np.array(regions_l), np.array(regions_i), det_ratio
-
-
 
 
 def find_regions_sat(
@@ -1167,7 +1362,6 @@ def find_regions_sat(
 
     # this part can remain the same, since it uses EW in wavelength units, not flux
     for std in range(std_min, std_max):
-
         gaussian = np.exp(-0.5 * (xarr / std) ** 2)
 
         flux_func = np.convolve(flux_ews, gaussian, "same")
@@ -1182,12 +1376,16 @@ def find_regions_sat(
     # Select regions based on detection ratio at each point, combining nearby regions
     start = 0
     region_endpoints = []
-    index = np.where(np.abs(det_ratio-np.max(det_ratio)) < N_sigma)[0]
-    
+    index = np.where(np.abs(det_ratio - np.max(det_ratio)) < N_sigma)[0]
+
     for i in range(num_pixels):
-        if start == 0 and np.abs(det_ratio[i]-np.max(det_ratio)) < N_sigma: # and fluxes[i] < 1.0:
+        if (
+            start == 0 and np.abs(det_ratio[i] - np.max(det_ratio)) < N_sigma
+        ):  # and fluxes[i] < 1.0:
             start = i
-        elif start != 0 and  np.abs(det_ratio[i]-np.max(det_ratio)) > N_sigma: # or fluxes[i] > 1.0):
+        elif (
+            start != 0 and np.abs(det_ratio[i] - np.max(det_ratio)) > N_sigma
+        ):  # or fluxes[i] > 1.0):
             if (i - start) > min_region_width:
                 end = i
                 region_endpoints.append([start, end])
@@ -1227,7 +1425,10 @@ def find_regions_sat(
         end = regions_expanded[i][1]
         end_init = end
         # TODO: this part seems to merge regions if they overlap - try printing this out to see if it can be modified to not merge regions?
-        if i < (len(regions_expanded) - 1) and np.abs(end -regions_expanded[i + 1][0])<2:
+        if (
+            i < (len(regions_expanded) - 1)
+            and np.abs(end - regions_expanded[i + 1][0]) < 2
+        ):
             end = regions_expanded[i + 1][1]
         for j in range(start, end):
             flux_dec = 1.0 - fluxes[j]
@@ -1239,36 +1440,33 @@ def find_regions_sat(
                 regions_l.append([wavelengths[start], wavelengths[end]])
                 regions_i.append([start, end])
 
-                if (start-18)<0:
+                if (start - 18) < 0:
                     start1 = 0
                 else:
-                    start1 = (start-18)
-                if (start-8)< 0:
+                    start1 = start - 18
+                if (start - 8) < 0:
                     start2 = start
                 else:
-                    start2 = (start-8)
-                if (end+8) >len(fluxes):
+                    start2 = start - 8
+                if (end + 8) > len(fluxes):
                     end1 = end
                 else:
-                    end1 = (end+8)
-                if (end+18) > len(fluxes):
+                    end1 = end + 8
+                if (end + 18) > len(fluxes):
                     end2 = int(len(fluxes))
                 else:
-                    end2 = (end+18)
-                
-                bounding_regions_i.append([[start1,start2],[end1,end2]])
+                    end2 = end + 18
 
-                #print(regions_l,regions_i)
+                bounding_regions_i.append([[start1, start2], [end1, end2]])
+
+                # print(regions_l,regions_i)
                 break
 
     if environment.verbose >= environment.VERBOSE_TACITURN:
         print("Found {} saturated regions".format(len(regions_l)))
 
-    #bounding_regions_i = [regions_i[0]-10,regions_i[-1]+10]
+    # bounding_regions_i = [regions_i[0]-10,regions_i[-1]+10]
     return np.array(regions_l), np.array(regions_i), np.array(bounding_regions_i)
-
-
-
 
 
 def model_tau(line, p, l, mode="Voigt"):
@@ -1312,27 +1510,31 @@ def EquivalentWidth(fluxes, waves):
     return np.sum(dEW)
 
 
-if __name__ == '__main__':
-
+if __name__ == "__main__":
     model = sys.argv[1]
     wind = sys.argv[2]
-    snap = str('%.3d'%int(sys.argv[3]))
+    snap = str("%.3d" % int(sys.argv[3]))
     i = int(sys.argv[4])
 
-    vel_range = 600.
-    chisq_asym_thresh = -3.
-    chisq_unacceptable = 25.
+    vel_range = 600.0
+    chisq_asym_thresh = -3.0
+    chisq_unacceptable = 25.0
 
-    #spec_dir = f'/disk04/sapple/data/normal/{model}_{wind}_{snap}/'
-    #spec_file = sorted(os.listdir(spec_dir))[i]
-    #spec_dir = f'/disk04/clilje/production_run/normal/{model}_{wind}_{snap}/'
-    #spec_file = sorted(os.listdir(spec_dir))[i]
-    spec_dir = f'./'
-    spec_file = f'spectra/spec_{wind}_{snap}_CII1334_{i}.h5'
-    #spec_file = 'sample_galaxy_811_MgII2796_270_deg_0.75r200.h5'
-    
-    #if 'SiIII1206' in spec_file.split('_'):
+    # spec_dir = f'/disk04/sapple/data/normal/{model}_{wind}_{snap}/'
+    # spec_file = sorted(os.listdir(spec_dir))[i]
+    # spec_dir = f'/disk04/clilje/production_run/normal/{model}_{wind}_{snap}/'
+    # spec_file = sorted(os.listdir(spec_dir))[i]
+    spec_dir = "./"
+    spec_file = f"spectra/spec_{wind}_{snap}_CII1334_{i}.h5"
+    # spec_file = 'sample_galaxy_811_MgII2796_270_deg_0.75r200.h5'
+
+    # if 'SiIII1206' in spec_file.split('_'):
     print(spec_file)
-    spec = Spectrum(f'{spec_dir}{spec_file}')
-    spec.main(vel_range=vel_range, chisq_unacceptable=chisq_unacceptable, chisq_asym_thresh=chisq_asym_thresh, write_lines=True, plot_fit=True)
-    
+    spec = Spectrum(f"{spec_dir}{spec_file}")
+    spec.main(
+        vel_range=vel_range,
+        chisq_unacceptable=chisq_unacceptable,
+        chisq_asym_thresh=chisq_asym_thresh,
+        write_lines=True,
+        plot_fit=True,
+    )
