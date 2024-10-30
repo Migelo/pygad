@@ -1,0 +1,915 @@
+##!/usr/bin/env python
+"""
+gtrace - a programm to trace the most massive structure back
+through a series of simulation snapshots.
+"""
+
+import argparse
+
+# minimum number of particles required in the halos/galaxies
+min_N = 100
+# only find/return the most massive halos in the catalogues (5 should be
+# sufficient for most cases)
+max_halos = 5
+restart_filename = "restart.gtrace"
+disc_def = dict()  # jzjc_min=0.85, rmax='50 kpc', zmax='10 kpc')
+phy_units = False ## adding this option in case we want params in physical units,
+## but unnecessary since we still need them in comoving units
+
+parser = argparse.ArgumentParser(
+    description="Trace the most massive progenitor of the most massive "
+    "(in stellar mass) galaxy in a highly resolved halo in "
+    "the start snapshot, that has no or very little low "
+    "resolution particles/mass, though the simulation. Store "
+    "its properties as well as storing the corresponding cut "
+    "region (centered at the center of the stars of the "
+    "galaxy of interest using a shrinking sphere and its "
+    "mass-weighted velocity)."
+)
+parser.add_argument(
+    "name_pattern",
+    help="The pattern of the snapshots' file names. One "
+    + "can use C- / Python-like string formatter that "
+    + "are all going to be replaced by the snapshot "
+    + 'number. (example: "output/snap_%%03d.gdt")',
+)
+parser.add_argument(
+    "--destination",
+    "-d",
+    metavar="FOLDER",
+    default=None,
+    help='The folder to store the output (default: "trace" '
+    + "in the directory of the snapshots).",
+)
+parser.add_argument(
+    "--start",
+    "-s",
+    metavar="INT",
+    type=int,
+    default=None,
+    help="The number of the snapshot to start with (the "
+    + "latest one). If there is a file called "
+    + '"%s" in the destination directory,' % restart_filename
+    + "restart the last run and ignore the start parameter. "
+    + "By default it is looked for the highest consecutive "
+    + "number in the snapshot filename pattern for which a "
+    + "snapshot exists.",
+)
+parser.add_argument(
+    "--end",
+    "-e",
+    metavar="INT",
+    type=int,
+    default=0,
+    help="The number of the logysnapshot to stop at (the "
+    + "earliest one); default: %(default)d).",
+)
+parser.add_argument(
+    "--step",
+    metavar="INT",
+    type=int,
+    default=1,
+    help="The step size in marching the snapshots (default: " + "%(default)d).",
+)
+parser.add_argument(
+    "--linking-length",
+    "-l",
+    metavar="FLOAT",
+    type=float,
+    default=0.05,
+    help="The linking length used for the FoF finder in terms "
+    + "of the mean particle separation. "
+    + "Default: %(default)g.",
+)
+parser.add_argument(
+    "--linking-vel",
+    "-lv",
+    metavar="STR",
+    default="100 km/s",
+    help="The linking velocity used for the FoF finder. " + "Default: %(default)s",
+)
+parser.add_argument(
+    "--lowresthreshold",
+    metavar="FLOAT",
+    type=float,
+    default=1e-2,
+    help="The maximum allowed mass of low resolution elements "
+    + "in a halo, defined by a sphere of R200 around the "
+    + "center of mass of the FoF group. (default: "
+    + "%(default)g).",
+)
+parser.add_argument(
+    "--gal-rad",
+    metavar="FLOAT",
+    type=float,
+    default=0.1,
+    help="The radius in units of R200 to define the galaxy "
+    + "(default: %(default)s).",
+)
+parser.add_argument(
+    "--cut",
+    metavar="FLOAT",
+    type=float,
+    default=None,
+    help="Also save the cut halos (all within <cut>*R200, not "
+    + "the FoF group) as Gadget files in the trace folder.",
+)
+parser.add_argument(
+    "--tlimit",
+    metavar="STR",
+    default="20000 h",
+    help="If this time limit in hours is exceeded, stop the "
+    + "tracing (default: %(default)s).",
+)
+parser.add_argument(
+    "--length",
+    default="ckpc/h_0",
+    help="Define the Gadget length units (default: %(default)s).",
+)
+parser.add_argument(
+    "--mass",
+    default="1e10 Msol h_0**-1",
+    help="Define the Gadget mass units (default: %(default)s).",
+)
+parser.add_argument(
+    "--velocity",
+    default="km/s",
+    help="Define the Gadget velocity units (default: %(default)s).",
+)
+parser.add_argument(
+    "--res", 
+    default='4x',
+    help="The resolution for the zooms used",
+)
+parser.add_argument(
+    "--overwrite",
+    action="store_true",
+    help="Force to overwrite possibly existing files in the " + "trace folder.",
+)
+parser.add_argument("--verbose", "-v", action="store_true", help="Run in verbose mode.")
+
+
+def my_center(halo, galaxy, snap, old_center, args):
+    """The definition of the center of the galaxy/halo."""
+    if galaxy is not None:
+        center = galaxy.com
+    elif halo is not None:
+        # take all matter within args.gal_rad * R200 like in the definition of the
+        # non-FoF galaxy:
+        R200, M200 = pygad.analysis.virial_info(snap, center=old_center, odens=200)
+        inner_halo = snap[
+            pygad.BallMask(center=old_center, R=args.gal_rad * R200, sph_overlap=False)
+        ]
+        center = pygad.analysis.center_of_mass(inner_halo)
+        del inner_halo
+    else:
+        center = old_center
+    return center
+
+
+def find_last_snap(args):
+    """Find the highest (consecutive) snapshot number."""
+    i_max = int(1e4)
+    for num in range(args.end, i_max):
+        nums = (num,) * args.name_pattern.count("%")
+        snap_fname = args.name_pattern % nums
+        if not os.path.exists(snap_fname):
+            if num == args.end:
+                snap_fname = os.path.basename(snap_fname)
+                print(
+                    'ERROR: first snapshot "%s"' % snap_fname,
+                    "does not exist!",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            return num - 1
+
+    print(
+        "ERROR: did not found last snapshot number in",
+        '[%d,%d] with pattern "%s"!'
+        % (args.end, i_max - 1, os.path.basename(args.name_pattern)),
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+
+def load_snap(snap_num, args, **kwargs):
+    """Read snapshot number `snap_num`."""
+    snap_nums = (snap_num,) * args.name_pattern.count("%")
+    snap_fname = args.name_pattern % snap_nums
+    if args.verbose:
+        print('read "%s"' % snap_fname)
+        sys.stdout.flush()
+    snap = pygad.Snapshot(
+        snap_fname,
+        gad_units={"LENGTH": args.length, "MASS": args.mass, "VELOCITY": args.velocity},
+        **kwargs,
+    )
+    if phy_units == True: ## unnecessary for the most part but here for here's sake
+        snap.to_physical_units()
+    else:
+        pass
+    if args.verbose:
+        print("->", snap)
+        print("scale factor:   ", snap.scale_factor)
+        print("cosmic time:    ", snap.cosmic_time())
+
+    return snap
+
+
+def find_struct_of_interest(snap, args, mode, galaxy=None, halo=None):
+    """
+    Find the halo and the galaxy of interest.
+
+    Modes:
+        * first:        Find the most massive galaxy and its halo that is
+                        resolved, of course.
+        * mmp-halo:     Find the *m*ost *m*assive *p*rogenitor in terms of the
+                        halo. The argument `halo` needs to be not None!
+        * mmp-galaxy:   Find the *m*ost *m*assive *p*rogenitor in therms ot the
+                        galaxy. Here the argument `galaxy` needs to be non-None,
+                        of course.
+    """
+
+    # fist find `max_halos` halos
+    def exclude(h, s):
+        # consider sphere wirh r=R200, not the FoF groups
+        halo = s[pygad.BallMask(center=h.com, R=h.R200_com, sph_overlap=False)]
+        M_lowres = halo.lowres["mass"].sum()
+        M = halo["mass"].sum()
+        return M_lowres / M > args.lowresthreshold
+
+    linking_length = linking_length_phys(
+        snap.highres, snap.cosmology.Omega_m, ll=args.linking_length
+    )
+    if args.verbose:
+        print(
+            "[FIND %d HALOS (dm+baryons) with M(low-res)/M <= %.2g; ll=%s]"
+            % (max_halos, args.lowresthreshold, linking_length)
+        )
+        sys.stdout.flush()
+    halos = pygad.analysis.generate_FoF_catalogue(
+        snap,
+        l=linking_length,
+        # dvmax = args.linking_vel,
+        min_N=min_N,
+        exclude=exclude,
+        calc=["mass", "lowres_mass", "com", "R200_com"],
+        max_halos=max_halos,
+        verbose=args.verbose,
+        progressbar=False,
+    )
+    if mode != "mmp-halo":
+        # and `max_halos` of the galaxies
+        linking_length = linking_length_phys(
+            snap.baryons, 0.045, ll=args.linking_length
+        )
+        if args.verbose:
+            print(
+                '[FIND %d GALAXIES ("stellar halos"); ll=%s]'
+                % (max_halos, linking_length)
+            )
+            sys.stdout.flush()
+        galaxies = pygad.analysis.generate_FoF_catalogue(
+            snap.stars,
+            l=linking_length,
+            dvmax=args.linking_vel,
+            min_N=min_N,
+            calc=["mass", "com", "Rmax"],
+            max_halos=max_halos,
+            verbose=args.verbose,
+            progressbar=False,
+        )
+    else:
+        galaxies = None  # `del galaxies` shall not fail at the end
+
+    if mode == "first":
+        # The most massive galaxy does not have to be in a halo with litle low
+        # resolution elements! Find the most massive galaxy living in a "resolved"
+        # halo:
+        halo, galaxy = None, None
+        for gal in galaxies:
+            # since the linking lengths for the galaxies/baryons is longer than
+            # for the halos/all high-res. particles, a galaxy is is entirely in
+            # some halo or not at all
+            gal_ID_set = set(gal.IDs)
+            for h in halos:
+                if len(gal_ID_set - set(h.IDs)) == 0:
+                    halo, galaxy = h, gal
+                    break
+            del gal_ID_set
+            if galaxy is not None:
+                break
+        if galaxy is None:
+            print("ERROR: galaxy of interest was not found!", file=sys.stderr)
+            sys.exit(1)
+    elif mode == "mmp-galaxy":
+        # find the most massive progenitor (galaxy) - i.e. update `galaxy`
+        if args.verbose:
+            print("[FIND the MOST MASSIVE PROGENITOR (galaxy-wise)]")
+            sys.stdout.flush()
+        prev_gal = galaxy
+        galaxy = pygad.analysis.find_most_massive_progenitor(snap, galaxies, prev_gal)
+        if args.verbose:
+            if galaxy is None:
+                print("[no galaxy present anymore]")
+                print("[FIND HALO of previous galaxy]")
+            else:
+                print("[FIND HALO of galaxy]")
+            sys.stdout.flush()
+        halo = pygad.analysis.find_most_massive_progenitor(
+            snap, halos, prev_gal if galaxy is None else galaxy
+        )
+    elif mode == "mmp-halo":
+        galaxy = None
+        if args.verbose:
+            print("[no galaxy present anymore]")
+            print("[FIND the MOST MASSIVE PROGENITOR (halo-wise)]")
+            sys.stdout.flush()
+        halo = pygad.analysis.find_most_massive_progenitor(snap, halos, halo)
+    else:
+        raise ValueError('Unknown mode "%s" in `find_struct_of_interest`!' % mode)
+
+    # warn, if not chosen the most massive FoF halo
+    if len(halos) > 0 and halo is not halos[0]:
+        n = None
+        for i, h in enumerate(halos):
+            if halo is h:
+                n = i
+                break
+        if n is None:
+            nth = "none of the %d biggest ones" % len(halos)
+        else:
+            nth = (
+                "the "
+                + {1: "1st", 2: "2nd", 3: "3rd"}.get(n, "%dth" % n)
+                + " biggest one!"
+            )
+        print(
+            "WARNING: The most massive galaxy is not in the "
+            + "most massive FoF halo, but %s!" % nth,
+            file=sys.stderr,
+        )
+
+    del halos, galaxies
+    return halo, galaxy
+
+
+def get_halo_and_galaxy(snap, args, R200, M200, center):
+    """Cut halo and galaxy (if present)."""
+    if args.verbose:
+        print("cut halo and galaxy...")
+        sys.stdout.flush()
+
+    if M200 == 0:
+        if args.verbose:
+            print("no halo found")
+        h = None
+        g = None
+    else:
+        h = snap[pygad.BallMask(R200, center=center, sph_overlap=False)]
+        g = snap[pygad.BallMask(args.gal_rad * R200, center=center, sph_overlap=False)]
+        if len(g) < min_N:
+            if args.verbose:
+                print(
+                    "galaxy has less than %d " % min_N
+                    + "particles, consider it as not defined"
+                )
+            g = None
+
+        if args.verbose:
+            print("done.")
+            print()
+            print(
+                "halo:     particles: %24s"
+                % pygad.utils.nice_big_num_str(len(h) if h else 0)
+            )
+            print(
+                "=====     M200 = %28s"
+                % (
+                    h["mass"].sum().in_units_of("Msol", subs=snap)
+                    if h
+                    else pygad.UnitArr(0, "Msol")
+                )
+            )
+            print(
+                "          R200 = %28s"
+                % (
+                    R200.in_units_of("kpc", subs=snap)
+                    if R200
+                    else pygad.UnitArr(0, "kpc")
+                )
+            )
+            print()
+            print(
+                "galaxy:   particles: %24s"
+                % pygad.utils.nice_big_num_str(len(g) if g else 0)
+            )
+            print(
+                "=====     M_stars = %25s"
+                % (
+                    g.stars["mass"].sum().in_units_of("Msol", subs=snap)
+                    if (g and len(g.stars))
+                    else pygad.UnitArr(0, "Msol")
+                )
+            )
+            print(
+                "          SFR = %29s"
+                % (g.gas["sfr"].sum() if g else pygad.UnitArr(0, units="Msol yr**-1"))
+            )
+            print()
+
+    return h, g
+
+
+def cut_halo_and_gal(snap, center, galaxy, args):
+    """Center the snapshot and cut the halo (using R200 from `virial_info`)."""
+    if args.verbose:
+        print("get virial information...")
+        sys.stdout.flush()
+    if center is not None:
+        R200, M200 = pygad.analysis.virial_info(snap, center=center, odens=200)
+        R500, M500 = pygad.analysis.virial_info(snap, center=center, odens=500)
+    else:
+        R200, M200 = pygad.UnitArr(np.nan, units=snap["pos"].units), pygad.UnitArr(
+            np.nan, units=snap["mass"].units
+        )
+        R500, M500 = pygad.UnitArr(np.nan, units=snap["pos"].units), pygad.UnitArr(
+            np.nan, units=snap["mass"].units
+        )
+
+    if args.verbose:
+        print("R200:", R200)
+        print("M200:", M200)
+
+    h, g = get_halo_and_galaxy(snap, args, R200, M200, center)
+
+    return h, g, {"R200": R200, "M200": M200, "R500": R500, "M500": M500}
+
+
+def write_info_1(h, g, args, center, virinfo):
+    """Write the first part of the info file."""
+    info_filename = args.destination + ("/info_%03d.txt" % snap_num)
+    if os.path.exists(info_filename) and not args.overwrite:
+        print(
+            'ERROR: file "%s" already ' % info_filename
+            + 'exists (consider "--overwrite")!',
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    if args.verbose:
+        print("start writing info file...")
+    with open(info_filename, "w") as f:
+        print("The galaxy is all matter within %.3f x R200" % args.gal_rad, file=f)
+        print("", file=f)
+        print("a:                  ", snap.scale_factor, file=f)
+        print("cosmic time:        ", snap.cosmic_time(), file=f)
+        print("redshift:           ", snap.redshift, file=f)
+        print("h:                  ", snap.cosmology.h(snap.redshift), file=f)
+        print("center:             ", center, file=f)
+        print(
+            "center(galaxy,com): ",
+            pygad.analysis.center_of_mass(g) if g is not None else None,
+            file=f,
+        )
+        print(
+            "center(galaxy,ssc): ",
+            pygad.analysis.shrinking_sphere(g, center=center, R=virinfo["R200"])
+            if g is not None
+            else None,
+            file=f,
+        )
+        print(
+            "center(halo,com):   ",
+            pygad.analysis.center_of_mass(h) if h is not None else None,
+            file=f,
+        )
+        print(
+            "center(halo,ssc):   ",
+            pygad.analysis.shrinking_sphere(h, center=center, R=virinfo["R200"])
+            if h is not None
+            else None,
+            file=f,
+        )
+        print(
+            "R200:               ",
+            virinfo["R200"].in_units_of("kpc", subs=snap),
+            file=f,
+        )
+        print(
+            "M200:               ",
+            virinfo["M200"].in_units_of("Msol", subs=snap),
+            file=f,
+        )
+        print(
+            "R500:               ",
+            virinfo["R500"].in_units_of("kpc", subs=snap),
+            file=f,
+        )
+        print(
+            "M500:               ",
+            virinfo["M500"].in_units_of("Msol", subs=snap),
+            file=f,
+        )
+
+
+def write_info_2(h, g, args, virinfo):
+    """Write the second part of the info file."""
+    if args.verbose:
+        print("continue writing info file...")
+        sys.stdout.flush()
+    info_filename = args.destination + ("/info_%03d.txt" % snap_num)
+    with open(info_filename, "a") as f:
+        redI = pygad.UnitArr(pygad.analysis.reduced_inertia_tensor(g)).flatten()
+        print(f"{redI=}")
+
+        if h:
+            print(
+                "M_stars:            ",
+                h.stars["mass"].sum().in_units_of("Msol", subs=snap)
+                if len(h.stars)
+                else None,
+                file=f,
+            )
+            print("L_halo:             ", h["angmom"].sum(axis=0), file=f)
+            print("L_baryons:          ", h.baryons["angmom"].sum(axis=0), file=f)
+        else:
+            print("M_stars:            ", pygad.UnitArr(0, units="Msol"), file=f)
+            print("L_halo:             ", None, file=f)
+            print("L_baryons:          ", None, file=f)
+        if g:
+            print(
+                "M_stars(gal):       ",
+                g.stars["mass"].sum().in_units_of("Msol", subs=snap),
+                file=f,
+            )
+            print(
+                "M_gas(gal):         ",
+                g.gas["mass"].sum().in_units_of("Msol", subs=snap),
+                file=f,
+            )
+            print(
+                "Z_stars(gal):       ",
+                (g.stars["mass"] * g.stars["metallicity"]).sum() / g.stars["mass"].sum()
+                if len(g.stars)
+                else None,
+                file=f,
+            )
+            print(
+                "Z_gas(gal):         ",
+                (g.gas["mass"] * g.gas["metallicity"]).sum() / g.gas["mass"].sum(),
+                file=f,
+            )
+            print("SFR(gal):           ", g.gas["sfr"].sum(), file=f)
+            print("L_baryons(gal):     ", g.baryons["angmom"].sum(axis=0), file=f)
+            redI = pygad.UnitArr(pygad.analysis.reduced_inertia_tensor(g)).flatten()
+            print("I_red(gal):         ", str(redI).replace("\n", " "), "[1]", file=f)
+            print("R_half_M(3D):       ", pygad.analysis.half_mass_radius(g), file=f)
+        else:
+            print("M_stars(gal):       ", pygad.UnitArr(0, "Msol"), file=f)
+            print("M_gas(gal):         ", pygad.UnitArr(0, "Msol"), file=f)
+            print("Z_stars(gal):       ", None, file=f)
+            print("Z_gas(gal):         ", None, file=f)
+            print("SFR(gal):           ", None, file=f)
+            print("L_baryons(gal):     ", None, file=f)
+            print("I_red(gal):         ", None, file=f)
+            print("R_half_M(3D):       ", None, file=f)
+
+
+def orientate_and_get_disc(g, args):
+    """Orientate the snapshot and get the disc."""
+    if args.verbose:
+        print("[ORIENTATE snapshot @ I_red(gal)...]")
+        sys.stdout.flush()
+
+    if g is None:
+        if args.verbose:
+            print("[no galaxy -> skip]")
+        return None
+
+    redI = pygad.UnitArr(pygad.analysis.reduced_inertia_tensor(g)).flatten()
+    pygad.analysis.orientate_at(g, "red I", total=True)
+    disc = g[pygad.DiscMask(**disc_def)]
+
+    return disc
+
+
+def write_info_3(h, g, disc, args):
+    """Write the thirs part of the info file."""
+    if args.verbose:
+        print("continue writing info file...")
+        sys.stdout.flush()
+    info_filename = args.destination + ("/info_%03d.txt" % snap_num)
+    with open(info_filename, "a") as f:
+        if g:
+            print(
+                "R_half_M(faceon):   ",
+                pygad.analysis.half_qty_radius(g, "mass", proj=2),
+                file=f,
+            )
+            print("R_eff(faceon):      ", pygad.analysis.eff_radius(g), file=f)
+            print(
+                "D/T(stars):         ",
+                float(disc.stars["mass"].sum() / g.stars["mass"].sum()),
+                file=f,
+            )
+        else:
+            print("R_half_M(faceon):   ", None, file=f)
+            print("R_eff(faceon):      ", None, file=f)
+            print("D/T(stars):         ", None, file=f)
+        print("", file=f)
+
+
+def write_star_form(snap, virinfo, last_snap, last_R200, args):
+    """Store the star formation information."""
+    if last_snap is not None:
+        if args.verbose:
+            print("gather newly formed stars...")
+            sys.stdout.flush()
+
+        stars = last_snap.stars
+        if len(stars) == 0:
+            return
+
+        assert stars["form_time"].units == "a_form"
+        new_stars = stars[
+            (snap.scale_factor < stars["form_time"])
+            & (stars["form_time"] <= last_snap.scale_factor)
+        ]
+
+        if args.verbose:
+            print("  %d new star particles born" % len(new_stars))
+
+        last_R200_f = float(last_R200)
+        this_R200_f = float(virinfo["R200"])
+        last_a = float(last_snap.scale_factor)
+        this_a = float(snap.scale_factor)
+        IDs = new_stars["ID"].view(np.ndarray)
+        r = new_stars["r"].view(np.ndarray)
+        a = new_stars["form_time"].view(np.ndarray)
+        x = (a - last_a) / (this_a - last_a)
+        R200_a = x * this_R200_f + (1.0 - x) * last_R200_f
+        del x
+        r_in_R200 = r / R200_a
+        r_in_kpc = new_stars["r"].in_units_of("kpc", subs=last_snap).view(np.ndarray)
+        Z = new_stars["metallicity"].view(np.ndarray)
+        star_form_filename = args.destination + "/star_form.ascii"
+        if args.verbose:
+            print('  write their properties to "%s"...' % star_form_filename)
+            sys.stdout.flush()
+        with open(star_form_filename, "a") as f:
+            for i in range(len(new_stars)):
+                print(
+                    "%-12d \t %-11.9f \t %-18.5g \t %-10.5g \t %-11.9f"
+                    % (IDs[i], a[i], r_in_kpc[i], r_in_R200[i], Z[i]),
+                    file=f,
+                )
+
+
+def write_halo_subsnap(args, snap, cut_R):
+    """Write the halo as a new snapshot."""
+    if cut_R:
+        cut_filename = args.destination + ("/snap_cut_%03d.gdt" % snap_num)
+        if args.verbose:
+            print('write cutted region (< {}) to "{}"...'.format(cut_R, cut_filename))
+            sys.stdout.flush()
+        if os.path.exists(cut_filename) and not args.overwrite:
+            print(
+                'ERROR: file "%s" already ' % cut_filename
+                + 'exists (consider "--overwrite")!',
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        pygad.gadget.write(
+            snap[pygad.BallMask(cut_R, sph_overlap=False)],
+            cut_filename,
+            blocks=None,  # -> all blocks
+            gformat=2,
+            endianness="native",
+            infoblock=True,
+            double_prec=False,
+            gad_units={
+                "LENGTH": args.length,
+                "MASS": args.mass,
+                "VELOCITY": args.velocity,
+            },
+            overwrite=args.overwrite,
+        )
+    else:
+        if args.verbose:
+            print("no halo to write")
+
+
+# linking length to physical length
+def linking_length_phys(s, Omega, ll):
+    m = np.mean(s["mass"])  # mean particle mass
+    rho = Omega * s.cosmology.rho_crit(z=0)  # mean density
+    # mean particle separation:
+    # (factor 2**(1/6) is assuming a densest sphere packing)
+    d = 2 ** (1 / 6.0) * (m / rho) ** Fraction(1, 3)
+    return ll * d.in_units_of("ckpc", subs={"a": 1.0, "h_0": s.cosmology.h_0})
+
+
+if __name__ == "__main__":
+    args = parser.parse_args()
+
+    import sys
+
+    if args.verbose:
+        print("starting up...")
+        sys.stdout.flush()
+
+    # Suspend importing to here, after parsing the arguments to be quick,
+    # if only the help has to be displayed or there already occurs and
+    # error in parsing the arguments.
+    import time
+
+    t_start = time.time()
+    import os
+    import gc
+    from fractions import Fraction
+    import numpy as np
+    import pickle as pickle
+    import pygad
+
+    pygad.environment.verbose = args.verbose
+    if args.verbose:
+        # print("imported pygad", pygad.version)
+        sys.stdout.flush()
+
+    # test arguments
+    if args.name_pattern.count("%") == 0:
+        if args.verbose:
+            print(
+                "ERROR: the pattern of the snapshot filename",
+                "does not contain any string formatter. It",
+                "will be the same name for all snapshots!",
+                file=sys.stderr,
+            )
+        sys.exit(1)
+    print(f"{args.start=}, {args.end=}, {-args.step=}")
+    assert args.start > args.end
+    # prepare arguments
+    if args.destination is None:
+        args.destination = os.path.dirname(args.name_pattern) + "/trace"
+
+    # prepare trace folder
+    if not os.path.exists(args.destination):
+        if args.verbose:
+            print('create trace folder: "%s"' % args.destination)
+        os.makedirs(args.destination)
+    if os.listdir(args.destination):
+        print("WARNING: trace is not empty!", file=sys.stderr)
+
+    restart_filename = args.destination + "/" + restart_filename
+    if os.path.exists(restart_filename):
+        if args.verbose:
+            print('reading restart file "%s"...' % restart_filename)
+            print("WARNING: ignoring --start=%s!" % args.start)
+            sys.stdout.flush()
+        with open(restart_filename, "rb") as f:
+            last_R200, center, galaxy, halo, old_args, snap_num = pickle.load(f)
+        # check the compability of the arguments
+        new_args = vars(args).copy()
+        for not_cmp in ["start", "step", "end", "tlimit", "overwrite", "verbose"]:
+            old_args.pop(not_cmp)
+            new_args.pop(not_cmp)
+        if old_args != new_args:
+            print(
+                "ERROR: arguments are not compatible " + "with the previous run!",
+                file=sys.stderr,
+            )
+            print("Not matching these old arguments:", file=sys.stderr)
+            for arg, value in old_args.items():
+                if new_args[arg] != value:
+                    print("  %-20s %s" % (arg + ":", value), file=sys.stderr)
+            sys.exit(1)
+        del old_args, new_args
+        args.start = snap_num - args.step
+        if args.verbose:
+            print("done reading restart file")
+        last_snap = load_snap(snap_num, args)
+        snap = load_snap(args.start, args)
+        snap["ID"] = np.array(snap["ID"], dtype=np.uint64)
+    else:
+        if args.start is None:
+            args.start = find_last_snap(args)
+
+        # prepare starformation file
+        star_form_filename = args.destination + "/star_form.ascii"
+        if args.verbose:
+            print("====================================================")
+            print('prepare star formation file "%s"...' % star_form_filename)
+            sys.stdout.flush()
+        if os.path.exists(star_form_filename) and not args.overwrite:
+            print(
+                'ERROR: file "%s" already ' % star_form_filename
+                + 'exists (consider "--overwrite")!',
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        with open(star_form_filename, "w") as f:
+            print(
+                "%-12s \t %-11s \t %-18s \t %-10s \t %-11s"
+                % ("ID", "a_form", "r [kpc]", "r/R200(a)", "Z"),
+                file=f,
+            )
+
+        # find most massive galaxy in a halos that has little intrudors (low
+        # resolution particles)
+        if args.verbose:
+            print("====================================================")
+            print("[FIND the structure OF INTEREST]")
+            sys.stdout.flush()
+            start_time = time.time()
+        snap = load_snap(args.start, args)
+        snap["ID"] = np.array(snap["ID"], dtype=np.uint64)
+        halo, galaxy = find_struct_of_interest(snap, args, mode="first")
+        if args.verbose:
+            print(
+                "found halo & galaxy of interest in %f sec" % (time.time() - start_time)
+            )
+
+        last_snap = None
+        last_R200 = None
+        center = "find it!"  # get's found by `my_center`
+
+    # do tracing / loop over snapshot (in reverse order)
+    if args.verbose:
+        start_time = time.time()
+    print(f"starting!!! {args.start=}, {args.end=}, {-args.step=}")
+    print(
+        "starting!!!", np.arange(args.start, args.end - 1, -args.step, dtype=np.int32)
+    )
+    for snap_num in np.arange(args.start, args.end - 1, -args.step, dtype=np.int32):
+        if args.verbose:
+            print("====================================================")
+            print("process snapshot #%03d" % snap_num)
+            sys.stdout.flush()
+
+        if snap_num != args.start or os.path.exists(restart_filename):
+            # load the snapshot
+            snap = load_snap(snap_num, args)
+            snap["ID"] = np.array(snap["ID"], dtype=np.uint64)
+            print ("loaded snap ", snap_num)
+
+            # find the most massive progenitor (galaxy) - i.e. update `galaxy`
+            if halo is None:
+                halo, galaxy = None, None
+            else:
+                halo, galaxy = find_struct_of_interest(
+                    snap,
+                    args,
+                    mode="mmp-galaxy" if galaxy is not None else "mmp-halo",
+                    galaxy=galaxy,
+                    halo=halo,
+                )
+        # define the center
+        center = my_center(halo, galaxy, snap, old_center=center, args=args)
+
+        # `galaxy` is the stellar FoF group, but `g` is everything within args.gal_rad*R200
+        h, g, virinfo = cut_halo_and_gal(snap, center, galaxy, args)
+        write_info_1(h, g, args, center if galaxy is not None else None, virinfo)
+        if args.verbose:
+            print("  center @", center)
+        pygad.Translation(-center).apply(snap)
+        write_info_2(h, g, args, virinfo)
+        disc = orientate_and_get_disc(g, args)
+        write_info_3(h, g, disc, args)
+        # at the current state returns immediately if last_snap is None (at first
+        # snapshot)
+        write_star_form(snap, virinfo, last_snap, last_R200, args)
+
+        if args.cut is not None:
+            write_halo_subsnap(args, snap, args.cut * virinfo["R200"] if h else None)
+
+        last_snap = snap
+        last_R200 = virinfo["R200"]
+
+        del snap, h, disc, virinfo
+        pygad.gc_full_collect()
+
+        if args.verbose:
+            print('writing restart file "%s"...' % restart_filename)
+            sys.stdout.flush()
+        with open(restart_filename, "wb") as f:
+            pickle.dump((last_R200, center, galaxy, halo, vars(args), snap_num), f)
+
+        if args.verbose:
+            print(
+                "all done with snapshot #%03d in " % snap_num
+                + "%f sec" % (time.time() - start_time)
+            )
+            start_time = time.time()
+            sys.stdout.flush()
+
+        if time.time() - t_start > pygad.UnitScalar(args.tlimit, "s"):
+            if args.verbose:
+                print()
+                print("time limit (%s) exceeded -- stop!" % args.tlimit)
+            break
+
+    if args.verbose:
+        print()
+        print("finished.")
