@@ -1062,10 +1062,8 @@ def mock_absorption_spectrum(
 
     # add the Hubble flow
     zero_Hubble_flow_at.convert_to(los_pos.units, subs=s)
-    # H_flow = s.cosmology.H(s.redshift) * (los_pos - zero_Hubble_flow_at)
-    H_flow = UnitArr(0, "km/s")
+    H_flow = s.cosmology.H(s.redshift) * (los_pos - zero_Hubble_flow_at)
     H_flow.convert_to(vel.units, subs=s)
-    print("H_flow is set to ", H_flow)
     vpec_z = vel  # DS: peculiar LOS velocities
     vel = vel + H_flow
 
@@ -1348,6 +1346,10 @@ def mock_absorption_spectra_multilos(
 
     if isinstance(ion, str):
         ion = str(ion)
+    # if ion == 'HI':
+    #     velstat = True
+    # else:
+    #     velstat = False
     zaxis = (set([0, 1, 2]) - set([xaxis, yaxis])).pop()
     if set([xaxis, yaxis, zaxis]) != set([0, 1, 2]):
         raise ValueError("x- and y-axis must be in [0,1,2] and different!")
@@ -1646,18 +1648,24 @@ def mock_absorption_spectra_multilos(
         los_pos = s.gas["pos"][:, zaxis]
 
     # add the Hubble flow
-    # zero_Hubble_flow_at.convert_to(los_pos.units, subs=s)
-    # H_flow = s.cosmology.H(s.redshift) * (los_pos - zero_Hubble_flow_at)
-    # H_flow.convert_to(vel.units, subs=s)
-    # vpec_z = vel  # DS: peculiar LOS velocities
-    # vel = vel + H_flow
     zero_Hubble_flow_at.convert_to(los_pos.units, subs=s)
-    # H_flow = s.cosmology.H(s.redshift) * (los_pos - zero_Hubble_flow_at)
-    H_flow = UnitArr(0, "km/s")
+    H_flow = s.cosmology.H(s.redshift) * (los_pos - zero_Hubble_flow_at)
     H_flow.convert_to(vel.units, subs=s)
-    print("H_flow is set to ", H_flow)
     vpec_z = vel  # DS: peculiar LOS velocities
     vel = vel + H_flow
+    # if velstat:
+    #     print ("some vel stats:")
+    #     print ("Hflo -- min:", f'{np.min(H_flow):.3f} km/s', "max:", f'{np.max(H_flow):.3f} km/s')
+    #     print ("vpec -- min:", f'{np.min(vpec_z):.3f} km/s', "max:", f'{np.max(vpec_z):.3f} km/s')
+    #     print ("vsum -- min:", f'{np.min(vel):.3f} km/s', "max:", f'{np.max(vel):.3f} km/s')
+
+    # zero_Hubble_flow_at.convert_to(los_pos.units, subs=s)
+    # # H_flow = s.cosmology.H(s.redshift) * (los_pos - zero_Hubble_flow_at)
+    # H_flow = UnitArr(0, "km/s")
+    # H_flow.convert_to(vel.units, subs=s)
+    # print("H_flow is set to ", H_flow)
+    # vpec_z = vel  # DS: peculiar LOS velocities
+    # vel = vel + H_flow
 
     if pos is not None:
         pos = (

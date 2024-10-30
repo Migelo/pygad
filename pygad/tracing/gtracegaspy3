@@ -1,0 +1,480 @@
+#!/usr/bin/env python
+"""
+gtracegas - trace the history of particles that has even been part of a given
+region.
+
+The following is tracked:
+    when (re-)entering the region:      [a, mass, metals, j_z, T]
+    when leaving the region:            [a, mass, metals, j_z, T, vel]
+    when turning into a star:           [a, mass, metals, j_z]
+    while being out of the region, the following is updated:
+                                        [(a, r_max), (a, z_max)]
+where a is the scale factor of when the particle reached the maximum radius or
+height, respectively.
+"""
+
+import argparse
+
+parser = argparse.ArgumentParser(
+    description="Trace gas particles that have been part of the region "
+    + "at some point. Tracing is started when they enter "
+    + "region for the first time. Some key properties (as "
+    + "temperature, angular momentum, and metallicty) are "
+    + "logged each time a particle enters or leaves the "
+    + "region. Furthermore the maximum travel distances for "
+    + "each journey out of the region is logged."
+)
+
+parser.add_argument(
+    "snaps",
+    help="The pattern of the snapshots' file names. One "
+    + "can use C- / Python-like string formatter that "
+    + "are all going to be replaced by the snapshot "
+    + 'number. (example: "snap_%%03d")',
+)
+parser.add_argument(
+    "infos",
+    help="The pattern of the infos' file names. One can use "
+    + "C- / Python-like string formatter that are all "
+    + "going to be replaced by the snapshot number. "
+    + '(example: "info_%%03d.txt")',
+)
+parser.add_argument(
+    "--snap_range",
+    nargs=2,
+    metavar="INT",
+    type=int,
+    required=True,
+    help="The snapshot numbers to analysis for histories.",
+)
+parser.add_argument(
+    "--step",
+    metavar="INT",
+    type=int,
+    default=1,
+    help="The step size in marching the snapshots (default: " + "%(default)d).",
+)
+parser.add_argument(
+    "--region",
+    choices=["disc", "ball", "halo", "disc-Uebler", "ism", "ism2"],
+    default="ball",
+    help="The definition of the region (default: %(default)s). "
+    + '"disc" is everything with jz/jc>0.85, r<0.15*R200, '
+    + "and |z|<5 kpc, where jc is the angular momentum of a "
+    + "particle on a circular orbit with the same energy, "
+    + 'only co-rotating particles are counted; "ball" is '
+    + 'just everything within 0.15*R200; "disc-Uebler" is '
+    + "the definition of Uebler+ (2014): 0.8<|jz/j'c|<1.2, "
+    + "r<0.15*R200, and |z|<5 kpc, where "
+    + "j'c := r * sqrt(G*M(<r)/r).",
+)
+parser.add_argument(
+    "--region_param",
+    default=None,
+    help='A parameter for the region. For "disc" it is the '
+    + 'critical jz/jc value (default: 0.85); for "ball" it '
+    + "is the radius in terms of the virial radius "
+    + '(default: 15%%), for "disc-Uebler" it is ignored.',
+)
+parser.add_argument(
+    "--dest",
+    default="traced_gas.dat",
+    help="The path of the output data (default %(default)s).",
+)
+parser.add_argument(
+    "--length",
+    default="ckpc/h_0",
+    help="Define the Gadget length units (default: %(default)s).",
+)
+parser.add_argument(
+    "--mass",
+    default="1e10 Msol h_0**-1",
+    help="Define the Gadget mass units (default: %(default)s).",
+)
+parser.add_argument(
+    "--velocity",
+    default="km/s",
+    help="Define the Gadget velocity units (default: %(default)s).",
+)
+parser.add_argument(
+    "--overwrite",
+    action="store_true",
+    help="Force to overwrite possibly existing files.",
+)
+parser.add_argument("--verbose", "-v", action="store_true", help="Run in verbose mode.")
+
+
+def prepare_snap(args, snap_i):
+    snap_num_freq = args.snaps.count("%")
+    snapfile = args.snaps % ((snap_i,) * snap_num_freq)
+    snap = pygad.Snapshot(
+        snapfile,
+        physical=False,
+        gad_units={
+            "LENGTH": args.length,
+            "VELOCITY": args.velocity,
+            "MASS": args.mass,
+        },
+    )
+    snap["ID"] = snap["ID"].astype(np.uint64)
+    snap_num_freq = args.infos.count("%")
+    infofile = args.infos % ((snap_i,) * snap_num_freq)
+    info = pygad.tools.read_info_file(infofile)
+
+    if args.verbose:
+        print("  ->", snap)
+        print("  scale param.:", snap.scale_factor)
+        print("  cosmic time: ", snap.cosmic_time())
+
+    Ired = info["I_red(gal)"]
+    if Ired is None or info["center"] is None:
+        if args.verbose:
+            print("no central galaxy yet; continue...")
+        return snap, None
+    Ired = Ired.reshape((3, 3))
+
+    if args.verbose:
+        print("center (also in velocity) and orientate the snapshot...")
+    if args.verbose:
+        print("   center at:", info["center"])
+    pygad.Translation(-info["center"]).apply(snap)
+    rind = np.argsort(snap["r"])
+    snap["vel"] -= pygad.analysis.mass_weighted_mean(
+        snap[snap["r"] < snap["r"][rind[1001]]], "vel"
+    )
+    if args.verbose:
+        print("   orientation is at reduced inertia tensor")
+    pygad.analysis.orientate_at(snap, "red I", qty=Ired, total=True)
+    snap.to_physical_units()
+
+    if args.verbose:
+        print("restrict to region...")
+    region = {"in": None, "out": None}
+    if args.region == "disc":
+        if args.verbose:
+            print("  ... the disc (jz/jc>%.2f," % args.region_param, end=" ")
+            print("rmax=0.15*R200, zmax='5 kpc')")
+            print("  ... where jc is the angular momentum of a particle with", end=" ")
+            print("the same energy, but on a perfectly circular orbit; only", end=" ")
+            print("co-rotating particles are counted")
+        R200, M200 = pygad.analysis.virial_info(snap)
+        region["in"] = snap.gas[
+            pygad.DiscMask(jzjc_min=args.region_param, rmax=0.15 * R200, zmax="5 kpc")
+        ]
+        region["out"] = region["in"]
+    elif args.region == "ball":
+        if args.verbose:
+            print("  ... all within %g%% of R200" % (100.0 * args.region_param))
+        R200, M200 = pygad.analysis.virial_info(snap)
+        region["in"] = snap.gas[pygad.BallMask(args.region_param * R200)]
+        region["out"] = region["in"]
+    elif args.region == "halo":
+        if args.verbose:
+            print("  ... all within %g%% of R200" % (100.0 * args.region_param))
+        R200, M200 = pygad.analysis.virial_info(snap)
+        region["in"] = snap.gas[pygad.BallMask(args.region_param * R200)]
+        region["out"] = region["in"]
+    elif args.region == "disc-Uebler":
+        if args.verbose:
+            print("  ... the disc (|jz/jc| in [0.8,1.2], rmax=0.15*R200, zmax='3 kpc')")
+            print("  ... where jc = r * sqrt(G*M(<r)/r)")
+        R200, M200 = pygad.analysis.virial_info(snap)
+        r_sort_arg = np.argsort(snap["r"])
+        M_enc = np.cumsum(snap["mass"][r_sort_arg])[pygad.utils.perm_inv(r_sort_arg)]
+        jc = snap["mass"] * snap["r"] * np.sqrt(pygad.physics.G * M_enc / snap["r"])
+        del r_sort_arg, M_enc
+        jz_jc = (snap["angmom"][:, 2] / jc).in_units_of(1, subs=snap)
+        rmax = (0.15 * R200).in_units_of(snap["r"].units, subs=snap)
+        zmax = pygad.UnitArr("3 kpc").in_units_of(snap["z"].units, subs=snap)
+        gm = snap.gas._mask
+        region["in"] = snap.gas[
+            (0.8 < np.abs(jz_jc[gm]))
+            & (np.abs(jz_jc[gm]) < 1.2)
+            & (snap.gas["r"] < rmax)
+            & (snap.gas["z"] < zmax)
+        ]
+        region["out"] = region["in"]
+        del jc, jz_jc
+    elif args.region == "ism":
+        R200, M200 = pygad.analysis.virial_info(snap)
+        R200_frac = float(args.region_param[0])
+        Tcrit = args.region_param[1]
+        rhocrit = args.region_param[2]
+        if args.verbose:
+            print("  ... ISM, which is all within %g%% of R200" % (100.0 * R200_frac))
+            print("      and T < {} and rho > {}".format(Tcrit, rhocrit))
+        region["in"] = snap.gas[
+            pygad.BallMask(R200_frac * R200)
+            & pygad.ExprMask('(temp < "{}") & (rho > "{}")'.format(Tcrit, rhocrit))
+        ]
+        region["out"] = snap.gas[pygad.BallMask(R200_frac * R200)]
+    elif args.region == "ism2":
+        R200, M200 = pygad.analysis.virial_info(snap)
+        R200_frac = float(args.region_param[0])
+        Tcrit = args.region_param[1]
+        rhocrit = args.region_param[2]
+        if args.verbose:
+            print("  ... ISM2, which is all within %g%% of R200" % (100.0 * R200_frac))
+            print("      and T < {} and rho > {}".format(Tcrit, rhocrit))
+        region["in"] = snap.gas[
+            pygad.BallMask(R200_frac * R200)
+            & pygad.ExprMask('(temp < "{}") & (rho > "{}")'.format(Tcrit, rhocrit))
+        ]
+        region["out"] = region["in"]
+        #region["out"] = snap.gas[pygad.ExprMask('(temp >= "%s")' % Tcrit)]
+
+    else:
+        raise RuntimeError('Unknown region mode "%s"!' % args.region)
+
+    return snap, region
+
+
+# trace (gas) particles by ID
+trace_data = {}
+traced_IDs = set()
+out_IDs = set()
+
+
+def add_state_info(sub, new=False, vel=False, temp=True):
+    data = [
+        sub["ID"],
+        sub.scale_factor * np.ones(len(sub), float),
+        sub["mass"],
+        sub["metals"],
+        sub["angmom"][:, 2],
+    ]
+    if temp:
+        data.append(sub["temp"])
+    if vel:
+        data.append(np.linalg.norm(sub["vel"], axis=-1))
+    data = np.vstack(data).T
+    if new:
+        for row in data:
+            trace_data[int(row[0])] = row[1:]
+    else:
+        for row in data:
+            ID = int(row[0])
+            trace_data[ID] = np.concatenate([trace_data[ID], row[1:]])
+
+
+def start_trace_new(region, region_IDs):
+    """Start to trace particles that are new in region."""
+    new_IDs = region_IDs - traced_IDs
+    traced_IDs.update(new_IDs)
+    new = region.gas[pygad.IDMask(new_IDs)]
+    if args.verbose:
+        print("new gas particles to trace:             %-10d" % len(new))
+    add_state_info(new, new=True)
+
+
+def stop_trace_stars(stars):
+    """Stop tracing particles that turned into stars."""
+    new_star_IDs = set(stars["ID"]).intersection(traced_IDs)
+    traced_IDs.difference_update(new_star_IDs)
+    new_stars = snap.stars[pygad.IDMask(new_star_IDs)]
+    if args.verbose:
+        print("traced gas particles that formed stars: %-10d" % len(new_stars))
+    add_state_info(new_stars, temp=False)
+
+
+def deactivate_reentering(region, region_IDs):
+    """Get the IDs that reentered during this snapshot"""
+    reenter_IDs = out_IDs.intersection(region_IDs)
+    out_IDs.difference_update(reenter_IDs)
+    reenter = region[pygad.IDMask(reenter_IDs)]
+    if args.verbose:
+        print("gas particles re-entered the region:    %-10d" % len(reenter))
+    add_state_info(reenter)
+
+
+def activate_leaving(snap, region_IDs):
+    """Get the IDs that left the region in this snapshot"""
+    leaving_IDs = (traced_IDs - out_IDs) - region_IDs
+    out_IDs.update(leaving_IDs)
+    leaving = snap.gas[pygad.IDMask(leaving_IDs)]
+    if args.verbose:
+        print("gas particles leaving the region:       %-10d" % len(leaving))
+    add_state_info(leaving, vel=True)
+
+    data = [
+        leaving["ID"],
+        leaving.scale_factor * np.ones(len(leaving), float),
+        leaving["r"],
+        leaving.scale_factor * np.ones(len(leaving), float),
+        leaving["pos"][:, 2],
+    ]
+    data = np.vstack(data).T
+    for row in data:
+        ID = int(row[0])
+        trace_data[ID] = np.concatenate([trace_data[ID], row[1:]])
+
+
+def update_activated(snap):
+    """Tracking of r and z cordinates for particles outside of the region"""
+    active = snap.gas[pygad.IDMask(out_IDs)]
+    if args.verbose:
+        print("update traced particles outside:        %-10d" % len(out_IDs))
+
+    current = [
+        active["ID"],
+        active.scale_factor * np.ones(len(active), float),
+        active["r"],
+        active.scale_factor * np.ones(len(active), float),
+        np.abs(active["pos"][:, 2]),
+    ]
+    current = np.vstack(current).T
+    for row in current:
+        data = trace_data[int(row[0])]
+        if data[-3] < row[-3]:
+            data[-4:-2] = row[-4:-2]
+        if data[-1] < row[-1]:
+            data[-2:] = row[-2:]
+
+
+if __name__ == "__main__":
+    args = parser.parse_args()
+
+    import sys, os, time
+
+    print ("log file is printed at ", os.path.dirname(args.dest)+"/log_gastrace_"+args.region+".txt")
+    stdoutOrigin=sys.stdout 
+    sys.stdout = open(os.path.dirname(args.dest)+"/log_gastrace_"+args.region+".txt", "a")
+    
+    if args.verbose:
+        print("starting up...")
+
+    if args.verbose:
+        start_total = time.time()
+    
+    # processing some arguments
+    if args.region == "disc":
+        if args.region_param is None:
+            args.region_param = 0.85
+        args.region_param = float(args.region_param)
+    elif args.region == "ball":
+        if args.region_param is None:
+            args.region_param = 0.15
+        args.region_param = float(args.region_param)
+    elif args.region == "halo":
+        if args.region_param is None:
+            args.region_param = 1.0
+        args.region_param = float(args.region_param)
+    elif args.region == "disc-Uebler":
+        pass  # no use of args.region_param
+    elif args.region == "ism":
+        if args.region_param is None:
+            args.region_param = [".15", "2e4 K", "1e-2 u/cm**3"]
+        else:
+            args.region_param = args.region_param.split(",")
+    elif args.region == "ism2":
+        if args.region_param is None:
+            args.region_param = [".15", "2e4 K", "1e-2 u/cm**3"]
+        else:
+            args.region_param = args.region_param.split(",")
+    else:
+        raise RuntimeError('Unknown region mode "%s"!' % args.region)
+
+    # Suspend importing to here, after parsing the arguments to be quick,
+    # if only the help has to be displayed or there already occurs and
+    # error in parsing the arguments.
+
+    import numpy as np
+    import pygad
+
+    pygad.environment.verbose = args.verbose
+
+    if os.path.exists(args.dest) and not args.overwrite:
+        print(
+            "ERROR: destination path exsits "
+            + '(%s)! Consider "--overwrite".' % args.dest,
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    for snap_i in range(args.snap_range[0], args.snap_range[1] + 1, args.step):
+        start_loop = time.time()
+        if args.verbose:
+            print("====================================================")
+            print("check if snapshot #%03d exists" % snap_i)
+            print("looking for it at:")
+            print(args.snaps)
+        if not os.path.isfile(args.snaps % snap_i):
+            if args.verbose:
+                print("#%03d does not exists, skipping" % snap_i)
+            continue
+        if args.verbose:
+            print("snapshot exists, read snapshot and trace file #%03d..." % snap_i)
+            sys.stdout.flush()
+        snap, region = prepare_snap(args, snap_i)
+        if region is None:  # no central galaxy
+            continue  # continue
+        region_IDs_in = set(region["in"].gas["ID"])
+        region_IDs_out = set(region["out"].gas["ID"])
+        
+        # continue as long as there is not / has not been a region with
+        # at least 50 particles
+        if not trace_data and len(region["in"].gas) < 50:
+            if args.verbose:
+                print("no region yet (only considered defined when it has more")
+                print("than 50 gas particles)")
+                print("continue")
+            continue
+
+        if args.verbose:
+            # print r'region has a stellar mass of %.2g %s (%d particles)' % (
+            #        region['in'].stars['mass'].sum(), region['in'].stars['mass'].units,
+            #        len(region['in'].stars))
+            print(
+                r"region['in'] has a gas mass of %.2g %s (%d particles)"
+                % (
+                    region["in"].gas["mass"].sum(),
+                    region["in"].gas["mass"].units,
+                    len(region["in"].gas),
+                )
+            )
+            print(
+                r"region['out'] has a gas mass of %.2g %s (%d particles)"
+                % (
+                    region["out"].gas["mass"].sum(),
+                    region["out"].gas["mass"].units,
+                    len(region["out"].gas),
+                )
+            )
+            sys.stdout.flush()
+
+        if args.verbose:
+            print("currently tracing %d particles..." % len(traced_IDs))
+        start_trace_new(
+            region["in"], region_IDs_in
+        )  # Start to trace particles that are new in region
+        stop_trace_stars(snap.stars)
+        if args.verbose:
+            print("... now tracing %d particles" % len(traced_IDs))
+        deactivate_reentering(
+            region["in"], region_IDs_in
+        )  # Get the IDs that reentered during this snapshot
+        activate_leaving(snap, region_IDs_out)
+        update_activated(snap)
+
+        if args.verbose:
+            print("done in %.3gs" % (time.time() - start_loop))
+
+    if args.verbose:
+        print("====================================================")
+        print("store results...")
+        sys.stdout.flush()
+    import pickle as pickle
+
+    with open(args.dest, "wb") as f:
+        pickle.dump(trace_data, f, pickle.HIGHEST_PROTOCOL)
+
+    if args.verbose:
+        print("====================================================")
+        t_total = time.time() - start_total
+        hours = t_total // 3600
+        minutes = int(t_total - 3600 * hours) // 60
+        seconds = t_total - 3600 * hours - 60 * minutes
+        print ("total runtime: %dh %dmin %.3gs" % (hours, minutes, seconds))
+
+    sys.stdout.close()
+    sys.stdout=stdoutOrigin
