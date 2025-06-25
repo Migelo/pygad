@@ -18,9 +18,13 @@ from glob import glob
 from .. import environment
 
 try:
-    cpygad = cdll.LoadLibrary(glob(environment.module_dir + "C/cpygad*.so")[0])
+    cpygad_path = glob(environment.module_dir + "C/cpygad*.so")[0]
+    cpygad = cdll.LoadLibrary(cpygad_path)
+    print(f"cpygad found at {cpygad_path}")
 except:
-    cpygad = cdll.LoadLibrary(glob(environment.module_dir + "../cpygad*.so")[0])
+    cpygad_path = glob(environment.module_dir + "../cpygad*.so")[0]
+    cpygad = cdll.LoadLibrary(cpygad_path)
+    print(f"cpygad found at {cpygad_path}")
 
 cpygad.cubic.restype = c_double
 cpygad.cubic.argtypes = [c_double, c_double]
