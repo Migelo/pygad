@@ -376,7 +376,7 @@ class Snapshot(object):
             s._boxsize.convert_to(s._boxsize.units.free_of_factors(['a', 'h_0']),
                                   subs=s)
 
-        if s._arepo_snap_type:
+        if s._arepo_snap_type or s._simba_snap_type:
             s._N_part = list(map(int, greader.header['N_part']))
             print (s._N_part)
             #pass
