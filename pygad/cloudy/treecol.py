@@ -34,7 +34,13 @@ def sigHI(z, UVB=gadget.general['UVB']):
     # calculate the characteristic self-shielding density (in units in cm^2)
     if UVB == 'FG11' or UVB == 'FG19':
         # TODO: this is a bit off...
-        sigHI = 3.27e-18 * (1. + z) ** (-0.2)
+        #sigHI = 3.27e-18 * (1. + z) ** (-0.2)
+
+        ## pretty good fit!
+        sigHI = -4.89946e-19 * (1. + z) ** (0.46765) + 3.072648e-18
+
+        ## less of a good fit without a constant
+        #sigHI = 2.62063645e-18 * (1. + z) ** (-0.15391465)
     elif UVB == 'HM01':
         # good fit for z<~5
         sigHI = 2.31e-18 + 0.96e-18 * (1. + z) ** (-1.18)
