@@ -162,8 +162,17 @@ def read_header(gfile, gformat, endianness):
         header['unused'] = ' '*68  # for consistency
         if "Config" in gfile.keys():
             header['flg_arepo'] = gfile['Config'].attrs.__contains__("VORONOI")
+            header['flg_simba'] = False
+        elif header['N_part_all'][0] == 1016261591:
+            header['flg_simba'] = True
+            header['flg_arepo'] = False
+        elif header['flg_metals'] == 34:
+            header['flg_simba'] = True
+            header['flg_arepo'] = False
         else:
             header['flg_arepo'] = False
+            header['flg_simba'] = False
+        #print (header)
     else:
         gfile.seek(4 if gformat == 1 else 4+8+4+4)
 
