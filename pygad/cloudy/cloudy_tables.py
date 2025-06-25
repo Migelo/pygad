@@ -32,11 +32,11 @@ def config_ion_table(redshift):
     nH_vals = iontable['nH_vals']
     nH_vals = np.linspace(float(nH_vals[0]),
                           float(nH_vals[0] + nH_vals[1]*(nH_vals[2]-1)),
-                          nH_vals[2])
+                          int(nH_vals[2]))
     T_vals = iontable['T_vals']
     T_vals = np.linspace(float(T_vals[0]),
                          float(T_vals[0] + T_vals[1]*(T_vals[2]-1)),
-                         T_vals[2])
+                         int(T_vals[2]))
 
     iontbl = IonisationTable(redshift,
                              tabledir=iontable['tabledir'],
