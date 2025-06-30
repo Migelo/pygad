@@ -191,7 +191,7 @@ def read_header(gfile, gformat, endianness):
                                 gfile.read(2*4+4*8+5*4+8))
         header['unused'] = gfile.read(68).decode('ascii')
         header['flg_arepo'] = False #Arepo snapshots are currently only supported in hdf5 format
-
+        header['flg_simba'] = False
         assert struct.unpack(endianness + 'i', gfile.read(4)) == (256,)
 
     return header
