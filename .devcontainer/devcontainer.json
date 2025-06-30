@@ -40,6 +40,6 @@
       ]
     }
   },
-  "onCreateCommand": "git lfs fetch; git lfs checkout; find data/*.tar.gz | xargs -I% tar xzf % -C pygad; sudo pip install --upgrade pip; sudo pip install -e .; sudo pip install ipython ipykernel jupyter"
+  "onCreateCommand": "mkdir -p data; cd data; wget https://bitbucket.org/broett/pygad/downloads/z_0.000_highres.tar.gz; wget https://bitbucket.org/broett/pygad/downloads/iontbls.tar.gz; wget https://bitbucket.org/broett/pygad/downloads/snaps.tar.gz; wget https://bitbucket.org/broett/pygad/downloads/bc03.tar.gz; find data/*.tar.gz | xargs -I% tar xzf % -C pygad; sudo pip install --upgrade pip; sudo pip install -e .; sudo pip install ipython ipykernel jupyter"
   // "postCreateCommand": "git lfs fetch; git lfs track '*.tar.gz'; git lfs checkout; find data/*.tar.gz | xargs -I% tar xzf % -C pygad; sudo pip install --upgrade pip; sudo pip install -e .; sudo pip install ipython ipykernel; wget -O snapdir_030.tar.gz https://heibox.uni-heidelberg.de/f/dc65a8c75220477eb62d/?dl=1; tar xzf snapdir_030.tar.gz"
 }
