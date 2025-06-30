@@ -21,12 +21,16 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           sudo apt-get update 
-          sudo apt-get install -y git-lfs libgsl-dev g++ gcc build-essential
+          sudo apt-get install -y libgsl-dev g++ gcc build-essential
       - name: Get files from LFS
         run: |
-          git lfs fetch
-          git lfs track "*.tar.gz"
-          git lfs checkout
+          ls
+          mkdir -p data
+          cd data
+          wget https://bitbucket.org/broett/pygad/downloads/z_0.000_highres.tar.gz
+          wget https://bitbucket.org/broett/pygad/downloads/iontbls.tar.gz
+          wget https://bitbucket.org/broett/pygad/downloads/snaps.tar.gz
+          wget https://bitbucket.org/broett/pygad/downloads/bc03.tar.gz
       - name: Extract auxiliary data    
         run: |
           find data/*.tar.gz | xargs -I% tar xzf % -C pygad
