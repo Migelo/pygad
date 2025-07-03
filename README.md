@@ -74,17 +74,17 @@ $ git clone https://github.com/Migelo/pygad.git
 $ cd pygad
 $ pip install .
 ```
-I would actually recommend `pip install -e . --config-settings editable_mode=strict` (see the [wiki entry][WikiInstallation] for more). This way of installing only links the pygad folder to your site-packages. This means any changes to the code will be immediately reflected, no need for reinstallation to apply the new changes.
+I would actually recommend `pip install -e . --config-settings editable_mode=strict` (see the [wiki entry][https://bitbucket.org/broett/pygad/wiki/Installation] for more). This way of installing only links the pygad folder to your site-packages. This means any changes to the code will be immediately reflected, no need for reinstallation to apply the new changes.
 
 For full functionality, pygad will automatically download the tables for [Bruzual & Charlot (2003)][BC03] SSP model and ionisation Cloudy tables (here for [Haardt & Madau, 2001][HM01]) as well as some test snapshots and cooling function tables. The downloaded files are put in the 
 
-If you have problems or want a more detailed explanation, see the [wiki][WikiInstallation].
+If you have problems or want a more detailed explanation, see the [wiki][https://bitbucket.org/broett/pygad/wiki/Installation].
 We also want to point out the [FAQ section][FAQ].
 
 ### Configure
 
 You probably need to customise [pygad]'s config files for your specific type of snapshots (even HDF5 block names can differ!).
-This goes a beyond the scope of a README; be referred to the [wiki][WikiConfig].
+This goes a beyond the scope of a README; be referred to the [wiki][https://bitbucket.org/broett/pygad/wiki/Configuration].
 
 ### Use pygad
 
@@ -102,7 +102,7 @@ ax.add_artist(plot.Circle([0,0], R200, facecolor='none', edgecolor='w'))
 ```
 
 There is a Jupyter Notebook called `QuickStart.ipynb` in the root of this repo that shows some more of the features.
-Please, also read the [wiki][WikiHome].
+Please, also read the [wiki][https://bitbucket.org/broett/pygad/wiki/Home].
 
 The showcase notebook can be started with
 
@@ -117,9 +117,7 @@ jupyter notebook QuickStart.ipynb
 If you have any problems, ideas, found bugs, or want to contribute in some way, please
 contact any of the current maintainers:
 
-[horst.foidl@outlook.com](mailto:horst.foidl@outlook.com)
-
-[cernetic@mpa-garching.mpg.de](mailto:cernetic@mpa-garching.mpg.de)
+[jtan@mpa-garching.mpg.de](mailto:jtan@mpa-garching.mpg.de)
 
 
 
