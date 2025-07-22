@@ -466,7 +466,7 @@ def define_from_cfg(config, allow_redef=False, warn=True, undefine_old=True):
     '''
     Define unit from a config-file.
 
-    The config file has to be readable by ConfigParser.SafeConfigParser, i.e. it
+    The config file has to be readable by ConfigParser.ConfigParser, i.e. it
     basically has to have the format of a Microsoft Windows INI file.
 
     The section 'base' is required which lists all base units. All other sections
