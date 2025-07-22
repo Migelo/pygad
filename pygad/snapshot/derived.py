@@ -55,7 +55,7 @@ Examples:
 '''
 __all__ = ['ptypes_and_deps', 'read_derived_rules', 'general']
 
-from configparser import SafeConfigParser
+from configparser import ConfigParser
 from .. import utils
 from .. import gadget
 from .. import environment
@@ -160,9 +160,7 @@ def read_derived_rules(config, delete_old=False):
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print(('reading config file "%s"' % filename))
 
-    # The SafeConfigParser class has been renamed to ConfigParser in Python 3.2, not yet removed for compatibility
-    cfg = SafeConfigParser(allow_no_value=True,
-                           inline_comment_prefixes=('#', ';'))  # new to python3. ignores comments at end of values
+    cfg = ConfigParser(allow_no_value=True, inline_comment_prefixes=('#', ';'))
     cfg.optionxform = str
     cfg.read(filename)
 

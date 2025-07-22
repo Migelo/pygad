@@ -27,7 +27,7 @@ __all__ = ['families', 'elements', 'default_gadget_units', 'block_units',
            'std_name_to_HDF5', 'HDF5_to_std_name', 'read_config',
            'get_block_units', 'general', 'block_infos']
 
-from configparser import SafeConfigParser
+from configparser import ConfigParser
 from ..units import *
 from os.path import exists, expanduser
 from .. import environment
@@ -99,9 +99,7 @@ def read_config(config):
         filenamep = os.path.split(filename)[1]
         print(('reading config file "%s"' % filenamep))
 
-    # The SafeConfigParser class has been renamed to ConfigParser in Python 3.2, not yet removed for compatibility
-    cfg = SafeConfigParser(allow_no_value=True,
-                           inline_comment_prefixes = ('#', ';') ) # new to python3. ignores comments at end of values
+    cfg = ConfigParser(allow_no_value=True, inline_comment_prefixes = ('#', ';') )
     cfg.optionxform = str
     cfg.read(filename)
 
