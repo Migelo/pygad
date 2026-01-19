@@ -59,6 +59,7 @@ def fit_profiles(
     l,
     flux,
     noise,
+    sigma,
     chisq_lim=2.0,
     max_lines=10,
     mode="Voigt",
@@ -143,7 +144,7 @@ def fit_profiles(
         return p, bnd
 
     # identify independent regions to fit within the spectrum
-    regions_l, regions_i = find_regions(l, flux, noise, min_region_width=2)
+    regions_l, regions_i = find_regions(l, flux, noise, min_region_width=2, N_sigma=sigma)
 
     # dicts to store results
     line_list = {
