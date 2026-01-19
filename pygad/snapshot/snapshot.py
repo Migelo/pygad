@@ -386,7 +386,7 @@ class Snapshot(object):
             # update loadable blocks:
             for block in greader.infos():
                 #print (f"{len(greader.infos())=}")
-                #print (block.ptypes)
+                #print ("block", block.name, block.ptypes)
                 if block.name in s._block_avail:
                     s._block_avail[block.name] = [(o or n) for o, n \
                                                 in zip(s._block_avail[block.name], block.ptypes)]
@@ -1741,6 +1741,7 @@ class SubSnapshot(Snapshot):
             # fulfilled:
             assert name in self.available_blocks()
             assert name not in self._blocks
+            # print ("getblock", self, name, self.get_host_subsnap(name))
             host = self.get_host_subsnap(name)
             if host is self:
                 # no slicing/masking needed!
