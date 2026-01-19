@@ -156,6 +156,7 @@ def fit_profiles(
         "N": np.array([]),
         "dN": np.array([]),
         "EW": np.array([]),
+        "chisq_soln": np.array([]),
     }
 
     # loop over regions
@@ -164,6 +165,7 @@ def fit_profiles(
     for ireg in range(len(regions_l)):
         params = []
         bounds = []
+        chisq_solns = []
         n_lines = 0
         best_nlines = 1
         chisq_old = 1.0e20
@@ -181,10 +183,12 @@ def fit_profiles(
                 params,
                 bounds=bounds,
                 args=(l_reg, f_reg, n_reg, mode),
+                method="L-BFGS-B",
                 options={"maxiter": 100},
             )
             params = soln.x  # set params to new chisq-minimized values
             chisq_soln = _chisq(params, l_reg, f_reg, n_reg, mode)
+            chisq_solns.append(chisq_soln)
             if chisq_soln < chisq_old:
                 chisq_old = chisq_soln
                 best_nlines = n_lines
@@ -209,7 +213,7 @@ def fit_profiles(
                 chisq_accept += 0.1
 
         if chisq_soln > chisq_accept:  # try to go back to previous best solution
-            if environment.verbose == environment.VERBOSE_TACITURN:
+            if environment.verbose >= environment.VERBOSE_TACITURN:
                 print(
                     (
                         "Region %d uncoverged with %d lines, chisq=%g; retrying with %d"
@@ -225,6 +229,7 @@ def fit_profiles(
                 params,
                 bounds=bounds,
                 args=(l_reg, f_reg, n_reg, mode),
+                method="L-BFGS-B",
                 options={"maxiter": 100},
             )
             params = soln.x  # set params to new chisq-minimized values
@@ -246,7 +251,7 @@ def fit_profiles(
             params,
             args=(l_reg, f_reg, n_reg, mode),
             method="BFGS",
-            options={"maxiter": 100},
+            options={"maxiter": 200},
         )
         cov = soln.hess_inv  # covariance matrix of final soluiton
 
@@ -285,6 +290,7 @@ def fit_profiles(
             line_list["EW"] = np.append(
                 line_list["EW"], EquivalentWidth(_tau_to_flux(tau_line), l_reg)
             )
+            line_list["chisq_soln"] = np.append(line_list["chisq_soln"], chisq_solns[ip])
 
     return line_list  # , tau_line
 
