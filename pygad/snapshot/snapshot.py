@@ -344,9 +344,12 @@ class Snapshot(object):
         greader = gadget.FileReader(filename, unclear_blocks=unclear_blocks)
         s._file_handlers = [greader]
         s._arepo_snap_type = s.headers()[0]["flg_arepo"]
+        s._tng50_snap_type = s.headers()[0]["flg_tng50"]
         s._simba_snap_type = s.headers()[0]["flg_simba"]
         if s._arepo_snap_type:
             greader.header['N_part'][3] = 0
+            if greader.header['N_part'][5] == 0 and s._tng50_snap_type:
+                greader.header['N_part'][5] = 8
 
         s._block_avail = {
             block.name: block.ptypes
