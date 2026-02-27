@@ -1,8 +1,6 @@
 '''
 Defining the disc etc.
 
-Rewrite to use np.in1d to get the correct particles.
-
 Examples:
     >>> from ..snapshot import Snapshot
     >>> from ..transformation import *
@@ -444,7 +442,7 @@ class IDMask(SnapMask):
             raise RuntimeError("You cannot mask with IDs of different type "
                                "(%s) than those of the snapshot (%s)!" % (
                                    IDs.dtype, s['ID'].dtype))
-        return np.in1d(s['ID'], IDs)
+        return np.isin(s['ID'], IDs)
 
 
 class ExprMask(SnapMask):
@@ -535,4 +533,3 @@ class CompoundMask(SnapMask):
     def _get_mask_for(self, s):
         m1, m2 = [m.get_mask_for(s) for m in self._masks]
         return self._op(m1, m2)
-
