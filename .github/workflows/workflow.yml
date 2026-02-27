@@ -22,15 +22,24 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           sudo apt-get update 
           sudo apt-get install -y libgsl-dev g++ gcc build-essential
-      - name: Get files from bitbucket
+      - name: Get auxiliary files
         run: |
-          ls
+          set -euo pipefail
           mkdir -p data
-          cd data
-          wget https://bitbucket.org/broett/pygad/downloads/z_0.000_highres.tar.gz
-          wget https://bitbucket.org/broett/pygad/downloads/iontbls.tar.gz
-          wget https://bitbucket.org/broett/pygad/downloads/snaps.tar.gz
-          wget https://bitbucket.org/broett/pygad/downloads/bc03.tar.gz
+          base_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/pygad-data"
+
+          for file in z_0.000_highres.tar.gz iontbls.tar.gz snaps.tar.gz bc03.tar.gz; do
+            if [ -s "files/${file}" ]; then
+              echo "Using local files/${file}"
+              cp "files/${file}" "data/${file}"
+            else
+              echo "Downloading ${file} from ${base_url}/${file}"
+              curl -fsSL --retry 3 --retry-delay 2 --location \
+                -o "data/${file}" "${base_url}/${file}"
+            fi
+
+            test -s "data/${file}"
+          done
       - name: Extract auxiliary data    
         run: |
           find data/*.tar.gz | xargs -I% tar xzf % -C pygad

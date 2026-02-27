@@ -78,6 +78,9 @@ I would actually recommend `pip install -e . --config-settings editable_mode=str
 
 For full functionality, pygad will automatically download the tables for [Bruzual & Charlot (2003)][BC03] SSP model and ionisation Cloudy tables (here for [Haardt & Madau, 2001][HM01]) as well as some test snapshots and cooling function tables. The downloaded files are put in the 
 
+For CI, these archives are fetched from this repository's public release assets
+under the `pygad-data` tag.
+
 If you have problems or want a more detailed explanation, see the [wiki](https://bitbucket.org/broett/pygad/wiki/Installation).
 We also want to point out the [FAQ section][FAQ].
 
