@@ -110,6 +110,12 @@ from .snapshot import *
 from .tools import prepare_zoom, read_info_file
 
 import gc
+import os
+import shutil
+import tarfile
+import tempfile
+import time
+import urllib.request
 # default seems to be (700, 10, 10)
 # pygad should more often collect garbage, since it has huge objects (SimArr and
 # _Snaps), in critical cases, call `gc_full_collect`.
@@ -117,35 +123,53 @@ gc.set_threshold(50, 3, 3)
 gc_full_collect()
 
 from .environment import module_dir
-import subprocess
 
-if not os.path.exists(module_dir+'./CoolingTables/z_0.000.hdf5'):
-    url = 'https://bitbucket.org/broett/pygad/downloads/'
-    file = 'z_0.000_highres.tar.gz'
-    subprocess.run('wget -q %s%s' % (url, file), check=True, shell=True)
-    subprocess.run('tar zxvf %s -C %s/' % (file, module_dir), check=True, shell=True)
-    subprocess.run('rm -f %s' % file, check=True, shell=True)
+_DATA_BASE_URL = os.getenv(
+    'PYGAD_DATA_BASE_URL',
+    'https://github.com/Migelo/pygad/releases/download/pygad-data',
+).rstrip('/')
 
-if not os.path.exists(module_dir+'./iontbls'):
-    url = 'https://bitbucket.org/broett/pygad/downloads/'
-    file = 'iontbls.tar.gz'
-    subprocess.run('wget -q  %s%s' % (url, file), check=True, shell=True)
-    subprocess.run('tar zxf %s -C %s/' % (file, module_dir), check=True, shell=True)
-    subprocess.run('rm -f %s' % file, check=True, shell=True)
 
-if not os.path.exists(module_dir+'./bc03'):
-    url = 'https://bitbucket.org/broett/pygad/downloads/'
-    file = 'bc03.tar.gz'
-    subprocess.run('wget -q  %s%s' % (url, file), check=True, shell=True)
-    subprocess.run('tar zxf %s -C %s/' % (file, module_dir), check=True, shell=True)
-    subprocess.run('rm -f %s' % file, check=True, shell=True)
+def _download_and_extract(data_file):
+    url = f'{_DATA_BASE_URL}/{data_file}'
+    if environment.verbose > environment.VERBOSE_QUIET:
+        print(f'downloading {url}')
 
-if not os.path.exists(module_dir+'./snaps'):
-    url = 'https://bitbucket.org/broett/pygad/downloads/'
-    file = 'snaps.tar.gz'
-    subprocess.run('wget -q  %s%s' % (url, file), check=True, shell=True)
-    subprocess.run('tar zxf %s -C %s/' % (file, module_dir), check=True, shell=True)
-    subprocess.run('rm -f %s' % file, check=True, shell=True)
+    with tempfile.NamedTemporaryFile(suffix='.tar.gz', delete=False) as tmp:
+        archive_path = tmp.name
+
+    try:
+        last_err = None
+        for _ in range(3):
+            try:
+                with urllib.request.urlopen(url, timeout=60) as response, \
+                        open(archive_path, 'wb') as out:
+                    shutil.copyfileobj(response, out)
+                break
+            except Exception as err:
+                last_err = err
+                time.sleep(2)
+        else:
+            raise RuntimeError(f'failed to download {url}: {last_err}')
+
+        with tarfile.open(archive_path, mode='r:gz') as archive:
+            archive.extractall(module_dir)
+    finally:
+        if os.path.exists(archive_path):
+            os.remove(archive_path)
+
+
+if not os.path.exists(module_dir + './CoolingTables/z_0.000.hdf5'):
+    _download_and_extract('z_0.000_highres.tar.gz')
+
+if not os.path.exists(module_dir + './iontbls'):
+    _download_and_extract('iontbls.tar.gz')
+
+if not os.path.exists(module_dir + './bc03'):
+    _download_and_extract('bc03.tar.gz')
+
+if not os.path.exists(module_dir + './snaps'):
+    _download_and_extract('snaps.tar.gz')
 
 from ._version import get_versions
 __version__ = get_versions()['version']
