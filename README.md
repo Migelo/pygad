@@ -80,6 +80,8 @@ For full functionality, pygad will automatically download the tables for [Bruzua
 
 For CI, these archives are fetched from this repository's public release assets
 under the `pygad-data` tag.
+At runtime, missing auxiliary archives are also downloaded from that release
+(override base URL with `PYGAD_DATA_BASE_URL` if needed).
 
 If you have problems or want a more detailed explanation, see the [wiki](https://bitbucket.org/broett/pygad/wiki/Installation).
 We also want to point out the [FAQ section][FAQ].
