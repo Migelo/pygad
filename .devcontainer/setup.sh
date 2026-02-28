@@ -7,6 +7,48 @@ cd "${ROOT_DIR}"
 DATA_BASE_URL="${PYGAD_DATA_BASE_URL:-https://github.com/Migelo/pygad/releases/download/pygad-data}"
 DATA_DIR="${ROOT_DIR}/data"
 mkdir -p "${DATA_DIR}"
+SUDO=""
+if [ "$(id -u)" -ne 0 ]; then
+  SUDO="sudo"
+fi
+
+ensure_system_packages() {
+  local pkgs=(
+    git-lfs
+    vim
+    curl
+    libgsl-dev
+    g++
+    gcc
+    build-essential
+    clang-format
+  )
+  local missing=0
+  local pkg
+  for pkg in "${pkgs[@]}"; do
+    if ! dpkg -s "${pkg}" >/dev/null 2>&1; then
+      missing=1
+      break
+    fi
+  done
+
+  if [ "${missing}" -eq 0 ]; then
+    echo "[setup] system packages already installed"
+    return 0
+  fi
+
+  # Some base images carry a stale Yarn apt source key. Remove that source to
+  # prevent apt update from failing during container setup.
+  if [ -f /etc/apt/sources.list.d/yarn.list ] && \
+      grep -q "dl.yarnpkg.com/debian" /etc/apt/sources.list.d/yarn.list; then
+    echo "[setup] removing stale Yarn apt source"
+    ${SUDO} rm -f /etc/apt/sources.list.d/yarn.list
+  fi
+
+  echo "[setup] installing system packages"
+  ${SUDO} apt-get update
+  DEBIAN_FRONTEND=noninteractive ${SUDO} apt-get install -y --no-install-recommends "${pkgs[@]}"
+}
 
 download_data_file() {
   local file="$1"
@@ -37,6 +79,8 @@ extract_if_missing() {
   echo "[setup] extracting ${file} into pygad/"
   tar -xzf "${DATA_DIR}/${file}" -C "${ROOT_DIR}/pygad"
 }
+
+ensure_system_packages
 
 if [ "${PYGAD_SKIP_DATA_BOOTSTRAP:-0}" != "1" ]; then
   download_data_file "z_0.000_highres.tar.gz"

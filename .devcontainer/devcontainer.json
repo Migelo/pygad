@@ -5,11 +5,6 @@
     "memory": "16gb",
     "cpus": 4
   },
-  "features": {
-    "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
-      "packages": "git-lfs,vim,curl,libgsl-dev,g++,gcc,build-essential,clang-format"
-    }
-  },
   "containerEnv": {
     "PIP_CACHE_DIR": "/tmp/pip-cache",
     "PYGAD_DATA_BASE_URL": "https://github.com/Migelo/pygad/releases/download/pygad-data"
