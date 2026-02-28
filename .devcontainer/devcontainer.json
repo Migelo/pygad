@@ -6,12 +6,8 @@
     "cpus": 4
   },
   "containerEnv": {
-    "PIP_CACHE_DIR": "/tmp/pip-cache",
     "PYGAD_DATA_BASE_URL": "https://github.com/Migelo/pygad/releases/download/pygad-data"
   },
-  "mounts": [
-    "type=cache,target=/tmp/pip-cache,source=pygad-pip-cache"
-  ],
   "customizations": {
     "vscode": {
       "settings": {
