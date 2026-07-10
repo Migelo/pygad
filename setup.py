@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os
+import sys
 import subprocess
 from glob import glob
 
@@ -23,18 +24,42 @@ for root, dirs, files in os.walk(setup_dir):
 # clean and make the cpygad.so library
 subprocess.run(["make", "clean"], cwd=setup_dir + "/pygad/C", check=False)
 
-gsl_include = ""
-gsl_lib = ""
 include_dirs = [
     "/usr/include/",
     "pygad/C/include/",
     "/opt/homebrew/opt/gsl/include/",
     "/opt/local/",
 ]
+library_dirs = []
 if os.getenv("GSL_HOME") is not None:
-    gsl_include = os.getenv("GSL_HOME") + "/include"
-    include_dirs.append(gsl_include)
-    gsl_lib = os.getenv("GSL_HOME") + "/lib"
+    include_dirs.append(os.getenv("GSL_HOME") + "/include")
+    library_dirs.append(os.getenv("GSL_HOME") + "/lib")
+
+if sys.platform == "darwin":
+    # Apple clang does not support GCC's -fopenmp / -lgomp; use libomp instead
+    # (install with `brew install libomp` or set LIBOMP_HOME).
+    omp_candidates = ["/opt/homebrew/opt/libomp", "/usr/local/opt/libomp"]
+    if os.getenv("LIBOMP_HOME"):
+        omp_candidates.insert(0, os.getenv("LIBOMP_HOME"))
+    omp_prefix = next((p for p in omp_candidates if os.path.isdir(p)), None)
+    if omp_prefix is None:
+        raise RuntimeError(
+            "libomp was not found. Install it with `brew install libomp` "
+            "or point LIBOMP_HOME at its prefix."
+        )
+    include_dirs.append(os.path.join(omp_prefix, "include"))
+    library_dirs.append(os.path.join(omp_prefix, "lib"))
+    # Homebrew's GSL is keg-only and not on the default linker search path.
+    for _gsl_lib_dir in ("/opt/homebrew/opt/gsl/lib", "/usr/local/opt/gsl/lib"):
+        if os.path.isdir(_gsl_lib_dir):
+            library_dirs.append(_gsl_lib_dir)
+    omp_compile_args = ["-Xpreprocessor", "-fopenmp"]
+    omp_link_args = []
+    omp_libraries = ["m", "gsl", "gslcblas", "omp"]
+else:
+    omp_compile_args = ["-fopenmp"]
+    omp_link_args = ["-fopenmp"]
+    omp_libraries = ["m", "gsl", "gslcblas", "gomp"]
 
 ext_module = Extension(
     "pygad/C/cpygad",
@@ -45,14 +70,14 @@ ext_module = Extension(
         "-fPIC",
         "-std=c++11",
         "-O3",
-        "-fopenmp",
+        *omp_compile_args,
         "-pedantic",
         "-Wall",
         "-Wextra",
     ],
-    libraries=["m", "gsl", "gslcblas", "gomp"],
-    extra_link_args=["-fopenmp"],
-    library_dirs=[gsl_lib],
+    libraries=omp_libraries,
+    extra_link_args=omp_link_args,
+    library_dirs=library_dirs,
 )
 
 setup(
