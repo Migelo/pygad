@@ -552,7 +552,7 @@ def define_from_cfg(config, allow_redef=False, warn=True, undefine_old=True):
     if not cfg.has_section('base'):
         raise KeyError('Section "base" is required in unit config file.')
 
-    if undefine_all:
+    if undefine_old:
         undefine_all()
 
     prefixes = dict()

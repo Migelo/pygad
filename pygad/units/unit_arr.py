@@ -832,8 +832,10 @@ def _div_units(a, b):
         return ab_units
     elif a_units is not None:
         return a_units
-    else:
+    elif b_units is not None:
         return 1 / b_units
+    else:
+        return None
 
 
 @UnitArr.ufunc_rule(np.reciprocal)

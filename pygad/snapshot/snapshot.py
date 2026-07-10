@@ -1228,7 +1228,7 @@ class Snapshot(object):
 
         return block
 
-    def _host_derive_block(self, name):
+    def _host_derive_block(self, name, cache=True):
         '''
         Derive a block from the stored rules (and add it to its host).
 
@@ -1238,6 +1238,13 @@ class Snapshot(object):
         Args:
             name (str):             The name of the derived block (as it is in
                                     self._root._derive_rule_deps).
+            cache (bool):           Whether to store the derived block in the
+                                    host's block registry (and link its
+                                    dependencies). If False, the block is
+                                    calculated but not stored; this is used to
+                                    pre-load intermediate dependencies without
+                                    polluting the cache on the non-cached
+                                    derive path.
 
         Returns:
             block (SimArr):     The (entire) block.
@@ -1276,7 +1283,7 @@ class Snapshot(object):
                     if environment.verbose >= environment.VERBOSE_TALKY else ''), end=' ')
             sys.stdout.flush()
         block = host.get(rule, namespace=None if self._root._cache_derived else dep_blocks)
-        if self._root._cache_derived:
+        if cache and self._root._cache_derived:
             for dep in deps:
                 host[dep].dependencies.add(name)
             host._blocks[name] = block
