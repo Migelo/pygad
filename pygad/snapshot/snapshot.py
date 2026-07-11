@@ -199,7 +199,7 @@ Example:
     ...     b  = s.get_host_subsnap(name)[name]
     ...     b2 = s2.get_host_subsnap(name)[name]
     ...     err = np.max( np.abs((b - b2) / b) )
-    ...     if err[np.isfinite(err)] > 1e-6:
+    ...     if np.any(err[np.isfinite(err)] > 1e-6):
     ...         print(name, b, b2)
     >>> os.remove(dest_file)
 
