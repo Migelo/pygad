@@ -1,0 +1,70 @@
+name: Traffic Monitor
+
+# Polls the GitHub traffic API daily and appends the per-day clone/view
+# counts to .github/traffic/traffic.json so we keep a long-term history
+# (GitHub only exposes the last 14 days via the API).
+#
+# Each run backfills the last 14 days, so missed runs recover automatically.
+
+on:
+  schedule:
+    # 06:00 UTC daily
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: traffic-monitor
+  cancel-in-progress: false
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch clones traffic
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/traffic/clones" \
+            -o /tmp/clones.json
+          echo ":: Fetched clones ::"
+          cat /tmp/clones.json
+
+      - name: Fetch views traffic
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/traffic/views" \
+            -o /tmp/views.json
+          echo ":: Fetched views ::"
+          cat /tmp/views.json
+
+      - name: Merge into traffic log
+        run: python .github/scripts/record_traffic.py
+
+      - name: Commit log
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/traffic/traffic.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "chore: update traffic log [skip ci]"
+            git push
+          fi
