@@ -16,6 +16,7 @@ build
 
 # weird MacOS files
 .DS_store
+._*
 
 # images
 *.png
