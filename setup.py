@@ -5,6 +5,9 @@ import subprocess
 from glob import glob
 
 from setuptools import Extension, setup
+from setuptools.command.build_ext import build_ext
+from setuptools.command.build_py import build_py
+from wheel.bdist_wheel import bdist_wheel
 
 import versioneer
 
@@ -62,7 +65,7 @@ else:
     omp_libraries = ["m", "gsl", "gslcblas", "gomp"]
 
 ext_module = Extension(
-    "pygad/C/cpygad",
+    "pygad.C.cpygad",
     language="c++",
     sources=glob("pygad/C/src/*"),
     include_dirs=include_dirs,
@@ -80,6 +83,32 @@ ext_module = Extension(
     library_dirs=library_dirs,
 )
 
+
+class BuildCtypesLibrary(build_ext):
+    def get_ext_filename(self, ext_name):
+        return ext_name.replace(".", os.sep) + ".so"
+
+
+class BuildPackage(build_py):
+    def run(self):
+        super().run()
+        for library in glob(os.path.join(self.build_lib, "pygad", "C", "cpygad*.so")):
+            os.remove(library)
+
+
+class BdistPlatformWheel(bdist_wheel):
+    def get_tag(self):
+        _, _, platform_tag = super().get_tag()
+        return "py3", "none", platform_tag
+
+
+cmdclass = versioneer.get_cmdclass()
+cmdclass.update({
+    "build_ext": BuildCtypesLibrary,
+    "build_py": BuildPackage,
+    "bdist_wheel": BdistPlatformWheel,
+})
+
 setup(
     name="pygadmpa",
     description="analysis module for Gadget",
@@ -92,6 +121,6 @@ setup(
     packages=list(map(str, modules)),
     scripts=scripts,
     version=versioneer.get_version(),
-    cmdclass=versioneer.get_cmdclass(),
+    cmdclass=cmdclass,
     ext_modules=[ext_module],
 )
