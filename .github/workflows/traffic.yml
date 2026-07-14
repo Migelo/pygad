@@ -28,7 +28,7 @@ jobs:
 
       - name: Fetch clones traffic
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.TRAFFIC_TOKEN }}
         run: |
           set -euo pipefail
           curl -fsSL \
@@ -42,7 +42,7 @@ jobs:
 
       - name: Fetch views traffic
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.TRAFFIC_TOKEN }}
         run: |
           set -euo pipefail
           curl -fsSL \
