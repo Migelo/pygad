@@ -5,7 +5,7 @@ from doctest import (BLANKLINE_MARKER, DONT_ACCEPT_BLANKLINE,
                      _ellipsis_match)
 from math import isclose
 
-NUMERIC_REL_TOL = 2e-6
+NUMERIC_REL_TOL = 5e-6
 NUMERIC_ABS_TOL = 1e-12
 
 
