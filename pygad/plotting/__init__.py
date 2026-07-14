@@ -48,8 +48,8 @@ def show_FoF_groups(s, groups, colors='rand', plot_center=True, plot_parts=False
     Returns:
         fig, ax, im, cbar:  As `image` does.
     '''
-    import numpy as np
     import matplotlib as mpl
+    import numpy as np
     from scipy.spatial import ConvexHull
 
     xaxis = plotargs.get('xaxis', 0)

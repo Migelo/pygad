@@ -104,13 +104,13 @@ Doctests:
 '''
 __all__ = ['cOctree']
 
-from ..C import *
 import sys
-import numpy as np
-import warnings
 import weakref
-from .. import environment
-from .. import utils
+
+import numpy as np
+
+from .. import environment, utils
+from ..C import *
 
 cpygad.new_octree_from_pos.restype = c_void_p
 cpygad.new_octree_from_pos.argtypes = [c_size_t, c_void_p]

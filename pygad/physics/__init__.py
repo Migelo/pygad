@@ -11,6 +11,6 @@ Also doctest other parts of this sub-module:
     TestResults(failed=0, attempted=14)
 '''
 
-from .quantities import *
-from .cosmology import *
 from .cooling import *
+from .cosmology import *
+from .quantities import *

@@ -6,11 +6,11 @@ Created on Tue Apr 16 12:19:11 2019
 @author: ubuntu1804
 """
 
+import sys
+import warnings
+
 import pygad
 from pygad.doctest import testmod
-import warnings
-import sys
-
 
 warnings.filterwarnings("ignore")
 print("*********************************************************************")

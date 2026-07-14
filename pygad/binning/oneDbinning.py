@@ -28,8 +28,10 @@ Doctests:
 __all__ = ['profile_from_map']
 
 import numpy as np
+
 from ..units import UnitArr, UnitQty
 from ..utils import dist, weighted_percentile
+
 
 def profile_from_map(m, extent, av=None, Nbins=None, reduction='sum',
                      ref_center=None, surface_dens=False):

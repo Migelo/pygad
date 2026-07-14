@@ -31,16 +31,16 @@ https://bitbucket.org/broett/pygad/issues?status=new&status=open
 
 import codecs
 import gc
-import re
 import inspect
-import types
+import itertools
 import operator
 import os
-import subprocess
-import tempfile
-import sys
-import itertools
+import re
 import resource
+import subprocess
+import sys
+import tempfile
+import types
 
 try:
     from types import InstanceType

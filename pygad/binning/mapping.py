@@ -39,13 +39,15 @@ Example:
 '''
 __all__ = ['map_qty']
 
-from ..units import *
-from ..snapshot import *
-from .core import *
+import numpy as np
+
+from .. import environment
 from ..gadget import *
 from ..kernels import *
-from .. import environment
-import numpy as np
+from ..snapshot import *
+from ..units import *
+from .core import *
+
 
 def map_qty(s, extent, field, qty, av=None, reduction=None, Npx=256,
             xaxis=0, yaxis=1, softening=None, sph=True, kernel=None, dV='dV'):

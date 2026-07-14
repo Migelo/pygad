@@ -9,18 +9,16 @@ one from.
 __all__ = ['calc_temps', 'age_from_form', 'calc_x_ray_lum', 'calc_HI_mass',
            'calc_ion_mass', 'calc_cooling_rates', 'get_luminosities']
 
-from .. import environment
-from ..units import UnitArr, UnitScalar, UnitQty, UnitError
-import numpy as np
-from .. import physics
-from .. import gadget
-from .. import cloudy
-from . import derived
-from fractions import Fraction
-from multiprocessing import Pool, cpu_count
-import warnings
 import gc
 import sys
+import warnings
+from multiprocessing import Pool, cpu_count
+
+import numpy as np
+
+from .. import cloudy, environment, gadget, physics
+from ..units import UnitArr, UnitError, UnitQty, UnitScalar
+
 
 def calc_cooling_rates(s, tbl='CoolingTables/z_0.000.hdf5'):
     '''
@@ -312,8 +310,8 @@ def get_luminosities(stars, band='bolometric', IMF=None):
     Returns:
         lum (UnitArr):  The luminosities of the star particles.
     '''
-    from ..ssp import inter_bc_qty
     from ..physics import solar
+    from ..ssp import inter_bc_qty
 
     if band == 'bolometric':
         qty = 'Mbol'
@@ -347,8 +345,10 @@ def calc_hsml_arepo_MG(mass, rho, subs=None):
 calc_hsml_arepo_MG._deps = set(['mass', 'rho'])
 
 def calc_hsml_tree(pos, mass, subs=None):
-    from .sim_arr import SimArr
     import pysph
+
+    from .sim_arr import SimArr
+
     # using the tree method from Ruediger
     tree = pysph.makeTree( pos )
     nthreads = 64
@@ -362,8 +362,10 @@ calc_hsml_tree._deps = set(['pos', 'mass'])
 
 
 def calc_hsml_combo(pos, mass, rho, subs=None):
-    from .sim_arr import SimArr
     import pysph
+
+    from .sim_arr import SimArr
+
     # combines the tree method and the 2.5*cbrt(vol) method and find the greater value
     volume = mass / rho
     hsml = SimArr(2.5*np.cbrt(volume), "ckpc h_0**-1", subs=subs)

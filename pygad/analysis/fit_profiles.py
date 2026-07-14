@@ -1,17 +1,15 @@
-from pygad.analysis.absorption_spectra import (
-    lines,
-    line_profile,
-)
-from pygad.units import UnitArr
-import pygad.environment as environment
 import sys
 
-import numpy as np
 import h5py
 import matplotlib.pyplot as plt
-import pygad as pg
-from physics import wave_to_vel, tau_to_flux
+import numpy as np
+from physics import tau_to_flux, wave_to_vel
 from utils import read_h5_into_dict
+
+import pygad as pg
+import pygad.environment as environment
+from pygad.analysis.absorption_spectra import line_profile, lines
+from pygad.units import UnitArr
 
 plt.rcParams["text.usetex"] = False
 import scipy

@@ -57,12 +57,16 @@ __all__ = ['get_format_and_endianness', 'read_header', 'write_header',
            'BlockInfo', 'write_info', 'get_block_info', 'write_block']
 
 import sys
+
 from ..environment import secure_get_h5py
+
 h5py = secure_get_h5py()
 import struct
-from . import config
-import numpy as np
 from itertools import combinations
+
+import numpy as np
+
+from . import config
 
 SEEK_SET = 0
 SEEK_CUR = 1

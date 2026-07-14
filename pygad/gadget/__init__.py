@@ -10,12 +10,13 @@ Also doctest other parts of this sub-module:
 
     handler module is implicitly tested in the snapshot module...
 '''
-from .config import *
-from . import lowlevel_file
-from .handler import *
 import os
 
 from ..environment import module_dir
+from . import lowlevel_file
+from .config import *
+from .handler import *
+
 read_config(['./gadget.cfg',
              os.getenv("HOME")+'/.config/pygad/gadget.cfg',
              module_dir+'config/gadget.cfg'])

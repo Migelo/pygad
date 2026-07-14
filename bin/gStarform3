@@ -3,8 +3,9 @@
 gStarform3 - a script generate star_form.ascii via pygad.cmdtool.gCache
 plugin-Command CmdStarform
 '''
-import sys
 import os
+import sys
+
 
 def default_arg(name, value):
     for arg in sys.argv:

@@ -4,8 +4,8 @@ gCache3 - a script generate/process SnapshotCache via pygad.cmdtool.gCache
 Plugin scripts can be passed with argument --command.
 This script has access to pygad to do computations
 '''
-import sys
 import os
+import sys
 
 print("script: ", sys.argv[0])
 if len(sys.argv) < 2:

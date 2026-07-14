@@ -44,11 +44,9 @@ Examples:
 
 __all__ = ['SimArr']
 
-import numpy as np
-from ..units import *
-from .snapshot import Snapshot
-import functools
 import weakref
+
+from ..units import *
 
 
 class SimArr(UnitArr):

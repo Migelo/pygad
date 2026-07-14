@@ -43,15 +43,14 @@ __all__ = [
     "plot_fit",
 ]
 
-from ..units import UnitArr
-from ..physics import c
-
-# from .. import utils
-from .. import environment
 import numpy as np
 import pylab as plt
 
-from .absorption_spectra import lines, Gaussian, Lorentzian, Voigt, line_profile
+# from .. import utils
+from .. import environment
+from ..physics import c
+from ..units import UnitArr
+from .absorption_spectra import line_profile, lines
 
 
 def fit_profiles(
@@ -545,8 +544,9 @@ def write_spectrum(
     Returns:
 
     """
-    import h5py
     import os
+
+    import h5py
 
     if os.path.isfile(spec_name) and not overwrite:
         if environment.verbose >= environment.VERBOSE_TACITURN:

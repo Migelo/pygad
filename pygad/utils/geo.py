@@ -4,6 +4,7 @@ Utility functions regarding geometry.
 __all__ = ['angle', 'dist', 'find_maxima_prominence_isolation']
 
 import numpy as np
+
 from ..units import UnitArr, UnitQty
 
 

@@ -200,8 +200,8 @@ if __name__ == '__main__':
 
     if args.verbose: print('starting up...')
 
-    import sys
     import os
+    import sys
 
     if not os.path.exists(args.file):
         print('File "%s" does not exist.' % args.file, file=sys.stderr)

@@ -58,12 +58,13 @@ Examples:
 '''
 __all__ = ['load_table', 'inter_bc_qty', 'lum_to_mag']
 
-import numpy as np
-from .. import gadget
-from ..units import UnitQty, UnitScalar
-from ..physics import solar
-from .. import environment
 import sys
+
+import numpy as np
+
+from .. import environment, gadget
+from ..physics import solar
+from ..units import UnitQty, UnitScalar
 
 metallicity_name = {
     1e-4: 'm22',

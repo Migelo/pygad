@@ -1,12 +1,11 @@
 # these packages are loaded by gcache3 by default
 import os
-import io
-import sys
-import re
-import time
-import numpy as np
-import matplotlib.pyplot as plt
 import pickle as pickle
+import sys
+import time
+
+import numpy as np
+
 import pygad as pg
 
 #############################################################################

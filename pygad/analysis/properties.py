@@ -110,12 +110,15 @@ __all__ = ['mass_weighted_mean', 'center_of_mass', 'reduced_inertia_tensor',
            'shell_flow_rates', 'flow_rates', 'los_velocity_dispersion',
            'x_ray_luminosity']
 
+import sys
+
 import numpy as np
+
+from pygad import physics
+
+from ..transformation import *
 from ..units import *
 from ..utils import dist
-from ..transformation import *
-from pygad import physics
-import sys
 
 
 def mass_weighted_mean(s, qty, mass='mass'):

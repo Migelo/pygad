@@ -136,14 +136,16 @@ Examples:
 '''
 __all__ = ['UnitArr', 'UnitQty', 'UnitScalar']
 
+import functools
+import numbers
+import warnings
+from fractions import Fraction
+
 import numpy as np
+
 from . import units
 from .units import *
 from .units import _UnitClass
-from fractions import Fraction
-import warnings
-import functools
-import numbers
 
 
 def UnitQty(obj, units=None, subs=None, dtype=None, copy=False):

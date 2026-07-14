@@ -4,14 +4,14 @@ and temperature for a given redshift.
 '''
 __all__ = ['config_ion_table', 'IonisationTable']
 
-from .. import environment
-from ..units import Unit, UnitQty
-from .. import gadget
-from .. import physics
-import numpy as np
-import copy
-import re
 import os
+import re
+
+import numpy as np
+
+from .. import environment, gadget, physics
+from ..units import Unit, UnitQty
+
 
 def config_ion_table(redshift):
     '''
@@ -206,8 +206,8 @@ class IonisationTable(object):
 
         if selfshield:
             # with Rahmati+ (2013) description
-            from ..snapshot.snapshot import Snapshot
             from ..cloudy import Rahmati_fGamma_HI
+            from ..snapshot.snapshot import Snapshot
             if isinstance(subs,Snapshot):
                 if z is None:
                     z = subs.redshift
@@ -260,6 +260,7 @@ class IonisationTable(object):
             out_of_bounds = np.sum( low_nH | high_nH | low_T | high_T )
             if out_of_bounds:
                 import sys
+
                 from .. import utils
                 print('WARNING: %s particles out of bounds!' % \
                         utils.nice_big_num_str(out_of_bounds), file=sys.stderr)
@@ -429,9 +430,7 @@ class IonisationTable(object):
             im (AxesImage):     The image instance created.
             cbar (Colorbar):    The colorbar.
         '''
-        import matplotlib as mpl
         from ..plotting import show_image
-        from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
         if ion is None:
             plts = []

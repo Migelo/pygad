@@ -17,16 +17,17 @@ Also doctest other parts of this sub-module:
     >>> doctest.testmod(masks)
     TestResults(failed=0, attempted=45)
 '''
-from .snapshot import *
-from .snapshotcache import *
-# not clear how to import: are used often e.g. ege_from_form
-from .derive_rules import *
-from .derived import read_derived_rules
-from .sim_arr import *
-from .masks import *
 import os
 
 from ..environment import module_dir
+# not clear how to import: are used often e.g. ege_from_form
+from .derive_rules import *
+from .derived import read_derived_rules
+from .masks import *
+from .sim_arr import *
+from .snapshot import *
+from .snapshotcache import *
+
 read_derived_rules(['./derived.cfg',
                    os.getenv("HOME")+'/.config/pygad/derived.cfg',
                    module_dir+'config/derived.cfg'])

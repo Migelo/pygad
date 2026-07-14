@@ -90,19 +90,20 @@ __all__ = ['UnitError', 'define', 'set_latex_repr', 'undefine', 'undefine_all',
            'defined_units', 'define_from_cfg', 'Unit', 'Units', 'Fraction',
            'convertable']
 
-from numbers import Number
-from fractions import Fraction
-import numpy
 import math
-from ..utils import *
-from keyword import iskeyword
 import re
-from configparser import ConfigParser
 import sys
-import ast
-import operator as op
+from configparser import ConfigParser
+from fractions import Fraction
+from keyword import iskeyword
+from numbers import Number
 from os import path
+
+import numpy
+
 from .. import environment
+from ..utils import *
+
 
 class UnitError(Exception):
     '''
@@ -659,7 +660,7 @@ def Unit(x, allow_undefined=False):
                     print(' ', list(undef), file=sys.stderr)
             variables.update( { n:_UnitClass(1.,[[n,1]])
                     for n in re.findall(_re_ident, x)
-                    if not n in _unit_evaluator.namespace } )
+                    if n not in _unit_evaluator.namespace } )
         try:
             exp_val = _unit_evaluator.eval(x, variables)
         except EvalError as e:

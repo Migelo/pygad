@@ -6,15 +6,20 @@ Doctesting is implicity done in the snapshot module.
 __all__ = ['FileReader', 'write']
 
 import os
+
 from .. import environment
 from ..environment import secure_get_h5py
+
 h5py = secure_get_h5py()
-from .lowlevel_file import *
+import sys
+import warnings
+
+import numpy as np
+
 from ..units import *
 from . import config
-import numpy as np
-import warnings
-import sys
+from .lowlevel_file import *
+
 
 class FileReader(object):
     '''
@@ -82,7 +87,7 @@ class FileReader(object):
         '''Return a sorted list of the block informations.'''
         try:
             erg = sorted(list(self._info.values()), key=lambda e: e.start_pos)
-        except Exception as e:
+        except Exception:
             erg = list(self._info.values())
         return erg
 

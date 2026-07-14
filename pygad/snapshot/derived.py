@@ -55,15 +55,14 @@ Examples:
 '''
 __all__ = ['ptypes_and_deps', 'read_derived_rules', 'general']
 
-from configparser import ConfigParser
-from .. import utils
-from .. import gadget
-from .. import environment
-from ..units import UnitQty
+import os
 import re
 import warnings
+from configparser import ConfigParser
+
+from .. import environment, gadget, utils
+from ..units import UnitQty
 from . import derive_rules
-import os
 
 _rules = {}
 general = {
@@ -113,7 +112,7 @@ def ptypes_and_deps(defi, snap):
             ptypes = [(ptypes[i] and (i in fam)) for i in range(6)]
         elif hasattr(derive_rules, name):
             func = getattr(derive_rules, name)
-            if not hasattr(func,'_deps') and not func is UnitQty:
+            if not hasattr(func,'_deps') and func is not UnitQty:
                 warnings.warn('The derived block defining function ' +
                               '"%s" has not attribute `_deps` ' % name +
                               'defining its dependencies! -- Assume no ' +

@@ -275,22 +275,21 @@ Example:
 '''
 __all__ = ['write', 'Snapshot', 'Snap', 'SubSnapshot']
 
-import sys
+import ast
+import fnmatch
 import os.path
-from .. import gadget
+import sys
+import warnings
+import weakref
+
+import numpy as np
+
+from .. import environment, gadget, physics, utils
+from ..environment import module_dir
 from ..gadget import write
-from .. import physics
-from .. import utils
 from ..units import *
 from ..utils import dist
-from .. import environment
-from ..environment import module_dir
-import numpy as np
-import warnings
-import ast
-import weakref
 from . import derived
-import fnmatch
 
 
 class Snapshot(object):
@@ -689,8 +688,8 @@ class Snapshot(object):
         Raises:
             KeyError:           If the mask was not understood.
         '''
-        from .masks import SnapMask
         from ..analysis.halo import Halo
+        from .masks import SnapMask
 
         base = self
 
@@ -822,7 +821,7 @@ class Snapshot(object):
                                 Defaults to the list loaded from `derived.cfg`.
             clear_old (dict):   Whether to first clear any already existing rules.
         '''
-        if not self is self.root:
+        if self is not self.root:
             self.root.fill_derived_rules(rules, clear_old)
             return
 
@@ -891,8 +890,9 @@ class Snapshot(object):
 
     @property
     def hsml3(self):
-        from .sim_arr import SimArr
         import pysph
+
+        from .sim_arr import SimArr
         if "Volume" not in self.gas.loadable_blocks():
             print(np.shape(self.gas["pos"]), np.shape(
                 self.gas["mass"]), np.shape(self.gas["rho"]))
@@ -1076,8 +1076,8 @@ class Snapshot(object):
                 raise KeyError('(Sub-)Snapshot %r has no block "%s".' % (
                     self, key))
         # postprone the import to here to speed up the access to blocks
-        from .masks import SnapMask
         from ..analysis.halo import Halo
+        from .masks import SnapMask
         if isinstance(key, (slice, np.ndarray, list, SnapMask, Halo, tuple)):
             # Handling of the index is fully done by the factory function.
             return self.SubSnap(key)
@@ -1149,7 +1149,7 @@ class Snapshot(object):
         root = self._root
         if not root._file_handlers:
             raise RuntimeError('No file(s) to load from.')
-        if not name in root._load_name:
+        if name not in root._load_name:
             raise ValueError("There is no block '%s' to load!" % name)
 
         if environment.verbose >= environment.VERBOSE_NORMAL:
@@ -1253,7 +1253,7 @@ class Snapshot(object):
             block (SimArr):     The (entire) block.
         '''
         root = self._root
-        if not name in root._derive_rule_deps:
+        if name not in root._derive_rule_deps:
             raise ValueError("There is no block '%s' to derive!" % name)
 
         host = self.get_host_subsnap(name)
@@ -1473,12 +1473,12 @@ class Snapshot(object):
         Returns:
             res (SimArr):       The result.
         '''
-        from .sim_arr import SimArr
-        from ..ssp import inter_bc_qty, lum_to_mag
-
         # prepare evaluator
         from numpy import inner
+
         from .. import analysis
+        from ..ssp import inter_bc_qty, lum_to_mag
+        from .sim_arr import SimArr
         namespace = {} if namespace is None else namespace.copy()
         namespace.update({'dist': dist, 'Unit': Unit, 'Units': Units,
                           'UnitArr': UnitArr, 'UnitQty': UnitQty,

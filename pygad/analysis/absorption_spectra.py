@@ -106,16 +106,15 @@ __all__ = [
     "redshifts_to_velocities",
 ]
 
-from ..units import Unit, UnitArr, UnitQty, UnitScalar
-from ..physics import kB, m_H, c, q_e, m_e, epsilon0
-from ..kernels import *
-from .. import gadget
-from .. import utils
-from .. import C
-from .. import environment
+from numbers import Number
+
 import numpy as np
 from scipy.special import wofz
-from numbers import Number
+
+from .. import C, environment, gadget, utils
+from ..kernels import *
+from ..physics import c, epsilon0, kB, m_e, q_e
+from ..units import Unit, UnitArr, UnitQty, UnitScalar
 
 # loading line data from .csv file [initially saved using lines dict defined in this file,
 # .csv file can be manually updated with updated line data.]

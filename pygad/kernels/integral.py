@@ -52,8 +52,10 @@ Examples and doctests:
 __all__ = ['project_kernel', 'integrate_kernel', 'rand_kernel_r']
 
 import numpy as np
-from .definitions import *
+
 from ..utils import static_vars
+from .definitions import *
+
 
 def project_kernel(kernel, N=100, inter_kind='quadratic'):
     '''
@@ -71,8 +73,8 @@ def project_kernel(kernel, N=100, inter_kind='quadratic'):
                         A function of R (cylindrical radius / 'impact parameter')
                         of the projected (integrated along one coordinate) kernel.
     '''
-    from scipy.interpolate import interp1d
     from scipy.integrate import quad
+    from scipy.interpolate import interp1d
 
     kernel = kernels[kernel]
     Rs = np.arange(N+1,dtype=float) / N
@@ -112,8 +114,8 @@ def integrate_kernel(kernel, N=100, inter_kind='quadratic'):
         integ_kernel (function):    A function of r (radius) of the integrated
                                     kernel.
     '''
-    from scipy.interpolate import interp1d
     from scipy.integrate import quad
+    from scipy.interpolate import interp1d
 
     kernel = kernels[kernel]
     rs = np.linspace(0,1)

@@ -72,6 +72,8 @@ import tarfile
 import tempfile
 import time
 import urllib.request
+
+# isort: skip_file
 from ._version import get_versions
 from . import utils
 from . import environment

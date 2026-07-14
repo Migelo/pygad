@@ -46,8 +46,10 @@ Example:
 __all__ = ['radially_binned', 'profile_dens', 'NFW', 'NFW_fit']
 
 import numpy as np
+
 from ..units import *
 from ..utils import dist
+
 
 def radially_binned(s, qty, av=None, r_edges=None, proj=None, center=None):
     '''

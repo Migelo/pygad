@@ -98,17 +98,16 @@ __all__ = ['shrinking_sphere', 'virial_info', 'find_FoF_groups',
            'nxt_ngb_dist_perc', 'generate_FoF_catalogue',
            'find_most_massive_progenitor']
 
+import sys
+
 import numpy as np
-from .. import utils
+
+from .. import C, environment
+from ..snapshot import *
+from ..transformation import *
 from ..units import *
 from ..utils import *
-import sys
-import os
-from ..transformation import *
 from .properties import *
-from ..snapshot import *
-from .. import environment
-from .. import C
 
 
 def shrinking_sphere(s, center, R, periodic=True, shrink_factor=0.93,
@@ -448,8 +447,8 @@ def read_Rockstar_file(fname):
         halos (np.ndarray):         A numpy array with the halo table.
         particles (np.ndarray):     A numpy array with the particle table.
     '''
-    from io import StringIO
     import codecs
+    from io import StringIO
     BEFORE_HALO_TBL = '#Halo table begins here:'
     BEFORE_PART_TBL = '#Particle table begins here:'
 
@@ -1075,7 +1074,7 @@ def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
     else:
         N_FoF = len(set(FoF)) - 1
 
-    from ..utils import ProgressBar, DevNull
+    from ..utils import DevNull
     if verbose >= environment.VERBOSE_NORMAL and progressbar:
         outfile = sys.stdout
     else:

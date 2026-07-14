@@ -45,13 +45,14 @@ Examples:
 '''
 __all__ = ['iter_idents_in_expr', 'EvalError', 'Evaluator', 'eval']
 
-import math
-import numpy as np
-import operator as op
 import ast
-import re
 import numbers
+import operator as op
+import re
 from fractions import Fraction
+
+import numpy as np
+
 
 def iter_idents_in_expr(expr, retel=False):
     '''

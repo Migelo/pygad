@@ -12,7 +12,8 @@ Also doctest other parts of this sub-module:
     >>> doctest.testmod(geo)
     TestResults(failed=0, attempted=20)
 '''
-from .utils import *
+# isort: skip_file
 from .safe_eval import *
 from .term import *
+from .utils import *
 from .geo import *

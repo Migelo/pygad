@@ -5,10 +5,11 @@ securely import h5py.
 __all__ = ['git_descr', 'interactive', 'module_dir', 'can_use_h5py',
            'secure_get_h5py', 'gc_full_collect']
 
-import sys
-import os
-from .utils import *
 import gc
+import os
+import sys
+
+from .utils import *
 
 module_dir = os.path.dirname(__file__)+'/'
 
@@ -72,6 +73,7 @@ def git_descr(path=os.curdir, dirty='dirty', PEP440=False):
     return descr
 
 import __main__ as main
+
 if hasattr(main, '__file__'):
     interactive = False
 else:

@@ -76,11 +76,13 @@ __all__ = ['OctNode', 'Octree', 'count_nodes', 'count_leaves', 'count_particles'
            'del_quantity', 'populate_center_of_mass',
            'delete_where_too_many_heavy_particles']
 
+import sys
+
 import numpy as np
 from scipy.spatial.distance import cdist
-from ..units import *
+
 from .. import environment
-import sys
+from ..units import *
 
 
 def find_octant(pos, ref):

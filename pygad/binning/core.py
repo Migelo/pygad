@@ -89,9 +89,10 @@ Examples:
 __all__ = ['gridbin2d', 'gridbin1d', 'gridbin', 'grid_props', 'Map', 'scale01', 'smooth']
 
 import numpy as np
-from ..units import *
-from scipy.stats import binned_statistic_dd
 from scipy.ndimage.filters import convolve
+from scipy.stats import binned_statistic_dd
+
+from ..units import *
 
 
 def gridbin2d(x, y, qty=None, bins=50, extent=None, normed=False, stats=None,
@@ -301,6 +302,7 @@ class Map(UnitArr):
 
     def __getitem__(self, key):
         from warnings import simplefilter
+
         # ignore all future warnings
         simplefilter(action='ignore', category=FutureWarning)
         item = super(Map, self).__getitem__(key)
@@ -431,7 +433,6 @@ def smooth(grid, sml, kernel, bndrymode='constant'):
 
     sml = float(sml)
 
-    from ..kernels import kernels, vector_kernels
 
     pxs = int(2 * np.ceil(sml) + 1)
     x = np.linspace(float(-(pxs - 1) / 2.), float((pxs - 1) / 2.), pxs) / sml

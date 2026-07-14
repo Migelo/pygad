@@ -334,7 +334,9 @@ def update_activated(snap):
 if __name__ == "__main__":
     args = parser.parse_args()
 
-    import sys, os, time
+    import os
+    import sys
+    import time
 
     print ("log file is printed at ", os.path.dirname(args.dest)+"/log_gastrace_"+args.region+".txt")
     stdoutOrigin=sys.stdout 
@@ -379,6 +381,7 @@ if __name__ == "__main__":
     # error in parsing the arguments.
 
     import numpy as np
+
     import pygad
 
     pygad.environment.verbose = args.verbose

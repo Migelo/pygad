@@ -3,8 +3,8 @@ Terminal helper functions.
 '''
 __all__ = ['strip_ansi', 'term_len', 'get_terminal_size']
 
-import re
 import os
+import re
 
 _ansi_re = re.compile('\033\[((?:\d|;)*)([a-zA-Z])')
 

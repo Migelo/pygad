@@ -13,16 +13,18 @@ __all__ = [
     "read_pyigm_COS_halos_EWs",
 ]
 
-from .snapshot import *
-from .units import *
-from .utils import *
-from .analysis import *
-from .transformation import *
-from . import environment
+import os
 import re
 import sys
-import os
+
 import numpy as np
+
+from . import environment
+from .analysis import *
+from .snapshot import *
+from .transformation import *
+from .units import *
+from .utils import *
 
 
 def read_info_file(filename):
@@ -69,7 +71,7 @@ def read_info_file(filename):
                             file=sys.stderr,
                         )
                     info[name] = value
-            except ValueError as e:
+            except ValueError:
                 continue  # ignore error continue loading
 
     return info
@@ -1172,7 +1174,6 @@ def read_pyigm_COS_halos_EWs(
                                 'Mstars' (stellar masses of the associated
                                 galaxies), and more. Each entry is a UnitArr.
     """
-    import pyigm
     from pyigm.cgm import cos_halos
 
     cos_halos = cos_halos.COSHalos()

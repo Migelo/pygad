@@ -726,11 +726,13 @@ if __name__ == "__main__":
     import time
 
     t_start = time.time()
-    import os
     import gc
-    from fractions import Fraction
-    import numpy as np
+    import os
     import pickle as pickle
+    from fractions import Fraction
+
+    import numpy as np
+
     import pygad
 
     pygad.environment.verbose = args.verbose

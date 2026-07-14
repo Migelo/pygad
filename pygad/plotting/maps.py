@@ -6,16 +6,16 @@ Doctests impossible, since they would require visual inspection...
 __all__ = ['plot_map', 'image', 'phase_diagram', 'over_plot_species_phases', 'vec_field',
            'correlation_chart']
 
-import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from .general import *
-from ..units import *
-from ..binning import *
-from ..gadget import config
-from ..snapshot import BoxMask
-import warnings
+import numpy as np
+
 from .. import environment
+from ..binning import *
+from ..snapshot import BoxMask
+from ..units import *
+from .general import *
+
 
 def plot_map(m, colors=None, extent=None, vlim=None, clim=None,
              logscale=True, clogscale=False, units=None, cunits=None,
@@ -665,6 +665,7 @@ def over_plot_species_phases(s, species=None, extent=None, enclose=0.8,
         ax (AxesSubplot):           The axis plotted on.
     '''
     from numbers import Number
+
     from scipy.optimize import brentq
     if species is None:
         species = ['HI', 'MgII', 'SiIII', 'CIV', 'OVI']

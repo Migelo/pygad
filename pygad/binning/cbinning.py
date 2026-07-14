@@ -74,16 +74,16 @@ Testing:
 __all__ = ['SPH_to_3Dgrid', 'SPH_to_2Dgrid', 'SPH_3D_to_line',
            'SPH_to_2Dgrid_by_particle']
 
-import numpy as np
-from ..kernels import *
-from ..units import *
-from .core import *
-from ..utils import *
-from .. import environment
-from .. import gadget
-from .. import C
 from numbers import Number
+
+import numpy as np
+
+from .. import C, environment, gadget
+from ..kernels import *
 from ..snapshot import BoxMask
+from ..units import *
+from ..utils import *
+from .core import *
 
 
 def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml',

@@ -111,9 +111,12 @@ __all__ = ['Transformation', 'Translation', 'Rotation', 'rot_from_axis_angle',
            'rot_to_z']
 
 import sys
+
 import numpy as np
-from ..units import *
+
 from .. import environment
+from ..units import *
+
 
 class Transformation(object):
     '''

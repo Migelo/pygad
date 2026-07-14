@@ -99,11 +99,13 @@ Examples:
 '''
 __all__ = ['SnapMask', 'BallMask', 'BoxMask', 'DiscMask', 'IDMask', 'ExprMask']
 
-import numpy as np
-from ..units import *
-from .. import gadget
 #from .snapshot import SubSnap, SubSnap is now method of Snapshot
 import operator
+
+import numpy as np
+
+from .. import gadget
+from ..units import *
 
 
 class SnapMask(object):
@@ -213,7 +215,7 @@ class BallMask(SnapMask):
         return s + ')'
 
     def _get_mask_for(self, s):
-        from ..utils import periodic_distance_to, dist
+        from ..utils import dist, periodic_distance_to
         R = self._R.in_units_of(s['r'].units, subs=s)
         center = self._center.in_units_of(s['r'].units, subs=s)
 

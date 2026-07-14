@@ -1,9 +1,9 @@
-import re
-from math import isclose
 import doctest as _doctest
-from doctest import (DONT_ACCEPT_TRUE_FOR_1, DONT_ACCEPT_BLANKLINE,
-                     NORMALIZE_WHITESPACE, BLANKLINE_MARKER, ELLIPSIS,
+import re
+from doctest import (BLANKLINE_MARKER, DONT_ACCEPT_BLANKLINE,
+                     DONT_ACCEPT_TRUE_FOR_1, ELLIPSIS, NORMALIZE_WHITESPACE,
                      _ellipsis_match)
+from math import isclose
 
 NUMERIC_REL_TOL = 2e-6
 NUMERIC_ABS_TOL = 1e-12

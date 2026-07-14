@@ -4,8 +4,9 @@ gCatalog3 - a script generate/process SnapshotCache via pygad.cmdtool.gCache
 plugin-Command CmdCatalog
 computes density profile and fits slope and puts it as "gamma" into the cache
 '''
-import sys
 import os
+import sys
+
 
 def get_arg(name):
     for arg in sys.argv:

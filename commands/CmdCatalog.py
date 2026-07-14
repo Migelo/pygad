@@ -1,12 +1,10 @@
 # these packages are loaded by gcache3 by default
 import os
-import io
-import sys
-import re
-import time
+
 import numpy as np
-import matplotlib.pyplot as plt
+
 import pygad as pg
+
 
 # additional packages should be loaded in prepare section
 # here your code of functions ONLY starts

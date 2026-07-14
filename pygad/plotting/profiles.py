@@ -5,15 +5,15 @@ Doctests impossible, since they would require visual inspection...
 '''
 __all__ = ['profile', 'history', 'SFR_history', 'flow_history']
 
-import numpy as np
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-from ..units import *
-from ..analysis import *
-from .. import environment
-from .. import utils
-from .. import physics
 import sys
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+from .. import environment, utils
+from ..analysis import *
+from ..units import *
+
 
 def profile(s, Rmax, qty, av=None, units=None, dens=True, proj=None,
             N=50, logbin=False, minlog=None, logscale=True, ylabel=None,
@@ -183,6 +183,7 @@ def history(s, qty, time=None, av=None, units=None, diff=False, N=50,
         time = s.get(time)
     if str(time.units).endswith('_form]'):
         from ..snapshot import age_from_form
+
         # only convert reasonable values & ensure not to overwrite blocks
         mask = (time!=-1) & np.isfinite(time)
         time = time.copy()

@@ -29,14 +29,17 @@ __all__ = ['alpha_elements',
            'Reff_van_der_Wel_2014', 'SFR_Elbaz_2007',
            'Jeans_length', 'Jeans_mass']
 
-import numpy as np
 import warnings
+
+import numpy as np
 import scipy.constants
-from ..units import UnitError, UnitArr, UnitQty, Unit
+
+from ..units import Unit, UnitArr, UnitError, UnitQty
+
 try:
     from collections.abc import Iterable
 except ImportError:
-    from collections import Iterable
+    pass
 
 
 # alpha elements, produced in (or actually before) SNII:

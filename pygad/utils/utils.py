@@ -8,13 +8,14 @@ __all__ = ['DevNull', 'static_vars', 'nice_big_num_str', 'float_to_nice_latex',
            'rand_dir', 'ProgressBar', 'time_from_color_str', 'time_to_nice_str',
            'sec_to_nice_str', 'weighted_percentile']
 
-import numpy as np
-import re
-import scipy.spatial.distance
-import sys
-from .term import *
-import time
 import numbers
+import re
+import sys
+import time
+
+import numpy as np
+
+from .term import *
 
 
 class DevNull():

@@ -71,8 +71,9 @@ Doctests:
 __all__ = ['Wiersma_CoolingTable']
 
 import numpy as np
-from ..units import UnitQty, UnitArr
+
 from .. import environment
+from ..units import UnitArr, UnitQty
 
 h5py = environment.secure_get_h5py()
 

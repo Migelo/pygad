@@ -9,10 +9,8 @@ import os
 
 import pygad
 from pygad.snapshot.snapshot import Snapshot
-from pygad.units.units import (
-    define, define_from_cfg, defined_units, Unit, UnitError,
-)
 from pygad.units.unit_arr import UnitArr, _div_units
+from pygad.units.units import define, define_from_cfg, defined_units
 
 
 def check_fix1():

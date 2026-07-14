@@ -43,6 +43,7 @@ Examples:
 __all__ = ['kernel_weighted', 'SPH_qty_at', 'scatter_gas_qty_to_stars']
 
 import numpy as np
+
 from ..units import *
 from ..utils import dist
 
@@ -196,6 +197,7 @@ def SPH_qty_at(s, qty, r, units=None, kernel=None, dV='dV'):
                           axis=0)
     else:
         from .. import C
+
         # C function expects doubles and cannot deal with views:
         r = r.astype(np.float64)
         gas_pos = gas_pos.astype(np.float64)
