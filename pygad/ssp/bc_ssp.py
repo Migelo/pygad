@@ -66,85 +66,87 @@ from .. import environment
 import sys
 
 metallicity_name = {
-        1e-4: 'm22',
-        4e-4: 'm32',
-        4e-3: 'm42',
-        8e-3: 'm52',
-        2e-2: 'm62',
-        5e-2: 'm72',
-        }
+    1e-4: 'm22',
+    4e-4: 'm32',
+    4e-3: 'm42',
+    8e-3: 'm52',
+    2e-2: 'm62',
+    5e-2: 'm72',
+}
 
 table_names = {
-        '1ABmag': ['log-age-yr', 'Mbol', 'g_AB', '(u-g)AB', '(g-r)AB',
-                   '(g-i)AB', '(g-z)AB', '(FUV-NUV)AB', '(FUV-r)AB', '(FUV-R)AB',
-                   'F(1500A)'],
-        '1color': ['log-age-yr', 'Mbol', 'Umag', 'Bmag', 'Vmag', 'Kmag', '14-V',
-                   '17-V', '22-V', '27-V', 'U-J', 'J-F', 'F-N', 'U-B', 'B-V'],
-        '2color': ['log-age-yr', 'Rmag', 'J2Mmag', 'Kmag', 'V-R', 'V-I', 'V-J',
-                   'V-K', 'R-I', 'J-H', 'H-K', 'V-K\'', 'V-Ks', '(J-H)2M ',
-                   '(J-Ks)2M'],
-        '3color': ['log-age-yr', 'B(4000)', 'B4_VN', 'B4_SDSS', 'B(912)', 'NLy',
-                   'NHeI', 'NHeII', 'Mbol', 'Bol_Flux', 'SNR/yr/Lo', 'N(BH)',
-                   'N(NS)', 'PNBR/yr/Lo', 'N(WD)', 'M(Remnants)'],
-        '4color': ['log-age-yr', 'Mbol', 'Bmag', 'Vmag', 'Kmag', 'M*_liv',
-                   'M_remnants', 'M_ret_gas', 'M_galaxy', 'SFR/yr',
-                   'M*_liv+M_rem', 'M*_tot/Lb', 'M*_tot/Lv', 'M*_tot/Lk',
-                   'M*_liv/Lb', 'M*_liv/Lv', 'M*_liv/Lk'],
-        '5color': ['log-age-yr', 'Mbol', 'b(t)*\'s/yr', 'B(t)/yr/Lo',
-                   'Turnoff_mass', 'BPMS/BMS'],
-        '6lsindx_ffn': ['log-age', 'CN_1', 'CN_2', 'Ca4227', 'G4300', 'Fe4383',
-                        'Ca4455', 'Fe4531', 'Fe4668', 'H\\beta', 'Fe5015', 'Mg_1',
-                        'Mg_2', 'Mg-b'],
-        '6lsindx_sed': ['log-age', 'CN_1', 'CN_2', 'Ca4227', 'G4300', 'Fe4383',
-                        'Ca4455', 'Fe4531', 'Fe4668', 'H\\beta', 'Fe5015', 'Mg_1',
-                        'Mg_2', 'Mg-b'],
-        '6lsindx_sed_lick_system': ['log-age', 'CN_1', 'CN_2', 'Ca4227', 'G4300',
-                                    'Fe4383', 'Ca4455', 'Fe4531', 'Fe4668',
-                                    'H\\beta', 'Fe5015', 'Mg_1', 'Mg_2', 'Mg-b'],
-        '7lsindx_ffn': ['log-age', 'Fe5270', 'Fe5335', 'Fe5406', 'Fe5709',
-                        'Fe5782', 'Na-D', 'TiO_1', 'TiO_2', 'H\\delta_A',
-                        'H\\gamma_A', 'H\\delta_F', 'H\\gamma_F', 'D(4000)'],
-        '7lsindx_sed': ['log-age', 'Fe5270', 'Fe5335', 'Fe5406', 'Fe5709',
-                        'Fe5782', 'Na-D', 'TiO_1', 'TiO_2', 'H\\delta_A',
-                        'H\\gamma_A', 'H\\delta_F', 'H\\gamma_F', 'D(4000)',
-                        'B4_VN', 'CaII8498', 'CaII8542', 'CaII8662', 'MgI8807',
-                        'H8_3889', 'H9_3835', 'H10_3798', 'BH-HK'],
-        '7lsindx_sed_lick_system': ['log-age', 'Fe5270', 'Fe5335', 'Fe5406',
-                                    'Fe5709', 'Fe5782', 'Na-D', 'TiO_1', 'TiO_2',
-                                    'H\\delta_A', 'H\\gamma_A', 'H\\delta_F',
-                                    'H\\gamma_F', 'D(4000)', 'B4_VN', 'CaII8498',
-                                    'CaII8542', 'CaII8662', 'MgI8807', 'H8_3889',
-                                    'H9_3835', 'H10_3798', 'BH-HK'],
-        '8lsindx_sed_fluxes': ['log-age', 'Nx', 'Im', 'Flux_Blue', 'Flux_Red',
-                               'Flux_Ctrl', 'Flux_Line', 'Index'],
-        '9color': ['log-age-yr', 'Kmag', 'K-I3.5', 'I3.5-I4.5', 'I4.5-I5.7',
-                   'I5.7-I7.9', 'I7.9-I12', 'I12-I25', 'I25-I60', 'I60-I100',
-                   'M24-M70', 'M70-M160', 'I100-M160'],
-        'acs_wfc_color': ['log-age-yr', 'Vmag', 'Kmag', 'V-F220w', 'V-F250w',
-                          'V-F330w', 'V-F410w', 'V-F435w', 'V-F475w', 'V-F555w',
-                          'V-F606w', 'V-F625w', 'V-F775w', 'V-F814w', 'log Nly',
-                          'Mt/Lb', 'Mt/Lv', 'Mt/Lk'],
-        #'ised' -> binary file,
-        'wfc3_color': ['log-age-yr', 'Vmag', 'Kmag', 'V-F110W', 'V-F125W',
-                       'V-F160W', 'V-F225W', 'V-F336W', 'V-FR388N', 'V-F438W',
-                       'V-F555W', 'V-F814W', 'V-ACS220W', 'V-ACS625W', 'log Nly',
-                       'Mt/Lb', 'Mt/Lv', 'Mt/Lk'],
-        'wfc3_uvis1_color': ['log-age-yr', 'Vmag', 'Kmag', 'V-F225w', 'V-F336w',
-                             'V-F438w', 'V-F547m', 'V-F555w', 'V-F606w',
-                             'V-F625w', 'V-F656n', 'V-F657n', 'V-F658n',
-                             'V-F814w', 'log Nly', 'Mt/Lb', 'Mt/Lv', 'Mt/Lk'],
-        'wfpc2_johnson_color': ['log-age-yr', 'Vmag', 'V-F300w', 'V-F300rl',
-                                'V-F336w', 'V-F439w', 'V-F450w', 'V-F555w',
-                                'V-F606w', 'V-F675w', 'V-F814w', 'V-U', 'V-B',
-                                'V-R', 'V-I', 'V-J', 'V-K', 'V-L'],
-    }
-available_qty = set(np.concatenate(list(table_names.values()))) - set(['log-age-yr', 'log-age'])
+    '1ABmag': ['log-age-yr', 'Mbol', 'g_AB', '(u-g)AB', '(g-r)AB',
+               '(g-i)AB', '(g-z)AB', '(FUV-NUV)AB', '(FUV-r)AB', '(FUV-R)AB',
+               'F(1500A)'],
+    '1color': ['log-age-yr', 'Mbol', 'Umag', 'Bmag', 'Vmag', 'Kmag', '14-V',
+               '17-V', '22-V', '27-V', 'U-J', 'J-F', 'F-N', 'U-B', 'B-V'],
+    '2color': ['log-age-yr', 'Rmag', 'J2Mmag', 'Kmag', 'V-R', 'V-I', 'V-J',
+               'V-K', 'R-I', 'J-H', 'H-K', 'V-K\'', 'V-Ks', '(J-H)2M ',
+               '(J-Ks)2M'],
+    '3color': ['log-age-yr', 'B(4000)', 'B4_VN', 'B4_SDSS', 'B(912)', 'NLy',
+               'NHeI', 'NHeII', 'Mbol', 'Bol_Flux', 'SNR/yr/Lo', 'N(BH)',
+               'N(NS)', 'PNBR/yr/Lo', 'N(WD)', 'M(Remnants)'],
+    '4color': ['log-age-yr', 'Mbol', 'Bmag', 'Vmag', 'Kmag', 'M*_liv',
+               'M_remnants', 'M_ret_gas', 'M_galaxy', 'SFR/yr',
+               'M*_liv+M_rem', 'M*_tot/Lb', 'M*_tot/Lv', 'M*_tot/Lk',
+               'M*_liv/Lb', 'M*_liv/Lv', 'M*_liv/Lk'],
+    '5color': ['log-age-yr', 'Mbol', 'b(t)*\'s/yr', 'B(t)/yr/Lo',
+               'Turnoff_mass', 'BPMS/BMS'],
+    '6lsindx_ffn': ['log-age', 'CN_1', 'CN_2', 'Ca4227', 'G4300', 'Fe4383',
+                    'Ca4455', 'Fe4531', 'Fe4668', 'H\\beta', 'Fe5015', 'Mg_1',
+                    'Mg_2', 'Mg-b'],
+    '6lsindx_sed': ['log-age', 'CN_1', 'CN_2', 'Ca4227', 'G4300', 'Fe4383',
+                    'Ca4455', 'Fe4531', 'Fe4668', 'H\\beta', 'Fe5015', 'Mg_1',
+                    'Mg_2', 'Mg-b'],
+    '6lsindx_sed_lick_system': ['log-age', 'CN_1', 'CN_2', 'Ca4227', 'G4300',
+                                'Fe4383', 'Ca4455', 'Fe4531', 'Fe4668',
+                                'H\\beta', 'Fe5015', 'Mg_1', 'Mg_2', 'Mg-b'],
+    '7lsindx_ffn': ['log-age', 'Fe5270', 'Fe5335', 'Fe5406', 'Fe5709',
+                    'Fe5782', 'Na-D', 'TiO_1', 'TiO_2', 'H\\delta_A',
+                    'H\\gamma_A', 'H\\delta_F', 'H\\gamma_F', 'D(4000)'],
+    '7lsindx_sed': ['log-age', 'Fe5270', 'Fe5335', 'Fe5406', 'Fe5709',
+                    'Fe5782', 'Na-D', 'TiO_1', 'TiO_2', 'H\\delta_A',
+                    'H\\gamma_A', 'H\\delta_F', 'H\\gamma_F', 'D(4000)',
+                    'B4_VN', 'CaII8498', 'CaII8542', 'CaII8662', 'MgI8807',
+                    'H8_3889', 'H9_3835', 'H10_3798', 'BH-HK'],
+    '7lsindx_sed_lick_system': ['log-age', 'Fe5270', 'Fe5335', 'Fe5406',
+                                'Fe5709', 'Fe5782', 'Na-D', 'TiO_1', 'TiO_2',
+                                'H\\delta_A', 'H\\gamma_A', 'H\\delta_F',
+                                'H\\gamma_F', 'D(4000)', 'B4_VN', 'CaII8498',
+                                'CaII8542', 'CaII8662', 'MgI8807', 'H8_3889',
+                                'H9_3835', 'H10_3798', 'BH-HK'],
+    '8lsindx_sed_fluxes': ['log-age', 'Nx', 'Im', 'Flux_Blue', 'Flux_Red',
+                           'Flux_Ctrl', 'Flux_Line', 'Index'],
+    '9color': ['log-age-yr', 'Kmag', 'K-I3.5', 'I3.5-I4.5', 'I4.5-I5.7',
+               'I5.7-I7.9', 'I7.9-I12', 'I12-I25', 'I25-I60', 'I60-I100',
+               'M24-M70', 'M70-M160', 'I100-M160'],
+    'acs_wfc_color': ['log-age-yr', 'Vmag', 'Kmag', 'V-F220w', 'V-F250w',
+                      'V-F330w', 'V-F410w', 'V-F435w', 'V-F475w', 'V-F555w',
+                      'V-F606w', 'V-F625w', 'V-F775w', 'V-F814w', 'log Nly',
+                      'Mt/Lb', 'Mt/Lv', 'Mt/Lk'],
+    # 'ised' -> binary file,
+    'wfc3_color': ['log-age-yr', 'Vmag', 'Kmag', 'V-F110W', 'V-F125W',
+                   'V-F160W', 'V-F225W', 'V-F336W', 'V-FR388N', 'V-F438W',
+                   'V-F555W', 'V-F814W', 'V-ACS220W', 'V-ACS625W', 'log Nly',
+                   'Mt/Lb', 'Mt/Lv', 'Mt/Lk'],
+    'wfc3_uvis1_color': ['log-age-yr', 'Vmag', 'Kmag', 'V-F225w', 'V-F336w',
+                         'V-F438w', 'V-F547m', 'V-F555w', 'V-F606w',
+                         'V-F625w', 'V-F656n', 'V-F657n', 'V-F658n',
+                         'V-F814w', 'log Nly', 'Mt/Lb', 'Mt/Lv', 'Mt/Lk'],
+    'wfpc2_johnson_color': ['log-age-yr', 'Vmag', 'V-F300w', 'V-F300rl',
+                            'V-F336w', 'V-F439w', 'V-F450w', 'V-F555w',
+                            'V-F606w', 'V-F675w', 'V-F814w', 'V-U', 'V-B',
+                            'V-R', 'V-I', 'V-J', 'V-K', 'V-L'],
+}
+available_qty = set(np.concatenate(list(table_names.values()))
+                    ) - set(['log-age-yr', 'log-age'])
 
 table_base_name = {
-        'Kroupa': 'bc2003_hr_stelib_%s_kroup_ssp',
-        'Chabrier': 'bc2003_hr_stelib_%s_chab_ssp',
-        'Salpeter': 'bc2003_hr_stelib_%s_salp_ssp',
-        }
+    'Kroupa': 'bc2003_hr_stelib_%s_kroup_ssp',
+    'Chabrier': 'bc2003_hr_stelib_%s_chab_ssp',
+    'Salpeter': 'bc2003_hr_stelib_%s_salp_ssp',
+}
+
 
 def load_table(qty, metal_code, folder=None, base=None, ending=None, IMF=None):
     '''
@@ -182,7 +184,7 @@ def load_table(qty, metal_code, folder=None, base=None, ending=None, IMF=None):
         RuntimeError:       If the quantity does not exists in one of the tables.
     '''
     if IMF is None:
-        IMF=gadget.general['IMF']
+        IMF = gadget.general['IMF']
     if folder is None:
         folder = gadget.general['SSP_dir'] + '/' + IMF.lower()
     if base is None:
@@ -192,24 +194,26 @@ def load_table(qty, metal_code, folder=None, base=None, ending=None, IMF=None):
     if ending is None:
         for ending, columns in list(table_names.items()):
             if qty in columns:
-                tbl = np.loadtxt(folder + '/' + (base%metal_code) + '.' + ending)
+                tbl = np.loadtxt(folder + '/' + (base %
+                                 metal_code) + '.' + ending)
                 found = True
                 break
     else:
         columns = table_names[ending]
         if qty in columns:
-            tbl = np.loadtxt(folder + '/' + (base%metal_code) + '.' + ending)
+            tbl = np.loadtxt(folder + '/' + (base % metal_code) + '.' + ending)
             found = True
 
     if not found:
-        raise RuntimeError('Could not find the quantity "%s" in the ' % qty + \
+        raise RuntimeError('Could not find the quantity "%s" in the ' % qty +
                            'SSP tables.')
     else:
         if environment.verbose >= environment.VERBOSE_TALKY:
-            print(("Using SSP table: " + folder + '/' + (base%metal_code) + '.' + ending))
+            print(("Using SSP table: " + folder + '/' +
+                  (base % metal_code) + '.' + ending))
 
+    return tbl[:, 0], tbl[:, columns.index(qty)]
 
-    return tbl[:,0], tbl[:,columns.index(qty)]
 
 def inter_bc_qty(age, Z, qty, units=None, IMF=None):
     '''
@@ -249,8 +253,8 @@ def inter_bc_qty(age, Z, qty, units=None, IMF=None):
             age = np.array([float(age)])
         if not Z.shape:
             Z = np.array([float(Z)])
-    if not len(age)==len(Z):
-        raise ValueError('The array of ages and metallicities need to have ' + \
+    if not len(age) == len(Z):
+        raise ValueError('The array of ages and metallicities need to have ' +
                          'the length!')
 
     if environment.verbose >= environment.VERBOSE_TALKY:
@@ -264,9 +268,9 @@ def inter_bc_qty(age, Z, qty, units=None, IMF=None):
     if environment.verbose >= environment.VERBOSE_TALKY:
         print('table limits:')
         print(('  age [yr]:    %.2e - %.2e' % (10**age_bins.min(),
-                                              10**age_bins.max())))
+                                               10**age_bins.max())))
         print(('  metallicity: %.2e - %.2e' % (min(metallicity_name.keys()),
-                                              max(metallicity_name.keys()))))
+                                               max(metallicity_name.keys()))))
 
     if environment.verbose >= environment.VERBOSE_TALKY:
         print('interpolate in age...')
@@ -274,20 +278,21 @@ def inter_bc_qty(age, Z, qty, units=None, IMF=None):
     # interpolate in age in all metallicities simultaneously (creating blocks for
     # each tabled metallicity for each particle, i.e. len(metallicity_name) entire
     # blocks -- there are much less metallcity bins than age bins!):
-    Q_mtl = {mtl:np.empty(len(age)) for mtl in list(metallicity_name.keys())}
+    Q_mtl = {mtl: np.empty(len(age)) for mtl in list(metallicity_name.keys())}
     for k in range(len(age_bins)+1):
         if k == 0:
-            age_mask = age<age_bins[0]
+            age_mask = age < age_bins[0]
             n = [0, 0]
             a_age = np.zeros(np.sum(age_mask))
         elif k == len(age_bins):
-            age_mask = age_bins[-1]<=age
+            age_mask = age_bins[-1] <= age
             n = [-1, -1]
             a_age = np.zeros(np.sum(age_mask))
         else:
-            age_mask = (age_bins[k-1]<=age) & (age<age_bins[k])
+            age_mask = (age_bins[k-1] <= age) & (age < age_bins[k])
             n = [k-1, k]
-            a_age = (age[age_mask] - age_bins[n[0]]) / (age_bins[n[1]] - age_bins[n[0]])
+            a_age = (age[age_mask] - age_bins[n[0]]) / \
+                (age_bins[n[1]] - age_bins[n[0]])
 
         for mtl in list(metallicity_name.keys()):
             tbl = tbls[mtl]
@@ -301,22 +306,24 @@ def inter_bc_qty(age, Z, qty, units=None, IMF=None):
     for i in range(len(metallicity_name)+1):
         if i == 0:
             z = list(metallicity_name.keys())[0]
-            Z_mask = Z<z
+            Z_mask = Z < z
             Q[Z_mask] = Q_mtl[z][Z_mask]
         elif i == len(metallicity_name):
             z = list(metallicity_name.keys())[-1]
-            Z_mask = z<=Z
+            Z_mask = z <= Z
             Q[Z_mask] = Q_mtl[z][Z_mask]
         else:
-            z = [list(metallicity_name.keys())[i-1], list(metallicity_name.keys())[i]]
-            Z_mask = (z[0]<=Z) & (Z<z[1])
+            z = [list(metallicity_name.keys())[i-1],
+                 list(metallicity_name.keys())[i]]
+            Z_mask = (z[0] <= Z) & (Z < z[1])
             a_Z = (Z[Z_mask] - z[0]) / (z[1] - z[0])
             Q[Z_mask] = a_Z * Q_mtl[z[1]][Z_mask] + \
-                    (1.0-a_Z) * Q_mtl[z[0]][Z_mask]
+                (1.0-a_Z) * Q_mtl[z[0]][Z_mask]
 
     if single_value:
-        return UnitScalar(float(Q), units)
+        return UnitScalar(Q[0], units)
     return UnitQty(Q, units)
+
 
 def lum_to_mag(L, subs=None):
     '''
@@ -330,5 +337,4 @@ def lum_to_mag(L, subs=None):
         mag (UnitArr):  The magnitudes.
     '''
     L = UnitQty(L, 'Lsol', subs=subs, dtype=float)
-    return UnitQty( solar.abs_mag - 2.5 * np.log10(L), 'mag')
-
+    return UnitQty(solar.abs_mag - 2.5 * np.log10(L), 'mag')

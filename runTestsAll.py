@@ -7,15 +7,10 @@ Created on Tue Apr 16 12:19:11 2019
 """
 
 import pygad
-import doctest
+from pygad.doctest import testmod
 import warnings
 import sys
 
-
-# monkey patch check_output to doctest.OutputChecker.check_output
-from doctest import OutputChecker
-from pygad.doctest import check_output_numbers
-OutputChecker.check_output = check_output_numbers
 
 warnings.filterwarnings("ignore")
 print("*********************************************************************")
@@ -24,7 +19,7 @@ print("*********************************************************************")
 pygad.environment.verbose = pygad.environment.VERBOSE_NORMAL
 print("running pygad doctest...")
 
-res = doctest.testmod(pygad)
+res = testmod(pygad)
 
 print("*********************************************************************")
 print("return code = ", res.failed)

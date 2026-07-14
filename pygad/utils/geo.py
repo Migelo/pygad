@@ -6,7 +6,8 @@ __all__ = ['angle', 'dist', 'find_maxima_prominence_isolation']
 import numpy as np
 from ..units import UnitArr, UnitQty
 
-def angle(a,b):
+
+def angle(a, b):
     '''
     Return the angle (in radiants) between two 3D vectors.
 
@@ -22,8 +23,9 @@ def angle(a,b):
         >>> angle( a, np.cross(a,b) ).in_units_of('degree')
         UnitArr(90.0, units="degree")
     '''
-    cos = np.dot(a,b) / ( np.linalg.norm(a) * np.linalg.norm(b) )
-    return UnitArr(np.arccos(cos),'rad')
+    cos = np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+    return UnitArr(np.arccos(cos), 'rad')
+
 
 def dist(arr, pos=None, metric='euclidean', p=2, V=None, VI=None, w=None):
     '''
@@ -56,7 +58,7 @@ def dist(arr, pos=None, metric='euclidean', p=2, V=None, VI=None, w=None):
     from scipy.spatial.distance import cdist
     arr = UnitQty(arr)
     if pos is None:
-        if not isinstance(arr, np.ndarray): # includes UnitArr!
+        if not isinstance(arr, np.ndarray):  # includes UnitArr!
             arr = np.array(arr)
         pos = [0]*arr.shape[-1]
     pos = UnitQty(pos)
@@ -71,11 +73,12 @@ def dist(arr, pos=None, metric='euclidean', p=2, V=None, VI=None, w=None):
         units = None
 
     if arr.ndim == 1:
-        arr = arr.reshape((1,-1))
+        arr = arr.reshape((1, -1))
 
     res = cdist(arr, [pos]).ravel().view(UnitArr)
     res.units = units
     return res
+
 
 def find_maxima_prominence_isolation(arr, prominence=None, sortby='index',
                                      descending=False):
@@ -135,69 +138,73 @@ def find_maxima_prominence_isolation(arr, prominence=None, sortby='index',
         raise ValueError('Only one dimensional array can be processed!')
     if len(arr) < 2:
         return np.array([],
-                        dtype=[('index',int), ('value',arr.dtype), ('prominence',arr.dtype)])
+                        dtype=[('index', int), ('value', arr.dtype), ('prominence', arr.dtype)])
 
     neg_arr = -arr
+
     def is_local_max(i, a=arr):
         next_other, j = a[i], i
         while next_other == a[i]:
             j += 1
-            next_other = a[i]-1 if j==len(a) else a[j]
+            next_other = a[i]-1 if j == len(a) else a[j]
         prev_other, j = a[i], i
         while prev_other == a[i]:
             j -= 1
-            prev_other = a[i]-1 if j==-1 else a[j]
+            prev_other = a[i]-1 if j == -1 else a[j]
         return prev_other < a[i] > next_other
+
     def is_local_min(i):
         return is_local_max(i, a=neg_arr)
 
     # find all the local extrema in the smoothed spectrum
-    extrema = [ ]
+    extrema = []
     for i in range(len(arr)):
         if is_local_max(i):
-            extrema.append( ['max', arr[i], i] )
+            extrema.append(['max', arr[i], i])
         elif is_local_min(i):
-            extrema.append( ['min', arr[i], i] )
+            extrema.append(['min', arr[i], i])
 
     # get the prominence of the maxima
-    for iex,ex in enumerate(extrema):
+    for iex, ex in enumerate(extrema):
         if ex[0] == 'min':
-            ex.append( -1.0 )
+            ex.append(-1.0)
             continue
 
         # find the prominence
         def find_one_sided_prominence(iex, ex, left):
             prom_one = np.inf
             vmin = ex[1]
-            nrange = list(range(iex-1,-1,-1)) if left else list(range(iex+1,len(extrema)))
+            nrange = list(range(iex-1, -1, -1)
+                          ) if left else list(range(iex+1, len(extrema)))
             for n in nrange:
                 if extrema[n][0] == 'min':
-                    if extrema[n][1] < vmin: vmin = extrema[n][1]
+                    if extrema[n][1] < vmin:
+                        vmin = extrema[n][1]
                 elif extrema[n][0] == 'max':
                     if extrema[n][1] >= ex[1]:
                         prom_one = ex[1] - vmin
                         break
             return prom_one
         # the total prominence is the minimum of the two
-        prom = min(find_one_sided_prominence(iex,ex,left=True),
-                   find_one_sided_prominence(iex,ex,left=False))
+        prom = min(find_one_sided_prominence(iex, ex, left=True),
+                   find_one_sided_prominence(iex, ex, left=False))
         if np.isinf(prom):
-            prom = arr.ptp()
-        ex.append( prom )
+            prom = np.ptp(arr)
+        ex.append(prom)
         # find the isolation
-        iso = max( ex[2]+1, len(arr)-ex[2] )
-        for i in range(1,max(ex[2],len(arr)-ex[2])):
-            if ex[2]-i>= 0 and arr[ex[2]-i] > ex[1]:
+        iso = max(ex[2]+1, len(arr)-ex[2])
+        for i in range(1, max(ex[2], len(arr)-ex[2])):
+            if ex[2]-i >= 0 and arr[ex[2]-i] > ex[1]:
                 iso = i
                 break
-            if ex[2]+i<len(arr) and arr[ex[2]+i] > ex[1]:
+            if ex[2]+i < len(arr) and arr[ex[2]+i] > ex[1]:
                 iso = i
                 break
-        ex.append( iso )
+        ex.append(iso)
 
     # filter maxima with given prominence
-    maxima = [ ex for ex in extrema
-                if (ex[0]=='max' and (prominence is None or ex[3]>prominence)) ]
+    maxima = [ex for ex in extrema
+              if (ex[0] == 'max' and (prominence is None or ex[3] > prominence))]
     if sortby == 'index':
         if descending:
             maxima = sorted(maxima, key=lambda ex: ex[2], reverse=descending)
@@ -211,7 +218,6 @@ def find_maxima_prominence_isolation(arr, prominence=None, sortby='index',
         maxima = sorted(maxima, key=lambda ex: ex[4], reverse=descending)
     else:
         raise ValueError('Cannot sort by "%s" -  unknown property.' % sortby)
-    return np.array( [(idx,val,prom,iso) for _,val,idx,prom,iso in maxima],
-                      dtype=[('index',int), ('value',arr.dtype),
-                             ('prominence',arr.dtype), ('isolation',int)] )
-
+    return np.array([(idx, val, prom, iso) for _, val, idx, prom, iso in maxima],
+                    dtype=[('index', int), ('value', arr.dtype),
+                           ('prominence', arr.dtype), ('isolation', int)])

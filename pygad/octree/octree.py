@@ -86,9 +86,12 @@ import sys
 def find_octant(pos, ref):
     '''Index corresponding to an octant of 'pos' with respect to 'ref'.'''
     res = 0
-    if pos[0] < ref[0]: res += 1
-    if pos[1] < ref[1]: res += 2
-    if pos[2] < ref[2]: res += 4
+    if pos[0] < ref[0]:
+        res += 1
+    if pos[1] < ref[1]:
+        res += 2
+    if pos[2] < ref[2]:
+        res += 4
     return res
 
 
@@ -215,7 +218,8 @@ class OctNode(object):
                 elif octant == 7:
                     cntr = (cntr[0] - off, cntr[1] - off, cntr[2] - off)
                 cntr = np.array(cntr)
-                self.child[octant] = OctNode(cntr, self.side / 2.0, self.depth + 1)
+                self.child[octant] = OctNode(
+                    cntr, self.side / 2.0, self.depth + 1)
             self.child[octant].insert(idx, pos_data)
 
 
@@ -257,9 +261,9 @@ def Octree(pos_data, idx=None, center=None, world_size=None):
 
     if world_size is None:
         try:
-            world_size = 1.001 * pos_data.ptp(axis=0).max()
+            world_size = 1.001 * np.ptp(pos_data, axis=0).max()
         except:
-            world_size = 1.001 * np.array(pos_data).ptp(axis=0).max()
+            world_size = 1.001 * np.ptp(np.array(pos_data), axis=0).max()
 
     if isinstance(pos_data, UnitArr):
         units = pos_data.units
@@ -510,7 +514,8 @@ class delete_where_too_many_heavy_particles(object):
 
     def __init__(self, snap, min_side, max_frac=1e-3, lowres_pts=None):
         self.max_frac = max_frac
-        self.min_side = float(UnitScalar(min_side, snap.boxsize.units, subs=snap))
+        self.min_side = float(UnitScalar(
+            min_side, snap.boxsize.units, subs=snap))
 
         self.lowres_pts = [2, 3] if lowres_pts is None else list(lowres_pts)
         self.N_cumsum = np.cumsum(snap.parts)
@@ -532,11 +537,10 @@ class delete_where_too_many_heavy_particles(object):
             N_low_res, N_tot = 0, 0
             for o, child in enumerate(children):
                 if child is not None:
-                    if node.child[o].side > self.min_side and (child[1] == 0 \
+                    if node.child[o].side > self.min_side and (child[1] == 0
                                                                or float(child[0]) / child[1] > self.max_frac):
                         node.child[o] = None
                     else:
                         N_low_res += child[0]
                         N_tot += child[1]
             return N_low_res, N_tot
-

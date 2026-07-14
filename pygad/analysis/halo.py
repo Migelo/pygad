@@ -102,7 +102,8 @@ import numpy as np
 from .. import utils
 from ..units import *
 from ..utils import *
-import sys, os
+import sys
+import os
 from ..transformation import *
 from .properties import *
 from ..snapshot import *
@@ -219,7 +220,8 @@ def virial_info(s, center=None, odens=200.0, N_min=10):
     center = UnitQty(center, s['pos'].units, subs=s).view(np.ndarray)
 
     rho_crit = s.cosmology.rho_crit(z=s.redshift)
-    rho_crit = rho_crit.in_units_of(s['mass'].units / s['pos'].units ** 3, subs=s)
+    rho_crit = rho_crit.in_units_of(
+        s['mass'].units / s['pos'].units ** 3, subs=s)
 
     # make use of the potentially precalculated derived block r
     if np.all(center == 0):
@@ -243,7 +245,7 @@ def virial_info(s, center=None, odens=200.0, N_min=10):
     if info[0] == 0.0:
         info[:] = np.nan
     return UnitArr(info[0], s['pos'].units), \
-           UnitArr(info[1], s['mass'].units)
+        UnitArr(info[1], s['mass'].units)
 
 
 NO_FOF_GROUP_ID = int(np.array(-1, np.int64))
@@ -290,7 +292,8 @@ def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True, periodic_boundary=
     min_N = int(min_N)
 
     if verbose >= environment.VERBOSE_NORMAL:
-        print('perform a FoF search on %s particles:' % nice_big_num_str(len(s)))
+        print('perform a FoF search on %s particles:' %
+              nice_big_num_str(len(s)))
         print('  l      = %.2g %s' % (l, l.units))
         if dvmax != np.inf:
             print('  dv_max = %.2g %s' % (dvmax, dvmax.units))
@@ -321,7 +324,7 @@ def find_FoF_groups(s, l, dvmax=np.inf, min_N=100, sort=True, periodic_boundary=
             periodic = False
 
     if periodic_boundary == 3:
-        assert(boxsize_manual is not None)
+        assert (boxsize_manual is not None)
         boxsize = float(boxsize_manual)
     else:
         if periodic:
@@ -465,7 +468,7 @@ def read_Rockstar_file(fname):
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print('  read halo table')
     # get rid of the leading '#'
-    halo_tbl = '\n'.join(line[1:] \
+    halo_tbl = '\n'.join(line[1:]
                          for line in
                          rs_file[halo_start + len(BEFORE_HALO_TBL) + 1:particle_start].split('\n'))
     halos = np.loadtxt(StringIO(halo_tbl), dtype=_ROCKSTAR_HALO_DTYPES)
@@ -524,7 +527,8 @@ def generate_Rockstar_halos(fname, snap, exclude=None, nosubs=True, data=None,
         # read the Rockstar file
         import time
         start_time = time.time()
-        data['header'], data['halos'], data['particles'] = read_Rockstar_file(fname)
+        data['header'], data['halos'], data['particles'] = read_Rockstar_file(
+            fname)
         if environment.verbose >= environment.VERBOSE_NORMAL:
             print('loaded in %.2f sec' % (time.time() - start_time))
 
@@ -742,10 +746,10 @@ class Halo(object):
             if root is not halo.root:
                 raise ValueError('`halo` and `root` are inconsistent!')
             if len(IDset - set(root['ID'])) > 0:
-                print('WARNING: Not all IDs are in the ' + \
+                print('WARNING: Not all IDs are in the ' +
                       'root snapshot!', file=sys.stderr)
         if halo is not None and len(halo) != len(self._IDs):
-            print('WARNING: The given halo does not ' + \
+            print('WARNING: The given halo does not ' +
                   'contain all specified IDs!', file=sys.stderr)
 
         # calculate the properties asked for
@@ -754,14 +758,15 @@ class Halo(object):
             return
         if halo is None:
             if root is None:
-                raise ValueError('Need `halo` or `root` to calculate properties!')
+                raise ValueError(
+                    'Need `halo` or `root` to calculate properties!')
             halo = root[IDMask(self._IDs)]
             if len(halo) != len(self._IDs):
-                print('WARNING: The given snapshot does not ' + \
+                print('WARNING: The given snapshot does not ' +
                       'contain all specified IDs!', file=sys.stderr)
         elif root is not None and testing:
             if root is not halo.root:
-                print('WARNING: `halo` and `root` are ' + \
+                print('WARNING: `halo` and `root` are ' +
                       'inconsistent!', file=sys.stderr)
         if root is None:
             root = halo.root
@@ -792,7 +797,7 @@ class Halo(object):
 
     def __dir__(self):
         return list(self.__dict__.keys()) + list(self._props.keys()) + \
-               [k for k in list(self.__class__.__dict__.keys())
+            [k for k in list(self.__class__.__dict__.keys())
                 if not k.startswith('_')]
 
     def __getattr__(self, name):
@@ -914,7 +919,8 @@ class Halo(object):
                 val = r3 ** Fraction(1, 3)
             else:
                 if scheme not in ['com', 'ssc']:
-                    raise ValueError('Unknown scheme for property "%s"!' % prop)
+                    raise ValueError(
+                        'Unknown scheme for property "%s"!' % prop)
                 center = self._get(scheme, **args)
                 Rodens, Modens = virial_info(root, center=center, odens=odens)
                 val = Rodens if qty == 'R' else Modens
@@ -945,18 +951,22 @@ class Halo(object):
             else:
                 val = np.nan
         elif prop == 'gas_half_mass_radius_from_com':
-            val = half_mass_radius(halo.gas, M=halo.gas['mass'].sum(), center=self._get('com', **args), proj=None)
+            val = half_mass_radius(halo.gas, M=halo.gas['mass'].sum(
+            ), center=self._get('com', **args), proj=None)
         elif prop == 'gas_half_mass_radius_from_ssc':
-            val = half_mass_radius(halo.gas, M=halo.gas['mass'].sum(), center=self._get('ssc', **args), proj=None)
+            val = half_mass_radius(halo.gas, M=halo.gas['mass'].sum(
+            ), center=self._get('ssc', **args), proj=None)
         elif prop == 'stars_half_mass_radius_from_com':
             if halo.stars['mass'].size > 0:
-                val = half_mass_radius(halo.stars, M=halo.stars['mass'].sum(), center=self._get('com', **args), proj=None)
+                val = half_mass_radius(halo.stars, M=halo.stars['mass'].sum(
+                ), center=self._get('com', **args), proj=None)
             else:
                 val = np.nan
 
         elif prop == 'stars_half_mass_radius_from_ssc':
             if halo.stars['mass'].size > 0:
-                val = half_mass_radius(halo.stars, M=halo.stars['mass'].sum(), center=self._get('ssc', **args), proj=None)
+                val = half_mass_radius(halo.stars, M=halo.stars['mass'].sum(
+                ), center=self._get('ssc', **args), proj=None)
             else:
                 val = np.nan
 
@@ -1000,12 +1010,13 @@ def nxt_ngb_dist_perc(s, q, N=1000, tree=None, ret_sample=False, verbose=None):
     with ProgressBar(np.random.randint(len(s), size=N), label='sampling') as pbar:
         for i in pbar:
             cond[i] = 0
-            i_next = tree.find_next_ngb(pos[i], pos, periodic=boxsize, cond=cond)
+            i_next = tree.find_next_ngb(
+                pos[i], pos, periodic=boxsize, cond=cond)
             cond[i] = 1
             d[pbar.iteration - 1] = dist(pos[i], pos[i_next])
     if ret_sample:
         return UnitArr(np.percentile(d, q), s['pos'].units), \
-               UnitArr(d, s['pos'].units)
+            UnitArr(d, s['pos'].units)
     else:
         return UnitArr(np.percentile(d, q), s['pos'].units)
 
@@ -1070,7 +1081,7 @@ def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
     else:
         outfile = DevNull()
     halos = []
-    #with ProgressBar(
+    # with ProgressBar(
     #        range(min(N_FoF, max_halos) if exclude is None else N_FoF),
     #        show_eta=False,
     #        show_percent=False,
@@ -1080,7 +1091,6 @@ def generate_FoF_catalogue(s, l=None, calc='all', FoF=None, exclude=None,
         print('initialize halos from FoF group IDs...')
         sys.stdout.flush()
     for i in range(min(N_FoF, max_halos) if exclude is None else N_FoF):
-        print (i)
         h = Halo(halo=s[FoF == i], root=s, calc=calc)
         h.linking_length = l
         if exclude is None or not exclude(h, s):
@@ -1121,7 +1131,7 @@ def find_most_massive_progenitor(s, halos, h0):
     '''
     if len(halos) == 0:
         return None
-    print (h0, h0.mass)
+    print(h0, h0.mass)
     h0_mass = h0.mass.in_units_of(halos[0].mass.units, subs=s)
 
     # propably one of the closest halos (with at least 10% of the mass), find them
@@ -1163,4 +1173,3 @@ def find_most_massive_progenitor(s, halos, h0):
     mmp = max(halos,
               key=lambda h: _common_mass(h, h0, s))
     return mmp if _common_mass(mmp, h0, s) > 0 else None
-

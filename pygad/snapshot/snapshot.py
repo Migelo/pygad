@@ -354,7 +354,6 @@ class Snapshot(object):
             if block.dtype is not None}
 
         s._N_part = list(map(int, greader.header['N_part_all']))
-        print (s._N_part)
         s._time = greader.header['time']
         s._redshift = greader.header['redshift']
         s._boxsize = SimArr(greader.header['boxsize'],
@@ -378,42 +377,40 @@ class Snapshot(object):
 
         if s._arepo_snap_type or s._simba_snap_type:
             s._N_part = list(map(int, greader.header['N_part']))
-            print (s._N_part)
-            #pass
+            # pass
             # update loadable blocks:
             for block in greader.infos():
-                #print (f"{len(greader.infos())=}")
-                #print (block.ptypes)
+                # print (f"{len(greader.infos())=}")
+                # print (block.ptypes)
                 if block.name in s._block_avail:
-                    s._block_avail[block.name] = [(o or n) for o, n \
-                                                in zip(s._block_avail[block.name], block.ptypes)]
+                    s._block_avail[block.name] = [(o or n) for o, n
+                                                  in zip(s._block_avail[block.name], block.ptypes)]
                 else:
                     s._block_avail[block.name] = block.ptypes
             # s._N_part[3] = 0
         else:
             if greader.header['N_files'] > 1:
                 s._descriptor += '.0-' + str(greader.header['N_files'])
-                #print (s._descriptor)
+                # print (s._descriptor)
                 # ensure Python int's to avoid overflows
                 N_part = list(map(int, greader.header['N_part']))
-                #print (N_part)
-                for n in range(1, greader.header['N_files']):  # first already done
+                # print (N_part)
+                # first already done
+                for n in range(1, greader.header['N_files']):
                     filename = base + '.' + str(n) + suffix
-                    greader = gadget.FileReader(filename, unclear_blocks=unclear_blocks)
+                    greader = gadget.FileReader(
+                        filename, unclear_blocks=unclear_blocks)
                     s._file_handlers.append(greader)
-                    print (s._file_handlers)
                     # ensure Python int's to avoid overflows
-                    for i in range(6): 
+                    for i in range(6):
                         N_part[i] += int(greader.header['N_part'][i])
-                        print (i, N_part)
                     # update loadable blocks:
                     for block in greader.infos():
                         if block.name in s._block_avail:
-                            s._block_avail[block.name] = [(o or n) for o, n \
-                                                        in zip(s._block_avail[block.name], block.ptypes)]
+                            s._block_avail[block.name] = [(o or n) for o, n
+                                                          in zip(s._block_avail[block.name], block.ptypes)]
                         else:
                             s._block_avail[block.name] = block.ptypes
-                print (s._N_part)
                 if N_part != s._N_part:
                     # more particles than fit into a native int
                     s._N_part = N_part
@@ -444,7 +441,7 @@ class Snapshot(object):
         # now the mass block is named 'mass' for all cases (HDF5 or other)
         s._block_avail['mass'] = [n > 0 for n in s._N_part]
 
-        #if s.headers()[0]["flg_arepo"]:
+        # if s.headers()[0]["flg_arepo"]:
         #    s.get_arepo_blocks()
 
         s.fill_derived_rules()
@@ -454,7 +451,7 @@ class Snapshot(object):
         return s
 
     def __init__(self, filename, physical=False, load_double_prec=False, cosmological=None,
-                                 gad_units=None, unclear_blocks=None, H_neutral_only=None):
+                 gad_units=None, unclear_blocks=None, H_neutral_only=None):
 
         filename = os.path.expandvars(filename)
         filename = os.path.expanduser(filename)
@@ -466,48 +463,49 @@ class Snapshot(object):
         if not os.path.exists(filename):
             filename = base + '.0' + suffix
             if not os.path.exists(filename):
-                raise IOError('Snapshot "%s%s" does not exist!' % (base, suffix))
+                raise IOError('Snapshot "%s%s" does not exist!' %
+                              (base, suffix))
 
-        self._filename              = '<none>'
-        self._descriptor            = 'new'
-        self._file_handlers         = []
-        self._gad_units             = gadget.default_gadget_units.copy()
+        self._filename = '<none>'
+        self._descriptor = 'new'
+        self._file_handlers = []
+        self._gad_units = gadget.default_gadget_units.copy()
         if gad_units:
-            self._gad_units.update( gad_units )
-        self._load_name             = {}    # from attribute name to actual block
-                                            # name as to use for loading
-        self._block_avail           = {}    # keys are lower case, stripped names
-                                            # or the hdf5 names with underscores
-        self._derive_rule_deps      = {}
-        self._blocks                = {}
-        self._cosmological          = cosmological
-        self._N_part                = [0] * 6
-        self._time                  = 1.0
-        self._redshift              = 0.0
-        self._boxsize               = 0.0
-        self._cosmology             = physics.Planck2013()
-        self._properties            = {}
-        self._load_double_prec      = False
-        self._phys_units_requested  = bool(physical)
-        self._trans_at_load         = []
-        self._root                  = self
-        self._base                  = None
-        self._cache_derived         = derived.general['cache_derived']
-        self._always_cache          = set() # _derive_rule_deps is empty; gets
-                                            # filled in Snap() with
-                                            # derived.general['always_cache']
-        #self._arepo_snap_type       = False
+            self._gad_units.update(gad_units)
+        self._load_name = {}    # from attribute name to actual block
+        # name as to use for loading
+        self._block_avail = {}    # keys are lower case, stripped names
+        # or the hdf5 names with underscores
+        self._derive_rule_deps = {}
+        self._blocks = {}
+        self._cosmological = cosmological
+        self._N_part = [0] * 6
+        self._time = 1.0
+        self._redshift = 0.0
+        self._boxsize = 0.0
+        self._cosmology = physics.Planck2013()
+        self._properties = {}
+        self._load_double_prec = False
+        self._phys_units_requested = bool(physical)
+        self._trans_at_load = []
+        self._root = self
+        self._base = None
+        self._cache_derived = derived.general['cache_derived']
+        self._always_cache = set()  # _derive_rule_deps is empty; gets
+        # filled in Snap() with
+        # derived.general['always_cache']
+        # self._arepo_snap_type       = False
         # Horst: copy configuration to snapshot-property
         if H_neutral_only is None:
-            self._H_neutral_only        = gadget.config.general['H_neutral_only']
+            self._H_neutral_only = gadget.config.general['H_neutral_only']
         else:
-            self._H_neutral_only        = H_neutral_only
+            self._H_neutral_only = H_neutral_only
 
         # Actual initialization is done in the factory function Snap. Just do some
         # basic setting of the attributes to ensure that even snapshot created by
         # just _Snap are somewhat functioning.
         self._initsnap(filename, base, suffix, physical=physical, load_double_prec=load_double_prec, cosmological=cosmological,
-                  gad_units=gad_units, unclear_blocks=unclear_blocks, H_neutral_only=H_neutral_only)
+                       gad_units=gad_units, unclear_blocks=unclear_blocks, H_neutral_only=H_neutral_only)
 
     @property
     def filename(self):
@@ -704,7 +702,8 @@ class Snapshot(object):
         elif isinstance(mask, list):
             ptypes = sorted(set(mask))
             # precalculating N_part is faster than the standard way in _SubSnap
-            N_part = [(base._N_part[pt] if pt in ptypes else 0) for pt in range(6)]
+            N_part = [(base._N_part[pt] if pt in ptypes else 0)
+                      for pt in range(6)]
             if utils.is_consecutive(ptypes):
                 # slicing is faster than masking!
                 sub = slice(sum(base._N_part[:ptypes[0]]),
@@ -714,7 +713,8 @@ class Snapshot(object):
                       else np.zeros(base._N_part[pt], bool)) for pt in range(6)]
                 sub = np.concatenate(l)
             sub = SubSnapshot(base, sub, N_part)
-            sub._descriptor = base._descriptor + ':pts=' + str(ptypes).replace(' ', '')
+            sub._descriptor = base._descriptor + \
+                ':pts=' + str(ptypes).replace(' ', '')
             return sub
 
         elif isinstance(mask, SnapMask) or isinstance(mask, Halo):
@@ -732,7 +732,7 @@ class Snapshot(object):
             warnings.warn('Indexed snapshot masking does not reorder!')
             idx_set = set(mask)
             if len(idx_set) < len(mask):
-                print("WARNING: lost %d" % (len(mask) - len(idx_set)) + \
+                print("WARNING: lost %d" % (len(mask) - len(idx_set)) +
                       " particles in snapshot masking!", file=sys.stderr)
             mask = np.array([(i in idx_set) for i in range(len(base))])
             return SubSnapshot(base, mask)
@@ -742,7 +742,8 @@ class Snapshot(object):
             return SubSnapshot(base, mask[0])
 
         else:
-            raise KeyError('Mask of type %s not understood.' % type(mask).__name__)
+            raise KeyError('Mask of type %s not understood.' %
+                           type(mask).__name__)
 
     def write(self, filename, **kwargs):
         '''
@@ -783,9 +784,9 @@ class Snapshot(object):
     def available_blocks(self):
         '''The names of the blocks that are available for all particle types of
         this snapshot.'''
-        return [ name for name, ptypes
+        return [name for name, ptypes
                 in self._root._block_avail.items()
-                if all([(Np==0 or s) for s,Np in zip(ptypes,self._N_part)]) ]
+                if all([(Np == 0 or s) for s, Np in zip(ptypes, self._N_part)])]
 
     def loadable_blocks(self):
         '''The names of all blocks of this snapshot.'''
@@ -805,9 +806,9 @@ class Snapshot(object):
 
     def __repr__(self):
         return '<Snap %s; N=%s; z=%.3f>' % (
-                self._descriptor,
-                utils.nice_big_num_str(len(self)),
-                self._root.redshift)
+            self._descriptor,
+            utils.nice_big_num_str(len(self)),
+            self._root.redshift)
 
     def fill_derived_rules(self, rules=None, clear_old=False):
         '''
@@ -831,7 +832,7 @@ class Snapshot(object):
 
         if clear_old:
             for name in self._derive_rule_deps.keys():
-                self._block_avail.pop(name,None)
+                self._block_avail.pop(name, None)
             self._derive_rule_deps = {}
 
         # calculate the dependencies and particle types of the derived blocks
@@ -839,7 +840,7 @@ class Snapshot(object):
         if 'dV' not in rules:
             x = gadget.config.general['vol_def_x']
             if x != '<undefined>':
-                rules['dV'] = '%s / kernel_weighted(gas,%s)' % (x,x)
+                rules['dV'] = '%s / kernel_weighted(gas,%s)' % (x, x)
 
         # remove derived blocks that can be loaded
         for name in list(rules.keys()):
@@ -855,11 +856,11 @@ class Snapshot(object):
                     continue    # this derived block can actually be loaded
                 ptypes, deps = derived.ptypes_and_deps(rule, self)
                 if name in self._block_avail:
-                    if ptypes!=self._block_avail[name] \
-                            or deps!=self._derive_rule_deps[name][1]:
-                       changed = True
+                    if ptypes != self._block_avail[name] \
+                            or deps != self._derive_rule_deps[name][1]:
+                        changed = True
                 else:
-                   changed = True
+                    changed = True
                 self._block_avail[name] = ptypes
                 self._derive_rule_deps[name] = (rule, deps)
 
@@ -872,41 +873,43 @@ class Snapshot(object):
                 if not (any(self._block_avail[name]) and (deps-not_available)):
                     not_available.add(name)
             for name in not_available:
-                self._block_avail.pop(name,None)
-                self._derive_rule_deps.pop(name,None)
+                self._block_avail.pop(name, None)
+                self._derive_rule_deps.pop(name, None)
 
         self._always_cache = set(self._derive_rule_deps.keys()) \
-                            & derived.general['always_cache']
+            & derived.general['always_cache']
 
     def __dir__(self):
         # Add the families available such that they occure in tab completion in
         # iPython, for instance.
         # The other list added here seems to include excatly the properties.
         return [k for k in list(self.__dict__.keys())
-                        if not k.startswith('_')] + \
-                [k for k in list(self._root.__class__.__dict__.keys())
-                        if not k.startswith('_')] + \
-                self.families()
+                if not k.startswith('_')] + \
+            [k for k in list(self._root.__class__.__dict__.keys())
+             if not k.startswith('_')] + \
+            self.families()
+
     @property
     def hsml3(self):
         from .sim_arr import SimArr
         import pysph
         if "Volume" not in self.gas.loadable_blocks():
-            print (np.shape(self.gas["pos"]), np.shape(self.gas["mass"]), np.shape(self.gas["rho"]))
+            print(np.shape(self.gas["pos"]), np.shape(
+                self.gas["mass"]), np.shape(self.gas["rho"]))
             self.gas["Volume"] = self.gas["mass"] / self.gas["rho"]
-        hsml = SimArr(np.cbrt(0.75 * self.gas["Volume"] / np.pi), "ckpc h_0**-1", snap=self)
-        
-        tree = pysph.makeTree( self.gas['pos'] )
+        hsml = SimArr(
+            np.cbrt(0.75 * self.gas["Volume"] / np.pi), "ckpc h_0**-1", snap=self)
+
+        tree = pysph.makeTree(self.gas['pos'])
         nthreads = 32
-        hsml2  = tree.calcHsmlMulti( self.gas['pos'].astype('f8'), self.gas['pos'].astype('f8'), 
-                                   self.gas['mass'].astype('f8'), 64, numthreads=nthreads, density=False )
-        self.gas['hsml2'] = SimArr(hsml2, "ckpc h_0**-1", snap=self)#'kpc')
-        hsml3 = np.maximum( hsml2, hsml)
-        hsml3 = SimArr(hsml3, "ckpc h_0**-1", snap=self) #'kpc')
-        #setattr(self.gas, 'hsml3', hsml3)
+        hsml2 = tree.calcHsmlMulti(self.gas['pos'].astype('f8'), self.gas['pos'].astype('f8'),
+                                   self.gas['mass'].astype('f8'), 64, numthreads=nthreads, density=False)
+        self.gas['hsml2'] = SimArr(hsml2, "ckpc h_0**-1", snap=self)  # 'kpc')
+        hsml3 = np.maximum(hsml2, hsml)
+        hsml3 = SimArr(hsml3, "ckpc h_0**-1", snap=self)  # 'kpc')
+        # setattr(self.gas, 'hsml3', hsml3)
         self.gas._add_custom_block(hsml3, "hsml3")
         return hsml3
-
 
     # def get_arepo_blocks(self):
     #     from .sim_arr import SimArr
@@ -928,10 +931,10 @@ class Snapshot(object):
     #         print (np.shape(self.gas["pos"]), np.shape(self.gas["mass"]), np.shape(self.gas["rho"]))
     #         self.gas["Volume"] = self.gas["mass"] / self.gas["rho"]
     #     self.gas["hsml"] = SimArr(np.cbrt(0.75 * self.gas["Volume"] / np.pi), "ckpc h_0**-1", snap=self)
-        
+
     #     tree = pysph.makeTree( self.gas['pos'] )
     #     nthreads = 32
-    #     hsml2  = tree.calcHsmlMulti( self.gas['pos'].astype('f8'), self.gas['pos'].astype('f8'), 
+    #     hsml2  = tree.calcHsmlMulti( self.gas['pos'].astype('f8'), self.gas['pos'].astype('f8'),
     #                                 self.gas['mass'].astype('f8'), 64, numthreads=nthreads, density=False )
     #     self.gas['hsml2'] = SimArr(hsml2, "ckpc h_0**-1", snap=self)#'kpc')
     #     hsml3 = np.maximum( hsml2, self.gas["hsml"] )
@@ -967,18 +970,18 @@ class Snapshot(object):
         # Arepo snaps PartType == 3 are trace particles without anything relevant
         if root._arepo_snap_type:
             ptype_list = [0, 4, 5]
-            #print ("pty arepo", ptype_list)
-        #else:
-            #print ("pty not arepo", ptype_list)
+            # print ("pty arepo", ptype_list)
+        # else:
+            # print ("pty not arepo", ptype_list)
 
         # It might happen, that a block is tagged as present for some particle
         # types that does not exist at all. Hence, the following:
         avail = root._block_avail[block_name]
         ptypes = [pt for pt in ptype_list if (avail[pt] and parts[pt])]
-        #print ("get_host_subsnap  ", block_name, ptypes)
+        # print ("get_host_subsnap  ", block_name, ptypes)
 
-        # block available for all families? -> root            
-        if not any( [parts[pt] for pt in ptype_list if pt not in ptypes] ):
+        # block available for all families? -> root
+        if not any([parts[pt] for pt in ptype_list if pt not in ptypes]):
             return root
 
         # find biggest family sub-snapshot (that is an attribute of root) which has
@@ -1013,7 +1016,8 @@ class Snapshot(object):
         '''
         done = set()
         if forthis:
-            names = iter(self._blocks.keys()) if present else self.available_blocks()
+            names = iter(self._blocks.keys()
+                         ) if present else self.available_blocks()
         else:
             names = iter(self._root._block_avail.keys())
         for block_name in names:
@@ -1053,13 +1057,13 @@ class Snapshot(object):
         # Explicitly set attributes (like self.redshift and self.gas), member
         # functions, and properties are already handles before __getattr__ is
         # called, hence, we now have an attribute error:
-        raise AttributeError('%r object has no ' % type(self).__name__ + \
+        raise AttributeError('%r object has no ' % type(self).__name__ +
                              'attribute %r' % name)
 
     def __getitem__(self, key):
         # strings are block names
         if isinstance(key, str):
-            block = self._blocks.get(key,None)
+            block = self._blocks.get(key, None)
             if block is not None:
                 return block
             if key in self.available_blocks():
@@ -1070,11 +1074,11 @@ class Snapshot(object):
                                'particle types of this (sub-)snapshot.')
             else:
                 raise KeyError('(Sub-)Snapshot %r has no block "%s".' % (
-                                    self, key))
+                    self, key))
         # postprone the import to here to speed up the access to blocks
         from .masks import SnapMask
         from ..analysis.halo import Halo
-        if isinstance(key, (slice,np.ndarray,list,SnapMask,Halo,tuple)):
+        if isinstance(key, (slice, np.ndarray, list, SnapMask, Halo, tuple)):
             # Handling of the index is fully done by the factory function.
             return self.SubSnap(key)
         else:
@@ -1082,7 +1086,7 @@ class Snapshot(object):
 
     def __setitem__(self, key, value):
         if key in self.available_blocks():
-            old = self._blocks.get(key,None)
+            old = self._blocks.get(key, None)
             if old is None:
                 warnings.warn('Need to load/derive an available blocks before ' +
                               'overwriting it to some custom value!')
@@ -1093,8 +1097,8 @@ class Snapshot(object):
             if value.shape != old.shape:
                 raise RuntimeError('Already existing blocks must not change ' +
                                    'their shape (here: "%s" with %r)!' % (
-                                       key,old.shape))
-            value.dependencies.update( old.dependencies )
+                                       key, old.shape))
+            value.dependencies.update(old.dependencies)
             value.invalidate_dependencies()
             self._blocks[key] = value
         else:
@@ -1113,7 +1117,7 @@ class Snapshot(object):
                 pass
         else:
             raise KeyError('(Sub-)Snapshot %r has no block "%s".' % (
-                                    self, name))
+                self, name))
 
     # iterate over all available loaded blocks (including custom and derived
     # blocks)
@@ -1149,9 +1153,9 @@ class Snapshot(object):
             raise ValueError("There is no block '%s' to load!" % name)
 
         if environment.verbose >= environment.VERBOSE_NORMAL:
-            print('load block %s%s...' % ('"%s" as '%root._load_name[name]
-                    if environment.verbose >= environment.VERBOSE_TALKY else '',
-                    name), end=' ')
+            print('load block %s%s...' % ('"%s" as ' % root._load_name[name]
+                                          if environment.verbose >= environment.VERBOSE_TALKY else '',
+                                          name), end=' ')
             sys.stdout.flush()
 
         block_name = root._load_name[name]
@@ -1163,21 +1167,20 @@ class Snapshot(object):
             for reader in root._file_handlers:
                 # getting masses should always return something - even if there is
                 # no such block, but the masses are given in the header only
-                if not reader.has_block(block_name) and block_name!='mass':
+                if not reader.has_block(block_name) and block_name != 'mass':
                     continue
                 read = reader.read_block(block_name, gad_units=root._gad_units)
                 units = read.units
                 if first:
-                    blocks = [read[int(np.sum(reader.header['N_part'][:pt]))
-                                    :np.sum(reader.header['N_part'][:pt+1])] \
-                                for pt in range(6)]
+                    blocks = [read[int(np.sum(reader.header['N_part'][:pt])):np.sum(reader.header['N_part'][:pt+1])]
+                              for pt in range(6)]
                     first = False
                 else:
                     for pt in range(6):
                         if not reader.header['N_part'][pt]:
                             continue
-                        read_pt = read[int(np.sum(reader.header['N_part'][:pt]))
-                                       :np.sum(reader.header['N_part'][:pt+1])]
+                        read_pt = read[int(np.sum(reader.header['N_part'][:pt])):np.sum(
+                            reader.header['N_part'][:pt+1])]
                         blocks[pt] = np.concatenate((blocks[pt], read_pt),
                                                     axis=0).view(UnitArr)
                         blocks[pt].units = units
@@ -1212,7 +1215,7 @@ class Snapshot(object):
                     print('apply stored %s to block %s...' % (
                         trans.__class__.__name__, name), end=' ')
                     sys.stdout.flush()
-                trans.apply_to_block(name,host)
+                trans.apply_to_block(name, host)
                 if environment.verbose >= environment.VERBOSE_NORMAL:
                     print('done.')
                     sys.stdout.flush()
@@ -1279,10 +1282,11 @@ class Snapshot(object):
                     dep_blocks[dep] = host._host_derive_block(dep, False)
 
         if environment.verbose >= environment.VERBOSE_NORMAL:
-            print('derive block %s%s...' % (name, ' := "%s"'%rule \
-                    if environment.verbose >= environment.VERBOSE_TALKY else ''), end=' ')
+            print('derive block %s%s...' % (name, ' := "%s"' % rule
+                                            if environment.verbose >= environment.VERBOSE_TALKY else ''), end=' ')
             sys.stdout.flush()
-        block = host.get(rule, namespace=None if self._root._cache_derived else dep_blocks)
+        block = host.get(
+            rule, namespace=None if self._root._cache_derived else dep_blocks)
         if cache and self._root._cache_derived:
             for dep in deps:
                 host[dep].dependencies.add(name)
@@ -1327,7 +1331,8 @@ class Snapshot(object):
         host = self.get_host_subsnap(name)
         if host is not self:
             print("name:", name, file=sys.stderr)
-            print("for particle types:", self._root._block_avail[name], file=sys.stderr)
+            print("for particle types:",
+                  self._root._block_avail[name], file=sys.stderr)
             print("self:", self, file=sys.stderr)
             print("host:", host, file=sys.stderr)
             del self._root._block_avail[name]
@@ -1335,7 +1340,7 @@ class Snapshot(object):
                                'sub-snapshots or the root.')
 
         from .sim_arr import SimArr
-        host._blocks[name] = SimArr(data,snap=host)
+        host._blocks[name] = SimArr(data, snap=host)
 
     def _host_get_block(self, name):
         '''
@@ -1365,12 +1370,12 @@ class Snapshot(object):
         if block.units is None:
             return
 
-        phys_units = block.units.free_of_factors(['a','h_0'])
+        phys_units = block.units.free_of_factors(['a', 'h_0'])
 
         if phys_units != block.units:
             if environment.verbose >= environment.VERBOSE_TALKY or (
                     environment.verbose >= environment.VERBOSE_NORMAL
-                    and name=='age'):
+                    and name == 'age'):
                 print('convert block %s to physical units...' % name, end=' ')
                 sys.stdout.flush()
             block.convert_to(phys_units, subs=self)
@@ -1413,7 +1418,7 @@ class Snapshot(object):
             print('convert boxsize to physical units...', end=' ')
             sys.stdout.flush()
         root._boxsize.convert_to(
-                root._boxsize.units.free_of_factors(['a','h_0']), subs=root)
+            root._boxsize.units.free_of_factors(['a', 'h_0']), subs=root)
         if environment.verbose >= environment.VERBOSE_TALKY:
             print('done.')
             sys.stdout.flush()
@@ -1421,9 +1426,7 @@ class Snapshot(object):
     def load_all_blocks(self):
         '''Load all blocks from file. (No block deriving, though.)'''
         for name in self._root._load_name:
-            print (name)
             host = self.get_host_subsnap(name)
-            print (host)
             host[name]
 
     def delete_blocks(self, derived=None, loaded=None):
@@ -1477,33 +1480,33 @@ class Snapshot(object):
         from numpy import inner
         from .. import analysis
         namespace = {} if namespace is None else namespace.copy()
-        namespace.update( {'dist':dist, 'Unit':Unit, 'Units':Units,
-                           'UnitArr':UnitArr, 'UnitQty':UnitQty,
-                           'UnitScalar':UnitScalar, 'inner':inner,
-                           'inter_bc_qty':inter_bc_qty, 'lum_to_mag':lum_to_mag,
-                           'perm_inv':utils.perm_inv,
-                           'solar':physics.solar, 'WMAP7':physics.WMAP7,
-                           'Planck2013':physics.Planck2013,
-                           'FLRWCosmo':physics.FLRWCosmo, 'a2z':physics.a2z,
-                           'z2a':physics.z2a,
-                           'kernel_weighted':analysis.kernel_weighted,
-                           'len':len, 'module_dir':module_dir}
-        )
+        namespace.update({'dist': dist, 'Unit': Unit, 'Units': Units,
+                          'UnitArr': UnitArr, 'UnitQty': UnitQty,
+                          'UnitScalar': UnitScalar, 'inner': inner,
+                          'inter_bc_qty': inter_bc_qty, 'lum_to_mag': lum_to_mag,
+                          'perm_inv': utils.perm_inv,
+                          'solar': physics.solar, 'WMAP7': physics.WMAP7,
+                          'Planck2013': physics.Planck2013,
+                          'FLRWCosmo': physics.FLRWCosmo, 'a2z': physics.a2z,
+                          'z2a': physics.z2a,
+                          'kernel_weighted': analysis.kernel_weighted,
+                          'len': len, 'module_dir': module_dir}
+                         )
         from . import derive_rules
-        for n,obj in [(n,getattr(derive_rules,n)) for n in dir(derive_rules)]:
+        for n, obj in [(n, getattr(derive_rules, n)) for n in dir(derive_rules)]:
             if hasattr(obj, '__call__'):
                 namespace[n] = obj
-        for n,obj in [(n,getattr(physics,n)) for n in dir(physics)]:
+        for n, obj in [(n, getattr(physics, n)) for n in dir(physics)]:
             if isinstance(obj, UnitArr):
                 namespace[n] = obj
         e = utils.Evaluator(namespace, my_math=np)
         # load properties etc. from this snapshot only if needed in the expression
-        namespace = {'self':self}
+        namespace = {'self': self}
         for name, el in utils.iter_idents_in_expr(expr, True):
             if name not in e.namespace and name not in namespace:
                 try:
                     try:
-                        namespace[name] = getattr(self,name)
+                        namespace[name] = getattr(self, name)
                     except AttributeError:
                         namespace[name] = self[name]
                 except KeyError:
@@ -1611,6 +1614,7 @@ class SubSnapshot(Snapshot):
         ...         s.stars[np.where(s.stars['inim']>s.stars['mass'].mean(), True, False)]['pos'] )
         load block inim... done.
     '''
+
     def _calc_N_part_from_slice(self, N_part_base, _slice):
         # work with positive stepping (and without None's):
         _slice = utils.sane_slice(_slice, int(sum(N_part_base)))
@@ -1625,7 +1629,7 @@ class SubSnapshot(Snapshot):
             pt += 1
         # count particles of the different types
         while pt < 6 and cur_pos < stop:
-            remain = int( min(stop, N_cum_base[pt]) - cur_pos )
+            remain = int(min(stop, N_cum_base[pt]) - cur_pos)
             N_part[pt] = remain // step
             if remain % step:
                 N_part[pt] += 1
@@ -1636,21 +1640,21 @@ class SubSnapshot(Snapshot):
 
     def _calc_N_part_from_mask(self, N_part_base, mask):
         N_cum_base = np.cumsum(N_part_base)
-        return [np.sum(mask[s:e]) for s,e in zip([0]+list(N_cum_base[:-1]),
-                                                 N_cum_base)]
+        return [np.sum(mask[s:e]) for s, e in zip([0]+list(N_cum_base[:-1]),
+                                                  N_cum_base)]
 
     def __init__(self, base, mask, N_part=None):
-        #Snapshot.__init__(self, gad_units=None, physical=False, cosmological=None)
-        self._base      = base
-        self._root      = base._root
-        self._blocks    = {}
+        # Snapshot.__init__(self, gad_units=None, physical=False, cosmological=None)
+        self._base = base
+        self._root = base._root
+        self._blocks = {}
         # self._arepo_snap_type = super._arepo_snap_type
 
         if isinstance(mask, slice):
             if mask.step == 0:
                 raise ValueError('Slice step cannot be 0!')
 
-            self._mask = slice(mask.start, mask.stop, mask.step) # make a copy
+            self._mask = slice(mask.start, mask.stop, mask.step)  # make a copy
             if N_part is None:
                 self._N_part = self._calc_N_part_from_slice(base._N_part, mask)
             else:
@@ -1668,7 +1672,7 @@ class SubSnapshot(Snapshot):
         elif isinstance(mask, np.ndarray) and mask.dtype == bool:
             mask = mask.view(np.ndarray)
             if len(mask) != len(base):
-                raise ValueError('Mask has to have the same length as the ' + \
+                raise ValueError('Mask has to have the same length as the ' +
                                  'base snapshot!')
 
             self._mask = mask.copy()
@@ -1679,7 +1683,7 @@ class SubSnapshot(Snapshot):
 
             self._descriptor = base._descriptor + ':masked'
         else:
-            raise TypeError('Need either a slice or a boolean np.ndarray ' + \
+            raise TypeError('Need either a slice or a boolean np.ndarray ' +
                             'for sub-snapshots!')
 
     def _restrict_mask_to_ptypes(self, ptypes):
@@ -1695,7 +1699,7 @@ class SubSnapshot(Snapshot):
             # work with positive stepping (and without None's):
             _slice = utils.sane_slice(self._mask, len(base))
             start, stop, step = _slice.start, _slice.stop, _slice.step
-            offset = sum( base._N_part[:ptypes[0]] )
+            offset = sum(base._N_part[:ptypes[0]])
             if utils.is_consecutive(ptypes):
                 if start < sum(base._N_part[:ptypes[0]]):
                     diff = sum(base._N_part[:ptypes[0]]) - start
@@ -1711,22 +1715,23 @@ class SubSnapshot(Snapshot):
                 pmasks = []
                 for pt in ptypes:
                     start = int(sum(base._N_part[:pt]))
-                    end   = start + base._N_part[pt]
-                    pmasks.append( fullmask[start:end] )
+                    end = start + base._N_part[pt]
+                    pmasks.append(fullmask[start:end])
                 mask = np.concatenate(pmasks)
                 return mask
         else:
-            assert isinstance(self._mask, np.ndarray) and self._mask.dtype==bool
+            assert isinstance(
+                self._mask, np.ndarray) and self._mask.dtype == bool
             if utils.is_consecutive(ptypes):
                 start = sum(base._N_part[:ptypes[0]])
-                end   = sum(base._N_part[:ptypes[-1]+1])
+                end = sum(base._N_part[:ptypes[-1]+1])
                 return self._mask[start:end]
             else:
                 pmasks = []
                 for pt in ptypes:
                     start = int(sum(base._N_part[:pt]))
-                    end   = start + base._N_part[pt]
-                    pmasks.append( self._mask[start:end] )
+                    end = start + base._N_part[pt]
+                    pmasks.append(self._mask[start:end])
                 mask = np.concatenate(pmasks)
                 return mask
 
@@ -1771,8 +1776,8 @@ class SubSnapshot(Snapshot):
                 sub = self
                 subs = []
                 while sub != sub._root:
-                    masks.append( sub._restrict_mask_to_ptypes(ptypes) )
-                    subs.append( sub )
+                    masks.append(sub._restrict_mask_to_ptypes(ptypes))
+                    subs.append(sub)
                     sub = sub._base
                 for mask in reversed(masks):
                     block = block[mask]
@@ -1807,8 +1812,10 @@ def _FamilySubSnap(base, fam):
 
 
 def Snap(filename, physical=False, load_double_prec=False, cosmological=None,
-             gad_units=None, unclear_blocks=None, H_neutral_only=None):
+         gad_units=None, unclear_blocks=None, H_neutral_only=None):
     from warnings import warn
-    warn("\nfunction Snap(...) has been renamed to Snapshot class\nplease use Snapshot(..) to create a snapshot object", DeprecationWarning, stacklevel=2)
-    s = Snapshot(filename, physical, load_double_prec, cosmological, gad_units, unclear_blocks, H_neutral_only)
+    warn("\nfunction Snap(...) has been renamed to Snapshot class\nplease use Snapshot(..) to create a snapshot object",
+         DeprecationWarning, stacklevel=2)
+    s = Snapshot(filename, physical, load_double_prec, cosmological,
+                 gad_units, unclear_blocks, H_neutral_only)
     return s

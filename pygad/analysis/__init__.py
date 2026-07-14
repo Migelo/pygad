@@ -2,7 +2,7 @@
 Module for snapshot analysis.
 
 Also doctest other parts of this sub-module:
-    >>> import doctest
+    >>> import pygad.doctest as doctest
     >>> doctest.testmod(sph_eval)
     TestResults(failed=0, attempted=15)
     >>> doctest.testmod(properties)

@@ -76,8 +76,8 @@ Doctests:
         N = 2.818e+15 [cm**-2]; EW = 1.139 [Angstrom]
        OVI1031
         N = 7.536e+14 [cm**-2]; EW = 0.909 [Angstrom]
-        N = 7.528e+14 [cm**-2]; EW = 0.538 [Angstrom]
-        N = 7.543e+14 [cm**-2]; EW = 0.530 [Angstrom]
+        N = 7.528e+14 [cm**-2]; EW = 0.539 [Angstrom]
+        N = 7.543e+14 [cm**-2]; EW = 0.531 [Angstrom]
     l.o.s.: [35000. 35600.] [ckpc h_0**-1]
        H1215
         N = 4.816e+13 [cm**-2]; EW = 0.312 [Angstrom]
@@ -117,12 +117,12 @@ import numpy as np
 from scipy.special import wofz
 from numbers import Number
 
-## loading line data from .csv file [initially saved using lines dict defined in this file,
-## .csv file can be manually updated with updated line data.]
-## 240803: dict moved from beginning of file to end of file, commented out;
-## 240812: commented out line dict moved to unused lines_LSF_data.txt file (only for visual purpose)
-## can still access lines in the same way as before
-## e.g., lines = pg.analysis.absorption_spectra.lines
+# loading line data from .csv file [initially saved using lines dict defined in this file,
+# .csv file can be manually updated with updated line data.]
+# 240803: dict moved from beginning of file to end of file, commented out;
+# 240812: commented out line dict moved to unused lines_LSF_data.txt file (only for visual purpose)
+# can still access lines in the same way as before
+# e.g., lines = pg.analysis.absorption_spectra.lines
 # pd.options.mode.chained_assignment = None  # default='warn'
 # df = pd.read_csv(environment.module_dir+"analysis/line_data.csv",index_col=0)
 # df['A_ki'][df['A_ki'].isnull()] = 0.0
@@ -131,25 +131,28 @@ from numbers import Number
 # lines["Lyman_beta"] = lines["H1025"]
 # lines["Lyman_gamma"] = lines["H972"]
 datz = np.genfromtxt(
-    environment.module_dir + "analysis/line_data.csv", 
-    dtype=[("", "U20"), ("ion", "U10"), ("l", "U20"), ("f", "U20"), ("atomwt", "U20"), ("A_ki", "U20"), ("element", "U2")],
-    delimiter=",", 
+    environment.module_dir + "analysis/line_data.csv",
+    dtype=[("", "U20"), ("ion", "U10"), ("l", "U20"), ("f", "U20"),
+           ("atomwt", "U20"), ("A_ki", "U20"), ("element", "U2")],
+    delimiter=",",
     skip_header=1)
 for i, line in enumerate(datz):
     if line["A_ki"] == '':
         datz[i]["A_ki"] = "0.0 s**-1"
 lines = {}
 for line in datz:
-    lines[line[0]] = {"ion": line[1], "l": line[2], "f": line[3], 
+    lines[line[0]] = {"ion": line[1], "l": line[2], "f": line[3],
                       "atomwt": line[4], "A_ki": line[5], "element": line[6]}
-    
-## loading LSF data from .npy file [initially saved using LSF_data dict defined in this file,
-## towards the end, ~3k lines, now moved to an unused LSF_data.txt file (only for visual purpose)]
-## 240812: renamed LSF_data.txt to lines_LSF_data.txt
-## can still access lines in the same way as before
-## e.g., LSF_data = pg.analysis.absorption_spectra.LSF_data
-lsfdata = np.load(environment.module_dir + "analysis/LSF_data.npy", allow_pickle=True)
+
+# loading LSF data from .npy file [initially saved using LSF_data dict defined in this file,
+# towards the end, ~3k lines, now moved to an unused LSF_data.txt file (only for visual purpose)]
+# 240812: renamed LSF_data.txt to lines_LSF_data.txt
+# can still access lines in the same way as before
+# e.g., LSF_data = pg.analysis.absorption_spectra.LSF_data
+lsfdata = np.load(environment.module_dir +
+                  "analysis/LSF_data.npy", allow_pickle=True)
 LSF_data = lsfdata[()]
+
 
 def line_quantity(line, qty):
     return lines[line][str(qty)]
@@ -361,7 +364,8 @@ def curve_of_growth(line, b, Nlim=(10, 21), bins=30, mode="Voigt"):
     if isinstance(line, str):
         line = lines[line]
     l0 = UnitScalar(line["l"])
-    N = UnitArr(np.logspace(float(Nlim[0]), float(Nlim[1]), int(bins)), "cm**-2")
+    N = UnitArr(np.logspace(float(Nlim[0]),
+                float(Nlim[1]), int(bins)), "cm**-2")
     ew = UnitArr(np.empty(len(N)), "Angstrom")
     for i, N_ in enumerate(N):
         lim, bins = [-0.5, 0.5], 300
@@ -513,7 +517,8 @@ def find_line_contributers(
     if environment.verbose >= environment.VERBOSE_NORMAL:
         print("finding the necessary particles...")
     low, mid, high = 0.0, 50.0, 100.0
-    Nlow, Nmid, Nhigh = [np.percentile(restr_column, x) for x in [low, mid, high]]
+    Nlow, Nmid, Nhigh = [np.percentile(restr_column, x)
+                         for x in [low, mid, high]]
     verbosity = environment.verbose
     environment.verbose = environment.VERBOSE_QUIET
     while np.sum(restr_column > Nlow) > np.sum(restr_column > Nhigh) + 1:
@@ -571,16 +576,15 @@ def mock_absorption_spectrum_of(s, los, line, vel_extent, **kwargs):
             line = lines[line]
         elif not isinstance(line, dict):
             raise ValueError(
-                "`line` needs to be a string or a dictionary, " + "not %s!" % type(line)
+                "`line` needs to be a string or a dictionary, " +
+                "not %s!" % type(line)
             )
     except KeyError:
         raise KeyError(
             "unkown line '%s' -- " % line
             + "see `analysis.absorption_spectra.lines.keys()`"
         )
-    print (len(los))
     if len(los) == 2:
-        print ("single LOS")
         return mock_absorption_spectrum(
             s,
             los,
@@ -594,7 +598,7 @@ def mock_absorption_spectrum_of(s, los, line, vel_extent, **kwargs):
             **kwargs
         )
     else:
-        print ("multiple LOS, number of LOS is ", len(los))
+        print("multiple LOS, number of LOS is ", len(los))
         return mock_absorption_spectra_multilos(
             s,
             los,
@@ -769,12 +773,14 @@ def mock_absorption_spectrum(
     if set([xaxis, yaxis, zaxis]) != set([0, 1, 2]):
         raise ValueError("x- and y-axis must be in [0,1,2] and different!")
     los = UnitQty(los, s["pos"].units, dtype=np.float64, subs=s)
-    zero_Hubble_flow_at = UnitScalar(zero_Hubble_flow_at, s["pos"].units, subs=s)
+    zero_Hubble_flow_at = UnitScalar(
+        zero_Hubble_flow_at, s["pos"].units, subs=s)
     vel_extent = UnitQty(vel_extent, "km/s", dtype=np.float64, subs=s)
     if restr_column_lims is None:
         restr_column_lims = vel_extent.copy()
     else:
-        restr_column_lims = UnitQty(restr_column_lims, "km/s", dtype=np.float64, subs=s)
+        restr_column_lims = UnitQty(
+            restr_column_lims, "km/s", dtype=np.float64, subs=s)
     l = UnitScalar(l, "Angstrom")
     if v_turb is not None:
         if isinstance(v_turb, str):
@@ -846,8 +852,8 @@ def mock_absorption_spectrum(
         ion = s.gas.get(ion)
     else:
         ion = UnitQty(ion, units=s["mass"].units, subs=s)
-    #print (ion.units)
-    #print ((ion.astype(np.float64) / atomwt).units)
+    # print (ion.units)
+    # print ((ion.astype(np.float64) / atomwt).units)
     # double precision needed in order not to overflow
     # 1 Msol / 1 u = 1.2e57, float max = 3.4e38, but double max = 1.8e308
     n = (ion.astype(np.float64) / atomwt).in_units_of(1, subs=s)
@@ -871,7 +877,8 @@ def mock_absorption_spectrum(
             spatial_extent = UnitQty(spatial_extent, s["pos"].units, subs=s)
 
         if spatial_res is None:
-            spatial_res = UnitArr(np.percentile(s.gas["hsml"], 1), s.gas["hsml"].units)
+            spatial_res = UnitArr(np.percentile(
+                s.gas["hsml"], 1), s.gas["hsml"].units)
         spatial_res = UnitScalar(spatial_res, s["pos"].units, subs=s)
         N = int(max(1e3, (spatial_extent.ptp() / spatial_res).in_units_of(1, subs=s)))
         spatial_res == spatial_extent.ptp() / N
@@ -917,20 +924,22 @@ def mock_absorption_spectrum(
             if environment.verbose >= environment.VERBOSE_NORMAL:
                 print(("  using an spatial extent of:", spatial_extent))
                 print((
-                    "  ... with %d bins of size %sx%s^2" % (N, col_width, spatial_res)
+                    "  ... with %d bins of size %sx%s^2" % (
+                        N, col_width, spatial_res)
                 ))
 
             from ..binning import SPH_to_3Dgrid
 
             def bin_func(s, qty, **args):
                 Q = SPH_to_3Dgrid(sub, qty, **args)
-                Q, px = Q[m].reshape(N) * Q.vol_voxel(), Q.res()
+                Q, px = Q[tuple(m)].reshape(N) * Q.vol_voxel(), Q.res()
                 return Q, px
 
             n_parts = n[sub._mask]
             n, px = bin_func(sub, n_parts / dV, **binargs)
             non0n = n != 0
-            vel, px = bin_func(sub, n_parts * sub["vel"][:, zaxis] / dV, **binargs)
+            vel, px = bin_func(
+                sub, n_parts * sub["vel"][:, zaxis] / dV, **binargs)
             vel[non0n] = vel[non0n] / n[non0n]
 
             rho, px = bin_func(sub, n_parts * sub["rho"] / dV, **binargs)
@@ -944,7 +953,8 @@ def mock_absorption_spectrum(
                 )
 
             # average sqrt(T), since thats what the therm. broadening scales with
-            temp, px = bin_func(sub, n_parts * np.sqrt(sub["temp"]) / dV, **binargs)
+            temp, px = bin_func(
+                sub, n_parts * np.sqrt(sub["temp"]) / dV, **binargs)
             temp[non0n] = temp[non0n] / n[non0n]
             temp **= 2
             # we actually need the column densities, not the number of particles
@@ -953,7 +963,8 @@ def mock_absorption_spectrum(
             # the z-coordinates for the Hubble flow
             los_pos = UnitArr(
                 np.linspace(
-                    float(spatial_extent[0]), float(spatial_extent[1] - px[zaxis]), N
+                    float(spatial_extent[0]), float(
+                        spatial_extent[1] - px[zaxis]), N
                 ),
                 spatial_extent.units,
             )
@@ -1018,8 +1029,10 @@ def mock_absorption_spectrum(
             temp **= 2
 
             # the z-coordinates for the Hubble flow
+            px = px.reshape(())
             los_pos = UnitArr(
-                np.linspace(float(spatial_extent[0]), float(spatial_extent[1] - px), N),
+                np.linspace(float(spatial_extent[0]), float(
+                    spatial_extent[1] - px), N),
                 spatial_extent.units,
             )
         else:
@@ -1037,7 +1050,8 @@ def mock_absorption_spectrum(
         temp = s.gas["temp"]
         rho = s.gas["rho"]  # DS: gas density
         if element is not None and element != "H" and element != "He":
-            metal_frac = s.gas[element] / s.gas["mass"]  # SA: metal mass fraction
+            metal_frac = s.gas[element] / \
+                s.gas["mass"]  # SA: metal mass fraction
         else:
             metal_frac = s.gas["metallicity"]
 
@@ -1069,11 +1083,14 @@ def mock_absorption_spectrum(
 
     if pos is not None:
         pos = (
-            pos.astype(np.float64).in_units_of(l_units, subs=s).view(np.ndarray).copy()
+            pos.astype(np.float64).in_units_of(
+                l_units, subs=s).view(np.ndarray).copy()
         )
-    vel = vel.astype(np.float64).in_units_of(v_units, subs=s).view(np.ndarray).copy()
+    vel = vel.astype(np.float64).in_units_of(
+        v_units, subs=s).view(np.ndarray).copy()
     vpec_z = (
-        vpec_z.astype(np.float64).in_units_of(v_units, subs=s).view(np.ndarray).copy()
+        vpec_z.astype(np.float64).in_units_of(
+            v_units, subs=s).view(np.ndarray).copy()
     )  # DS LOS peculiar velocities
     temp = temp.in_units_of("K", subs=s).view(np.ndarray).astype(np.float64)
     rho = (
@@ -1084,9 +1101,11 @@ def mock_absorption_spectrum(
     )  # SA metal mass fraction
 
     if hsml is not None:
-        hsml = hsml.in_units_of(l_units, subs=s).view(np.ndarray).astype(np.float64)
+        hsml = hsml.in_units_of(l_units, subs=s).view(
+            np.ndarray).astype(np.float64)
 
-    los = los.in_units_of(l_units, subs=s).view(np.ndarray).astype(np.float64).copy()
+    los = los.in_units_of(l_units, subs=s).view(
+        np.ndarray).astype(np.float64).copy()
     vel_extent = (
         vel_extent.in_units_of(v_units, subs=s)
         .view(np.ndarray)
@@ -1109,8 +1128,10 @@ def mock_absorption_spectrum(
     los_dens = np.empty(Nbins, dtype=np.float64)
     los_dens_phys = np.empty(Nbins, dtype=np.float64)  # DS: gas density field
     los_temp = np.empty(Nbins, dtype=np.float64)
-    los_vpec = np.empty(Nbins, dtype=np.float64)  # DS: LOS peculiar velocity field
-    los_metal_frac = np.empty(Nbins, dtype=np.float64)  # SA: LOS metallicity field
+    # DS: LOS peculiar velocity field
+    los_vpec = np.empty(Nbins, dtype=np.float64)
+    # SA: LOS metallicity field
+    los_metal_frac = np.empty(Nbins, dtype=np.float64)
     restr_column_lims = restr_column_lims.view(np.ndarray).astype(np.float64)
     restr_column = np.empty(N, dtype=np.float64)
     C.cpygad.absorption_spectrum(
@@ -1162,11 +1183,13 @@ def mock_absorption_spectrum(
             EW_l = EW(taus, l_edges)
             extinct = np.exp(-np.asarray(taus))
             v_mean = UnitArr(
-                np.average((v_edges[:-1] + v_edges[1:]) / 2.0, weights=extinct),
+                np.average((v_edges[:-1] + v_edges[1:]) /
+                           2.0, weights=extinct),
                 v_edges.units,
             )
             l_mean = UnitArr(
-                np.average((l_edges[:-1] + l_edges[1:]) / 2.0, weights=extinct),
+                np.average((l_edges[:-1] + l_edges[1:]) /
+                           2.0, weights=extinct),
                 l_edges.units,
             )
             print("created line with:")
@@ -1189,6 +1212,7 @@ def mock_absorption_spectrum(
         )
     else:
         return taus, los_dens, los_temp, v_edges, restr_column
+
 
 def mock_absorption_spectra_multilos(
     s,
@@ -1356,12 +1380,14 @@ def mock_absorption_spectra_multilos(
     los_arr = UnitQty(los, s["pos"].units, dtype=np.float64, subs=s)
     Nlos = len(los_arr)
     # print ("number of LOS is ", Nlos)
-    zero_Hubble_flow_at = UnitScalar(zero_Hubble_flow_at, s["pos"].units, subs=s)
+    zero_Hubble_flow_at = UnitScalar(
+        zero_Hubble_flow_at, s["pos"].units, subs=s)
     vel_extent = UnitQty(vel_extent, "km/s", dtype=np.float64, subs=s)
     if restr_column_lims is None:
         restr_column_lims = vel_extent.copy()
     else:
-        restr_column_lims = UnitQty(restr_column_lims, "km/s", dtype=np.float64, subs=s)
+        restr_column_lims = UnitQty(
+            restr_column_lims, "km/s", dtype=np.float64, subs=s)
     l = UnitScalar(l, "Angstrom")
     if v_turb is not None:
         if isinstance(v_turb, str):
@@ -1433,8 +1459,8 @@ def mock_absorption_spectra_multilos(
         ion = s.gas.get(ion)
     else:
         ion = UnitQty(ion, units=s["mass"].units, subs=s)
-    #print (ion.units)
-    #print ((ion.astype(np.float64) / atomwt).units)
+    # print (ion.units)
+    # print ((ion.astype(np.float64) / atomwt).units)
     # double precision needed in order not to overflow
     # 1 Msol / 1 u = 1.2e57, float max = 3.4e38, but double max = 1.8e308
     n = (ion.astype(np.float64) / atomwt).in_units_of(1, subs=s)
@@ -1458,7 +1484,8 @@ def mock_absorption_spectra_multilos(
             spatial_extent = UnitQty(spatial_extent, s["pos"].units, subs=s)
 
         if spatial_res is None:
-            spatial_res = UnitArr(np.percentile(s.gas["hsml"], 1), s.gas["hsml"].units)
+            spatial_res = UnitArr(np.percentile(
+                s.gas["hsml"], 1), s.gas["hsml"].units)
         spatial_res = UnitScalar(spatial_res, s["pos"].units, subs=s)
         N = int(max(1e3, (spatial_extent.ptp() / spatial_res).in_units_of(1, subs=s)))
         spatial_res == spatial_extent.ptp() / N
@@ -1504,7 +1531,8 @@ def mock_absorption_spectra_multilos(
             if environment.verbose >= environment.VERBOSE_NORMAL:
                 print(("  using an spatial extent of:", spatial_extent))
                 print((
-                    "  ... with %d bins of size %sx%s^2" % (N, col_width, spatial_res)
+                    "  ... with %d bins of size %sx%s^2" % (
+                        N, col_width, spatial_res)
                 ))
 
             from ..binning import SPH_to_3Dgrid
@@ -1517,7 +1545,8 @@ def mock_absorption_spectra_multilos(
             n_parts = n[sub._mask]
             n, px = bin_func(sub, n_parts / dV, **binargs)
             non0n = n != 0
-            vel, px = bin_func(sub, n_parts * sub["vel"][:, zaxis] / dV, **binargs)
+            vel, px = bin_func(
+                sub, n_parts * sub["vel"][:, zaxis] / dV, **binargs)
             vel[non0n] = vel[non0n] / n[non0n]
 
             rho, px = bin_func(sub, n_parts * sub["rho"] / dV, **binargs)
@@ -1531,7 +1560,8 @@ def mock_absorption_spectra_multilos(
                 )
 
             # average sqrt(T), since thats what the therm. broadening scales with
-            temp, px = bin_func(sub, n_parts * np.sqrt(sub["temp"]) / dV, **binargs)
+            temp, px = bin_func(
+                sub, n_parts * np.sqrt(sub["temp"]) / dV, **binargs)
             temp[non0n] = temp[non0n] / n[non0n]
             temp **= 2
             # we actually need the column densities, not the number of particles
@@ -1540,7 +1570,8 @@ def mock_absorption_spectra_multilos(
             # the z-coordinates for the Hubble flow
             los_pos = UnitArr(
                 np.linspace(
-                    float(spatial_extent[0]), float(spatial_extent[1] - px[zaxis]), N
+                    float(spatial_extent[0]), float(
+                        spatial_extent[1] - px[zaxis]), N
                 ),
                 spatial_extent.units,
             )
@@ -1606,7 +1637,8 @@ def mock_absorption_spectra_multilos(
 
             # the z-coordinates for the Hubble flow
             los_pos = UnitArr(
-                np.linspace(float(spatial_extent[0]), float(spatial_extent[1] - px), N),
+                np.linspace(float(spatial_extent[0]), float(
+                    spatial_extent[1] - px), N),
                 spatial_extent.units,
             )
         else:
@@ -1624,7 +1656,8 @@ def mock_absorption_spectra_multilos(
         temp = s.gas["temp"]
         rho = s.gas["rho"]  # DS: gas density
         if element is not None and element != "H" and element != "He":
-            metal_frac = s.gas[element] / s.gas["mass"]  # SA: metal mass fraction
+            metal_frac = s.gas[element] / \
+                s.gas["mass"]  # SA: metal mass fraction
         else:
             metal_frac = s.gas["metallicity"]
 
@@ -1669,11 +1702,14 @@ def mock_absorption_spectra_multilos(
 
     if pos is not None:
         pos = (
-            pos.astype(np.float64).in_units_of(l_units, subs=s).view(np.ndarray).copy()
+            pos.astype(np.float64).in_units_of(
+                l_units, subs=s).view(np.ndarray).copy()
         )
-    vel = vel.astype(np.float64).in_units_of(v_units, subs=s).view(np.ndarray).copy()
+    vel = vel.astype(np.float64).in_units_of(
+        v_units, subs=s).view(np.ndarray).copy()
     vpec_z = (
-        vpec_z.astype(np.float64).in_units_of(v_units, subs=s).view(np.ndarray).copy()
+        vpec_z.astype(np.float64).in_units_of(
+            v_units, subs=s).view(np.ndarray).copy()
     )  # DS LOS peculiar velocities
     temp = temp.in_units_of("K", subs=s).view(np.ndarray).astype(np.float64)
     rho = (
@@ -1684,9 +1720,11 @@ def mock_absorption_spectra_multilos(
     )  # SA metal mass fraction
 
     if hsml is not None:
-        hsml = hsml.in_units_of(l_units, subs=s).view(np.ndarray).astype(np.float64)
+        hsml = hsml.in_units_of(l_units, subs=s).view(
+            np.ndarray).astype(np.float64)
 
-    los_arr = los_arr.in_units_of(l_units, subs=s).view(np.ndarray).astype(np.float64).copy()
+    los_arr = los_arr.in_units_of(l_units, subs=s).view(
+        np.ndarray).astype(np.float64).copy()
     vel_extent = (
         vel_extent.in_units_of(v_units, subs=s)
         .view(np.ndarray)
@@ -1705,16 +1743,19 @@ def mock_absorption_spectra_multilos(
     Xsec = float(Xsec.in_units_of(l_units**2 * v_units, subs=s))
     Gamma = float(Gamma.in_units_of(v_units))
 
-    taus = np.empty((Nlos,Nbins), dtype=np.float64)
-    los_dens = np.empty((Nlos,Nbins), dtype=np.float64)
-    los_dens_phys = np.empty((Nlos,Nbins), dtype=np.float64)  # DS: gas density field
-    los_temp = np.empty((Nlos,Nbins), dtype=np.float64)
-    los_vpec = np.empty((Nlos,Nbins), dtype=np.float64)  # DS: LOS peculiar velocity field
-    los_metal_frac = np.empty((Nlos,Nbins), dtype=np.float64)  # SA: LOS metallicity field
+    taus = np.empty((Nlos, Nbins), dtype=np.float64)
+    los_dens = np.empty((Nlos, Nbins), dtype=np.float64)
+    # DS: gas density field
+    los_dens_phys = np.empty((Nlos, Nbins), dtype=np.float64)
+    los_temp = np.empty((Nlos, Nbins), dtype=np.float64)
+    # DS: LOS peculiar velocity field
+    los_vpec = np.empty((Nlos, Nbins), dtype=np.float64)
+    # SA: LOS metallicity field
+    los_metal_frac = np.empty((Nlos, Nbins), dtype=np.float64)
     restr_column_lims = restr_column_lims.view(np.ndarray).astype(np.float64)
     full_column_calc = False
     if full_column_calc:
-        restr_column = np.empty((Nlos,N), dtype=np.float64)
+        restr_column = np.empty((Nlos, N), dtype=np.float64)
     else:
         restr_column = np.empty((1), dtype=np.float64)
     C.cpygad.absorption_spectrum_multiple_los(
@@ -1767,11 +1808,13 @@ def mock_absorption_spectra_multilos(
             EW_l = EW(taus, l_edges)
             extinct = np.exp(-np.asarray(taus))
             v_mean = UnitArr(
-                np.average((v_edges[:-1] + v_edges[1:]) / 2.0, weights=extinct),
+                np.average((v_edges[:-1] + v_edges[1:]) /
+                           2.0, weights=extinct),
                 v_edges.units,
             )
             l_mean = UnitArr(
-                np.average((l_edges[:-1] + l_edges[1:]) / 2.0, weights=extinct),
+                np.average((l_edges[:-1] + l_edges[1:]) /
+                           2.0, weights=extinct),
                 l_edges.units,
             )
             print("created line with:")
@@ -1794,6 +1837,7 @@ def mock_absorption_spectra_multilos(
         )
     else:
         return taus, los_dens, los_temp, v_edges, restr_column
+
 
 def EW(taus, edges):
     """
@@ -1821,7 +1865,8 @@ def EW(taus, edges):
     if edges.shape == tuple():
         EW = edges * np.sum((1.0 - np.exp(-np.asarray(taus))))
     else:
-        EW = np.sum((1.0 - np.exp(-np.asarray(taus))) * (edges[1:] - edges[:-1]))
+        EW = np.sum((1.0 - np.exp(-np.asarray(taus)))
+                    * (edges[1:] - edges[:-1]))
     return EW
 
 
@@ -1905,7 +1950,8 @@ def fit_continuum(l, flux, noise, order=0, sigma_lim=2.0, tol=1.0e-4, max_iter=1
         p = np.polyfit(
             l_unabs, f_unabs, order, w=1.0 / n_unabs
         )  # fit polynomial of specified order
-        contin = np.polyval(p, l_unabs)  # evaluate polynomial to get continuum guess
+        # evaluate polynomial to get continuum guess
+        contin = np.polyval(p, l_unabs)
         med_contin = np.median(contin)  # get median value of continuum guess
         select = (
             f_unabs > contin - sigma_lim * n_unabs
@@ -1913,7 +1959,8 @@ def fit_continuum(l, flux, noise, order=0, sigma_lim=2.0, tol=1.0e-4, max_iter=1
         f_unabs = f_unabs[select]
         l_unabs = l_unabs[select]
         n_unabs = n_unabs[select]
-        diff = abs((med_contin - med_old) / med_old)  # criteria for convergence
+        # criteria for convergence
+        diff = abs((med_contin - med_old) / med_old)
         med_old = med_contin
         if n_iter > max_iter:
             print((
@@ -1971,12 +2018,14 @@ def apply_LSF(l, flux, noise, grating="COS_G130M"):
     )  # make sure this is an even number
     if nlsf_interp < 2:
         return flux, noise  # if pixels are too large, then LSF has no effect
-    rw_interp = np.arange(rw[0], rw[-1] + 0.5 * dl_lsf, (rw[-1] - rw[0]) / nlsf_interp)
+    rw_interp = np.arange(rw[0], rw[-1] + 0.5 * dl_lsf,
+                          (rw[-1] - rw[0]) / nlsf_interp)
     lsf_interp = np.interp(rw_interp, rw, lsf)
     # convolve flux and noise
     flux_conv = convolve(flux, lsf_interp, boundary="wrap")
     noise_conv = convolve(noise, lsf_interp, boundary="wrap")
     print((
-        "Applied LSF at <lambda>=%1g: %s, channel %s" % (np.mean(l), grating, channel)
+        "Applied LSF at <lambda>=%1g: %s, channel %s" % (
+            np.mean(l), grating, channel)
     ))  # ,np.mean(flux_conv)-np.mean(flux)))
     return flux_conv, noise_conv

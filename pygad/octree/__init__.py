@@ -2,7 +2,7 @@
 A module for octrees on 3-dim. points in form of np.ndarrays.
 
 Also doctest other parts of this sub-module:
-    >>> import doctest
+    >>> import pygad.doctest as doctest
     >>> doctest.testmod(coctree)
     TestResults(failed=0, attempted=48)
     >>> doctest.testmod(octree)
@@ -11,4 +11,3 @@ Also doctest other parts of this sub-module:
 
 from .coctree import *
 from .octree import *
-

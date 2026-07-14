@@ -2,7 +2,7 @@
 Module for physics that are not directly connected to snapshots.
 
 Also doctest other parts of this sub-module:
-    >>> import doctest
+    >>> import pygad.doctest as doctest
     >>> doctest.testmod(quantities)
     TestResults(failed=0, attempted=33)
     >>> doctest.testmod(cosmology)
@@ -14,4 +14,3 @@ Also doctest other parts of this sub-module:
 from .quantities import *
 from .cosmology import *
 from .cooling import *
-

@@ -2,7 +2,7 @@
 All about kernels
 
 Also doctest other parts of this sub-module:
-    >>> import doctest
+    >>> import pygad.doctest as doctest
     >>> doctest.testmod(definitions)
     TestResults(failed=0, attempted=5)
     >>> doctest.testmod(integral)
@@ -11,4 +11,3 @@ Also doctest other parts of this sub-module:
 
 from .definitions import *
 from .integral import *
-

@@ -2,7 +2,7 @@
 Module for handling Gadget files.
 
 Also doctest other parts of this sub-module:
-    >>> import doctest
+    >>> import pygad.doctest as doctest
     >>> doctest.testmod(config)
     TestResults(failed=0, attempted=10)
     >>> doctest.testmod(lowlevel_file)
@@ -19,4 +19,3 @@ from ..environment import module_dir
 read_config(['./gadget.cfg',
              os.getenv("HOME")+'/.config/pygad/gadget.cfg',
              module_dir+'config/gadget.cfg'])
-

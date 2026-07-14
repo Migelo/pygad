@@ -2,7 +2,7 @@
 Some (convenience) functions for binning.
 
 Also doctest other parts of this sub-module:
-    >>> import doctest
+    >>> import pygad.doctest as doctest
     >>> doctest.testmod(core)
     TestResults(failed=0, attempted=32)
     >>> doctest.testmod(cbinning)
@@ -17,4 +17,3 @@ from .core import *
 from .cbinning import *
 from .mapping import *
 from .oneDbinning import *
-

@@ -8,7 +8,7 @@ interactive mode (for more details see the documentation about the
 plotting module.
 
 doctests:
-    >>> import doctest
+    >>> import pygad.doctest as doctest
     >>> import sys
     >>> print("ATTENTION: full doctest takes a few minutes!!!", file=sys.stderr)
     >>> print('testing module utils...', file=sys.stderr)
@@ -72,9 +72,23 @@ import tarfile
 import tempfile
 import time
 import urllib.request
+from ._version import get_versions
 from . import utils
 from . import environment
 from .environment import gc_full_collect, module_dir
+from .tools import prepare_zoom, read_info_file
+from .snapshot import *
+from .transformation import *
+from .units import *
+from . import plotting
+from . import cloudy
+from . import analysis
+from . import binning
+from . import ssp
+from . import octree
+from . import gadget
+from . import kernels
+from . import physics
 
 _DATA_BASE_URL = os.getenv(
     'PYGAD_DATA_BASE_URL',
@@ -142,11 +156,12 @@ def _download_and_extract(data_file):
                     print(f'pygad: retry {attempt}/2 for {data_file} after '
                           f'error: {err}',
                           file=sys.stderr, flush=True)
-                time.sleep(2)
+                    time.sleep(2)
         else:
             raise RuntimeError(f'failed to download {url}: {last_err}')
 
-        print(f'pygad: extracting {data_file} ...', file=sys.stderr, flush=True)
+        print(f'pygad: extracting {data_file} ...',
+              file=sys.stderr, flush=True)
         with tarfile.open(archive_path, mode='r:gz') as archive:
             archive.extractall(module_dir)
         print(f'pygad: extracted {data_file}', file=sys.stderr, flush=True)
@@ -162,7 +177,8 @@ def _ensure_auxiliary_data():
         (module_dir + './bc03', 'bc03.tar.gz'),
         (module_dir + './snaps', 'snaps.tar.gz'),
     ]
-    missing = [archive for path, archive in required_data if not os.path.exists(path)]
+    missing = [archive for path,
+               archive in required_data if not os.path.exists(path)]
     if not missing:
         return
 
@@ -177,19 +193,10 @@ def _ensure_auxiliary_data():
 _ensure_auxiliary_data()
 
 # import all modules
-#from . import units            made visible directly below
-from . import physics
-from . import kernels
-from . import gadget
-#from . import transformation   made visible directly below
-#from . import snapshot         made visible directly below
-from . import octree
-from . import ssp
-from . import binning
-from . import analysis
-#from . import tools            prepare zoom moved to SnapshotCache, others -> Cmd-scripts
-from . import cloudy
-from . import plotting
+# from . import units            made visible directly below
+# from . import transformation   made visible directly below
+# from . import snapshot         made visible directly below
+# from . import tools            prepare zoom moved to SnapshotCache, others -> Cmd-scripts
 
 # the version of this pygad
 # this line gets changed by setup.py during installation, and hence is different
@@ -212,10 +219,6 @@ from . import plotting
 # only import core objects to be visible on package level
 # functions to be used from sub-modules only
 # ################################################
-from .units import *
-from .transformation import *
-from .snapshot import *
-from .tools import prepare_zoom, read_info_file
 
 # default seems to be (700, 10, 10)
 # pygad should more often collect garbage, since it has huge objects (SimArr and
@@ -223,7 +226,6 @@ from .tools import prepare_zoom, read_info_file
 gc.set_threshold(50, 3, 3)
 gc_full_collect()
 
-from ._version import get_versions
 __version__ = get_versions()['version']
 if environment.verbose > environment.VERBOSE_QUIET:
     print(('imported pygad', __version__))

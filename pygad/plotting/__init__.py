@@ -2,7 +2,7 @@
 Module for plotting.
 
 Also doctest other parts of this sub-module:
-    >>> import doctest
+    >>> import pygad.doctest as doctest
     >>> doctest.testmod(general)
     TestResults(failed=0, attempted=1)
 '''
@@ -11,6 +11,7 @@ from .colormaps import *
 from .general import *
 from .maps import *
 from .profiles import *
+
 
 def show_FoF_groups(s, groups, colors='rand', plot_center=True, plot_parts=False,
                     plot_hull=True, pointsize=20, alpha=0.02, linewidth=1,
@@ -62,20 +63,20 @@ def show_FoF_groups(s, groups, colors='rand', plot_center=True, plot_parts=False
 
     for i, group in enumerate(groups):
         if colors == 'rand':
-            color = mpl.colors.hsv_to_rgb( [np.random.rand(), 1, 1] )
-        elif isinstance(colors,str) or colors.dtype in (str,str) \
-                or colors.shape==(3,):
+            color = mpl.colors.hsv_to_rgb([np.random.rand(), 1, 1])
+        elif isinstance(colors, str) or colors.dtype in (str, str) \
+                or colors.shape == (3,):
             color = colors
         else:
             color = colors[i]
 
-        pos2D = s[group]['pos'][:,(xaxis,yaxis)]
+        pos2D = s[group]['pos'][:, (xaxis, yaxis)]
         if plot_hull:
             hull = ConvexHull(pos2D)
-            ax.fill(pos2D[hull.vertices,0], pos2D[hull.vertices,1], fill=False,
+            ax.fill(pos2D[hull.vertices, 0], pos2D[hull.vertices, 1], fill=False,
                     edgecolor=color, linestyle=linestyle, linewidth=linewidth)
         if plot_parts:
-            ax.scatter(pos2D[:,0], pos2D[:,1], s=pointsize,
+            ax.scatter(pos2D[:, 0], pos2D[:, 1], s=pointsize,
                        edgecolor='none', facecolor=color, alpha=alpha)
         if plot_center:
             try:
@@ -83,7 +84,7 @@ def show_FoF_groups(s, groups, colors='rand', plot_center=True, plot_parts=False
             except:
                 center = group.com
             c = mpl.colors.rgb_to_hsv(color)
-            c = mpl.colors.hsv_to_rgb( [c[0], c[1]*0.6, c[2]*0.8] )
+            c = mpl.colors.hsv_to_rgb([c[0], c[1]*0.6, c[2]*0.8])
             ax.scatter(center[xaxis], center[yaxis],
                        marker='x', s=1.5*pointsize, color=c)
 
@@ -91,4 +92,3 @@ def show_FoF_groups(s, groups, colors='rand', plot_center=True, plot_parts=False
     ax.set_ylim(ylim)
 
     return fig, ax, im, cbar
-

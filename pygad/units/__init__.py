@@ -2,7 +2,7 @@
 Module for units and arrays with units.
 
 Also doctest other parts of this sub-module:
-    >>> import doctest
+    >>> import pygad.doctest as doctest
     >>> doctest.testmod(units)
     TestResults(failed=0, attempted=38)
     >>> doctest.testmod(unit_arr)

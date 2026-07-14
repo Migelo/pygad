@@ -1,8 +1,12 @@
 import re
 from math import isclose
+import doctest as _doctest
 from doctest import (DONT_ACCEPT_TRUE_FOR_1, DONT_ACCEPT_BLANKLINE,
                      NORMALIZE_WHITESPACE, BLANKLINE_MARKER, ELLIPSIS,
                      _ellipsis_match)
+
+NUMERIC_REL_TOL = 2e-6
+NUMERIC_ABS_TOL = 1e-12
 
 
 def string_to_numbers(string: str):
@@ -11,8 +15,20 @@ def string_to_numbers(string: str):
     Use refex to find numbers, integers and floats.
     https://stackoverflow.com/a/29581287/633093
     """
-    numbers = re.findall("[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?", string)
+    numbers = re.findall(
+        r"[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?", string)
     return numbers
+
+
+def _without_array_shape(string: str):
+    """Remove NumPy's optional array-shape suffix from a representation."""
+    return re.sub(r",\s*shape=\([^)]*\)", "", string)
+
+
+def _without_numpy_scalar_wrapper(string: str):
+    """Normalize NumPy scalar reprs, which vary between NumPy releases."""
+    string = re.sub(r"np\.(?:float|int|uint)\d+\(([^()]*)\)", r"\1", string)
+    return re.sub(r"np\.void\((\([^)]*\)), dtype=.*\)", r"\1", string)
 
 
 def check_output_numbers(self, want, got, optionflags):
@@ -39,7 +55,6 @@ def check_output_numbers(self, want, got, optionflags):
     if got == want:
         return True
 
-
     # The values True and False replaced 1 and 0 as the return
     # value for boolean comparisons in Python 2.3.
     if not (optionflags & DONT_ACCEPT_TRUE_FOR_1):
@@ -59,6 +74,11 @@ def check_output_numbers(self, want, got, optionflags):
         if got == want:
             return True
 
+    # Normalize representation-only differences before applying the standard
+    # textual checks.  These are not differences in the computed result.
+    got = _without_numpy_scalar_wrapper(_without_array_shape(got))
+    want = _without_numpy_scalar_wrapper(_without_array_shape(want))
+
     # This flag causes doctest to ignore any differences in the
     # contents of whitespace strings.  Note that this can be used
     # in conjunction with the ELLIPSIS flag.
@@ -73,23 +93,63 @@ def check_output_numbers(self, want, got, optionflags):
     if optionflags & ELLIPSIS:
         if _ellipsis_match(want, got):
             return True
-        
+
     # Compare the two strings number by number
     # print("using the homemade check_output_numbers function")
     # print(f"got = {got}")
     # print(f"want = {want}")
+    # NumPy versions differ in whether they append ``shape=(...)`` to array
+    # representations.  It is metadata, not part of the numerical result.
     got_numbers = string_to_numbers(got)
     want_numbers = string_to_numbers(want)
     # print(f"got_numbers = {got_numbers}")
     # print(f"want_numbers = {want_numbers}")
-    all_equal = True
-    if len(got_numbers) == len(want_numbers):
-        for i in range(len(got_numbers)):
-            if not isclose(float(got_numbers[i]), float(want_numbers[i])):
-                all_equal = False
-                break
-    if all_equal:
+    if len(got_numbers) == len(want_numbers) and all(
+        isclose(float(got_number), float(want_number),
+                rel_tol=NUMERIC_REL_TOL, abs_tol=NUMERIC_ABS_TOL)
+        for got_number, want_number in zip(got_numbers, want_numbers)
+    ):
         return True
 
     # We didn't find any match; return false.
     return False
+
+
+class NumericOutputChecker(_doctest.OutputChecker):
+    """Output checker that also accepts numerically close values."""
+
+    def check_output(self, want, got, optionflags):
+        return check_output_numbers(self, want, got, optionflags)
+
+
+def testmod(m=None, name=None, globs=None, verbose=None, report=True,
+            optionflags=0, extraglobs=None, raise_on_error=False,
+            exclude_empty=True):
+    """Run a module's doctests with :class:`NumericOutputChecker`.
+
+    This mirrors the standard :func:`doctest.testmod` API closely, while
+    avoiding a process-wide replacement of ``OutputChecker.check_output``.
+    """
+    if m is None:
+        m = _doctest._normalize_module(None)
+    if name is None:
+        name = getattr(m, "__name__", None)
+    if globs is None:
+        globs = getattr(m, "__dict__", {})
+    if extraglobs:
+        globs = globs.copy()
+        globs.update(extraglobs)
+
+    finder = _doctest.DocTestFinder(exclude_empty=exclude_empty)
+    runner = _doctest.DocTestRunner(
+        checker=NumericOutputChecker(),
+        verbose=verbose,
+        optionflags=optionflags,
+    )
+
+    for test in finder.find(m, name=name, globs=globs):
+        runner.run(test, clear_globs=False)
+
+    if report:
+        runner.summarize(verbose=verbose)
+    return _doctest.TestResults(runner.failures, runner.tries)

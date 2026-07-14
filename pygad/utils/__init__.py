@@ -2,7 +2,7 @@
 Some general (low-level) functions.
 
 Also doctest other parts of this sub-module:
-    >>> import doctest
+    >>> import pygad.doctest as doctest
     >>> doctest.testmod(utils)
     TestResults(failed=0, attempted=62)
     >>> doctest.testmod(safe_eval)
@@ -16,4 +16,3 @@ from .utils import *
 from .safe_eval import *
 from .term import *
 from .geo import *
-

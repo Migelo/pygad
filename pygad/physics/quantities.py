@@ -51,7 +51,8 @@ for name in scipy.constants.find():
         value = scipy.constants.value(name)
         units = scipy.constants.unit(name)
         constants[name] = UnitArr(value,
-                                  units.replace('^', '**').replace('ohm', 'Ohm')
+                                  units.replace(
+                                      '^', '**').replace('ohm', 'Ohm')
                                   if units else None)
     except UnitError:
         pass
@@ -76,9 +77,10 @@ try:
     m_He = UnitArr(4.002602, 'u')
     R = N_A * kB  # ideal gas constant
 except KeyError:
-    print("Constant missing from scipy.constants, update scipy to the latest"\
+    print("Constant missing from scipy.constants, update scipy to the latest"
           " version!")
     raise
+
 
 class solar(object):
     '''
@@ -232,7 +234,6 @@ def SMH_Moster_2013(M_halo, z=0.0, return_scatter=False):
     one_minus_a = float(z / (z + 1.0))
 
     M_halo = UnitQty(M_halo, 'Msol', dtype=float)
-    from collections import Iterable
     if getattr(M_halo, 'shape', None) and M_halo.shape[0] > 1:
         ret = []
         for Mh in M_halo:
@@ -262,29 +263,30 @@ def SMH_Moster_2013(M_halo, z=0.0, return_scatter=False):
         eta = M_halo / inter['M1']
         alpha = eta ** -inter['beta'] + eta ** inter['gamma']
         dmd = {}
-        dmd['M1'] = [(inter['gamma'] * eta ** inter['gamma'] \
+        dmd['M1'] = [(inter['gamma'] * eta ** inter['gamma']
                       - inter['beta'] * eta ** (-inter['beta'])) / alpha,
-                     (inter['gamma'] * eta ** inter['gamma'] \
-                      - inter['beta'] * eta ** (-inter['beta'])) / alpha \
+                     (inter['gamma'] * eta ** inter['gamma']
+                      - inter['beta'] * eta ** (-inter['beta'])) / alpha
                      * one_minus_a]
         dmd['N'] = [np.log10(np.e) / inter['N'],
                     np.log10(np.e) / inter['N'] * one_minus_a]
-        dmd['beta'] = [np.log10(np.e) / alpha * np.log(eta) \
+        dmd['beta'] = [np.log10(np.e) / alpha * np.log(eta)
                        * eta ** (-inter['beta']),
-                       np.log10(np.e) / alpha * np.log(eta) \
+                       np.log10(np.e) / alpha * np.log(eta)
                        * eta ** (-inter['beta']) * one_minus_a]
-        dmd['gamma'] = [-np.log10(np.e) / alpha * np.log(eta) \
+        dmd['gamma'] = [-np.log10(np.e) / alpha * np.log(eta)
                         * eta ** inter['gamma'],
-                        -np.log10(np.e) / alpha * np.log(eta) \
+                        -np.log10(np.e) / alpha * np.log(eta)
                         * eta ** inter['gamma'] * one_minus_a]
         sigma = 0.0
         for key in list(dmd.keys()):
             sigma += (dmd[key][0] * param[key + 'e'][0]) ** 2 \
-                     + (dmd[key][1] * param[key + 'e'][1]) ** 2
+                + (dmd[key][1] * param[key + 'e'][1]) ** 2
         sigma = np.sqrt(sigma) + 0.15
 
         log10_SM = np.log10(SMH * M_halo)
-        lower, upper = 10 ** (log10_SM - sigma) / M_halo, 10 ** (log10_SM + sigma) / M_halo
+        lower, upper = 10 ** (log10_SM - sigma) / \
+            M_halo, 10 ** (log10_SM + sigma) / M_halo
 
     if return_scatter:
         return SMH, lower, upper
@@ -300,10 +302,10 @@ def _Behroozi_function(log10_M, log10_M1, log10_eps, alpha, delta, gamma):
 
     def f(x, alpha, delta, gamma):
         return -np.log10(10 ** (alpha * x) + 1.) + \
-               delta * np.log10(1 + np.exp(x)) ** gamma / (1 + np.exp(10 ** -x))
+            delta * np.log10(1 + np.exp(x)) ** gamma / (1 + np.exp(10 ** -x))
 
     return log10_eps + log10_M1 + f(log10_M - log10_M1, alpha, delta, gamma) \
-           - f(0, alpha, delta, gamma)
+        - f(0, alpha, delta, gamma)
 
 
 def SMH_Behroozi_2013(M_halo, z=0.0, return_scatter=False):
@@ -345,7 +347,8 @@ def SMH_Behroozi_2013(M_halo, z=0.0, return_scatter=False):
     z = float(z)
     a = 1 / (1. + z)
     nu = np.exp(-4. * a ** 2)
-    log10_eps = -1.777 + (-0.006 * (a - 1.) - 0.000 * z) * nu - 0.119 * (a - 1.)
+    log10_eps = -1.777 + (-0.006 * (a - 1.) - 0.000 *
+                          z) * nu - 0.119 * (a - 1.)
     log10_M1 = 11.514 + (-1.793 * (a - 1.) - 0.251 * z) * nu
     alpha = -1.412 + (0.731 * (a - 1.)) * nu
     delta = 3.508 + (2.608 * (a - 1.) - 0.043 * z) * nu
@@ -356,12 +359,13 @@ def SMH_Behroozi_2013(M_halo, z=0.0, return_scatter=False):
 
     xi = 0.218 - 0.023 * (a - 1.)
 
-    log10_SM = _Behroozi_function(np.log10(M_halo), log10_M1, log10_eps, alpha, delta, gamma)
+    log10_SM = _Behroozi_function(
+        np.log10(M_halo), log10_M1, log10_eps, alpha, delta, gamma)
     # TODO: do properly
     # log10_SM = log10_SM - mu
     if return_scatter:
         return 10 ** log10_SM / M_halo, \
-               10 ** (log10_SM - xi) / M_halo, 10 ** (log10_SM + xi) / M_halo
+            10 ** (log10_SM - xi) / M_halo, 10 ** (log10_SM + xi) / M_halo
     else:
         return 10 ** log10_SM / M_halo
 
@@ -405,11 +409,12 @@ def SMH_Kravtsov_2014(M_halo, type='200c', return_scatter=False):
     delta = {'200c': 4.345, '200m': 4.305, 'vir': 4.335}[type]
     gamma = {'200c': 0.619, '200m': 0.544, 'vir': 0.531}[type]
 
-    log10_SM = _Behroozi_function(np.log10(M_halo), log10_M1, log10_eps, alpha, delta, gamma)
+    log10_SM = _Behroozi_function(
+        np.log10(M_halo), log10_M1, log10_eps, alpha, delta, gamma)
     if return_scatter:
         warnings.warn('Scatter of 0.2 dex in Kravtsov et al. (2014) not sure!')
         return 10 ** log10_SM / M_halo, \
-               10 ** (log10_SM - 0.2) / M_halo, 10 ** (log10_SM + 0.2) / M_halo
+            10 ** (log10_SM - 0.2) / M_halo, 10 ** (log10_SM + 0.2) / M_halo
     else:
         return 10 ** log10_SM / M_halo
 
@@ -442,7 +447,8 @@ def Reff_van_der_Wel_2014(M_stars, z, type, return_scatter=False):
     z_edges = np.array([0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0])
     z = float(z)
     if z > z_edges[-1]:
-        raise ValueError('The redshift has to be less than %.3f.' % z_edges[-1])
+        raise ValueError(
+            'The redshift has to be less than %.3f.' % z_edges[-1])
 
     A_bins = {'ETG': [0.60, 0.42, 0.22, 0.09, -0.05, -0.06],
               'LTG': [0.86, 0.78, 0.70, 0.65, 0.55, 0.51]}
@@ -456,8 +462,10 @@ def Reff_van_der_Wel_2014(M_stars, z, type, return_scatter=False):
         if z < z_bins[i] or i == len(z_bins) - 1:
             xi_z = (z - z_bins[i]) / (z_bins[i - 1] - z_bins[i])
             A = A_bins[type][i - 1] * xi_z + A_bins[type][i] * (1. - xi_z)
-            alpha = alpha_bins[type][i - 1] * xi_z + alpha_bins[type][i] * (1. - xi_z)
-            sigma = sigma_bins[type][i - 1] * xi_z + sigma_bins[type][i] * (1. - xi_z)
+            alpha = alpha_bins[type][i - 1] * xi_z + \
+                alpha_bins[type][i] * (1. - xi_z)
+            sigma = sigma_bins[type][i - 1] * xi_z + \
+                sigma_bins[type][i] * (1. - xi_z)
             break
 
     M_stars = UnitQty(M_stars, 'Msol', dtype=float) / UnitArr(5e10, 'Msol')
@@ -579,7 +587,7 @@ def Jeans_length(T, rho, mu='1 u', units='kpc'):
     # check if all given arrays are of the same shape, if there are more than one
     if len(k) > 1:
         if k.count(k[0]) != len(k):
-            raise ValueError('If more than one parameter is passed as an ' + \
+            raise ValueError('If more than one parameter is passed as an ' +
                              'array, they need to have the same shape!')
 
     L2 = 15. * kB * T / (4. * np.pi * G * mu * rho)

@@ -5,7 +5,7 @@ These are structures for Gadget snapshots. The reading, though, is done by the
 gadget module.
 
 Also doctest other parts of this sub-module:
-    >>> import doctest
+    >>> import pygad.doctest as doctest
     >>> doctest.testmod(snapshot)
     TestResults(failed=0, attempted=118)
     >>> doctest.testmod(derive_rules)
@@ -19,7 +19,8 @@ Also doctest other parts of this sub-module:
 '''
 from .snapshot import *
 from .snapshotcache import *
-from .derive_rules import *     #   not clear how to import: are used often e.g. ege_from_form
+# not clear how to import: are used often e.g. ege_from_form
+from .derive_rules import *
 from .derived import read_derived_rules
 from .sim_arr import *
 from .masks import *
@@ -29,4 +30,3 @@ from ..environment import module_dir
 read_derived_rules(['./derived.cfg',
                    os.getenv("HOME")+'/.config/pygad/derived.cfg',
                    module_dir+'config/derived.cfg'])
-

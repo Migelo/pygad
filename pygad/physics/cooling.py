@@ -66,7 +66,7 @@ Doctests:
     add the Compton cooling rates...
     >>> perc_gal = np.percentile(Lambda_gal, [10,25,50,75,90])
     >>> np.round(np.array(perc_gal)/np.array(perc), decimals=5)
-    array([ 0.03983,  0.0583 ,  0.32214, -0.00594,  0.00067])
+    array([ 0.03984,  0.0583 ,  0.32215, -0.00594,  0.00067])
 '''
 __all__ = ['Wiersma_CoolingTable']
 
@@ -137,7 +137,7 @@ class Wiersma_CoolingTable(object):
             self._species = spec.astype('|U10')
             if verbose >= environment.VERBOSE_TALKY:
                 print(('  %2d species: %s' % (len(self._species),
-                                             ', '.join(self._species))))
+                                              ', '.join(self._species))))
 
             if verbose >= environment.VERBOSE_TALKY:
                 print('  reading cooling tables for')
@@ -172,8 +172,15 @@ class Wiersma_CoolingTable(object):
         self._tbls = tbls
 
         def interp(x, y, z, kind='linear'):
-            from scipy.interpolate import interp2d
-            return interp2d(x, y, z.T, kind=kind, copy=True, bounds_error=True)
+            from scipy.interpolate import RegularGridInterpolator
+            interpolator = RegularGridInterpolator(
+                (x, y), z, method=kind, bounds_error=True)
+
+            def evaluate(x_value, y_value):
+                value = interpolator([[x_value, y_value]])[0]
+                return np.asarray(value).reshape(1, 1)
+
+            return evaluate
 
         self._metals_interp = {
             metal: interp(self._T_bins, self._nH_bins, self._tbls[metal])
@@ -227,7 +234,7 @@ class Wiersma_CoolingTable(object):
         For either `self._noZ_interp` or `self._ne_nH_interp`.
         '''
         assert interpolations is self._noZ_interp or \
-               interpolations is self._ne_nH_interp
+            interpolations is self._ne_nH_interp
         from numbers import Number
         if isinstance(fHe, Number) or fHe.shape == tuple() or len(fHe) == 1:
             fHe = fHe * np.ones(len(T), dtype=float)
@@ -247,7 +254,7 @@ class Wiersma_CoolingTable(object):
             interpolations[i](t, n) for i, t, n in iTnH
         ]).reshape(len(T))
         alpha = (fHe - self._fHe_bins[ifHe]) \
-                / (self._fHe_bins[ifHe + 1] - self._fHe_bins[ifHe])
+            / (self._fHe_bins[ifHe + 1] - self._fHe_bins[ifHe])
         return (1. - alpha) * Qs_1 + alpha * Qs_2
 
     def get_cooling_for_species(self, species, T, nH, fHe=0.25):
@@ -330,7 +337,8 @@ class Wiersma_CoolingTable(object):
 
         T = g['temp'].in_units_of('K', subs=s).view(np.ndarray)
         nH = g['nH'].in_units_of('cm**-3', subs=s).view(np.ndarray)
-        fHe = (g['He'] / (g['He'] + g['H'])).in_units_of(1, subs=s).view(np.ndarray)
+        fHe = (g['He'] / (g['He'] + g['H'])
+               ).in_units_of(1, subs=s).view(np.ndarray)
 
         T[T < self.T_range[0]] = self.T_range[0]
         T[T > self.T_range[1]] = self.T_range[1]
@@ -348,9 +356,10 @@ class Wiersma_CoolingTable(object):
                     print(('  %s...' % species))
                 el = SHORT_ELEMENT_NAME[species]
                 solar_abund = \
-                    self._solar_mass_frac[np.where(self._solar_species == species)][0]
+                    self._solar_mass_frac[np.where(
+                        self._solar_species == species)][0]
                 el_cool = self.get_cooling_for_species(el, T, nH, fHe) \
-                          * (g[el] / g['mass']) / solar_abund
+                    * (g[el] / g['mass']) / solar_abund
                 metal_cool += el_cool
             except ValueError as e:
                 print(("%s: %s" % (type(e).__name__, e.message)))
@@ -382,10 +391,11 @@ class Wiersma_CoolingTable(object):
             Thompson = quantities.constants['Thomson cross section']
             kB = quantities.kB
 
-            T_CMB = UnitArr('2.728 K') * (1.0 + self._redshift)  # CMB temperature
+            T_CMB = UnitArr('2.728 K') * \
+                (1.0 + self._redshift)  # CMB temperature
             # note: nH was made unitless (for speed); [hhe_]ne is unitless anyway
             Compton_cool = -(16.0 * Stefan * Thompson * (T_CMB ** 4) / (m_e * c ** 2)) \
-                           * kB * (T_CMB - T) * hhe_ne / UnitArr(nH, 'cm**-3')
+                * kB * (T_CMB - T) * hhe_ne / UnitArr(nH, 'cm**-3')
             Compton_cool.convert_to('erg cm**3 s**-1')
             # print 'Compton cooling [0%,25%,100%]-perc.:', \
             #        np.percentile(Compton_cool, [0,50,100] ), Compton_cool.units
@@ -397,4 +407,3 @@ class Wiersma_CoolingTable(object):
         net_cool.convert_to(units)
 
         return net_cool
-
