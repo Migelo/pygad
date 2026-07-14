@@ -18,6 +18,7 @@ __all__ = ['CM_DEF', 'luminance', 'isolum_cmap', 'color_code', 'show_image',
            'scatter_map', 'make_scale_indicators', 'add_cbar']
 
 import matplotlib as mpl
+import matplotlib.patheffects
 import matplotlib.pyplot as plt
 import numpy as np
 
