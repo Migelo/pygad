@@ -1,0 +1,45 @@
+name: PyTest CI
+
+on:
+  push:
+    branches: ["*"]
+  pull_request:
+    branches: ["*"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+      - name: Cache auxiliary data
+        uses: actions/cache@v4
+        with:
+          path: |
+            ./pygad/CoolingTables
+            ./pygad/iontbls
+            ./pygad/bc03
+            ./pygad/snaps
+          key: aux-data-${{ runner.os }}-python-${{ matrix.python-version }}
+          restore-keys: |
+            aux-data-${{ runner.os }}-python-
+      - name: Install package
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install -e .
+      - name: Run existing doctests
+        env:
+          PYGAD_SKIP_DATA_BOOTSTRAP: "1"
+        run: .venv/bin/python runTestsAll.py
+      - name: Run pytest
+        env:
+          PYGAD_SKIP_DATA_BOOTSTRAP: "1"
+        run: .venv/bin/python -m pytest
