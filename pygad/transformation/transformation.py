@@ -244,7 +244,7 @@ class Transformation(object):
                         trans.units = snap.boxsize.units
                     last._trans += trans.in_units_of(last._trans.units,subs=snap)
                 elif isinstance(self, Rotation):
-                    last._R = self._R * last._R
+                    last._R = self._R @ last._R
                 else:
                     raise NotImplementedError('Encountered an unknown '
                                               'transformation: %s' %
@@ -333,9 +333,9 @@ class Rotation(Transformation):
         >>> ca, sa = np.cos(1.2), np.sin(1.2)
         >>> R = Rotation([[ca,sa,0],[-sa,ca,0],[0,0,1]])
         >>> R.rotmat
-        matrix([[ 0.36235775,  0.93203909,  0.        ],
-                [-0.93203909,  0.36235775,  0.        ],
-                [ 0.        ,  0.        ,  1.        ]])
+        array([[ 0.36235775,  0.93203909,  0.        ],
+               [-0.93203909,  0.36235775,  0.        ],
+               [ 0.        ,  0.        ,  1.        ]])
         >>> Rcp = R.copy()
         >>> assert Rcp is not R
         >>> assert Rcp._R is not R._R
@@ -364,10 +364,10 @@ class Rotation(Transformation):
 
     @rotmat.setter
     def rotmat(self, value):
-        self._R = np.matrix(value, dtype=float).copy()
+        self._R = np.array(value, dtype=float, copy=True)
         if len(self._R.shape)!=2 or self._R.shape!=(3,3):
             raise ValueError('Rotation matrix needs to be a 3x3-matrix!')
-        if np.sum(np.abs( (self._R * self._R.T) - np.eye(3) )) > 1e-6:
+        if np.sum(np.abs( (self._R @ self._R.T) - np.eye(3) )) > 1e-6:
             raise ValueError('Rotation matrix needs to fullfil R^T == R^-1!')
         if self._test_proper and not self.is_proper():
             raise ValueError('Rotation matrix needs to fullfil det(R) == +1 '
@@ -390,7 +390,7 @@ class Rotation(Transformation):
         '''Calculate the axis around which the rotation is performed.'''
         vals, vecs = np.linalg.eig(self._R)
         i = np.where(np.abs(vals-1) < 1e-9)[0][0]
-        return vecs[:,i].real.getA1()
+        return vecs[:,i].real
 
     def angle(self):
         '''Calculate the angle of the rotation.'''
@@ -418,7 +418,7 @@ class Rotation(Transformation):
             raise ValueError('The block has to have shape (?,%d)!' %
                     self._R.shape[0])
 
-        transformed = (self._R * block.T).T.view(type(block))
+        transformed = (self._R @ block.T.view(np.ndarray)).T.view(type(block))
 
         if isinstance(block, UnitArr):
             transformed.units = block.units

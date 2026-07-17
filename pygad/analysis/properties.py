@@ -30,18 +30,18 @@ Example:
     derive block angmom... done.
     >>> redI = reduced_inertia_tensor(sub.baryons)
     derive block r... done.
-    >>> np.linalg.norm(redI - np.matrix([[ 2.54e10, -3.28e9, 2.74e9],
-    ...                                  [-3.28e9,   2.75e9, 5.16e8],
-    ...                                  [ 2.74e9,   5.16e8, 5.84e9]])) < 1e10
+    >>> np.linalg.norm(redI - np.array([[ 2.54e10, -3.28e9, 2.74e9],
+    ...                                 [-3.28e9,   2.75e9, 5.16e8],
+    ...                                 [ 2.74e9,   5.16e8, 5.84e9]])) < 1e10
     True
     >>> orientate_at(s, 'red I', redI)
     apply Rotation to "pos" of "snap_M1196_4x_320"... done.
     apply Rotation to "vel" of "snap_M1196_4x_320"... done.
     >>> redI = reduced_inertia_tensor(sub.baryons)
     derive block r... done.
-    >>> np.linalg.norm(redI - np.matrix([[ 2.62e10,  0.00   , 0.00   ],
-    ...                                  [ 0.00   ,  5.73e+9, 0.00   ],
-    ...                                  [ 0.00   ,  0.00   , 2.05e9]])) < 1e8
+    >>> np.linalg.norm(redI - np.array([[ 2.62e10,  0.00   , 0.00   ],
+    ...                                 [ 0.00   ,  5.73e+9, 0.00   ],
+    ...                                 [ 0.00   ,  0.00   , 2.05e9]])) < 1e8
     True
     >>> if abs( los_velocity_dispersion(sub) - '170 km/s' ) > '5 km/s':
     ...     print(round(float(los_velocity_dispersion(sub)),4))
@@ -171,7 +171,7 @@ def reduced_inertia_tensor(s):
         s (Snap):   The (sub-)snapshot to calculate the reduced inertia tensor of.
 
     Returns:
-        I (np.matrix):  The reduced inertia tensor. (Without units, but they would
+        I (np.ndarray): The reduced inertia tensor. (Without units, but they would
                         be s['mass'].units/s['pos'].units.)
     '''
     # a bit faster with the np.ndarray views
@@ -193,9 +193,9 @@ def reduced_inertia_tensor(s):
     I_xy = np.sum(m * pos[:, 0] * pos[:, 1] / r2)
     I_xz = np.sum(m * pos[:, 0] * pos[:, 2] / r2)
     I_yz = np.sum(m * pos[:, 1] * pos[:, 2] / r2)
-    I = np.matrix([[I_xx, I_xy, I_xz], \
-                   [I_xy, I_yy, I_yz], \
-                   [I_xz, I_yz, I_zz]], dtype=np.float64)
+    I = np.array([[I_xx, I_xy, I_xz], \
+                  [I_xy, I_yy, I_yz], \
+                  [I_xz, I_yz, I_zz]], dtype=np.float64)
     return I
 
 
@@ -238,8 +238,8 @@ def orientate_at(s, mode, qty=None, total=False, remember=True):
     if mode in ['vec', 'L']:
         T = rot_to_z(qty)
     elif mode in ['tensor', 'red I']:
-        qty = np.matrix(qty)
-        if np.max(np.abs(qty.H - qty)) > 1e-6:
+        qty = np.array(qty)
+        if np.max(np.abs(qty.conj().T - qty)) > 1e-6:
             raise ValueError('The matrix passed as qty has to be Hermitian!')
         vals, vecs = np.linalg.eigh(qty)
         i = np.argsort(vals)[::-1]
