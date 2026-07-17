@@ -203,7 +203,7 @@ def history(s, qty, time=None, av=None, units=None, diff=False, N=50,
         if av is None:
             Q_hist.append( Q[mask].sum() )
         else:
-            av_hist.append( (Q[mask]*AV[mask]).sum() / AV[mask].sum() )
+            Q_hist.append( (Q[mask]*AV[mask]).sum() / AV[mask].sum() )
     Q_hist = UnitArr(Q_hist, Q.units)
 
     if diff:
