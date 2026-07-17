@@ -309,7 +309,7 @@ class Translation(Transformation):
     def _apply_to_block(self, block, snap=None):
         if snap is not None:
             block = snap[block]
-        if not len(block.shape)==2 and block.shape[1]==self._trans.shape[0]:
+        if not (len(block.shape)==2 and block.shape[1]==self._trans.shape[0]):
             raise ValueError('The block has to have shape (?,%d)!' %
                     self._trans.shape[0])
 
@@ -414,7 +414,7 @@ class Rotation(Transformation):
     def _apply_to_block(self, block, snap=None):
         if snap is not None:
             name, block = block, snap[block]
-        if not len(block.shape)==2 and block.shape[1]==self._R.shape[0]:
+        if not (len(block.shape)==2 and block.shape[1]==self._R.shape[0]):
             raise ValueError('The block has to have shape (?,%d)!' %
                     self._R.shape[0])
 
