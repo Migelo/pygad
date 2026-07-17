@@ -1056,6 +1056,7 @@ def fit_profiles_sat(
         """
 
         # jiggle params and refit to compute hessian
+        params_pre_jiggle = params.copy()
         params += 0.02 * (2 * np.random.rand(len(params)) - 1)
         chisq_fcn = lambda *args: _chisq(*args)
         soln = minimize(
@@ -1066,7 +1067,7 @@ def fit_profiles_sat(
             options={"maxiter": 100},
         )
         cov = soln.hess_inv  # covariance matrix of final soluiton
-        chisq_new = _chisq(params, l_reg, f_reg, n_reg, mode)
+        chisq_new = _chisq(soln.x, l_reg, f_reg, n_reg, mode)
         if chisq_new < chisq_best:
             if verbose:
                 print(
@@ -1078,6 +1079,9 @@ def fit_profiles_sat(
             best_params = params
             best_bounds = bounds
             chisq_best = chisq_new
+        else:
+            # rejected: restore the pre-jiggle best so params/cov/chisq agree
+            params = params_pre_jiggle
 
         # remove small lines as long as chisq doesn't go up by much
         while n_lines > 1:
