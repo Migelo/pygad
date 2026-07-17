@@ -312,7 +312,11 @@ class SnapshotCache:
             self.__galaxy = self.__galaxy_all
         else:
             gx = self.__galaxy_all
-            self.__galaxy = eval('gx.' + str(value),globals(),locals())
+            if value not in pg.gadget.families:
+                raise ValueError('unknown galaxy family "%s"; valid families '
+                                 'are: %s' % (value, ', '.join(
+                                     sorted(pg.gadget.families))))
+            self.__galaxy = getattr(gx, str(value))
 
         self.__family = value
 
