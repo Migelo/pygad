@@ -41,7 +41,10 @@ jobs:
           . .venv/bin/activate
           pip install -e .
           pip install pytest
+      - name: Ensure auxiliary data
+        # Import once before pytest: downloads/extracts the aux data on a
+        # cache miss so the cache step above captures it, and any download
+        # failure surfaces here instead of inside the test run.
+        run: .venv/bin/python -c "import pygad"
       - name: Run pytest
-        env:
-          PYGAD_SKIP_DATA_BOOTSTRAP: "1"
         run: .venv/bin/python -m pytest
