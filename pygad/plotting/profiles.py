@@ -168,6 +168,8 @@ def history(s, qty, time=None, av=None, units=None, diff=False, N=50,
     if av is not None:
         if isinstance(av, str):
             AV = s.get(av)
+        else:
+            AV = av
         if len(s) != len(AV):
             raise ValueError('The length of the averaging quantity array ' +
                              '(%s) ' % utils.nice_big_num_str(len(AV)) +
