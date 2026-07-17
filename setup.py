@@ -9,8 +9,6 @@ from setuptools.command.build_ext import build_ext
 from setuptools.command.build_py import build_py
 from wheel.bdist_wheel import bdist_wheel
 
-import versioneer
-
 # define scripts
 scripts = ["bin/ginsp", "bin/gconv", "bin/gCache3", "bin/gCatalog3", "bin/gStarform3"]
 
@@ -102,12 +100,11 @@ class BdistPlatformWheel(bdist_wheel):
         return "py3", "none", platform_tag
 
 
-cmdclass = versioneer.get_cmdclass()
-cmdclass.update({
+cmdclass = {
     "build_ext": BuildCtypesLibrary,
     "build_py": BuildPackage,
     "bdist_wheel": BdistPlatformWheel,
-})
+}
 
 setup(
     name="pygadmpa",
@@ -120,7 +117,6 @@ setup(
     include_package_data=True,
     packages=list(map(str, modules)),
     scripts=scripts,
-    version=versioneer.get_version(),
     cmdclass=cmdclass,
     ext_modules=[ext_module],
 )

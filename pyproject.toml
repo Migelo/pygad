@@ -1,3 +1,10 @@
 [build-system]
-requires = ["setuptools", "wheel", "versioneer<=0.29"]
+requires = ["setuptools>=61", "wheel", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
+
+# Version is derived from git tags (v0.11.0 -> 0.11.0).
+# --match v[0-9]* keeps the moving `pygad-data` release tag (and ancient RC
+# tags like v9.0-RC1, which would parse as 9.0rc1) out of version resolution.
+[tool.setuptools_scm]
+version_file = "pygad/_version.py"
+git_describe_command = "git describe --dirty --tags --long --match v[0-9]*"

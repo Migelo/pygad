@@ -74,7 +74,6 @@ import time
 import urllib.request
 
 # isort: skip_file
-from ._version import get_versions
 from . import utils
 from . import environment
 from .environment import gc_full_collect, module_dir
@@ -228,7 +227,17 @@ _ensure_auxiliary_data()
 gc.set_threshold(50, 3, 3)
 gc_full_collect()
 
-__version__ = get_versions()['version']
+try:
+    # generated at build time by setuptools-scm (pyproject.toml)
+    from ._version import version as __version__
+except ImportError:
+    # raw source tree without a build: fall back to the installed metadata
+    from importlib.metadata import PackageNotFoundError, version
+
+    try:
+        __version__ = version("pygadmpa")
+    except PackageNotFoundError:
+        __version__ = "0+unknown"
+    del version, PackageNotFoundError
 if environment.verbose > environment.VERBOSE_QUIET:
     print(('imported pygad', __version__))
-del get_versions
