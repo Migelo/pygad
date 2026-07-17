@@ -283,7 +283,9 @@ def scatter_map(x, y, s=None, qty=None, av=None, bins=150, extent=None,
     if cmap is None:
         cmap = CM_DEF if colors is None else 'isolum'
         cmap = mpl.colormaps[cmap]
-        cmap.set_bad('w' if zero_is_white else 'k')
+        # work on a copy with adjusted extremes instead of mutating the
+        # colormap in place
+        cmap = cmap.with_extremes(bad='w' if zero_is_white else 'k')
         if fontcolor is None:
             fontcolor = 'k' if zero_is_white else 'w'
     if isinstance(cmap, str):
