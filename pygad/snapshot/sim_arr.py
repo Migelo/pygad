@@ -88,12 +88,12 @@ class SimArr(UnitArr):
             if hasattr(a, '_dependencies'): del a._dependencies
             a = a.base
 
-    def __array_wrap__(self, array, context=None):
-        ua = UnitArr.__array_wrap__(self, array, context)
+    def __array_wrap__(self, array, context=None, return_scalar=False):
+        ua = UnitArr.__array_wrap__(self, array, context, return_scalar)
         # seems like if and only if context is None, its not from a ufunc but just
         # slicing/masking and/or setting inplace (i.e. from a __i*__ function like
         # __iadd__) -- in these cases, we don't want references to the snapshot
-        if context is not None:
+        if context is not None and ua is not self:
             # might even already be a UnitArr, but the reference can still exist!
             ua.view(SimArr).downgrade_to_UnitArr()
         return ua

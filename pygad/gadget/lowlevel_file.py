@@ -721,7 +721,7 @@ def get_block_info(gfile, gformat, endianness, header, unclear_blocks):
         for name, group in gfile.items():
             if not name.startswith('PartType'):
                 continue
-            ptype = int(name[-1])   # name is e.g. 'PartType3'
+            ptype = int(name[len('PartType'):])   # name is e.g. 'PartType3'
             # We are accessing the dataset classes, but do not load the actual
             # data! For instance, ds.dtype does not require to load the data (a
             # h5py datastructure is not a np.ndarray!), only actually accessing
@@ -743,7 +743,12 @@ def get_block_info(gfile, gformat, endianness, header, unclear_blocks):
                             ptypes=[False]*6,
                             start_pos=None,
                             size=None)
-                info[block_name].ptypes[ptype] = True
+                ptypes = info[block_name].ptypes
+                if ptype >= len(ptypes):
+                    # there might be more than the six standard particle
+                    # types (e.g. 'PartType10')
+                    ptypes.extend([False]*(ptype+1-len(ptypes)))
+                ptypes[ptype] = True
     else:
         # Count blocks and remember start positions.
         # If format 2: Also remember if there is a INFO block and where it is.

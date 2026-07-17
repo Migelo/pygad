@@ -1,0 +1,38 @@
+name: "Set up pygad"
+description: "Install system deps, build pygad into .venv, and ensure auxiliary data."
+inputs:
+  python-version:
+    description: "Python version, used in the auxiliary-data cache key"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Cache auxiliary data
+      uses: actions/cache@v6
+      with:
+        path: |
+          ./pygad/CoolingTables
+          ./pygad/iontbls
+          ./pygad/bc03
+          ./pygad/snaps
+        key: aux-data-${{ runner.os }}-python-${{ inputs.python-version }}
+        restore-keys: |
+          aux-data-${{ runner.os }}-python-
+    - name: Install system dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libgsl-dev g++ gcc build-essential
+    - name: Install package
+      shell: bash
+      run: |
+        python -m venv .venv
+        . .venv/bin/activate
+        pip install -e .
+        pip install pytest
+    - name: Ensure auxiliary data
+      # Import once before testing: downloads/extracts the aux data on a
+      # cache miss so the cache step above captures it, and any download
+      # failure surfaces here instead of inside the test run.
+      shell: bash
+      run: .venv/bin/python -c "import pygad"

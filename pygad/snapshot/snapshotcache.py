@@ -312,7 +312,11 @@ class SnapshotCache:
             self.__galaxy = self.__galaxy_all
         else:
             gx = self.__galaxy_all
-            self.__galaxy = eval('gx.' + str(value),globals(),locals())
+            if value not in pg.gadget.families:
+                raise ValueError('unknown galaxy family "%s"; valid families '
+                                 'are: %s' % (value, ', '.join(
+                                     sorted(pg.gadget.families))))
+            self.__galaxy = getattr(gx, str(value))
 
         self.__family = value
 
@@ -1547,8 +1551,7 @@ class SnapshotCache:
         except Exception as e:
             print("error importing star_form file")
             print(e)
-            exit(1)
-            return
+            raise
 
     def _fill_gas_from_traced(self, snap, data, add_blocks='all', add_derived=True,
                              units=None, invalid=0.0):

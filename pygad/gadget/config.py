@@ -80,7 +80,7 @@ def read_config(config):
         config (list):  list of possible filenames for the config file.
     '''
     global families, block_order, elements, default_gadget_units, block_units, \
-           std_nameto_HDF5, HDF5_to_std_name, general, block_infos
+           std_name_to_HDF5, HDF5_to_std_name, general, block_infos
 
     def test_section(cfg, section, entries):
         if not cfg.has_section(section):

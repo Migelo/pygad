@@ -195,10 +195,10 @@ class FLRWCosmo(object):
     def __eq__(self, other):
         return (self._h_0 == other._h_0 and
                 self._Omega_Lambda == other._Omega_Lambda and
-                self._Omega_m == self._Omega_m and
-                self._Omega_b == self._Omega_b and
-                self._sigma_8 == self._sigma_8 and
-                self._n_s == self._n_s)
+                self._Omega_m == other._Omega_m and
+                self._Omega_b == other._Omega_b and
+                self._sigma_8 == other._sigma_8 and
+                self._n_s == other._n_s)
 
     def __ne__(self, other):
         return not self.__eq__(other)

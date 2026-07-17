@@ -89,7 +89,7 @@ Examples:
 __all__ = ['gridbin2d', 'gridbin1d', 'gridbin', 'grid_props', 'Map', 'scale01', 'smooth']
 
 import numpy as np
-from scipy.ndimage.filters import convolve
+from scipy.ndimage import convolve
 from scipy.stats import binned_statistic_dd
 
 from ..units import *
@@ -297,8 +297,8 @@ class Map(UnitArr):
         UnitArr.__array_finalize__(self, obj)
         self._extent = getattr(obj, '_extent', [[0, 0]] * len(self.shape))
 
-    def __array_wrap__(self, array, context=None):
-        return UnitArr.__array_wrap__(self, array, context)
+    def __array_wrap__(self, array, context=None, return_scalar=False):
+        return UnitArr.__array_wrap__(self, array, context, return_scalar)
 
     def __getitem__(self, key):
         from warnings import simplefilter
@@ -420,7 +420,7 @@ def smooth(grid, sml, kernel, bndrymode='constant'):
                                 It has to be a vector function, i.e. be able to
                                 operate on entire arrays.
         bndrymode (str):        How to handle the boundaries. See e.g.
-                                scipy.ndimage.filters.convolve for more
+                                scipy.ndimage.convolve for more
                                 information.
 
     Returns:

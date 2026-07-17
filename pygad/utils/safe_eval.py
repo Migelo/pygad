@@ -149,8 +149,8 @@ class Evaluator(object):
     def _eval(self, node):
         if hasattr(node,'ctx') and not isinstance(node.ctx, ast.Load):
             raise EvalError('only loading context allowed')
-        if isinstance(node, ast.Num):
-            return node.n
+        if isinstance(node, ast.Constant):
+            return node.value
         elif isinstance(node, ast.Name):
             return self.variables[node.id]
         elif isinstance(node, ast.BinOp):
@@ -208,16 +208,12 @@ class Evaluator(object):
             return tuple(map(self._eval, node.dims))
         elif isinstance(node, ast.Index):
             return self._eval(node.value)
-        elif isinstance(node, ast.Str):
-            return node.s
         elif node is None:
             return None
         elif isinstance(node, ast.List):
             return list(map(self._eval, node.elts))
         elif isinstance(node, ast.Tuple):
             return tuple(map(self._eval, node.elts))
-        elif isinstance(node, ast.NameConstant):
-            return node.value
         else:
             # seldomly reached due to substitution of spaces
             raise EvalError('AST node type %s not supported' %

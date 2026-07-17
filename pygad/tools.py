@@ -690,7 +690,7 @@ def read_traced_gas(filename, types=None):
         elif t == 15:  # left region, but is still a gas particle
             new += [e[-10:-4], e[-4:]]
         elif t == 19:  # left region and turned into a star
-            new += [e[-14:-8], e[-8:-4], e[-4]]
+            new += [e[-14:-8], e[-8:-4], e[-4:]]
         else:
             raise RuntimeError('Structure in "%s" ' % filename + "is not as expected!")
         tr[ID] = new
