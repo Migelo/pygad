@@ -1082,6 +1082,17 @@ def fit_profiles_sat(
         else:
             # rejected: restore the pre-jiggle best so params/cov/chisq agree
             params = params_pre_jiggle
+            # soln.hess_inv describes the rejected soln.x, not the restored
+            # params -- refit from the restored (unjiggled) best so the
+            # covariance is evaluated at the returned parameters
+            soln = minimize(
+                chisq_fcn,
+                params,
+                args=(l_reg, f_reg, n_reg, mode),
+                method="BFGS",
+                options={"maxiter": 100},
+            )
+            cov = soln.hess_inv  # covariance matrix at the returned params
 
         # remove small lines as long as chisq doesn't go up by much
         while n_lines > 1:
