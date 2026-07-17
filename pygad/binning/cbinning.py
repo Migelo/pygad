@@ -178,13 +178,13 @@ def SPH_to_3Dgrid(s, qty, extent, Npx, kernel=None, dV='dV', hsml='hsml',
     dV = dV.view(np.ndarray).astype(np.float64)
     qty = qty[sub._mask].view(np.ndarray).astype(np.float64)
     if pos.base is not None:
-        pos.copy()
+        pos = pos.copy()
     if hsml.base is not None:
-        hsml.copy()
+        hsml = hsml.copy()
     if dV.base is not None:
-        dV.copy()
+        dV = dV.copy()
     if qty.base is not None:
-        qty.copy()
+        qty = qty.copy()
 
     ext = extent.view(np.ndarray).astype(np.float64).copy()
     grid = np.empty(np.prod(Npx), dtype=np.float64)
@@ -315,11 +315,11 @@ def SPH_to_2Dgrid(s, qty, extent, Npx, xaxis=0, yaxis=1, kernel=None, dV='dV',
     dV = dV.view(np.ndarray).astype(np.float64)
     qty = qty[sub._mask].view(np.ndarray).astype(np.float64)
     if hsml.base is not None:
-        hsml.copy()
+        hsml = hsml.copy()
     if dV.base is not None:
-        dV.copy()
+        dV = dV.copy()
     if qty.base is not None:
-        qty.copy()
+        qty = qty.copy()
 
     ext = extent.view(np.ndarray).astype(np.float64).copy()
     grid = np.empty(np.prod(Npx), dtype=np.float64)
@@ -442,11 +442,11 @@ def SPH_3D_to_line(s, qty, los, extent, Npx, xaxis=0, yaxis=1, kernel=None,
     dV = dV.view(np.ndarray).astype(np.float64)
     qty = qty[sub._mask].view(np.ndarray).astype(np.float64)
     if hsml.base is not None:
-        hsml.copy()
+        hsml = hsml.copy()
     if dV.base is not None:
-        dV.copy()
+        dV = dV.copy()
     if qty.base is not None:
-        qty.copy()
+        qty = qty.copy()
 
     ext = extent.view(np.ndarray).reshape((2,)).astype(np.float64).copy()
     line = np.empty(Npx, dtype=np.float64)
@@ -575,14 +575,14 @@ def SPH_to_2Dgrid_by_particle(s, qty, extent, Npx, reduction, xaxis=0, yaxis=1,
     av = None if av is None else av[sub._mask].view(
         np.ndarray).astype(np.float64)
     if hsml.base is not None:
-        hsml.copy()
+        hsml = hsml.copy()
     if dV.base is not None:
-        dV.copy()
+        dV = dV.copy()
     if qty.base is not None:
-        qty.copy()
+        qty = qty.copy()
     if av is not None:
         if av.base is not None:
-            av.copy()
+            av = av.copy()
     else:
         av = np.ones(len(sub), dtype=np.float64)
 
