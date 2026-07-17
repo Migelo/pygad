@@ -473,8 +473,8 @@ def periodic_wrap(l, flux, noise):
     """
 
     starting_pixel = np.argmax(flux)
-    flux = np.concatenate((flux[starting_pixel:-1], flux[0 : starting_pixel + 1]))
-    noise = np.concatenate((noise[starting_pixel:-1], noise[0 : starting_pixel + 1]))
+    flux = np.concatenate((flux[starting_pixel:], flux[0:starting_pixel]))
+    noise = np.concatenate((noise[starting_pixel:], noise[0:starting_pixel]))
     if environment.verbose >= environment.VERBOSE_TACITURN:
         print(("Periodically wrapping spectrum, starting_pixel= %d" % starting_pixel))
 
