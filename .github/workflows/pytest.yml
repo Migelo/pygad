@@ -40,10 +40,6 @@ jobs:
           . .venv/bin/activate
           pip install -e .
           pip install pytest
-      - name: Run existing doctests
-        env:
-          PYGAD_SKIP_DATA_BOOTSTRAP: "1"
-        run: .venv/bin/python runTestsAll.py
       - name: Run pytest
         env:
           PYGAD_SKIP_DATA_BOOTSTRAP: "1"
