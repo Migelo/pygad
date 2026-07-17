@@ -28,8 +28,6 @@ jobs:
         run: .venv/bin/python -m pytest
 
   doctests:
-    # Historically push-only (was workflow.yml); drop this `if` to also gate PRs.
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
