@@ -1547,8 +1547,7 @@ class SnapshotCache:
         except Exception as e:
             print("error importing star_form file")
             print(e)
-            exit(1)
-            return
+            raise
 
     def _fill_gas_from_traced(self, snap, data, add_blocks='all', add_derived=True,
                              units=None, invalid=0.0):
