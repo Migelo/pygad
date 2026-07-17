@@ -40,23 +40,6 @@ jobs:
           . .venv/bin/activate
           pip install -e .
           pip install pytest
-      - name: Verify auxiliary data (diagnostic)
-        env:
-          PYGAD_SKIP_DATA_BOOTSTRAP: "1"
-        run: |
-          .venv/bin/python - <<'EOF'
-          import os, shutil, pygad
-          from pygad import environment
-          md = environment.module_dir
-          print('module_dir:', md)
-          print('module_dir contents:', sorted(os.listdir(md)))
-          d = os.path.join(md, 'iontbls')
-          print('iontbls exists:', os.path.isdir(d))
-          if os.path.isdir(d):
-              print('iontbls contents:', sorted(os.listdir(d)))
-          print('tbls-i45 exists:', os.path.isdir(os.path.join(d, 'tbls-i45')))
-          print('disk usage:', shutil.disk_usage(md))
-          EOF
       - name: Run existing doctests
         env:
           PYGAD_SKIP_DATA_BOOTSTRAP: "1"
