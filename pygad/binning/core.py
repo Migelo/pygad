@@ -89,7 +89,7 @@ Examples:
 __all__ = ['gridbin2d', 'gridbin1d', 'gridbin', 'grid_props', 'Map', 'scale01', 'smooth']
 
 import numpy as np
-from scipy.ndimage.filters import convolve
+from scipy.ndimage import convolve
 from scipy.stats import binned_statistic_dd
 
 from ..units import *
@@ -420,7 +420,7 @@ def smooth(grid, sml, kernel, bndrymode='constant'):
                                 It has to be a vector function, i.e. be able to
                                 operate on entire arrays.
         bndrymode (str):        How to handle the boundaries. See e.g.
-                                scipy.ndimage.filters.convolve for more
+                                scipy.ndimage.convolve for more
                                 information.
 
     Returns:
