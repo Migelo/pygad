@@ -317,8 +317,15 @@ class UnitArr(np.ndarray):
         self._unit_carrier = getattr(obj, '_unit_carrier', self)
         self._units = getattr(obj, 'units', None)
 
-    def __array_wrap__(self, array, context=None):
+    def __array_wrap__(self, array, context=None, return_scalar=False):
+        # Note: `return_scalar` (NumPy 2.0+) indicates that the ufunc result is
+        # 0-d and NumPy would return it as a scalar; for UnitArr the scalar
+        # representation *is* the 0-d UnitArr (cf. UnitScalar), so we keep it.
         if context is None:
+            return array
+        if array is self:
+            # in-place operation (out=self): values and units are already
+            # handled by the __i*__ operators; nothing to do here
             return array
 
         try:

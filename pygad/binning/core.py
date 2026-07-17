@@ -297,8 +297,8 @@ class Map(UnitArr):
         UnitArr.__array_finalize__(self, obj)
         self._extent = getattr(obj, '_extent', [[0, 0]] * len(self.shape))
 
-    def __array_wrap__(self, array, context=None):
-        return UnitArr.__array_wrap__(self, array, context)
+    def __array_wrap__(self, array, context=None, return_scalar=False):
+        return UnitArr.__array_wrap__(self, array, context, return_scalar)
 
     def __getitem__(self, key):
         from warnings import simplefilter
